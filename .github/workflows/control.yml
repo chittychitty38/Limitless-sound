@@ -57,12 +57,21 @@ jobs:
           SDL_AUDIODRIVER: dummy
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
-            "dist/Limitless Control.app/Contents/MacOS/Limitless Control" --self-test
+            APP="dist/Limitless Control.app/Contents/MacOS/Limitless Control"
           elif [ "$RUNNER_OS" = "Windows" ]; then
-            "dist/Limitless Control/Limitless Control.exe" --self-test
+            APP="dist/Limitless Control/Limitless Control.exe"
           else
-            "dist/Limitless Control/Limitless Control" --self-test
+            APP="dist/Limitless Control/Limitless Control"
           fi
+          set +e
+          "$APP" --self-test > smoke.log 2>&1
+          code=$?
+          cat smoke.log
+          if [ $code -ne 0 ]; then
+            # Surface the error as annotations so it shows on the PR without opening logs.
+            tail -n 30 smoke.log | while IFS= read -r line; do echo "::error title=Smoke test::$line"; done
+          fi
+          exit $code
 
       - name: Make the Mac disk image
         if: runner.os == 'macOS'
