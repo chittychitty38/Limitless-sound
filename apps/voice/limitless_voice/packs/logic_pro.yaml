@@ -1,0 +1,126 @@
+# Logic Pro, using its default key command set (Logic Pro > Key Commands).
+# If you've changed a key command, change the matching "keys" line here.
+# Shortcuts marked "verify" are worth checking against your Logic version.
+
+name: Logic Pro
+apps: ["Logic Pro", "Logic Pro X"]
+platforms: [mac]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+  - say: ["record", "start recording"]
+    fuzzy: false
+    do: {keys: r}
+    reply: Recording
+    repeatable: false
+  - say: ["capture [the] recording", "capture that"]
+    do: {keys: shift+r}
+    reply: Captured
+  - say: ["cycle", "loop", "toggle cycle", "toggle loop"]
+    do: {keys: c}
+  - say: ["metronome", "click", "toggle click", "toggle metronome"]
+    do: {keys: k}
+  - say: ["go to start", "go to beginning", "back to start", "top"]
+    do: {keys: return}
+  - say: ["forward", "next bar", "forward [a] bar"]
+    do: {keys: "."}
+  - say: ["back", "previous bar", "back [a] bar", "rewind"]
+    do: {keys: ","}
+  - say: ["go to bar {bar:number}", "bar {bar:number}", "jump to bar {bar:number}"]
+    do:
+      steps:
+        - {keys: "/"}
+        - {wait: 0.3}
+        - {type: "{bar}"}
+        - {keys: return}
+    reply: Bar {bar}
+    repeatable: false
+    help: Opens Go to Position, types the bar, presses Return
+
+  # --- tracks -----------------------------------------------------------
+  - say: ["new track", "new tracks", "add [a] track"]
+    do: {keys: opt+cmd+n}
+  - say: ["new audio track", "add [an] audio track"]
+    do: {keys: opt+cmd+a}
+    reply: New audio track
+  - say: ["new instrument track", "new software instrument", "add [an] instrument track"]
+    do: {keys: opt+cmd+s}
+    reply: New instrument track
+  - say: ["duplicate track", "new track with same settings"]
+    do: {keys: cmd+d}
+  - say: ["next track", "track down"]
+    do: {keys: down}
+  - say: ["previous track", "track up"]
+    do: {keys: up}
+  - say: ["solo", "solo track", "solo [the] track", "unsolo"]
+    do: {keys: ctrl+s}
+    help: Toggle solo on the selected track (verify)
+  - say: ["mute", "mute track", "mute [the] track", "unmute"]
+    do: {keys: ctrl+m}
+    help: Toggle mute on the selected track (verify)
+  - say: ["arm", "arm track", "record enable", "disarm"]
+    do: {keys: ctrl+r}
+    help: Toggle record enable on the selected track (verify)
+
+  # --- editing ----------------------------------------------------------
+  - say: ["split", "split here", "split at playhead", "cut here"]
+    do: {keys: cmd+t}
+  - say: ["join", "join regions"]
+    do: {keys: cmd+j}
+  - say: ["repeat region", "repeat regions"]
+    do: {keys: cmd+r}
+  - say: ["quantize", "quantize that"]
+    do: {keys: q}
+    reply: Quantized
+  - say: ["delete", "delete that", "remove that"]
+    fuzzy: false
+    do: {keys: delete}
+  - say: ["set locators", "loop selection"]
+    do: {keys: cmd+u}
+
+  # --- views ------------------------------------------------------------
+  - say: ["mixer", "show [the] mixer", "hide [the] mixer"]
+    do: {keys: x}
+  - say: ["library", "show [the] library"]
+    do: {keys: y}
+  - say: ["inspector", "show [the] inspector"]
+    do: {keys: i}
+  - say: ["editor", "show [the] editor", "editors"]
+    do: {keys: e}
+  - say: ["piano roll", "show [the] piano roll"]
+    do: {keys: p}
+  - say: ["score", "score editor"]
+    do: {keys: n}
+  - say: ["smart controls"]
+    do: {keys: b}
+  - say: ["loops", "loop browser", "apple loops"]
+    do: {keys: o}
+  - say: ["browser", "browsers", "file browser"]
+    do: {keys: f}
+  - say: ["global tracks", "tempo track"]
+    do: {keys: g}
+  - say: ["automation", "show automation"]
+    do: {keys: a}
+  - say: ["musical typing"]
+    do: {keys: cmd+k}
+
+  # --- zoom -------------------------------------------------------------
+  - say: ["zoom in"]
+    do: {keys: cmd+right}
+  - say: ["zoom out"]
+    do: {keys: cmd+left}
+  - say: ["zoom in vertical", "taller tracks"]
+    do: {keys: cmd+down}
+  - say: ["zoom out vertical", "shorter tracks"]
+    do: {keys: cmd+up}
+  - say: ["zoom to fit", "zoom to selection", "fit"]
+    do: {keys: z}
+
+  # --- project ----------------------------------------------------------
+  - say: ["bounce", "bounce [the] project", "export mix"]
+    fuzzy: false
+    do: {keys: cmd+b}
+    repeatable: false
