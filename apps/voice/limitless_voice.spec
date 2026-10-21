@@ -25,7 +25,7 @@ binaries = collect_dynamic_libs("vosk")
 
 hidden = ["yaml", "platformdirs"]
 if mac:
-    hidden += ["pynput.keyboard._darwin", "pynput.mouse._darwin", "AppKit", "ApplicationServices"]
+    hidden += ["pynput.keyboard._darwin", "pynput.mouse._darwin", "AppKit", "ApplicationServices", "AVFoundation", "ServiceManagement"]
 elif win:
     hidden += ["pynput.keyboard._win32", "pynput.mouse._win32",
                "pyttsx3.drivers", "pyttsx3.drivers.sapi5", "comtypes", "comtypes.client"]

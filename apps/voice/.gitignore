@@ -3,5 +3,5 @@ __pycache__/
 venv/
 build/
 dist/
-models/
+models
 *.zip

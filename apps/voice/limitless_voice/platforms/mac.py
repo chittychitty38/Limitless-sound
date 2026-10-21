@@ -40,21 +40,54 @@ class MacPlatform(Platform):
             raise RuntimeError(r.stderr.strip() or "AppleScript failed")
         return r.stdout.strip()
 
-    def permission_problems(self):
-        problems = []
+    # -- permissions -----------------------------------------------------
+
+    def mic_permission(self):
+        try:
+            from AVFoundation import AVCaptureDevice, AVMediaTypeAudio
+            status = AVCaptureDevice.authorizationStatusForMediaType_(AVMediaTypeAudio)
+        except Exception:
+            return "granted"  # can't tell; let the system prompt when the mic opens
+        # 0 not determined, 1 restricted, 2 denied, 3 authorized
+        return {0: "ask", 3: "granted"}.get(int(status), "denied")
+
+    def request_mic_permission(self, done):
+        try:
+            from AVFoundation import AVCaptureDevice, AVMediaTypeAudio
+            AVCaptureDevice.requestAccessForMediaType_completionHandler_(
+                AVMediaTypeAudio, lambda granted: done(bool(granted)))
+        except Exception:
+            done(True)
+
+    def control_permission(self):
         try:
             from ApplicationServices import AXIsProcessTrusted
-            trusted = AXIsProcessTrusted()
+            return bool(AXIsProcessTrusted())
         except Exception:
-            trusted = True  # can't tell; don't nag
-        if not trusted:
-            problems.append((
-                "Allow Limitless Voice to control the computer",
-                "Open Accessibility settings, turn on Limitless Voice, then come back. "
-                "This is what lets spoken commands press keys in Logic and Pro Tools.",
-                ACCESSIBILITY_PANE,
-            ))
-        return problems
+            return True  # can't tell; don't nag
+
+    def request_control_permission(self):
+        """Adds us to the Accessibility list and shows macOS's own prompt."""
+        try:
+            from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+            AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+        except Exception:
+            self.open_settings(ACCESSIBILITY_PANE)
+
+    def mic_settings_link(self):
+        return MICROPHONE_PANE
+
+    def control_settings_link(self):
+        return ACCESSIBILITY_PANE
+
+    def set_login_item(self, enabled):
+        # macOS 13+: the app appears under System Settings > General > Login Items
+        from ServiceManagement import SMAppService
+        service = SMAppService.mainAppService()
+        ok, err = (service.registerAndReturnError_(None) if enabled
+                   else service.unregisterAndReturnError_(None))
+        if not ok and err is not None:
+            raise RuntimeError(str(err.localizedDescription()))
 
     def open_settings(self, link):
         subprocess.run(["open", link])

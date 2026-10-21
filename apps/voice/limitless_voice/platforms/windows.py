@@ -88,5 +88,19 @@ class WindowsPlatform(Platform):
     def permission_problems(self):
         return []
 
+    def set_login_item(self, enabled):
+        import sys
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                             r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+        with key:
+            if enabled:
+                winreg.SetValueEx(key, "Limitless Voice", 0, winreg.REG_SZ, f'"{sys.executable}"')
+            else:
+                try:
+                    winreg.DeleteValue(key, "Limitless Voice")
+                except FileNotFoundError:
+                    pass
+
     def open_settings(self, link):
         os.startfile(link)

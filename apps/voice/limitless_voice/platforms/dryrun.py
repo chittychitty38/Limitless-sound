@@ -1,6 +1,6 @@
 """A pretend platform that records what it would do. Used by tests and --dry-run."""
 
-from .base import AppRef, NotSupported
+from .base import AppRef, NotSupported, Platform
 from ..keys import for_platform, parse_chord
 
 
@@ -48,8 +48,32 @@ class DryRunPlatform:
     def wait(self, seconds):
         self._record("wait", seconds)
 
-    def permission_problems(self):
-        return []
+    mic_state = "granted"
+    control_state = True
+
+    def mic_permission(self):
+        return self.mic_state
+
+    def request_mic_permission(self, done):
+        self.mic_state = "granted"
+        done(True)
+
+    def control_permission(self):
+        return self.control_state
+
+    def request_control_permission(self):
+        self._record("ask control permission")
+
+    def mic_settings_link(self):
+        return "settings:microphone"
+
+    def control_settings_link(self):
+        return "settings:accessibility"
+
+    permission_problems = Platform.permission_problems
+
+    def set_login_item(self, enabled):
+        self._record("login item", enabled)
 
     def open_settings(self, link):
         self._record("open settings", link)

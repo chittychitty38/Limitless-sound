@@ -24,12 +24,17 @@ Not covered yet: Linux, Chromebooks, iPad.
 ## Install
 
 **Mac:** open the `.dmg`, drag Limitless Voice into Applications, open it.
-The first time, macOS asks two things:
-1. *Allow microphone access*: choose Allow.
-2. *Allow Limitless Voice to control the computer* (Accessibility). The app
-   shows a button that opens the right settings page; turn Limitless Voice on
-   there, then press "I've done it, check again". This is what lets spoken
-   commands press keys in Logic and Pro Tools.
+A one-minute setup guide (spoken aloud as well as shown) walks through:
+1. *Microphone*: press Allow microphone, then Allow in the macOS prompt.
+2. *Control the computer* (Accessibility): press the button, turn on
+   Limitless Voice in the list that opens, and come back. The guide notices
+   by itself and moves on. This is what lets spoken commands press keys in
+   Logic and Pro Tools.
+3. *Mic check*: pick your mic and say "what can I say".
+4. *How it answers you*: spoken replies, the on-screen display, larger text,
+   high contrast, start at login.
+
+Run it again any time from the menu bar icon > Run setup again.
 
 **Windows:** run `LimitlessVoiceSetup.exe` and follow the steps. It installs
 for your user only, so it doesn't need an administrator password. Windows may
@@ -66,6 +71,12 @@ Built-in safety:
 - Record, delete, bounce and save-as only run on the exact words, never a
   near miss, so a lyric like "recorded" can't start a take.
 - While the app is talking, it stops listening, so it never hears itself.
+
+**While you work in Logic or Pro Tools** a small card at the bottom of the
+screen shows what it heard and what it did, then fades. It never takes focus.
+The menu bar icon shows the state at a glance: green listening, grey asleep,
+red take mode, blue dictating. Closing the window keeps it listening from the
+menu bar; choose Quit there to stop it.
 
 **The window** works with VoiceOver, NVDA, Narrator and JAWS, and entirely by
 keyboard (Ctrl+L, or Cmd+L on Mac, toggles listening). Settings has larger text, a
@@ -144,7 +155,9 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 
 | File | Job |
 |---|---|
-| `app.py` | The window, settings, first-run checks |
+| `app.py` | The window, menu bar icon, settings, permission checks |
+| `onboarding.py` | The first-launch setup guide |
+| `hud.py` | The floating card showing what was heard, and the state icons |
 | `audio.py` | Microphone (any device, any rate, survives unplugging) and recognition. Each utterance goes to two recognizers: one limited to command phrases (accurate on poor mics) and one open (for dictation and free text) |
 | `engine.py` | Sleep/wake, dictation, confirm, repeat, picks the command for the app in front |
 | `grammar.py` | Loads command files, matches phrases, builds the recognizer's phrase list |

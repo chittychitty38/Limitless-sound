@@ -34,6 +34,9 @@ class Settings:
     text_scale: float = 1.0
     high_contrast: bool = False
     hotkey: str = ""               # e.g. "<ctrl>+<alt>+l"; toggles listening
+    show_hud: bool = True          # floating card showing what was heard
+    hud_seconds: float = 3.0
+    keep_in_menu_bar: bool = True  # closing the window keeps it listening
     first_run_done: bool = False
     extra: dict = field(default_factory=dict)
 

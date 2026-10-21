@@ -6,6 +6,7 @@ accessible name, results are announced, text can be enlarged and there's a
 high-contrast theme.
 """
 
+import os
 import sys
 import threading
 
@@ -27,6 +28,7 @@ from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .numbers import NUMBER_WORDS
 from .platforms import current_os, get_platform
 from .settings import APP_NAME, Settings, user_packs_dir
+from .hud import Hud, state_icon
 from .suite import Suite
 from .voice_out import Speaker
 
@@ -203,6 +205,8 @@ class MainWindow(QMainWindow):
         self.suite = Suite(self.engine, on_change=self._update_state, on_phrases=self._suite_phrases,
                            on_speaking=self._suite_speaking, dispatch=self.bridge.call.emit)
 
+        self._quitting = False
+        self.hud = Hud()
         self._build_ui()
         self.apply_settings()
 
@@ -214,17 +218,66 @@ class MainWindow(QMainWindow):
             use_command_vocabulary=settings.command_vocabulary,
         )
         self.bridge.heard.connect(self.on_heard)
-        self.bridge.level.connect(lambda lv: self.level.setValue(int(lv * 100)))
+        self.bridge.level.connect(self._on_level)
         self.bridge.error.connect(self.on_mic_error)
-        self.listener.start()
+        self.wizard = None
+        self._listening_started = False
+        self._last_problem = None
+        # On a Mac, opening the mic before permission is granted gives silence,
+        # so the listener starts once the microphone is allowed.
+        if platform.mic_permission() == "granted":
+            self.start_listener()
         self.suite.start()
 
         self.focus_timer = QTimer(self)
         self.focus_timer.timeout.connect(self._track_focus)
         self.focus_timer.start(500)
+        self.permission_timer = QTimer(self)
+        self.permission_timer.timeout.connect(self._check_permissions)
+        self.permission_timer.start(2000)
 
         self._update_state()
         self._check_permissions()
+
+    def start_listener(self):
+        if not self._listening_started and self.listener:
+            self._listening_started = True
+            self.listener.start()
+
+    def choose_mic(self, name):
+        self.settings.mic_name = name
+        self.settings.save()
+        idx = self.mic_combo.findData(name)
+        self.mic_combo.blockSignals(True)
+        self.mic_combo.setCurrentIndex(max(0, idx))
+        self.mic_combo.blockSignals(False)
+        self.listener.set_device(self._device_index(name))
+
+    def _on_level(self, level):
+        self.level.setValue(int(level * 100))
+        if self.wizard is not None:
+            self.wizard.on_level(level)
+
+    def show_setup(self):
+        from .onboarding import SetupWizard
+        if self.wizard is not None:
+            self.wizard.raise_()
+            return
+        self.wizard = SetupWizard(self)
+        self.wizard.finished.connect(self._setup_done)
+        self.wizard.show()
+
+    def _setup_done(self, _result):
+        self.wizard = None
+        self.start_listener() if self.platform.mic_permission() == "granted" else None
+        self._check_permissions()
+        self._update_state()
+
+    def set_login_item(self, enabled):
+        try:
+            self.platform.set_login_item(enabled)
+        except Exception as e:
+            self._show_did(f"Couldn't change the login setting: {e}")
 
     # -- layout --------------------------------------------------------
 
@@ -320,21 +373,43 @@ class MainWindow(QMainWindow):
         self.tray = None
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
-        self.tray = QSystemTrayIcon(self.windowIcon(), self)
+        self.tray = QSystemTrayIcon(state_icon("awake"), self)
         menu = QMenu()
+        self.tray_status = QAction("Listening", self)
+        self.tray_status.setEnabled(False)
+        menu.addAction(self.tray_status)
         self.tray_toggle = QAction("Listen", self)
         self.tray_toggle.triggered.connect(self.toggle_listening)
         menu.addAction(self.tray_toggle)
-        show = QAction("Show window", self)
-        show.triggered.connect(lambda: (self.showNormal(), self.raise_(), self.activateWindow()))
+        menu.addSeparator()
+        show = QAction("Show Limitless Voice", self)
+        show.triggered.connect(self.bring_forward)
         menu.addAction(show)
+        cmds = QAction("What can I say?", self)
+        cmds.triggered.connect(self.show_commands)
+        menu.addAction(cmds)
+        setup = QAction("Run setup again…", self)
+        setup.triggered.connect(self.show_setup)
+        menu.addAction(setup)
         menu.addSeparator()
         quit_ = QAction("Quit Limitless Voice", self)
-        quit_.triggered.connect(QApplication.quit)
+        quit_.triggered.connect(self.quit_app)
         menu.addAction(quit_)
         self.tray.setContextMenu(menu)
         self.tray.setToolTip(APP_NAME)
+        self.tray.activated.connect(
+            lambda reason: self.bring_forward() if reason == QSystemTrayIcon.DoubleClick else None)
         self.tray.show()
+
+    def quit_app(self):
+        self._quitting = True
+        self.shutdown()
+        QApplication.quit()
+
+    def bring_forward(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     # -- settings ------------------------------------------------------
 
@@ -462,10 +537,23 @@ class MainWindow(QMainWindow):
         self.listen_btn.setText(text)
         self.listen_btn.setAccessibleName(text)
         self.listen_btn.setChecked(self.engine.awake)
+        state = self.suite.listening()
+        if state != getattr(self, "_shown_state", None):
+            self._shown_state = state
+            self.hud.set_state(state)
+            self.setWindowIcon(state_icon(state))
+            if self.tray:
+                self.tray.setIcon(state_icon(state))
+                self.tray.setToolTip(f"{APP_NAME}: {text}")
+                self.tray_status.setText(text)
         if self.tray:
             self.tray_toggle.setText("Go to sleep" if self.engine.awake else "Wake up")
 
     def on_heard(self, heard, alternative):
+        if self.wizard is not None:
+            # during setup, speech is only a microphone test
+            self.wizard.on_heard(heard, alternative)
+            return
         try:
             result = self.engine.handle(heard, alternative)
         except Exception as e:
@@ -484,6 +572,10 @@ class MainWindow(QMainWindow):
         if result.message:
             first_line = result.message.splitlines()[0]
             self._show_did(("✓ " if result.handled else "? ") + first_line)
+            if self.settings.show_hud and not self.isActiveWindow():
+                did = first_line if result.handled else "Didn't catch a command"
+                self.hud.show_message(shown.replace("[unk]", "").strip(), did, result.handled,
+                                      self.settings.hud_seconds)
             self.history.insertItem(0, f"{shown}  →  {first_line}")
             while self.history.count() > 200:
                 self.history.takeItem(self.history.count() - 1)
@@ -529,11 +621,20 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(user_packs_dir())))
 
     def _check_permissions(self):
+        if self.platform.mic_permission() == "granted":
+            self.start_listener()
         problems = self.platform.permission_problems()
         if not problems:
+            if self._last_problem is not None:
+                self._last_problem = None
+                self.permission_box.hide()
+                self._show_did("\u2713 All set")
             self.permission_box.hide()
             return
         title, how, link = problems[0]
+        if title == self._last_problem:
+            return
+        self._last_problem = title
         self.permission_text.setText(f"<b>{title}</b><br>{how}")
         try:
             self.permission_open.clicked.disconnect()
@@ -545,11 +646,26 @@ class MainWindow(QMainWindow):
         announce(self.permission_text, f"{title}. {how}")
 
     def closeEvent(self, event):
+        if self.tray is not None and self.settings.keep_in_menu_bar and not self._quitting:
+            # keep listening from the menu bar, like other Mac menu bar apps
+            event.ignore()
+            self.hide()
+            if not self.settings.extra.get("told_menu_bar"):
+                self.settings.extra["told_menu_bar"] = True
+                self.settings.save()
+                self.tray.showMessage(APP_NAME, "Still listening. Open it again from the menu bar icon.")
+                self.speaker.say("Still listening from the menu bar")
+            return
+        self.shutdown()
+        super().closeEvent(event)
+        QApplication.quit()
+
+    def shutdown(self):
+        self.hud.hide()
         self.suite.stop()
         self.listener.stop()
         if self.hotkey_listener:
             self.hotkey_listener.stop()
-        super().closeEvent(event)
 
 
 USER_PACKS_HELP = """Your own voice commands go in this folder.
@@ -625,10 +741,13 @@ def ensure_model(parent, name=""):
 
 
 def run(argv=None):
+    # Qt on macOS activates the whole app whenever any window is raised, which
+    # would pull focus away from Logic or Pro Tools. Turn that off.
+    os.environ.setdefault("QT_MAC_SET_RAISE_PROCESS", "0")
     QApplication.setApplicationName(APP_NAME)
     QApplication.setApplicationDisplayName(APP_NAME)
     app = QApplication(argv if argv is not None else sys.argv)
-    app.setQuitOnLastWindowClosed(True)
+    app.setQuitOnLastWindowClosed(False)   # the menu bar icon keeps it running
     icon_path = DEFAULT_PACK_DIR.parent / "assets" / "icon.png"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
@@ -640,11 +759,10 @@ def run(argv=None):
     platform = get_platform()
     win = MainWindow(settings, platform, model_path)
     win.setWindowTitle(f"{APP_NAME} {__version__}")
-    if not settings.first_run_done:
-        settings.first_run_done = True
-        settings.save()
-        win.speaker.say("Limitless Voice is ready. Say what can I say to hear the commands.")
     win.show()
+    if not settings.first_run_done or platform.permission_problems() or platform.mic_permission() == "ask":
+        QTimer.singleShot(400, win.show_setup)
+    app.aboutToQuit.connect(win.shutdown)
     return app.exec()
 
 

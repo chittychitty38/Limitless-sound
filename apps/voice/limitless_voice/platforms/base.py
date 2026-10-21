@@ -101,10 +101,50 @@ class Platform:
         time.sleep(seconds)
 
     # -- permissions -----------------------------------------------------
+    # Mac asks before an app may use the microphone or press keys in other
+    # apps. Other systems don't, so the defaults say "granted".
+
+    def mic_permission(self):
+        """"granted", "denied" or "ask" (never asked yet)."""
+        return "granted"
+
+    def request_mic_permission(self, done):
+        """Show the system's microphone prompt; done(granted) is called on any thread."""
+        done(True)
+
+    def control_permission(self):
+        """True when we're allowed to press keys in other apps."""
+        return True
+
+    def request_control_permission(self):
+        """Show the system's prompt for controlling the computer, if there is one."""
+
+    def mic_settings_link(self):
+        return None
+
+    def control_settings_link(self):
+        return None
 
     def permission_problems(self):
         """Things the user must allow before we can work, as (title, how-to, settings link)."""
-        return []
+        problems = []
+        if self.mic_permission() == "denied":
+            problems.append((
+                "Allow Limitless Voice to use the microphone",
+                "Open Microphone settings, turn on Limitless Voice, then come back.",
+                self.mic_settings_link(),
+            ))
+        if not self.control_permission():
+            problems.append((
+                "Allow Limitless Voice to control the computer",
+                "Open Accessibility settings, turn on Limitless Voice, then come back. "
+                "This is what lets spoken commands press keys in Logic and Pro Tools.",
+                self.control_settings_link(),
+            ))
+        return problems
 
     def open_settings(self, link):
         pass
+
+    def set_login_item(self, enabled):
+        """Start (or stop starting) this app when the user logs in."""
