@@ -26,7 +26,7 @@ What "tested" means below:
 | Hub | A message could carry a negative step count and run a link loop past the 4-step safety limit (17 steps). | Fixed on PR #7. |
 | Hub | Two copies of the same app knocked each other off the hub forever (30 reconnects in 3 s). | Fixed on PR #7. |
 | GazeStage | A note held with a switch kept sounding forever when the window lost focus, and the switch stopped working. | Fixed on PR #11. |
-| Voice | "Delete fifty times" pressed Delete 50 times from one utterance; same for cut and paste. One misheard phrase could wipe a session. | Sent to the Voice thread. |
+| Voice | "Delete fifty times" pressed Delete 50 times from one utterance; same for cut and paste. One misheard phrase could wipe a session. | Fixed on PR #1 (4dc4aff): at most 3. |
 | Control | A trigger held near its threshold with a tremor fired 9 commands in 3 seconds. | Sent to the Control thread. |
 
 ## App by app
@@ -48,10 +48,11 @@ What "tested" means below:
 
 ### Limitless Voice (`apps/voice`, PR #1)
 - Unit tested, including synthetic speech (espeak-ng) through the real recognizer.
-- Stress tested at the engine level. The real-recognizer stress tests (two minutes each of
-  white noise, pink noise, mains hum and a band playing; studio chatter; spoken commands under
-  music at three loudness levels) run in the Stress tests workflow on Mac and Linux. They
-  could not run in the sandbox these tests were written in, so their first results come from CI.
+- Stress tested, including the real speech model on synthetic voices (espeak-ng) on PR #1:
+  two minutes each of white noise, pink noise, mains hum and a band playing fired **no**
+  commands; 13 sentences of studio chatter fired none; 20 spoken commands under music were
+  understood 20/20 at 30 dB and 15 dB, 18/20 with loud music (6 dB). The same tests run with the
+  Mac's own voices in the Stress tests workflow.
 - Never heard a real voice through a real Mac microphone. Accuracy on a cheap mic, with a
   speech difference, or with a band playing is unknown.
 

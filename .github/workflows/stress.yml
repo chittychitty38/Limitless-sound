@@ -19,6 +19,7 @@ on:
 env:
   STRESS_SECONDS: ${{ github.event_name == 'pull_request' && '20' || github.event.inputs.seconds || '600' }}
   PYTHONUNBUFFERED: "1"
+  PYTHONUTF8: "1"   # Windows consoles default to cp1252; the reports print arrows and µ
 
 jobs:
   engines:

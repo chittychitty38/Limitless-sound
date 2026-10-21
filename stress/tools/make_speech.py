@@ -9,12 +9,13 @@ engine as text, so the list never drifts from the command packs.
 """
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("STRESS_REPO_ROOT") or Path(__file__).resolve().parents[2])
 sys.path.insert(0, str(ROOT / "apps" / "voice"))
 
 from limitless_voice.engine import Engine  # noqa: E402
