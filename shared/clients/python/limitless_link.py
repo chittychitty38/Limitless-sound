@@ -271,6 +271,10 @@ class Link:
             cb = self._waiting.pop(msg.get("id"), None)
             if cb:
                 self.dispatch(lambda: cb(msg))
+        elif op == "error" and msg.get("code") == "replaced":
+            # A newer copy of this app took over: step aside for good instead of fighting it.
+            self._stop.set()
+            self._close()
         elif op == "error" and not self.connected:
             self._close()
 

@@ -235,3 +235,17 @@ def test_cli_autostart(tmp_path, monkeypatch, capsys):
     assert calls == [True]
     assert json.loads(paths.settings_file().read_text())["autostart"] is True
     assert cli.main(["autostart", "off"]) == 0 and calls == [True, False]
+
+
+def test_two_copies_of_one_app_do_not_fight(hub):
+    first, _ = tool("zoom")
+    second, _ = tool("zoom")
+    flips = []
+    deadline = time.time() + 1.0
+    while time.time() < deadline:
+        flips.append(hub.bus.tools.get("zoom"))
+        time.sleep(0.01)
+    assert second.connected and not first.connected
+    assert len({id(c) for c in flips}) == 1, "the two copies kept kicking each other off"
+    first.stop()
+    second.stop()

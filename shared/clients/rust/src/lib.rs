@@ -265,6 +265,11 @@ fn session(inner: &Inner, port: u16, token: &str, on_invoke: &InvokeFn, on_event
                 let source = msg.get("source").and_then(Value::as_str).unwrap_or("");
                 on_event(name, msg.get("value").unwrap_or(&Value::Null), source);
             }
+            // A newer copy of this app took over: step aside for good instead of fighting it.
+            "error" if msg.get("code").and_then(Value::as_str) == Some("replaced") => {
+                inner.stopped.store(true, Ordering::SeqCst);
+                return Ok(());
+            }
             "error" if !inner.connected.load(Ordering::SeqCst) => return Ok(()),
             _ => {}
         }

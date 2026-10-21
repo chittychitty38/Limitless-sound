@@ -53,6 +53,14 @@ def _clean_text(v, limit=500) -> str:
     return str(v if v is not None else "")[:limit]
 
 
+def _depth(msg: dict) -> int:
+    """How many links led here, as an app reports it: trusted only within 0..MAX_DEPTH+1."""
+    d = msg.get("depth")
+    if isinstance(d, bool) or not isinstance(d, int):
+        return 0
+    return min(max(d, 0), MAX_DEPTH + 1)
+
+
 class Conn:
     """One connection: a tool, or the settings page / command line acting for the musician."""
 
@@ -73,8 +81,11 @@ class Conn:
 
 class Bus:
     def __init__(self, settings: dict, token: str, *, speaker=None, launcher=None,
-                 save: Callable[[dict], None] | None = None, clock=time.monotonic):
+                 save: Callable[[dict], None] | None = None, clock=time.monotonic,
+                 background: Callable[[Callable[[], None]], None] | None = None):
         self.lock = threading.RLock()
+        # Slow work (a closed app's command line) runs here, never while holding the lock.
+        self.background = background or (lambda fn: threading.Thread(target=fn, daemon=True).start())
         self.token = token
         self.speaker = speaker
         self.launcher = launcher
@@ -171,7 +182,9 @@ class Bus:
         old = self.tools.get(tool)
         if old is not None and old is not conn:
             old.closed = True
-            old.send({"op": "error", "message": "Another copy connected; closing this one."})
+            # The newest copy wins; clients stop reconnecting on "replaced" so two copies don't fight.
+            old.send({"op": "error", "code": "replaced",
+                      "message": "Another copy of this app connected; closing this one."})
         self.tools[tool] = conn
         conn.send({
             "op": "welcome", "protocol": PROTOCOL, "prefs": self.settings["prefs"],
@@ -246,7 +259,7 @@ class Bus:
                 conn.send({"op": "result", "id": req_id, **result})
 
         self.invoke(str(msg.get("action") or ""), msg.get("args") if isinstance(msg.get("args"), dict) else {},
-                    source=conn.tool or conn.kind, depth=int(msg.get("depth") or 0), on_result=reply)
+                    source=conn.tool or conn.kind, depth=_depth(msg), on_result=reply)
 
     def invoke(self, action: str, args: dict | None = None, *, source: str = "hub", depth: int = 0,
                on_result: Callable[[dict], None] | None = None) -> None:
@@ -285,7 +298,7 @@ class Bus:
                            "source": source, "depth": depth})
                 self._note(f"{self._who(source)} → {conn.name}: {self.label_for(f'{tool}.{act}')}", "action")
                 return
-            return done(self._offline(tool, act, args, source, depth))
+            return self._offline(tool, act, args, source, depth, done)
 
     def _invoke_chain(self, intent, providers, args, source, depth, done, failures) -> None:
         """Ask each app that can do an intent in turn, until one manages it
@@ -314,23 +327,32 @@ class Bus:
                     return f"{tool}.{a['id']}"
         return None
 
-    def _offline(self, tool: str, act: str, args: dict, source: str, depth: int) -> dict:
+    def _offline(self, tool: str, act: str, args: dict, source: str, depth: int,
+                 done: Callable[[dict], None]) -> None:
         spec = catalog.TOOLS.get(tool)
         if spec is None:
-            return {"ok": False, "message": f"No tool called '{tool}' is connected."}
+            return done({"ok": False, "message": f"No tool called '{tool}' is connected."})
         if self.launcher is None or not self.launcher.find(tool):
             msg = f"{spec['name']} isn't installed on this computer."
             self._note(msg, "warn")
-            return {"ok": False, "message": msg}
-        ok, message = self.launcher.run_cli(tool, act, args)
-        if ok:
-            self._note(f"{self._who(source)} → {spec['name']}: {self.label_for(f'{tool}.{act}')}", "action")
-            # The tool can't report back over its command line, so the hub reports for it.
-            self._emit_did(tool, act, self._catalog_intent(tool, act), args or None, source, depth)
-            return {"ok": True, "message": message}
-        msg = f"{spec['name']} isn't open. {message}".strip()
-        self._note(msg, "warn")
-        return {"ok": False, "message": msg}
+            return done({"ok": False, "message": msg})
+
+        def run() -> None:
+            # A command line can take seconds; the rest of the suite keeps moving meanwhile.
+            ok, message = self.launcher.run_cli(tool, act, args)
+            with self.lock:
+                if ok:
+                    self._note(f"{self._who(source)} → {spec['name']}: {self.label_for(f'{tool}.{act}')}", "action")
+                    # The tool can't report back over its command line, so the hub reports for it.
+                    self._emit_did(tool, act, self._catalog_intent(tool, act), args or None, source, depth)
+                    result = {"ok": True, "message": message}
+                else:
+                    msg = f"{spec['name']} isn't open. {message}".strip()
+                    self._note(msg, "warn")
+                    result = {"ok": False, "message": msg}
+            done(result)
+
+        self.background(run)
 
     def _catalog_intent(self, tool: str, act: str) -> str | None:
         for a in catalog.TOOLS.get(tool, {}).get("actions", []):
@@ -385,7 +407,7 @@ class Bus:
         if intent is None and act in conn.actions:
             intent = conn.actions[act].get("intent")
         self._emit_did(conn.tool, act, intent if intent in catalog.INTENTS else None,
-                       msg.get("value"), conn.tool, int(msg.get("depth") or 0))
+                       msg.get("value"), conn.tool, _depth(msg))
 
     def _emit_did(self, tool, act, intent, value, source, depth) -> None:
         self.emit(f"{tool}.{act}", value, source=source, depth=depth)
@@ -402,7 +424,7 @@ class Bus:
         if self.states.get(name, object()) == value:
             return
         self.states[name] = value
-        self.emit(name, value, source=conn.tool, depth=int(msg.get("depth") or 0))
+        self.emit(name, value, source=conn.tool, depth=_depth(msg))
 
     def set_state(self, name: str, value) -> None:
         with self.lock:

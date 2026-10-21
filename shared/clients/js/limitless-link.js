@@ -154,7 +154,11 @@ class Link extends EventEmitter {
       case 'prefs': this.prefs = msg.prefs || {}; this.emit('prefs', this.prefs); break;
       case 'actions': this.suiteActions = msg.actions || []; this.emit('actions', this.suiteActions); break;
       case 'result': { const cb = this._waiting.get(msg.id); if (cb) { this._waiting.delete(msg.id); cb(msg); } break; }
-      case 'error': if (!this.connected) this._sock?.destroy(); break;
+      case 'error':
+        // A newer copy of this app took over: step aside for good instead of fighting it.
+        if (msg.code === 'replaced') { this._stopped = true; this._sock?.destroy(); }
+        else if (!this.connected) this._sock?.destroy();
+        break;
     }
   }
 }
