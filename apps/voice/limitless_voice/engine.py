@@ -1,8 +1,10 @@
 """The voice command engine: takes recognized text, decides what to do.
 
-It knows three states:
+It knows four states:
   asleep     ignores everything except a wake phrase, so talking to a
              bandmate or singing a take never triggers anything
+  take       during a recording: only "stop" (and the sleep and wake words)
+             do anything, so lyrics can't trigger commands mid-take
   command    matches phrases against the packs for the app in front
   dictation  types what you say into the focused field
 """
@@ -23,9 +25,12 @@ AGAIN = {"again", "repeat that", "do that again", "one more time", "same again"}
 HELP = {"what can i say", "show commands", "help"}
 DICTATION_ON = {"start dictation", "dictation mode", "start typing"}
 DICTATION_OFF = {"stop dictation", "command mode", "stop typing"}
+# While a take is recording, only these do anything.
+TAKE_STOP = {"stop", "stop recording", "stop playback", "stop the take"}
+TAKE_OFF = {"end take mode", "take mode off", "all commands"}
 
 # Words the engine itself listens for, so the recognizer knows them too.
-BUILTIN_PHRASES = WAKE | SLEEP | CANCEL | YES | AGAIN | HELP | DICTATION_ON | DICTATION_OFF | {
+BUILTIN_PHRASES = WAKE | SLEEP | CANCEL | YES | AGAIN | HELP | DICTATION_ON | DICTATION_OFF | TAKE_STOP | TAKE_OFF | {
     "scratch that", "delete that", "new line", "new paragraph", "times", "twice",
 }
 
@@ -97,6 +102,8 @@ class Engine:
         self.last = None         # (command, params, times) for "again"
         self.own_names = {n.lower() for n in own_names}
         self.target = None       # last app in front that wasn't us
+        self.take = False        # a take is recording: only stop words count
+        self.suite = None        # the Limitless Sound link: other apps' actions by voice
         self._last_typed = ""
 
     # -- context -------------------------------------------------------
@@ -155,6 +162,18 @@ class Engine:
             self.dictating = False
             return self._reply(raw, "Going to sleep")
 
+        if self.take:
+            if any(t in TAKE_OFF for t in texts):
+                self.take = False
+                return self._reply(raw, "All commands back on")
+            if not any(t in TAKE_STOP for t in texts):
+                return Result(raw, False, "take")
+            self.take = False
+            found = self._match("stop", self.commands_for(self.current_app_name()))
+            if found:
+                return self._run(raw, found[0], found[1], 1)
+            return self._reply(raw, "All commands back on")
+
         if self.dictating:
             # dictation wants the open-vocabulary words, not the command guess
             return self._dictate(alternative or heard, texts)
@@ -187,6 +206,11 @@ class Engine:
             if found:
                 raw = t
                 break
+        if not found and self.suite is not None:
+            for t in texts:
+                hit = self.suite.match(t)
+                if hit:
+                    return self._reply(raw, self.suite.run(hit))
         if not found:
             body, times = split_repeat(text)
             found = self._fuzzy(body, commands)

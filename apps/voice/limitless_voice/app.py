@@ -27,6 +27,7 @@ from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .numbers import NUMBER_WORDS
 from .platforms import current_os, get_platform
 from .settings import APP_NAME, Settings, user_packs_dir
+from .suite import Suite
 from .voice_out import Speaker
 
 OWN_NAMES = (APP_NAME, "LimitlessVoice", "Limitless Voice.exe", "python", "python3", "Python")
@@ -67,6 +68,7 @@ class Bridge(QObject):
     heard = Signal(str, str)
     level = Signal(float)
     error = Signal(str)
+    call = Signal(object)   # calls from the Limitless Sound link
 
 
 class CommandsDialog(QDialog):
@@ -196,6 +198,10 @@ class MainWindow(QMainWindow):
         self.packs = load_packs([DEFAULT_PACK_DIR, user_packs_dir()], platform.os_name)
         self.engine = Engine(platform, self.packs, feedback=self._feedback,
                              start_awake=settings.start_listening, own_names=OWN_NAMES)
+        self._own_busy = self._suite_busy = False
+        self.bridge.call.connect(lambda fn: fn())
+        self.suite = Suite(self.engine, on_change=self._update_state, on_phrases=self._suite_phrases,
+                           on_speaking=self._suite_speaking, dispatch=self.bridge.call.emit)
 
         self._build_ui()
         self.apply_settings()
@@ -211,6 +217,7 @@ class MainWindow(QMainWindow):
         self.bridge.level.connect(lambda lv: self.level.setValue(int(lv * 100)))
         self.bridge.error.connect(self.on_mic_error)
         self.listener.start()
+        self.suite.start()
 
         self.focus_timer = QTimer(self)
         self.focus_timer.timeout.connect(self._track_focus)
@@ -429,7 +436,11 @@ class MainWindow(QMainWindow):
     # -- listening -------------------------------------------------------
 
     def _phrases(self):
-        return command_phrases(self.packs)
+        return command_phrases(self.packs) | self.suite.phrases()
+
+    def _suite_phrases(self):
+        if self.listener:
+            self.listener.set_phrases(self._phrases())
 
     def toggle_listening(self):
         self.engine.awake = not self.engine.awake
@@ -445,6 +456,9 @@ class MainWindow(QMainWindow):
             text = "Listening: say \"go to sleep\" to pause"
         else:
             text = "Asleep: say \"wake up\" or press here to start"
+        if self.engine.take and self.engine.awake:
+            text = "Take mode: only \"stop\" works until the take ends"
+        self.suite.report_state()
         self.listen_btn.setText(text)
         self.listen_btn.setAccessibleName(text)
         self.listen_btn.setChecked(self.engine.awake)
@@ -459,8 +473,9 @@ class MainWindow(QMainWindow):
             self._show_did(f"That didn't work: {e}")
             self.speaker.say("That didn't work")
         self._update_state()
-        if result is None or result.message == "asleep":
+        if result is None or result.message in ("asleep", "take"):
             return
+        self.suite.report(result)
         if self.engine.dictating or not result.handled:
             shown = alternative or heard   # the plain-English transcript reads better
         else:
@@ -476,12 +491,19 @@ class MainWindow(QMainWindow):
                 self.show_commands()
 
     def _feedback(self, msg):
-        self.speaker.say(msg)
+        # with the suite's one voice on, the hub speaks so apps never talk over each other
+        if not self.settings.speak_feedback or not self.suite.say(msg):
+            self.speaker.say(msg)
 
     def _speaking(self, busy):
-        # don't let the mic hear our own voice
+        # don't let the mic hear our own voice, or the suite's
+        self._own_busy = busy
         if self.listener:
-            self.listener.paused = busy
+            self.listener.paused = self._own_busy or self._suite_busy
+
+    def _suite_speaking(self, busy):
+        self._suite_busy = busy
+        self._speaking(self._own_busy)
 
     def _show_did(self, text):
         self.did_label.setText(text)
@@ -523,6 +545,7 @@ class MainWindow(QMainWindow):
         announce(self.permission_text, f"{title}. {how}")
 
     def closeEvent(self, event):
+        self.suite.stop()
         self.listener.stop()
         if self.hotkey_listener:
             self.hotkey_listener.stop()

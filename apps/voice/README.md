@@ -165,3 +165,21 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
    virtual Mackie Control / HUI surface, which both DAWs support.
 5. **More apps and languages:** command files for Ableton Live, Studio One,
    REAPER, GarageBand, FL Studio; Vosk has models for 20+ languages.
+
+## Works with the rest of Limitless Sound
+
+When the Limitless Sound hub is running, Limitless Voice joins the suite by itself:
+
+- **Say any app's actions.** "Screen colors on", "one hand mode", "next layer", "zoom keys
+  off"... Your own commands always come first.
+- **Take mode.** When a recording starts from any app (a controller button, GazeStage, your
+  voice), Voice goes into take mode: only "stop" works, so lyrics and talk-back can't trigger
+  commands. "Stop" ends the take and brings every command back. "All commands" ends take mode
+  without stopping.
+- **Voice works for the others.** Apps that can't press keys (GazeStage) can ask Voice to
+  record, undo, save, mute and more, and anything can run a spoken command (`voice.do`).
+- **One voice.** With that setting on, Voice's spoken replies go through the suite's one
+  voice, and Voice stops listening while any app is being spoken for.
+
+Without the hub nothing changes. The link is `limitless_voice/suite.py`, using a copy of
+`shared/clients/python/limitless_link.py`.
