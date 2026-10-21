@@ -1,617 +1,148 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; worker-src 'self' blob:">
 <title>GazeStage</title>
-<!--
-  GazeStage: eye and head tracking control for Pro Tools and virtual instruments.
-  Limitless Sound. Runs as the GazeStage desktop app (Mac, Windows, Linux) or in Chrome/Edge
-  when served over http(s). Everything it needs (face model included) ships with it: no internet.
-
-  Signal path:
-    webcam -> MediaPipe Face Landmarker (iris + head pose) -> calibrated, smoothed pointer
-      -> Transport page: HUI button presses over MIDI -> Pro Tools (HUI peripheral)
-      -> Play page: MIDI notes -> virtual MIDI port -> instrument track / any virtual instrument
-    microphone -> sound onset (pop, click, "ta") -> works as a switch
-  Nothing leaves the computer: video is processed locally in the browser.
--->
-<style>
-:root {
-  --bg: #f6f5f1; --panel: #ffffff; --ink: #16181d; --muted: #5b616e; --line: #d7d9de;
-  --accent: #0b5fff; --accent-ink: #ffffff; --hot: #ffb000; --rec: #c4001a; --ok: #0a7a3d;
-  --pad: #e9ecf3; --pad-root: #dbe6ff; --focus: #000000;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1115; --panel: #181b21; --ink: #f2f3f5; --muted: #a3a9b6; --line: #2c313a;
-    --accent: #5b9bff; --accent-ink: #0f1115; --hot: #ffc233; --rec: #ff4d5e; --ok: #3ddc84;
-    --pad: #232833; --pad-root: #26365a; --focus: #ffffff;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0f1115; --panel: #181b21; --ink: #f2f3f5; --muted: #a3a9b6; --line: #2c313a;
-  --accent: #5b9bff; --accent-ink: #0f1115; --hot: #ffc233; --rec: #ff4d5e; --ok: #3ddc84;
-  --pad: #232833; --pad-root: #26365a; --focus: #ffffff;
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body {
-  background: var(--bg); color: var(--ink);
-  font: 18px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-  display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
-}
-header {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-  padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
-}
-header h1 { font-size: 20px; margin: 0 12px 0 0; letter-spacing: .2px; }
-header label { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
-select, button.small, input[type=range] { font: inherit; font-size: 14px; }
-select, button.small {
-  background: var(--bg); color: var(--ink); border: 1px solid var(--line);
-  border-radius: 8px; padding: 6px 10px;
-}
-button.small { cursor: pointer; }
-button.small.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-main { position: relative; padding: 16px; min-height: 0; }
-.page { display: none; height: 100%; }
-.page.active { display: grid; }
-#transport { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 16px; }
-#play { grid-template-rows: auto 1fr; gap: 12px; }
-#padgrid { display: grid; gap: 12px; min-height: 0; }
-.target {
-  position: relative; border: 3px solid var(--line); border-radius: 18px; background: var(--pad);
-  color: var(--ink); font-weight: 600; font-size: 28px; line-height: 1.1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  user-select: none; cursor: pointer; overflow: hidden;
-}
-.target small { font-size: 15px; font-weight: 500; color: var(--muted); }
-.target .glyph { font-size: 44px; line-height: 1; }
-.target.root { background: var(--pad-root); }
-.target.gazed { border-color: var(--hot); border-width: 6px; }
-.target.on { background: var(--hot); color: #111; }
-.target.on small { color: #111; }
-.target.rec .glyph { color: var(--rec); }
-.target .dwell {
-  position: absolute; left: 0; bottom: 0; height: 10px; width: 0; background: var(--hot);
-}
-.nav { display: flex; gap: 12px; }
-.nav .target { flex: 1; min-height: 80px; font-size: 22px; }
-footer {
-  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
-  padding: 8px 16px; border-top: 1px solid var(--line); background: var(--panel);
-  font-size: 14px; color: var(--muted);
-}
-#status b { color: var(--ink); }
-#cursor {
-  position: fixed; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%;
-  border: 4px solid var(--hot); box-shadow: 0 0 0 3px rgba(0,0,0,.55); pointer-events: none;
-  z-index: 50; display: none;
-}
-#cam { position: fixed; right: 16px; bottom: 56px; width: 180px; border-radius: 10px;
-  transform: scaleX(-1); border: 1px solid var(--line); z-index: 40; background: #000;
-  pointer-events: none; opacity: .85; } /* never blocks clicks or gaze on the targets under it */
-#cam.hidden { display: none; }
-#calib { position: fixed; inset: 0; background: var(--bg); z-index: 60; display: none; }
-#calib.active { display: block; }
-#calib .msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-  text-align: center; max-width: 560px; font-size: 22px; padding: 0 16px; }
-#calib .dot { position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px;
-  border-radius: 50%; background: var(--rec); border: 6px solid var(--ink); }
-.ok { color: var(--ok); } .bad { color: var(--rec); }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>GazeStage</h1>
-  <button class="small primary" id="startBtn">Start camera</button>
-  <label>Pointer
-    <select id="mode">
-      <option value="head">Head pointer (most reliable)</option>
-      <option value="eyes">Eye gaze (needs calibration)</option>
-      <option value="mouse">Mouse (testing)</option>
-    </select>
-  </label>
-  <button class="small" id="calibBtn">Calibrate</button>
-  <label>Select by
-    <select id="select">
-      <option value="dwell">Dwell (look and hold)</option>
-      <option value="switch">Switch (Space / any key)</option>
-      <option value="blink">Long blink</option>
-      <option value="sound">Sound (pop, click or "ta" into the mic)</option>
-    </select>
-  </label>
-  <label id="micWrap">Mic sensitivity <input type="range" id="micSens" min="1" max="20" step="1" value="10">
-    <meter id="micLevel" min="0" max="1" value="0" style="width:60px"></meter></label>
-  <label>Camera <select id="camSel"><option value="">default</option></select></label>
-  <label>Dwell <input type="range" id="dwell" min="250" max="2500" step="50" value="800"> <span id="dwellVal">800 ms</span></label>
-  <label>Smoothing <input type="range" id="smooth" min="0" max="10" step="1" value="5"></label>
-  <label>Pro Tools out <select id="huiOut"><option value="">none</option></select></label>
-  <label>Pro Tools in <select id="huiIn"><option value="">none</option></select></label>
-  <label>Instrument out <select id="noteOut"><option value="">built-in sound</option></select></label>
-  <button class="small" id="camToggle">Hide camera</button>
-  <button class="small" id="topBtn" hidden>Keep on top: off</button>
+<!--
+  GazeStage: play music and run Pro Tools with your head, eyes, a sound or a switch.
+  Limitless Sound. Everything runs on this computer; nothing is recorded or sent anywhere.
+-->
+<header class="topbar">
+  <div class="brand" aria-label="GazeStage">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="16" cy="16" r="6" fill="#ffc233"/><path d="M4 16c3-6 7.5-9 12-9s9 3 12 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    GazeStage
+  </div>
+  <div class="chips" role="status" aria-live="polite">
+    <span class="chip" id="chipCamera"><span class="dot"></span><span>Camera <b>off</b></span></span>
+    <span class="chip opt" id="chipSelect"><span class="dot ok"></span><span>Select <b>Dwell</b></span></span>
+    <span class="chip" id="chipMidi"><span class="dot"></span><span>MIDI <b>…</b></span></span>
+    <span class="chip" id="chipPT"><span class="dot"></span><span>Pro Tools <b>not linked</b></span></span>
+  </div>
+  <div class="preview hidden" id="preview" title="Camera preview"><video id="cam" playsinline muted></video><span class="dot face" id="faceDot"></span></div>
+  <button class="tool" id="recenterBtn" title="Recenter pointer (⌘R)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>Recenter</button>
+  <button class="tool" id="calibBtn" title="Calibrate (⌘K)">Calibrate</button>
+  <button class="tool" id="settingsBtn" title="Settings (⌘,)" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>Settings</button>
 </header>
 
 <main>
+  <nav class="tabs" aria-label="Pages">
+    <button class="target" data-goto="transport" aria-current="page"><span class="glyph" aria-hidden="true">▶︎</span>Transport</button>
+    <button class="target" data-goto="play"><span class="glyph" aria-hidden="true">🎹</span>Instrument</button>
+    <button class="target pause" data-action="pause"><span class="glyph" aria-hidden="true">⏸︎</span>Pause</button>
+  </nav>
+
+  <div class="banner" id="faceBanner" role="alert"><span class="dot warn"></span><span id="faceBannerText">I can't see your face. Move back into view of the camera.</span></div>
+
   <section class="page active" id="transport" aria-label="Pro Tools transport">
-    <div class="target" data-hui="1"><span class="glyph" aria-hidden="true">⏪</span>Rewind<small>hold to rewind</small></div>
-    <div class="target" data-hui="4"><span class="glyph" aria-hidden="true">▶</span>Play<small>Pro Tools play</small></div>
-    <div class="target" data-hui="2"><span class="glyph" aria-hidden="true">⏩</span>Fast forward<small>hold to fast forward</small></div>
-    <div class="target rec" data-hui="5"><span class="glyph" aria-hidden="true">●</span>Record<small>arms transport record</small></div>
-    <div class="target" data-hui="3"><span class="glyph" aria-hidden="true">■</span>Stop<small>Pro Tools stop</small></div>
-    <div class="target" data-goto="play"><span class="glyph" aria-hidden="true">🎹</span>Play an instrument<small>open note pads</small></div>
+    <button class="target" data-hui="rewind" aria-label="Rewind (hold)"><span class="glyph" aria-hidden="true">⏪︎</span>Rewind<small>keep looking to keep rewinding</small></button>
+    <button class="target" data-hui="play" id="tPlay"><span class="glyph" aria-hidden="true">▶︎</span>Play<small id="tPlayState">Pro Tools play</small></button>
+    <button class="target" data-hui="fastForward" aria-label="Fast forward (hold)"><span class="glyph" aria-hidden="true">⏩︎</span>Fast forward<small>keep looking to keep going</small></button>
+    <button class="target rec" data-hui="record" id="tRec"><span class="glyph" aria-hidden="true">●</span>Record<small id="tRecState">record arm the transport</small></button>
+    <button class="target stop" data-hui="stop"><span class="glyph" aria-hidden="true">■</span>Stop<small>Pro Tools stop</small></button>
+    <p class="hint" id="transportHint"></p>
   </section>
 
-  <section class="page" id="play" aria-label="Instrument pads">
-    <div class="nav">
-      <div class="target" data-goto="transport">◀ Transport</div>
-      <div class="target" data-action="octdown">Octave −</div>
-      <div class="target" data-action="octup">Octave +</div>
-      <div class="target" data-action="scale" id="scaleBtn">Scale: Major</div>
-      <div class="target" data-action="latch" id="latchBtn">Hold notes: off</div>
-      <div class="target" data-action="panic">All notes off</div>
+  <section class="page" id="play" aria-label="Instrument">
+    <div class="controls">
+      <button class="target" data-action="octdown">Octave −<small id="octLabel">C4</small></button>
+      <button class="target" data-action="octup">Octave +<small>&nbsp;</small></button>
+      <button class="target" data-action="scale">Scale<small id="scaleLabel">C Major</small></button>
+      <button class="target" data-action="chords" aria-pressed="false">Chords<small id="chordsLabel">off</small></button>
+      <button class="target" data-action="hold" aria-pressed="false">Hold notes<small id="holdLabel">off</small></button>
+      <button class="target" data-action="sound">Sound<small id="soundLabel">Soft keys</small></button>
+      <button class="target" data-action="panic">Stop all<small>notes off</small></button>
     </div>
-    <div id="padgrid"></div>
+    <div id="pads" aria-label="Note pads"></div>
   </section>
 </main>
 
-<footer>
-  <span id="status">Camera: <b>off</b></span>
-  <span id="midiStatus">MIDI: <b>not ready</b></span>
-  <span id="huiStatus">Pro Tools link: <b>waiting</b></span>
-  <span id="last"></span>
-  <button class="small" id="themeBtn">Theme</button>
-</footer>
+<div id="cursor" aria-hidden="true"><svg viewBox="0 0 56 56"><circle class="halo" cx="28" cy="28" r="20"/><circle class="ring" cx="28" cy="28" r="20"/><circle class="fill" id="cursorFill" cx="28" cy="28" r="20" stroke-dasharray="0 126"/></svg></div>
 
-<div id="cursor" aria-hidden="true"></div>
-<video id="cam" class="hidden" playsinline muted></video>
-<div id="calib" aria-live="polite"><div class="msg" id="calibMsg"></div><div class="dot" id="calibDot"></div></div>
+<div class="overlay" id="pauseOverlay" role="dialog" aria-label="Paused">
+  <button class="target" data-action="resume"><span class="glyph" aria-hidden="true">▶︎</span>Resume<small>look here to continue</small></button>
+</div>
 
-<script type="module">
-// ---------- settings ----------
-const $ = (id) => document.getElementById(id);
-const store = {
-  get(k, d) { try { const v = localStorage.getItem('gazestage.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('gazestage.' + k, JSON.stringify(v)); } catch {} },
-};
-const ui = { mode: $('mode'), select: $('select'), dwell: $('dwell'), smooth: $('smooth') };
-for (const [k, el] of Object.entries(ui)) {
-  el.value = store.get(k, el.value);
-  el.addEventListener('change', () => { store.set(k, el.value); onSettings(); });
-  el.addEventListener('input', onSettings);
-}
-function onSettings() {
-  $('dwellVal').textContent = ui.dwell.value + ' ms';
-  $('micWrap').style.display = ui.select.value === 'sound' ? '' : 'none';
-  if (ui.select.value === 'sound') startMic();
-  filterX.setBeta(); filterY.setBeta();
-  $('cursor').style.display = (ui.mode.value === 'mouse' || tracking) ? 'block' : 'none';
-}
-$('themeBtn').onclick = () => {
-  const r = document.documentElement;
-  const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  r.dataset.theme = dark ? 'light' : 'dark'; store.set('theme', r.dataset.theme);
-};
-if (store.get('theme')) document.documentElement.dataset.theme = store.get('theme');
-$('camToggle').onclick = () => {
-  const hidden = $('cam').classList.toggle('hidden');
-  $('camToggle').textContent = hidden ? 'Show camera' : 'Hide camera';
-};
+<div class="overlay" id="calib" aria-live="polite"><div class="msg" id="calibMsg"></div><div class="tgt" id="calibDot"></div></div>
 
-// ---------- One Euro filter (low jitter when still, low lag when moving) ----------
-class OneEuro {
-  constructor() { this.x = null; this.dx = 0; this.t = 0; this.minCutoff = 1; this.beta = 0.01; }
-  setBeta() { const s = +ui.smooth.value; this.minCutoff = 3.0 / (1 + s); this.beta = 0.02 / (1 + s * 0.5); }
-  alpha(cutoff, dt) { const tau = 1 / (2 * Math.PI * cutoff); return 1 / (1 + tau / dt); }
-  filter(v, t) {
-    if (this.x == null) { this.x = v; this.t = t; return v; }
-    const dt = Math.max((t - this.t) / 1000, 1e-3); this.t = t;
-    const dx = (v - this.x) / dt;
-    this.dx += this.alpha(1, dt) * (dx - this.dx);
-    const cutoff = this.minCutoff + this.beta * Math.abs(this.dx);
-    this.x += this.alpha(cutoff, dt) * (v - this.x);
-    return this.x;
-  }
-}
-const filterX = new OneEuro(), filterY = new OneEuro();
-filterX.setBeta(); filterY.setBeta();
+<aside id="settings" role="dialog" aria-label="Settings" aria-hidden="true">
+  <header><h2>Settings</h2><button class="tool" id="closeSettings">Done</button></header>
+  <div class="body">
+    <section>
+      <h3>Pointer</h3>
+      <div class="row"><label for="sMode">Move the pointer with</label>
+        <select id="sMode"><option value="head">My head</option><option value="eyes">My eyes</option><option value="mouse">Mouse or another pointer</option></select>
+        <div class="help" id="sModeHelp"></div></div>
+      <div class="row"><label for="sRange">Head movement needed</label>
+        <select id="sRange"><option value="10">Small</option><option value="16">Medium</option><option value="24">Large</option></select></div>
+      <div class="row"><label for="sSmooth">Smoothing</label><input type="range" id="sSmooth" min="0" max="10" step="1"></div>
+      <div class="row"><label for="sCamera">Camera</label><select id="sCamera"><option value="">Default camera</option></select></div>
+      <div class="row"><label for="sPreview">Show camera preview</label><input type="checkbox" class="switch" id="sPreview"></div>
+      <div class="btnrow"><button class="tool" data-cmd="recenter">Recenter</button><button class="tool" data-cmd="calibrate">Calibrate</button><button class="tool" id="clearCal">Clear calibration</button></div>
+      <div class="help" id="calInfo" style="color:var(--muted);font-size:.85em"></div>
+    </section>
+    <section>
+      <h3>Selecting</h3>
+      <div class="row"><label for="sSelect">Select by</label>
+        <select id="sSelect"><option value="dwell">Dwell (look and hold)</option><option value="switch">Switch or key</option><option value="sound">Sound (pop, click or “ta”)</option><option value="blink">Long blink</option></select></div>
+      <div class="row"><label for="sDwell">Dwell time for buttons</label><span><input type="range" id="sDwell" min="300" max="2500" step="50"> <output id="sDwellOut"></output></span></div>
+      <div class="row"><label for="sPadDwell">Dwell time for note pads</label><span><input type="range" id="sPadDwell" min="0" max="1500" step="25"> <output id="sPadDwellOut"></output></span>
+        <div class="help">Short is best for playing. Zero plays a pad the moment you look at it.</div></div>
+      <div class="row"><label for="sBlink">Long blink length</label><span><input type="range" id="sBlink" min="250" max="1200" step="25"> <output id="sBlinkOut"></output></span></div>
+      <div class="row"><label for="sMic">Sound sensitivity</label><span><input type="range" id="sMic" min="1" max="20" step="1"> <meter id="micMeter" min="0" max="1" value="0"></meter></span></div>
+      <div class="row"><label for="sTick">Click sound when something is selected</label><input type="checkbox" class="switch" id="sTick"></div>
+    </section>
+    <section>
+      <h3>Instrument</h3>
+      <div class="row"><label for="sBuiltIn">Play the built-in sound</label><input type="checkbox" class="switch" id="sBuiltIn">
+        <div class="help">Turn this off when a Pro Tools instrument is playing the notes, so you don't hear both.</div></div>
+      <div class="row"><label for="sPreset">Built-in sound</label><select id="sPreset"></select></div>
+      <div class="row"><label for="sVolume">Volume</label><input type="range" id="sVolume" min="0" max="1" step="0.05"></div>
+      <div class="row"><label for="sKey">Key</label><select id="sKey"></select></div>
+      <div class="row"><label for="sScale">Scale</label><select id="sScale"></select></div>
+      <div class="row"><label for="sPads">Number of pads</label><select id="sPads"><option value="6">6 (largest)</option><option value="8">8</option><option value="12">12</option></select></div>
+      <div class="row"><label for="sVelocity">Loudness of notes</label><input type="range" id="sVelocity" min="30" max="127" step="1"></div>
+    </section>
+    <section>
+      <h3>Pro Tools and MIDI</h3>
+      <div id="midiNative">
+        <p style="margin:4px 0 8px">GazeStage has its own MIDI ports, so there is nothing to install.</p>
+        <ol class="steps">
+          <li>In Pro Tools choose <b>Setup › Peripherals › MIDI Controllers</b>.</li>
+          <li>Add a <b>HUI</b> with <b>Receive From</b> and <b>Send To</b> both set to <code>GazeStage HUI</code>.</li>
+          <li>For instruments, set an instrument track's MIDI input to <code>GazeStage Notes</code> and record-enable it.</li>
+        </ol>
+      </div>
+      <div id="midiWeb">
+        <div class="row"><label for="sOutHui">Pro Tools out</label><select id="sOutHui"></select></div>
+        <div class="row"><label for="sInHui">Pro Tools in</label><select id="sInHui"></select></div>
+        <div class="row"><label for="sOutNotes">Instrument out</label><select id="sOutNotes"></select></div>
+        <ol class="steps" id="midiWebSteps"></ol>
+      </div>
+    </section>
+    <section>
+      <h3>Display</h3>
+      <div class="row"><label for="sTheme">Appearance</label><select id="sTheme"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Match system</option></select></div>
+      <div class="row"><label for="sContrast">High contrast</label><input type="checkbox" class="switch" id="sContrast"></div>
+      <div class="row"><label for="sSize">Text size</label><select id="sSize"><option value="normal">Normal</option><option value="large">Large</option><option value="xlarge">Extra large</option></select></div>
+      <div class="row"><label for="sSpacing">Space between targets</label><select id="sSpacing"><option value="normal">Normal</option><option value="wide">Wide</option></select></div>
+      <div class="row"><label for="sOnTop">Keep window on top</label><input type="checkbox" class="switch" id="sOnTop"></div>
+    </section>
+    <section>
+      <h3>Setup</h3>
+      <div class="btnrow"><button class="tool" data-cmd="onboarding">Run guided setup again</button><button class="tool" id="resetAll">Reset all settings</button></div>
+      <p class="help" style="color:var(--muted);font-size:.85em" id="aboutLine"></p>
+    </section>
+  </div>
+</aside>
 
-// ---------- face tracking ----------
-let landmarker = null, tracking = false, lastVideoTime = -1;
-const video = $('cam');
-let features = null;       // latest raw feature vector for the active mode
-let blinkScore = 0;        // 0..1, both eyes closed
-let model = store.get('model', {}); // per-mode calibration: { head: {wx, wy}, eyes: {wx, wy} }
+<div class="overlay" id="onboard" role="dialog" aria-label="Guided setup"><div class="card" id="onboardCard"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
-$('startBtn').onclick = async () => {
-  $('startBtn').disabled = true;
-  $('status').innerHTML = 'Camera: <b>loading face model…</b>';
-  try {
-    const base = new URL('./vendor/', location.href).href;
-    const vision = await import(base + 'vision_bundle.mjs');
-    const files = await vision.FilesetResolver.forVisionTasks(base + 'wasm');
-    landmarker = await vision.FaceLandmarker.createFromOptions(files, {
-      baseOptions: {
-        modelAssetPath: base + 'face_landmarker.task',
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO', numFaces: 1,
-      outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
-    });
-    await openCamera();
-    listCameras();
-    $('cam').classList.remove('hidden'); $('camToggle').textContent = 'Hide camera';
-    tracking = true; onSettings();
-    if (ui.mode.value === 'mouse') { ui.mode.value = 'head'; store.set('mode', 'head'); }
-    $('status').innerHTML = 'Camera: <b class="ok">tracking</b>';
-    requestAnimationFrame(trackLoop);
-  } catch (e) {
-    console.error(e);
-    $('status').innerHTML = 'Camera: <b class="bad">could not start (' + (e.message || e) + ')</b>';
-    $('startBtn').disabled = false;
-  }
-};
-
-function trackLoop() {
-  if (!tracking) return;
-  if (video.currentTime !== lastVideoTime) {
-    lastVideoTime = video.currentTime;
-    const r = landmarker.detectForVideo(video, performance.now());
-    if (r.faceLandmarks && r.faceLandmarks.length) {
-      readFace(r);
-    } else {
-      features = null;
-      $('status').innerHTML = 'Camera: <b class="bad">no face found</b>';
-    }
-  }
-  requestAnimationFrame(trackLoop);
-}
-
-function readFace(r) {
-  const L = r.faceLandmarks[0];
-  // Head pose from the 4x4 transformation matrix (column-major).
-  const m = r.facialTransformationMatrixes[0].data;
-  const yaw = Math.atan2(m[8], m[10]);   // left/right
-  const pitch = Math.asin(-m[9]);        // up/down
-  // Iris position inside each eye, normalised to eye corners and lids.
-  const eye = (iris, outer, inner, top, bottom) => {
-    const w = L[inner].x - L[outer].x, h = L[bottom].y - L[top].y;
-    return [(L[iris].x - L[outer].x) / w, (L[iris].y - L[top].y) / (h || 1e-3)];
-  };
-  const a = eye(468, 33, 133, 159, 145), b = eye(473, 263, 362, 386, 374);
-  const ix = (a[0] + (1 - b[0])) / 2, iy = (a[1] + b[1]) / 2;
-  const bs = Object.fromEntries((r.faceBlendshapes[0]?.categories || []).map(c => [c.categoryName, c.score]));
-  blinkScore = Math.min(bs.eyeBlinkLeft || 0, bs.eyeBlinkRight || 0);
-  features = ui.mode.value === 'eyes' ? [ix, iy, yaw, pitch, 1] : [yaw, pitch, 1];
-  $('status').innerHTML = 'Camera: <b class="ok">tracking</b>';
-}
-
-async function openCamera() {
-  video.srcObject?.getTracks().forEach(t => t.stop());
-  const id = $('camSel').value;
-  video.srcObject = await navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480, ...(id ? { deviceId: { exact: id } } : { facingMode: 'user' }) },
-  });
-  await video.play();
-}
-async function listCameras() {
-  const sel = $('camSel'), keep = store.get('cam', '');
-  const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
-  sel.length = 1;
-  cams.forEach((c, i) => sel.add(new Option(c.label || 'Camera ' + (i + 1), c.deviceId)));
-  if (cams.some(c => c.deviceId === keep)) { sel.value = keep; if (keep) await openCamera(); }
-}
-$('camSel').onchange = async () => { store.set('cam', $('camSel').value); if (tracking) await openCamera(); };
-
-// Microphone as a switch: any short loud sound (a pop, click, tongue "ta", hum) strikes the gazed target.
-// Works with any built-in or USB mic; only the loudness is used, nothing is recorded.
-let micOnset = () => {};
-let micStream = null;
-async function startMic() {
-  if (micStream) return;
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
-  } catch (e) { $('last').textContent = 'Microphone blocked: ' + (e.message || e); ui.select.value = 'dwell'; return; }
-  ac ??= new AudioContext();
-  const an = ac.createAnalyser(); an.fftSize = 512;
-  ac.createMediaStreamSource(micStream).connect(an);
-  const buf = new Float32Array(an.fftSize);
-  let floor = 0.01, armed = true, lastHit = 0;
-  const tick = () => {
-    an.getFloatTimeDomainData(buf);
-    let sum = 0; for (const v of buf) sum += v * v;
-    const rms = Math.sqrt(sum / buf.length);
-    floor = rms < floor ? rms : floor * 0.999 + rms * 0.001; // slow-moving room noise estimate
-    const sens = +$('micSens').value;                       // 1 = needs a loud sound, 20 = very light
-    const threshold = Math.max(floor * 3, 0.32 / sens);
-    $('micLevel').value = Math.min(rms / (threshold * 1.5), 1);
-    const now = performance.now();
-    if (armed && rms > threshold && now - lastHit > 150) { armed = false; lastHit = now; micOnset(); }
-    if (!armed && rms < threshold * 0.5) armed = true;
-    requestAnimationFrame(tick);
-  };
-  tick();
-}
-$('micSens').value = store.get('micSens', 10);
-$('micSens').oninput = () => store.set('micSens', $('micSens').value);
-
-// Desktop app only: keep the GazeStage window above Pro Tools or your DAW.
-if (window.gazestage) {
-  const b = $('topBtn'); b.hidden = false;
-  let on = store.get('onTop', false);
-  const apply = () => { window.gazestage.setAlwaysOnTop(on); b.textContent = 'Keep on top: ' + (on ? 'on' : 'off'); store.set('onTop', on); };
-  b.onclick = () => { on = !on; apply(); }; apply();
-}
-
-// Map features to screen with the calibrated linear model, or a sensible default for head mode.
-function featuresToScreen(f) {
-  const cal = model[ui.mode.value];
-  const W = innerWidth, H = innerHeight;
-  if (cal) {
-    const dot = (w) => w.reduce((s, wi, i) => s + wi * f[i], 0);
-    return [dot(cal.wx) * W, dot(cal.wy) * H];
-  }
-  if (ui.mode.value === 'head') {
-    // Uncalibrated: about ±17° of head turn spans the screen. Calibrate to fit the user's own range.
-    const [yaw, pitch] = f, gain = 3.4;
-    return [W / 2 - yaw * gain * W / 2, H / 2 - pitch * gain * H / 2];
-  }
-  return [W / 2, H / 2];
-}
-
-// ---------- calibration: look at 9 dots, fit least squares ----------
-const CAL_POINTS = [[.1,.1],[.5,.1],[.9,.1],[.1,.5],[.5,.5],[.9,.5],[.1,.9],[.5,.9],[.9,.9]];
-$('calibBtn').onclick = calibrate;
-async function calibrate() {
-  if (!tracking) { alert('Start the camera first.'); return; }
-  const box = $('calib'), dot = $('calibDot'), msg = $('calibMsg');
-  box.classList.add('active'); dot.style.display = 'none';
-  msg.textContent = ui.mode.value === 'eyes'
-    ? 'Keep your head still and look at each red dot until it moves.'
-    : 'Point your nose at each red dot until it moves.';
-  await wait(2500); msg.textContent = '';
-  const X = [], YX = [], YY = [];
-  for (const [px, py] of CAL_POINTS) {
-    dot.style.display = 'block'; dot.style.left = px * 100 + '%'; dot.style.top = py * 100 + '%';
-    await wait(900); // settle
-    const end = performance.now() + 900;
-    while (performance.now() < end) {
-      if (features) { X.push([...features]); YX.push(px); YY.push(py); }
-      await wait(33);
-    }
-  }
-  dot.style.display = 'none';
-  const wx = leastSquares(X, YX), wy = leastSquares(X, YY);
-  if (wx && wy) {
-    model[ui.mode.value] = { wx, wy }; store.set('model', model);
-    msg.textContent = 'Calibrated.';
-  } else {
-    msg.textContent = 'Calibration failed: the camera lost your face. Try again with more light.';
-  }
-  await wait(1200); box.classList.remove('active');
-}
-function leastSquares(X, y) {
-  if (X.length < 20) return null;
-  const n = X[0].length, A = Array.from({ length: n }, () => new Array(n + 1).fill(0));
-  for (let k = 0; k < X.length; k++)
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) A[i][j] += X[k][i] * X[k][j];
-      A[i][n] += X[k][i] * y[k];
-    }
-  for (let i = 0; i < n; i++) A[i][i] += 1e-6; // ridge for stability
-  for (let c = 0; c < n; c++) { // Gaussian elimination with partial pivoting
-    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
-    [A[c], A[p]] = [A[p], A[c]];
-    if (Math.abs(A[c][c]) < 1e-12) return null;
-    for (let r = 0; r < n; r++) if (r !== c) {
-      const f = A[r][c] / A[c][c];
-      for (let j = c; j <= n; j++) A[r][j] -= f * A[c][j];
-    }
-  }
-  return A.map((row, i) => row[n] / row[i]);
-}
-const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-// ---------- MIDI ----------
-let midi = null;
-const outSel = { hui: $('huiOut'), note: $('noteOut') };
-async function initMidi() {
-  if (!navigator.requestMIDIAccess) { $('midiStatus').innerHTML = 'MIDI: <b class="bad">use Chrome for MIDI</b>'; return; }
-  try {
-    midi = await navigator.requestMIDIAccess({ sysex: false });
-    midi.onstatechange = fillPorts; fillPorts();
-    $('midiStatus').innerHTML = 'MIDI: <b class="ok">ready</b>';
-  } catch (e) {
-    $('midiStatus').innerHTML = 'MIDI: <b class="bad">' + (e.name === 'NotAllowedError' ? 'permission denied' : 'no MIDI system found') + '</b>';
-  }
-}
-function fillPorts() {
-  const fill = (sel, ports, key) => {
-    const keep = store.get(key, sel.value);
-    sel.length = 1;
-    for (const p of ports.values()) sel.add(new Option(p.name, p.id));
-    if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
-    sel.onchange = () => { store.set(key, sel.value); if (key === 'huiIn') hookHuiInput(); };
-  };
-  fill($('huiOut'), midi.outputs, 'huiOut');
-  fill($('noteOut'), midi.outputs, 'noteOut');
-  fill($('huiIn'), midi.inputs, 'huiIn');
-  hookHuiInput();
-}
-const out = (key) => midi && outSel[key].value ? midi.outputs.get(outSel[key].value) : null;
-
-// HUI: Pro Tools pings every second (90 00 00); a surface must answer 90 00 7F or Pro Tools marks it offline.
-let lastPing = 0;
-function hookHuiInput() {
-  for (const p of midi.inputs.values()) p.onmidimessage = null;
-  const inp = $('huiIn').value && midi.inputs.get($('huiIn').value);
-  if (!inp) return;
-  inp.onmidimessage = (e) => {
-    const [s, d1, d2] = e.data;
-    if (s === 0x90 && d1 === 0 && d2 === 0) {
-      out('hui')?.send([0x90, 0x00, 0x7f]); lastPing = performance.now();
-    }
-  };
-}
-setInterval(() => {
-  const ok = performance.now() - lastPing < 2500;
-  $('huiStatus').innerHTML = 'Pro Tools link: ' + (ok ? '<b class="ok">connected</b>' : '<b>waiting</b>');
-}, 1000);
-
-// HUI switch: select zone (CC 0x0F), then port with 0x40 set for press (CC 0x2F). Transport is zone 0x0E.
-function huiSwitch(port, down, zone = 0x0e) {
-  const o = out('hui'); if (!o) return false;
-  o.send([0xb0, 0x0f, zone, 0xb0, 0x2f, (down ? 0x40 : 0) | port]);
-  return true;
-}
-
-// ---------- built-in synth (so pads make sound without any MIDI setup) ----------
-let ac = null; const voices = new Map();
-function synthOn(note, vel) {
-  ac ??= new AudioContext();
-  const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
-  o.type = 'sawtooth'; o.frequency.value = 440 * 2 ** ((note - 69) / 12);
-  f.type = 'lowpass'; f.frequency.value = 2200;
-  g.gain.setValueAtTime(0, ac.currentTime); g.gain.linearRampToValueAtTime(0.18 * vel / 127, ac.currentTime + 0.01);
-  o.connect(f).connect(g).connect(ac.destination); o.start();
-  voices.set(note, { o, g });
-}
-function synthOff(note) {
-  const v = voices.get(note); if (!v) return; voices.delete(note);
-  v.g.gain.cancelScheduledValues(ac.currentTime);
-  v.g.gain.setValueAtTime(v.g.gain.value, ac.currentTime);
-  v.g.gain.linearRampToValueAtTime(0, ac.currentTime + 0.25); v.o.stop(ac.currentTime + 0.3);
-}
-const sounding = new Set();
-function noteOn(n, vel = 100) {
-  if (sounding.has(n)) return; sounding.add(n);
-  const o = out('note'); o ? o.send([0x90, n, vel]) : synthOn(n, vel);
-}
-function noteOff(n) {
-  if (!sounding.has(n)) return; sounding.delete(n);
-  const o = out('note'); o ? o.send([0x80, n, 0]) : synthOff(n);
-}
-function allOff() { for (const n of [...sounding]) noteOff(n); out('note')?.send([0xb0, 123, 0]); }
-
-// ---------- note pads ----------
-const SCALES = { Major: [0,2,4,5,7,9,11], Minor: [0,2,3,5,7,8,10], Pentatonic: [0,2,4,7,9], Blues: [0,3,5,6,7,10], Chromatic: [0,1,2,3,4,5,6,7,8,9,10,11] };
-const NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-let scaleName = store.get('scale', 'Major'), octave = store.get('octave', 4), latch = false;
-function buildPads() {
-  const steps = SCALES[scaleName], count = 8;
-  const grid = $('padgrid'); grid.innerHTML = '';
-  const cols = 4; grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  // Row 1 = higher notes, row 2 = lower notes, so looking up means going up in pitch.
-  const notes = [];
-  for (let i = 0; i < count; i++) notes.push(12 * (octave + 1) + steps[i % steps.length] + 12 * Math.floor(i / steps.length));
-  const order = [...notes.slice(4), ...notes.slice(0, 4)];
-  for (const n of order) {
-    const d = document.createElement('div');
-    d.className = 'target' + (n % 12 === 0 ? ' root' : '');
-    d.dataset.note = n;
-    d.innerHTML = `${NAMES[n % 12]}${Math.floor(n / 12) - 1}<small>${n % 12 === 0 ? 'root' : ''}</small><div class="dwell"></div>`;
-    grid.appendChild(d);
-  }
-  $('scaleBtn').textContent = 'Scale: ' + scaleName;
-  for (const t of document.querySelectorAll('.target')) if (!t.querySelector('.dwell')) t.insertAdjacentHTML('beforeend', '<div class="dwell"></div>');
-}
-buildPads();
-
-// ---------- pointer, hit testing, selection ----------
-let px = innerWidth / 2, py = innerHeight / 2;
-addEventListener('mousemove', (e) => { if (ui.mode.value === 'mouse') { px = e.clientX; py = e.clientY; } });
-let gazed = null, gazeStart = 0, fired = false, blinkStart = 0, heldHui = null;
-
-function activate(t) {
-  if (t.dataset.goto) { showPage(t.dataset.goto); return; }
-  if (t.dataset.action) { doAction(t.dataset.action); return; }
-  if (t.dataset.hui) {
-    const port = +t.dataset.hui;
-    const sent = huiSwitch(port, true);
-    flash(t);
-    // Rewind and fast forward stay held while you keep looking; others are a tap.
-    if (port === 1 || port === 2) heldHui = { port, t };
-    else setTimeout(() => huiSwitch(port, false), 80);
-    $('last').textContent = sent ? 'Sent: ' + t.textContent.trim().split('\n')[0] : 'Pick a "Pro Tools out" port to send this';
-    return;
-  }
-  if (t.dataset.note) {
-    const n = +t.dataset.note;
-    if (latch && sounding.has(n)) { noteOff(n); t.classList.remove('on'); return; }
-    noteOn(n); t.classList.add('on');
-  }
-}
-function release(t) {
-  if (heldHui && heldHui.t === t) { huiSwitch(heldHui.port, false); heldHui = null; }
-  if (t?.dataset.note && !latch) { noteOff(+t.dataset.note); t.classList.remove('on'); }
-}
-function doAction(a) {
-  if (a === 'octup') octave = Math.min(7, octave + 1);
-  if (a === 'octdown') octave = Math.max(1, octave - 1);
-  if (a === 'scale') { const k = Object.keys(SCALES); scaleName = k[(k.indexOf(scaleName) + 1) % k.length]; }
-  if (a === 'latch') { latch = !latch; $('latchBtn').firstChild.textContent = 'Hold notes: ' + (latch ? 'on' : 'off'); if (!latch) { allOff(); clearOn(); } }
-  if (a === 'panic') { allOff(); clearOn(); }
-  store.set('scale', scaleName); store.set('octave', octave);
-  if (a !== 'latch' && a !== 'panic') { allOff(); buildPads(); }
-}
-const clearOn = () => document.querySelectorAll('.target.on').forEach(e => e.classList.remove('on'));
-function flash(t) { t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 180); }
-function showPage(id) {
-  allOff(); clearOn();
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
-}
-
-// A switch (keyboard-emulating adaptive switch, foot pedal, Xbox Adaptive Controller mapped to a key) strikes the gazed target.
-addEventListener('keydown', (e) => {
-  if (e.repeat || ui.select.value !== 'switch' || !gazed) return;
-  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-  e.preventDefault(); activate(gazed); fired = true;
-});
-addEventListener('keyup', () => { if (ui.select.value === 'switch' && gazed) { release(gazed); fired = false; } });
-micOnset = () => {
-  if (ui.select.value !== 'sound' || !gazed) return;
-  if (fired) release(gazed);        // retrigger the same pad on each sound
-  activate(gazed); fired = true;
-};
-// Clicking still works for helpers and for testing.
-document.addEventListener('mousedown', (e) => { const t = e.target.closest('.target'); if (t) activate(t); });
-document.addEventListener('mouseup', (e) => { const t = e.target.closest('.target'); if (t) release(t); });
-
-function frame(now) {
-  if (tracking && features && ui.mode.value !== 'mouse') {
-    const [sx, sy] = featuresToScreen(features);
-    px = filterX.filter(Math.min(Math.max(sx, 0), innerWidth - 1), now);
-    py = filterY.filter(Math.min(Math.max(sy, 0), innerHeight - 1), now);
-  }
-  const c = $('cursor'); c.style.left = px + 'px'; c.style.top = py + 'px';
-  if ($('calib').classList.contains('active')) { requestAnimationFrame(frame); return; }
-
-  const hit = document.elementFromPoint(px, py)?.closest('.target') || null;
-  if (hit !== gazed) {
-    if (gazed) { gazed.classList.remove('gazed'); setBar(gazed, 0); if (fired) release(gazed); }
-    gazed = hit; gazeStart = now; fired = false;
-    if (gazed) gazed.classList.add('gazed');
-  }
-  if (gazed && !fired && (ui.mode.value !== 'mouse')) {
-    const mode = ui.select.value;
-    if (mode === 'dwell') {
-      const p = (now - gazeStart) / +ui.dwell.value; setBar(gazed, p);
-      if (p >= 1) { activate(gazed); fired = true; setBar(gazed, 0); }
-    } else if (mode === 'blink') {
-      // Deliberate blink: both eyes closed for 350 ms. Normal blinks are ~100–150 ms.
-      if (blinkScore > 0.5) { blinkStart ||= now; if (now - blinkStart > 350) { activate(gazed); fired = true; blinkStart = 0; } }
-      else blinkStart = 0;
-    }
-  }
-  requestAnimationFrame(frame);
-}
-function setBar(t, p) { const b = t.querySelector('.dwell'); if (b) b.style.width = Math.min(p, 1) * 100 + '%'; }
-
-onSettings();
-initMidi();
-requestAnimationFrame(frame);
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

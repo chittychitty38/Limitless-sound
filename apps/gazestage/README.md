@@ -1,17 +1,16 @@
 # GazeStage
 
-GazeStage lets you play virtual instruments and run the Pro Tools transport using your head, your eyes, a sound into the microphone, or any switch. It runs completely offline. Video and audio never leave the computer, and nothing is recorded.
+Play music and run Pro Tools with your head, your eyes, a short sound or a switch. GazeStage runs entirely on your computer. Video and audio never leave it, and nothing is recorded.
 
 ## What you need
 
-- **A computer:** a Mac with macOS 12 or newer (Apple Silicon or Intel), or a Windows 10 or 11 PC (64-bit). Anything from about 2017 onward should be fast enough.
-- **A webcam:** the built-in camera or any USB webcam. 720p is enough. Face the light, not a bright window.
-- **A microphone (optional):** the built-in mic or any USB or headset mic. You only need it if you want to use a sound as the switch.
-- **A switch (optional):** anything that types a key. That includes an adaptive switch interface, a foot pedal, a big-button keyboard, or an Xbox Adaptive Controller with a key-mapping tool.
+- **A Mac** with macOS 12 or newer, Apple Silicon or Intel. Windows 10 and 11 are supported too.
+- **A camera:** the built-in camera or any USB webcam. Face a light, not a bright window.
+- **Optional:** a microphone (to select with a sound), or any switch that types a key (an adaptive switch, a foot pedal, or an Xbox Adaptive Controller with a key mapper).
 
-## Download and install
+## Install
 
-Get the installer from the newest `gazestage-v…` release on the repository's Releases page.
+Download from the newest `gazestage-v…` release on the Releases page.
 
 | Computer | File |
 | --- | --- |
@@ -19,60 +18,75 @@ Get the installer from the newest `gazestage-v…` release on the repository's R
 | Mac with Intel | `GazeStage-<version>-mac-x64.dmg` |
 | Windows PC | `GazeStage-<version>-win-x64.exe` |
 
-**Mac:** Open the .dmg file and drag GazeStage to Applications. The first time, macOS will say it can't check the developer. Open System Settings > Privacy & Security, scroll down and click **Open Anyway**. When asked, allow the camera, and the microphone too if you want sound control.
+**Mac:** Open the .dmg and drag GazeStage to Applications, then open it. The first time, macOS says it can't check the developer. Go to System Settings › Privacy & Security, scroll down, and click **Open Anyway**. This happens once, because the app isn't signed with a paid Apple developer certificate yet.
 
-**Windows:** Run the installer. If SmartScreen appears, click **More info > Run anyway**.
+**Windows:** Run the installer. If SmartScreen appears, click **More info › Run anyway**.
 
-These warnings appear because this test build isn't signed with a paid developer certificate yet.
+## First launch
 
-## First run
+A short guided setup, about two minutes, walks you through five steps:
 
-1. Click **Start camera**. Sit about an arm's length from the screen with your face centred.
-2. Click **Calibrate** and follow the red dots. In head mode, point your nose at each dot. In eye mode, keep your head still and look at each dot.
-3. Choose how to select:
-   - **Dwell:** look at a target and hold. You can set the hold time from 0.25 to 2.5 seconds.
-   - **Switch:** press any key.
-   - **Long blink:** close both eyes for about a third of a second.
-   - **Sound:** make a short pop, click or "ta" into the mic. Use **Mic sensitivity** if it fires too easily or not easily enough.
-4. Open **Play an instrument** and try the pads. If no MIDI is set up yet, you'll hear the built-in sound.
-5. Turn on **Keep on top** so GazeStage stays visible above Pro Tools or your DAW.
+1. **Camera:** turns the camera on and checks that your face is found, the light is good, and you're centred at a good distance.
+2. **Pointing:** use your head (recommended, works right away), your eyes (after a short calibration), or a mouse or other pointer, such as a head mouse or the macOS Head Pointer.
+3. **Selecting:** look and hold (dwell), a switch or key, a short sound like a pop, click or "ta", or a long blink. Each option has a live test.
+4. **Practice:** three targets to try. GazeStage centres itself on where you're looking first.
+5. **Pro Tools:** the one-time connection steps.
 
-## Connecting to Pro Tools and instruments
+A helper can click through setup with a mouse. Once the camera is on, every step can also be selected by pointing.
 
-GazeStage sends MIDI through virtual MIDI ports. You need three of them:
+## Playing
 
-| Port name | Used for |
+- **Instrument:** big note pads in any key and scale. Higher notes are on the top row. **Chords** turns every pad into a chord that fits the key, and **Hold notes** latches notes on. The built-in sound has two voices, Soft keys and Warm pad, so it plays with no other software.
+- **Transport:** Rewind, Play, Fast forward, Record and Stop for Pro Tools. Play and Record light up to match Pro Tools.
+- **Pause:** look at Pause to rest. Nothing fires until you look at Resume.
+- If the pointer drifts, choose **Recenter** (⌘R). **Calibrate** (⌘K) fits the pointer to you.
+
+## Connecting Pro Tools (one time)
+
+**Mac:** GazeStage creates its own MIDI ports, so there's nothing to install.
+
+1. In Pro Tools, choose **Setup › Peripherals › MIDI Controllers**.
+2. Add a **HUI** with **Receive From** and **Send To** both set to `GazeStage HUI`.
+3. For instruments, set an instrument track's MIDI input to `GazeStage Notes`, then record-enable it. In Settings, turn off **Play the built-in sound** so you only hear Pro Tools.
+
+**Windows:** create three loopback ports named `To Pro Tools`, `From Pro Tools` and `GazeStage Notes`. On Windows 11 use the MIDI Settings app. On Windows 10 use the free loopMIDI. GazeStage picks the ports up by name. Then in Pro Tools, add a HUI that receives from `To Pro Tools` and sends to `From Pro Tools`.
+
+Other DAWs that support HUI work the same way, including Logic, Cubase and Reaper.
+
+## Keyboard shortcuts (Mac)
+
+| Shortcut | Action |
 | --- | --- |
-| To Pro Tools | Transport button presses going to Pro Tools |
-| From Pro Tools | Pro Tools' "are you there" check coming back |
-| GazeStage Notes | Notes for instruments |
+| ⌘R | Recenter the pointer |
+| ⌘K | Calibrate |
+| ⌘P | Pause or resume |
+| ⌘1 / ⌘2 | Transport / Instrument |
+| ⌘. | All notes off |
+| ⌘, | Settings |
 
-**Mac:** open Audio MIDI Setup and choose Window > Show MIDI Studio. Double-click **IAC Driver**, tick "Device is online", and add the three ports with the names above.
+## Known limits
 
-**Windows 11:** open the **MIDI Settings** app that comes with Windows MIDI Services and add loopback endpoints with the names above. On Windows 10, or if you don't have that app, install the free **loopMIDI** by Tobias Erichsen and create the three ports there.
-
-**Pro Tools (Mac or Windows):**
-
-1. Go to Setup > Peripherals > MIDI Controllers.
-2. Add a **HUI** with Receive From set to "To Pro Tools" and Send To set to "From Pro Tools".
-3. In GazeStage, set **Pro Tools out** to "To Pro Tools" and **Pro Tools in** to "From Pro Tools". The footer should then say "Pro Tools link: connected".
-
-**Instruments:** in GazeStage, set **Instrument out** to "GazeStage Notes". Then set the MIDI input of an instrument track (or any standalone synth) to that port and record-enable or input-monitor it. The same setup works in other DAWs that support HUI, such as Logic, Cubase and Reaper.
-
-## Known limits in 0.2.0
-
-- It hasn't been tested yet with a real face on camera, a real Pro Tools rig, or a player. The automated tests only checked that the app starts, loads the face model offline, and opens the camera, microphone and MIDI.
-- The HUI codes for rewind, fast forward and stop haven't been confirmed. If one of those buttons does the wrong thing, tell us which.
-- GazeStage only controls its own window. Moving the real mouse cursor and sending keyboard shortcuts to Pro Tools is planned next.
+- It hasn't been tested yet on a real Pro Tools rig or with a player. The HUI codes for rewind (1), fast forward (2) and stop (3) are unconfirmed.
+- GazeStage controls its own window. Moving the system cursor and sending shortcuts to other apps is planned through the Limitless Sound hub.
 
 ## For developers
 
 ```sh
 npm install              # also fetches the MediaPipe runtime and face model into renderer/vendor
 npm start                # run the app
-npm test                 # smoke test (on Linux: xvfb-run -a npm test)
+npm test                 # unit tests, then the end-to-end smoke test (on Linux: xvfb-run -a npm test)
 npm run dist:mac-arm64   # or dist:mac-x64 / dist:win / dist:linux; output in dist/
 npm run test:packaged    # smoke test the built app in dist/
 ```
 
-The app is a small Electron shell (`main.js`) around one page (`renderer/index.html`). The page is served from `app://`, so the camera, microphone and Web MIDI behave the same on every platform. CI (`.github/workflows/gazestage.yml`) tests every pull request and builds the Mac .dmg files and the Windows installer. A `gazestage-v*` tag attaches them to a release.
+| Path | What it holds |
+| --- | --- |
+| `main.js` | Electron shell: the `app://` protocol, virtual MIDI ports (`@julusian/midi`), the menu, window state, and camera and microphone permissions |
+| `preload.js` | The small bridge the page can use |
+| `renderer/app.js` | Pointer, sticky targeting, selection, pages, guided setup and settings |
+| `renderer/tracker.js` | MediaPipe face and iris tracking |
+| `renderer/lib.js` | Pure logic covered by the unit tests: filter, calibration fit, head mapping, scales and chords, the HUI protocol, sound onsets |
+| `renderer/synth.js` | The built-in instrument |
+| `renderer/midi.js` | Native or Web MIDI routing and the HUI link |
+
+CI (`.github/workflows/gazestage.yml`) runs the tests on every pull request. It then builds the Mac .dmg files and the Windows installer, smoke tests each built app, and checks that the macOS build creates its own MIDI ports. A `gazestage-v*` tag attaches the installers to a release.

@@ -1,19 +1,20 @@
 {
   "name": "gazestage",
   "productName": "GazeStage",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Eye, head and sound control for Pro Tools and virtual instruments. Limitless Sound.",
   "main": "main.js",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "test": "node test/smoke.mjs",
+    "test": "node --test test/lib.test.mjs && node test/smoke.mjs",
     "test:packaged": "node test/smoke.mjs --packaged",
     "postinstall": "node scripts/fetch-assets.mjs",
     "dist:mac-arm64": "electron-builder --mac --arm64 --publish never",
     "dist:mac-x64": "electron-builder --mac --x64 --publish never",
     "dist:win": "electron-builder --win --x64 --publish never",
-    "dist:linux": "electron-builder --linux dir --x64 --publish never"
+    "dist:linux": "electron-builder --linux dir --x64 --publish never",
+    "test:unit": "node --test test/lib.test.mjs"
   },
   "devDependencies": {
     "@mediapipe/tasks-vision": "0.10.14",
@@ -46,7 +47,8 @@
       "extendInfo": {
         "NSCameraUsageDescription": "GazeStage uses the camera to follow your head and eyes. Video stays on this computer.",
         "NSMicrophoneUsageDescription": "GazeStage can use a short sound, like a pop or click, as a switch. Nothing is recorded."
-      }
+      },
+      "icon": "packaging/icon.png"
     },
     "dmg": {
       "writeUpdateInfo": false
@@ -54,7 +56,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "packaging/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -65,11 +68,15 @@
       "target": [
         "dir"
       ]
-    }
+    },
+    "npmRebuild": false
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/chittychitty38/limitless-sound.git",
     "directory": "apps/gazestage"
+  },
+  "dependencies": {
+    "@julusian/midi": "3.8.1"
   }
 }
