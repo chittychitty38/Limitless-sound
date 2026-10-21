@@ -38,6 +38,11 @@ FILLER_START = ("please ", "um ", "uh ", "okay ", "ok ", "hey computer ", "compu
 FILLER_END = (" please", " thanks", " thank you")
 
 MAX_REPEAT = 50
+# Keys that throw work away. However they're reached ("delete fifty times",
+# "press backspace twenty times"), one utterance presses them at most this often.
+DESTRUCTIVE_KEYS = {"delete", "backspace", "forwarddelete", "cmd+x", "cmd+v", "cmd+d", "cmd+delete",
+                    "cmd+backspace", "ctrl+x", "ctrl+v", "ctrl+d"}
+MAX_DESTRUCTIVE = 3
 FUZZY_CUTOFF = 0.88
 
 # Spoken punctuation in dictation mode.
@@ -219,6 +224,10 @@ class Engine:
         cmd, params = found
         if cmd.repeatable is False:
             times = 1
+        elif not isinstance(cmd.repeatable, bool) and isinstance(cmd.repeatable, int):
+            times = min(times, max(1, cmd.repeatable))
+        if any(str(v).lower() in DESTRUCTIVE_KEYS for v in params.values()):
+            times = min(times, MAX_DESTRUCTIVE)
         if cmd.confirm:
             self.pending = (cmd, params, times)
             return self._reply(raw, f"Say yes to {cmd.help or cmd.phrases[0]}, or cancel")

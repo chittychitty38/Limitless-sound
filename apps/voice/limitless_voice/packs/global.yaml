@@ -29,8 +29,10 @@ commands:
   - say: ["copy", "copy that"]
     do: {keys: cmd+c}
   - say: ["cut", "cut that"]
+    repeatable: 3   # one misheard number must never wipe a session
     do: {keys: cmd+x}
   - say: ["paste", "paste that"]
+    repeatable: 3   # one misheard number must never wipe a session
     do: {keys: cmd+v}
   - say: ["select all"]
     do: {keys: cmd+a}

@@ -215,5 +215,27 @@ class Flow(unittest.TestCase):
         self.assertEqual(normalize("[unk] solo track"), "solo track")
 
 
+class Destructive(unittest.TestCase):
+    def test_one_utterance_never_deletes_more_than_three_times(self):
+        cases = [("Logic Pro", "mac"), ("Pro Tools", "mac"), ("Pro Tools", "windows")]
+        phrases = ["delete fifty times", "delete that twenty times", "cut that fifty times",
+                   "paste fifty times", "duplicate fifty times", "duplicate track fifty times",
+                   "press delete fifty times", "press backspace twenty times",
+                   "press command x fifty times", "press command v fifty times"]
+        for app, os_name in cases:
+            for phrase in phrases:
+                e, p = engine(app, os_name)
+                e.handle(phrase)
+                self.assertLessEqual(len(pressed(p)), 3, f"{app} {os_name}: {phrase} -> {pressed(p)}")
+
+    def test_harmless_commands_still_repeat(self):
+        e, p = engine("Pro Tools")
+        e.handle("nudge right twenty times")
+        self.assertEqual(len(pressed(p)), 20)
+        e, p = engine("Logic Pro")
+        e.handle("press down ten times")
+        self.assertEqual(len(pressed(p)), 10)
+
+
 if __name__ == "__main__":
     unittest.main()

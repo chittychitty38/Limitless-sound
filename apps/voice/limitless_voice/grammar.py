@@ -38,7 +38,7 @@ class Command:
     pack: str
     reply: str = ""
     confirm: bool = False
-    repeatable: bool = True
+    repeatable: object = True    # True, False, or the most times one utterance may run it
     help: str = ""
     fuzzy: bool = True
     _compiled: list = field(default_factory=list, repr=False)

@@ -50,6 +50,7 @@ commands:
     do: {keys: opt+cmd+s}
     reply: New instrument track
   - say: ["duplicate track", "new track with same settings"]
+    repeatable: 3   # one misheard number must never wipe a session
     do: {keys: cmd+d}
   - say: ["next track", "track down"]
     do: {keys: down}
@@ -76,6 +77,7 @@ commands:
     do: {keys: q}
     reply: Quantized
   - say: ["delete", "delete that", "remove that"]
+    repeatable: 3   # one misheard number must never wipe a session
     fuzzy: false
     do: {keys: delete}
   - say: ["set locators", "loop selection"]
