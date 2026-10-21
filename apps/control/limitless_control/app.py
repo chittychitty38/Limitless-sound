@@ -220,6 +220,7 @@ class App:
                 "config": copy.deepcopy(self.config),
                 "catalog": profiles.CATALOG,
                 "commands": profiles.COMMANDS,
+                "timingPresets": profiles.TIMING_PRESETS,
                 "suite": self.suite.suite_actions(),
                 "inputs": ALL_INPUTS,
                 "platform": keys.platform_name(),

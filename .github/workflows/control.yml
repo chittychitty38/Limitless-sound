@@ -79,7 +79,10 @@ jobs:
           OUT="dist/LimitlessControl-${{ matrix.name }}.dmg"
           pip install dmgbuild==1.6.7
           # Styled window: app icon, arrow, Applications folder. Plain image if that fails.
-          if ! dmgbuild -s packaging/dmg_settings.py -D app="dist/Limitless Control.app" "Limitless Control" "$OUT"; then
+          if dmgbuild -s packaging/dmg_settings.py -D app="dist/Limitless Control.app" "Limitless Control" "$OUT"; then
+            echo "::notice title=Disk image::Styled disk image built with dmgbuild"
+          else
+            echo "::warning title=Disk image::dmgbuild failed; built a plain disk image instead"
             mkdir -p dmg
             cp -R "dist/Limitless Control.app" dmg/
             ln -s /Applications dmg/Applications

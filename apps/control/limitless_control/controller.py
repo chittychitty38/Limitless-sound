@@ -47,6 +47,10 @@ AXES = {
     pygame.CONTROLLER_AXIS_TRIGGERRIGHT: (None, "rt"),
 }
 
+# A trigger or stick counts as released only once it falls this far below the
+# push point, so a shaky hand resting near the threshold doesn't fire again and again.
+HYSTERESIS = 0.2
+
 ALL_INPUTS = [
     "a", "b", "x", "y", "lb", "rb", "lt", "rt", "view", "menu", "xbox", "ls", "rs",
     "dpad_up", "dpad_down", "dpad_left", "dpad_right",
@@ -137,10 +141,15 @@ class ControllerReader:
             elif ev.type == pygame.CONTROLLERAXISMOTION:
                 neg, pos = AXES.get(ev.axis, (None, None))
                 value = ev.value / 32767.0
-                if neg:
-                    self._set(ev.instance_id, neg, value <= -self.threshold)
-                if pos:
-                    self._set(ev.instance_id, pos, value >= self.threshold)
+                held = self._down.get(ev.instance_id, set())
+                for name, amount in ((neg, -value), (pos, value)):
+                    if not name:
+                        continue
+                    if name in held:
+                        down = amount >= max(self.threshold - HYSTERESIS, 0.1)
+                    else:
+                        down = amount >= self.threshold
+                    self._set(ev.instance_id, name, down)
 
     def stop(self) -> None:
         sdl_controller.quit()

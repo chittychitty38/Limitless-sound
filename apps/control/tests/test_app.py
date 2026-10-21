@@ -55,3 +55,10 @@ def test_start_at_login_linux(tmp_path, monkeypatch):
     assert "--background" in (tmp_path / "autostart" / "limitless-control.desktop").read_text()
     login.set_enabled(False)
     assert not login.is_enabled()
+
+
+def test_default_timing_is_the_steady_preset():
+    config = profiles.default_config()
+    steady = profiles.TIMING_PRESETS["steady"]
+    assert config["timing"] == steady["timing"]
+    assert config["analogThreshold"] == steady["analogThreshold"]

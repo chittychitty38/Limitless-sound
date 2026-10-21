@@ -180,6 +180,29 @@ _LAYOUTS = {
 }
 
 
+# Timing presets offered in settings. "Steady" is the default.
+TIMING_PRESETS = {
+    "steady": {
+        "label": "Steady hands",
+        "timing": {"minPressSeconds": 0.05, "cooldownSeconds": 0.15, "longPressSeconds": 0.8,
+                   "repeatDelaySeconds": 0.5, "repeatIntervalSeconds": 0.12},
+        "analogThreshold": 0.6,
+    },
+    "some_tremor": {
+        "label": "Some tremor or shaking",
+        "timing": {"minPressSeconds": 0.08, "cooldownSeconds": 0.4, "longPressSeconds": 1.0,
+                   "repeatDelaySeconds": 0.7, "repeatIntervalSeconds": 0.15},
+        "analogThreshold": 0.65,
+    },
+    "strong_tremor": {
+        "label": "Strong tremor, or presses that bounce",
+        "timing": {"minPressSeconds": 0.12, "cooldownSeconds": 0.7, "longPressSeconds": 1.3,
+                   "repeatDelaySeconds": 0.9, "repeatIntervalSeconds": 0.2},
+        "analogThreshold": 0.7,
+    },
+}
+
+
 def action(profile: str, action_id: str) -> dict:
     """A copy of a catalog action, tagged with its id so settings can show its label."""
     src = COMMANDS.get(action_id) or CATALOG[profile][action_id]

@@ -175,6 +175,12 @@
 
   <section aria-labelledby="timing-h">
     <h2 id="timing-h">Timing and feedback</h2>
+    <div class="row-controls">
+      <label class="stack">Start from
+        <select id="preset"></select>
+      </label>
+    </div>
+    <p class="muted">Pick the closest, then fine-tune with the sliders.</p>
     <div id="sliders"></div>
     <label class="check"><input type="checkbox" id="speak"> Speak each action out loud</label><br>
     <label class="check"><input type="checkbox" id="sticky"> Layer 2 lasts for one action only (like Sticky Keys)</label>
@@ -486,7 +492,26 @@ function renderSetup(st) {
   mark("step-go", DAWS.includes(st.profile));
 }
 
+function presetMatching() {
+  for (const [id, p] of Object.entries(S.timingPresets || {})) {
+    const same = Object.entries(p.timing).every(([k, v]) => Math.abs((S.config.timing || {})[k] - v) < 1e-6)
+      && Math.abs((S.config.analogThreshold ?? 0.6) - p.analogThreshold) < 1e-6;
+    if (same) return id;
+  }
+  return "custom";
+}
+
+function renderPresets() {
+  const sel = $("preset"); sel.textContent = "";
+  for (const [id, p] of Object.entries(S.timingPresets || {})) {
+    const o = document.createElement("option"); o.value = id; o.textContent = p.label; sel.appendChild(o);
+  }
+  const o = document.createElement("option"); o.value = "custom"; o.textContent = "My own settings"; o.disabled = true; sel.appendChild(o);
+  sel.value = presetMatching();
+}
+
 function renderTiming() {
+  renderPresets();
   const box = $("sliders"); box.textContent = "";
   const t = S.config.timing || (S.config.timing = {});
   const all = [...SLIDERS, ["analogThreshold", "How far to push triggers and sticks", 0.2, 0.95, 0.05, "Lower is more sensitive."]];
@@ -500,7 +525,7 @@ function renderTiming() {
     inp.value = holder[key] ?? min;
     const fmt = () => key === "analogThreshold" ? Math.round(inp.value * 100) + "%" : Number(inp.value).toFixed(2) + " s";
     out.textContent = fmt(); inp.setAttribute("aria-valuetext", fmt());
-    inp.addEventListener("input", () => { holder[key] = Number(inp.value); out.textContent = fmt(); inp.setAttribute("aria-valuetext", fmt()); scheduleSave(); });
+    inp.addEventListener("input", () => { holder[key] = Number(inp.value); out.textContent = fmt(); inp.setAttribute("aria-valuetext", fmt()); $("preset").value = presetMatching(); scheduleSave(); });
     const p = document.createElement("p"); p.className = "muted"; p.textContent = help;
     div.append(lab, out, inp, p); box.appendChild(div);
   }
@@ -607,6 +632,15 @@ $("show-setup").addEventListener("click", () => {
 $("login").addEventListener("change", async () => {
   const r = await api("/api/login", { enabled: $("login").checked }).catch(e => ({ ok: false }));
   say(r.ok ? ($("login").checked ? "Will start when you log in" : "Will not start at login") : "Could not change that setting");
+});
+$("preset").addEventListener("change", () => {
+  const p = S.timingPresets[$("preset").value];
+  if (!p) return;
+  S.config.timing = { ...p.timing };
+  S.config.analogThreshold = p.analogThreshold;
+  renderTiming();
+  scheduleSave();
+  say("Timing set for " + p.label.toLowerCase());
 });
 $("speak").addEventListener("change", () => { S.config.speak = $("speak").checked; scheduleSave(); });
 $("sticky").addEventListener("change", () => { S.config.layerMode = $("sticky").checked ? "oneShot" : "toggle"; scheduleSave(); });
