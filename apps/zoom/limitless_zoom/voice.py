@@ -20,10 +20,13 @@ WAKE_ACTIONS = {"wake"}
 def match_phrase(text, words, min_conf):
     """Map a recognised utterance to an action, or None.
     words is Vosk's per-word result list with 'conf' scores."""
-    text = " ".join(text.split())
+    # "[unk]" is a breath, a click or a word that isn't a command; one before
+    # or after a command shouldn't stop it working.
+    text = " ".join(w for w in text.split() if w != "[unk]")
     action = VOICE_PHRASES.get(text)
     if action is None:
         return None
+    words = [w for w in (words or []) if w.get("word") != "[unk]"]
     if words:
         conf = sum(w.get("conf", 1.0) for w in words) / len(words)
         if conf < min_conf:

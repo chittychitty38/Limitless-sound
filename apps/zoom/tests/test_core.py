@@ -106,6 +106,8 @@ def test_match_phrase_confidence():
     assert match_phrase("zoom  in", words, 0.5) == "in"
     assert match_phrase("zoom in", [{"conf": 0.3}, {"conf": 0.3}], 0.5) is None
     assert match_phrase("[unk]", [], 0.5) is None
+    noisy = [{"word": "[unk]", "conf": 0.2}, {"word": "again", "conf": 0.9}]
+    assert match_phrase("[unk] again", noisy, 0.5) == "again"
     assert match_phrase("", [], 0.5) is None
 
 
