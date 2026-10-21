@@ -34,7 +34,7 @@ commands:
     do: {keys: cmd+v}
   - say: ["select all"]
     do: {keys: cmd+a}
-  - say: ["save", "save [the] project", "save that"]
+  - say: ["save", "save [the] project", "save [the] session", "save that"]
     do: {keys: cmd+s}
     reply: Saved
     repeatable: false

@@ -128,6 +128,35 @@ jobs:
             apps/voice/dist/*.dmg
             apps/voice/dist/LimitlessVoiceSetup-*.exe
 
+  # How well it understands real (synthetic) Mac voices, clean and noisy,
+  # for each speech model we could ship. Results land on the run's summary page.
+  benchmark:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Download speech models
+        run: |
+          mkdir -p models
+          for m in vosk-model-small-en-us-0.15 vosk-model-en-us-0.22-lgraph; do
+            curl -sSfL -o m.zip "https://alphacephei.com/vosk/models/$m.zip"
+            python -m zipfile -e m.zip models/ && rm m.zip
+          done
+      - name: Benchmark
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/bench.py models/vosk-model-small-en-us-0.15 models/vosk-model-en-us-0.22-lgraph
+      - uses: actions/upload-artifact@v4
+        with:
+          name: speech-benchmark
+          path: apps/voice/bench.json
+
   release:
     defaults:
       run:

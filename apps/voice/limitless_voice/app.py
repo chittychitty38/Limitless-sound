@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__
+from .actions import APP_ALIASES
 from .audio import Listener, list_input_devices
 from .engine import BUILTIN_PHRASES, Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases
@@ -52,7 +53,7 @@ QProgressBar::chunk { background: #00e5ff; }
 
 def command_phrases(packs):
     """Everything the command recognizer should listen for."""
-    extra = BUILTIN_PHRASES | NUMBER_WORDS | spoken_vocabulary() | {"please", "and"}
+    extra = BUILTIN_PHRASES | NUMBER_WORDS | spoken_vocabulary() | set(APP_ALIASES) | {"please", "and"}
     return recognizer_phrases(packs, extra)
 
 
