@@ -139,8 +139,8 @@ At the end, fix what you can on a branch and open a pull request per app, or ope
 - [ ] Same with music playing from the speakers at a normal level. Count again.
 - [ ] Say "go to sleep", then talk normally for a minute: nothing happens. "Wake up" works.
 - [ ] Talk to someone in the room for two minutes without saying commands: count anything that fires.
-- [ ] Say "delete fifty times" with a region selected (save the project first): it must not
-      delete 50 things. (Known bug when this file was written; check whether it's fixed.)
+- [ ] Say "delete fifty times" with a region selected (save the project first): it deletes at
+      most 3 things. (Fixed on PR #1; confirm.)
 - [ ] Unplug the USB mic while it's listening, plug it back in: it recovers on its own.
 - [ ] If he has a speech difference or a quiet voice, or knows someone who does: note accuracy honestly.
 - [ ] Pro Tools: repeat the main commands.
@@ -171,8 +171,8 @@ At the end, fix what you can on a branch and open a pull request per app, or ope
       This is the biggest unknown: whether macOS gives controller input to a background app.
 - [ ] A switch in each 3.5 mm jack: each does its mapped command once per press.
 - [ ] Tap quickly, hold, and press with a shaky hand: no double fires, holds work.
-- [ ] Hold a trigger or stick halfway with a shaky hand: it must not fire over and over. (Known
-      bug when this file was written; check whether it's fixed.)
+- [ ] Hold a trigger or stick halfway with a shaky hand: it must not fire over and over. (Fixed in
+      0.2.1; confirm.) Try the "Some tremor" and "Strong tremor" timing presets too.
 - [ ] Pull the cable mid-press: nothing keeps repeating. Plug back in: it reconnects.
 - [ ] The settings page opens and works with VoiceOver (⌘F5).
 

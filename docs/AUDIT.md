@@ -27,7 +27,7 @@ What "tested" means below:
 | Hub | Two copies of the same app knocked each other off the hub forever (30 reconnects in 3 s). | Fixed on PR #7. |
 | GazeStage | A note held with a switch kept sounding forever when the window lost focus, and the switch stopped working. | Fixed on PR #11. |
 | Voice | "Delete fifty times" pressed Delete 50 times from one utterance; same for cut and paste. One misheard phrase could wipe a session. | Fixed on PR #1 (4dc4aff): at most 3. |
-| Control | A trigger held near its threshold with a tremor fired 9 commands in 3 seconds. | Sent to the Control thread. |
+| Control | A trigger held near its threshold with a tremor fired 9 commands in 3 seconds. | Fixed on PR #3 (0.2.1): triggers and sticks now have hysteresis, plus tremor timing presets. |
 
 ## App by app
 
@@ -71,7 +71,7 @@ What "tested" means below:
   if the app crashes with colors on are all untried.
 
 ### Limitless Control (`apps/control`, PR #3)
-- Unit tested, stress tested: switch contact bounce never double-fires, unplugging mid-press
+- Unit tested, stress tested: switch contact bounce never double-fires, a shaky trigger no longer machine-guns (0.2.1), unplugging mid-press
   stops repeats, 100,000 random presses leave nothing stuck.
 - **Never used with a real Xbox Adaptive Controller** (or any controller) on a Mac. Whether
   macOS delivers controller input while Logic or Pro Tools is in front is the big unknown.
