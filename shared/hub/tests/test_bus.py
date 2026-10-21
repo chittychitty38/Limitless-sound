@@ -330,3 +330,15 @@ def test_mac_executable_reads_info_plist(tmp_path):
         plistlib.dump({"CFBundleExecutable": "limitless-color"}, f)
     assert mac_executable(app, "Limitless Color").name == "limitless-color"
     assert mac_executable(tmp_path / "Missing.app", "Fallback").name == "Fallback"
+
+
+def test_intent_falls_through_to_the_next_app(bus):
+    control, cin = connect(bus, "control", [{"id": "record", "label": "Record", "intent": "daw.record"}])
+    voice, vin = connect(bus, "voice", [{"id": "record", "label": "Record", "intent": "daw.record"}])
+    got = []
+    bus.invoke("daw.record", source="gaze", on_result=got.append)
+    first = of(cin, "invoke")[0]
+    bus.receive(control, {"op": "result", "id": first["id"], "ok": False, "message": "No key in Finder."})
+    second = of(vin, "invoke")[0]
+    bus.receive(voice, {"op": "result", "id": second["id"], "ok": True, "message": "Recording"})
+    assert got == [{"ok": True, "message": "Recording"}]

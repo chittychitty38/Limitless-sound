@@ -272,6 +272,8 @@ class Bus:
                     msg = f"Nothing that can do “{label}” is open. Open Limitless Control or Limitless Voice."
                     self._note(msg, "warn")
                     return done({"ok": False, "message": msg})
+                if len(providers) > 1:
+                    return self._invoke_chain(action, providers, args, source, depth, done, [])
                 tool, act = providers[0]
             conn = self.tools.get(tool)
             if conn is not None:
@@ -284,6 +286,22 @@ class Bus:
                 self._note(f"{self._who(source)} → {conn.name}: {self.label_for(f'{tool}.{act}')}", "action")
                 return
             return done(self._offline(tool, act, args, source, depth))
+
+    def _invoke_chain(self, intent, providers, args, source, depth, done, failures) -> None:
+        """Ask each app that can do an intent in turn, until one manages it
+        (the controller may have no key for it in the app in front, but Voice does)."""
+        if not providers:
+            return done({"ok": False, "message": " ".join(failures) or "Nobody could do that."})
+        tool, act = providers[0]
+
+        def next_or_done(result: dict) -> None:
+            if result.get("ok"):
+                return done(result)
+            with self.lock:
+                self._invoke_chain(intent, providers[1:], args, source, depth, done,
+                                   failures + [result.get("message") or ""])
+
+        self.invoke(f"{tool}.{act}", args, source=source, depth=depth, on_result=next_or_done)
 
     def _intent_fallback(self, intent: str) -> str | None:
         """A closed tool with a command line can still answer some intents (zoom)."""
