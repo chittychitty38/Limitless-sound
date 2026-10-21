@@ -7,6 +7,7 @@ import queue
 import threading
 import urllib.request
 import zipfile
+from array import array
 from pathlib import Path
 
 from .actions import VOICE_PHRASES
@@ -70,14 +71,42 @@ def list_microphones():
     return names
 
 
+def pick_channel(data, channels):
+    """Mono int16 audio from interleaved int16 audio: the loudest channel.
+    On an audio interface the mic is often on input 2, not input 1."""
+    samples = array("h")
+    samples.frombytes(data)
+    if channels == 1:
+        return samples
+    best, best_energy = None, -1
+    for c in range(channels):
+        ch = samples[c::channels]
+        energy = sum(abs(x) for x in ch[::8])
+        if energy > best_energy:
+            best, best_energy = ch, energy
+    return best
+
+
+def level(samples):
+    """0-1 loudness of a block, for the microphone meter."""
+    if not samples:
+        return 0.0
+    peak = max(abs(x) for x in samples[::4])
+    return min(1.0, peak / 20000)
+
+
 class VoiceListener(threading.Thread):
     """Runs in the background and calls on_action(action) for each command heard.
-    on_status(text) reports problems and state in plain words."""
+    on_status(text) reports problems and state in plain words, on_heard(text)
+    gets every phrase understood, and on_level(0-1) the microphone loudness."""
 
-    def __init__(self, model_path, on_action, on_status, device=None, min_conf=0.55):
+    def __init__(self, model_path, on_action, on_status, device=None, min_conf=0.55,
+                 on_heard=None, on_level=None):
         super().__init__(daemon=True)
         self.model_path, self.device, self.min_conf = model_path, device, min_conf
         self.on_action, self.on_status = on_action, on_status
+        self.on_heard = on_heard or (lambda text: None)
+        self.on_level = on_level or (lambda value: None)
         self.asleep = False
         self._halt = threading.Event()
 
@@ -106,6 +135,7 @@ class VoiceListener(threading.Thread):
     def _listen(self, sd, vosk, model):
         info = sd.query_devices(self.device, "input")
         rate = int(info["default_samplerate"])
+        channels = max(1, min(2, int(info["max_input_channels"])))
         rec = vosk.KaldiRecognizer(model, rate, grammar())
         rec.SetWords(True)
         audio = queue.Queue()
@@ -113,17 +143,22 @@ class VoiceListener(threading.Thread):
         def callback(data, frames, t, status):
             audio.put(bytes(data))
 
-        with sd.RawInputStream(samplerate=rate, blocksize=rate // 4, device=self.device,
-                               dtype="int16", channels=1, callback=callback):
+        with sd.RawInputStream(samplerate=rate, blocksize=rate // 10, device=self.device,
+                               dtype="int16", channels=channels, callback=callback):
             self.on_status(f"Listening on {info['name']}")
             while not self._halt.is_set():
                 try:
                     data = audio.get(timeout=0.5)
                 except queue.Empty:
                     continue
-                if rec.AcceptWaveform(data):
+                mono = pick_channel(data, channels)
+                self.on_level(level(mono))
+                if rec.AcceptWaveform(mono.tobytes()):
                     res = json.loads(rec.Result())
+                    text = " ".join(res.get("text", "").replace("[unk]", "").split())
                     action = match_phrase(res.get("text", ""), res.get("result"), self.min_conf)
+                    if text:
+                        self.on_heard(text if action else f"{text} (not sure, ignored)")
                     if action is None:
                         continue
                     if self.asleep and action not in WAKE_ACTIONS:

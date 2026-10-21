@@ -77,14 +77,22 @@ jobs:
       - name: Self test and package (macOS)
         if: runner.os == 'macOS'
         run: |
-          "dist/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" --selftest --no-voice
-          hdiutil create -volname "Limitless Zoom" -srcfolder "dist/Limitless Zoom.app" \
+          # One consistent ad-hoc signature, so macOS remembers the permissions you grant.
+          codesign --force --deep --sign - "dist/Limitless Zoom.app"
+          codesign --verify --deep --strict "dist/Limitless Zoom.app"
+          "dist/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" --selftest
+          # Drag-to-Applications disk image with a short how-to-open note.
+          mkdir -p dmg
+          cp -R "dist/Limitless Zoom.app" dmg/
+          ln -s /Applications dmg/Applications
+          cp "packaging/How to open on a Mac.txt" dmg/
+          hdiutil create -volname "Limitless Zoom" -srcfolder dmg \
             -ov -format UDZO "dist/Limitless-Zoom-${{ matrix.name }}.dmg"
       - name: Self test and package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "dist\Limitless Zoom\Limitless Zoom.exe" -ArgumentList "--selftest","--no-voice" -Wait -PassThru
+          $p = Start-Process -FilePath "dist\Limitless Zoom\Limitless Zoom.exe" -ArgumentList "--selftest" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "self test failed" }
           $env:APP_VERSION = (python -c "import limitless_zoom; print(limitless_zoom.__version__)")
           if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }

@@ -1,10 +1,11 @@
 """On-screen parts: the big-text toast, the "zoom keys on" badge, the
-big-button panel (dwell and switch scanning), and the first-run welcome."""
+big-button panel (dwell and switch scanning), key capture, and the setup assistant."""
 
 from PySide6.QtCore import QElapsedTimer, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
-from PySide6.QtWidgets import (QComboBox, QDialog, QGridLayout, QHBoxLayout, QLabel,
-                               QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
+                               QLabel, QProgressBar, QPushButton, QScrollArea, QVBoxLayout,
+                               QWidget)
 
 from .actions import PANEL_BUTTONS
 
@@ -157,15 +158,35 @@ class Panel(QWidget):
         self.status.setWordWrap(True)
         self.status.setStyleSheet(f"font-size:{int(px * 0.7)}px; color:#bbb;")
 
+        self.keys_label = QLabel("Zoom keys: off")
+        self.voice_label = QLabel("Voice: starting…")
+        self.chip_px = int(px * 0.75)
+        for chip in (self.keys_label, self.voice_label):
+            chip.setWordWrap(True)
+            chip.setStyleSheet(f"font-size:{self.chip_px}px; color:#ddd; background:#1d1d1d;"
+                               "border-radius:10px; padding:6px 10px;")
+
         lay = QVBoxLayout(self)
         lay.setContentsMargins(12, 12, 12, 12)
+        lay.addWidget(self.keys_label)
+        lay.addWidget(self.voice_label)
         lay.addLayout(grid)
         lay.addLayout(bar)
         lay.addWidget(self.status)
 
         self.scan_index = -1
         self.scan_timer = QTimer(self, interval=scan_ms, timeout=self._advance)
-        self.resize(int(440 * scale), int(620 * scale))
+        self.resize(int(440 * scale), int(700 * scale))
+
+    def set_keys_state(self, on, key_text):
+        base = f"font-size:{self.chip_px}px; border-radius:10px; padding:6px 10px;"
+        if on:
+            self.keys_label.setText("Zoom keys ON: E in, Q out, S taller, W shorter, A fit. "
+                                    f"Tap {key_text} to turn off.")
+            self.keys_label.setStyleSheet(base + f"background:{HIGHLIGHT}; color:#000; font-weight:800;")
+        else:
+            self.keys_label.setText(f"Zoom keys off. Tap {key_text} to turn on.")
+            self.keys_label.setStyleSheet(base + "background:#1d1d1d; color:#ddd;")
 
     # Scanning: one switch steps through the buttons.
     def scanning(self):
@@ -218,7 +239,8 @@ class KeyCaptureDialog(QDialog):
         self.setWindowTitle(title)
         self.setStyleSheet("QWidget{background:#111;color:#fff;font-size:26px;font-weight:600;}")
         self.key = None
-        self.label = QLabel(prompt)
+        self.label = QLabel(prompt + "\n\nYou can also tap Right Option, Right Command, "
+                                     "Right Control or Right Shift on its own.")
         self.label.setWordWrap(True)
         self.label.setAlignment(Qt.AlignCenter)
         cancel = QPushButton("Cancel")
@@ -245,46 +267,221 @@ class KeyCaptureDialog(QDialog):
             self.got_key(e.text().strip().lower())
 
 
-class Welcome(QDialog):
-    """First run: pick the zoom key, the switch key and the microphone."""
+STATE_MARK = {"ok": ("✓", "#3ddc84"), "missing": ("!", "#ff9f43"), "unknown": ("?", "#9e9e9e")}
 
+SETUP_STYLE = """
+    QWidget { background:#111; color:#fff; font-size:19px; }
+    QLabel#h1 { font-size:32px; font-weight:800; }
+    QLabel#h2 { font-size:23px; font-weight:700; margin-top:10px; }
+    QLabel#muted { color:#bbb; }
+    QFrame#card { background:#1c1c1c; border-radius:16px; }
+    QFrame#card QLabel { background:transparent; }
+    QPushButton { background:#2a2a2a; border:3px solid #555; border-radius:12px;
+                  min-height:52px; padding:4px 18px; font-weight:600; }
+    QPushButton:hover, QPushButton:focus { border-color:#4fc3f7; }
+    QPushButton#primary { background:#ffcc00; color:#000; border-color:#ffcc00;
+                          min-height:68px; font-size:23px; }
+    QComboBox { min-height:46px; background:#2a2a2a; border:2px solid #555; border-radius:10px;
+                padding:0 10px; }
+    QProgressBar { background:#2a2a2a; border:none; border-radius:8px; height:16px; }
+    QProgressBar::chunk { background:#3ddc84; border-radius:8px; }
+    QCheckBox { spacing:12px; } QCheckBox::indicator { width:28px; height:28px; }
+"""
+
+
+class Setup(QWidget):
+    """The setup assistant: shown on first launch and from the menu.
+    Everything updates live, so people can see each step work."""
+
+    request_permission = Signal(str)
     choose_layer = Signal()
     choose_switch = Signal()
+    mic_changed = Signal(object)
+    login_changed = Signal(bool)
+    finished = Signal()
 
-    def __init__(self, layer_text, switch_text, mics, current_mic, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Welcome to Limitless Zoom")
-        self.setStyleSheet("""
-            QWidget{background:#111;color:#fff;font-size:22px;}
-            QPushButton{background:#2a2a2a;border:4px solid #555;border-radius:14px;
-                        min-height:70px;font-weight:600;}
-            QPushButton:hover{border-color:#4fc3f7;}
-            QComboBox{min-height:50px;}
-        """)
-        intro = QLabel(
-            "Zoom your DAW or your whole screen without a mouse.\n\n"
-            "• Say \"zoom in\", \"zoom out\", \"taller\", \"fit\".\n"
-            "• Or tap your zoom key, then use E, Q, S, W, A with one hand.\n"
-            "• Or rest your eyes or pointer on the big buttons.\n"
-            "• Or press your switch to scan through them.")
+    def __init__(self, key_text, switch_text, mics, current_mic, login=None, parent=None):
+        super().__init__(parent, Qt.Window)
+        self.setWindowTitle("Set up Limitless Zoom")
+        self.setAccessibleName("Limitless Zoom setup")
+        self.setStyleSheet(SETUP_STYLE)
+
+        body = QWidget()
+        lay = QVBoxLayout(body)
+        lay.setContentsMargins(28, 24, 28, 24)
+        lay.setSpacing(12)
+
+        h1 = QLabel("Welcome to Limitless Zoom")
+        h1.setObjectName("h1")
+        intro = QLabel("Zoom Logic, Pro Tools, Ableton or your whole screen with your voice, "
+                       "one key, your eyes or a switch. This takes about a minute.")
+        intro.setObjectName("muted")
         intro.setWordWrap(True)
-        self.layer_btn = QPushButton(f"Zoom keys on/off: {layer_text}  (change)")
-        self.switch_btn = QPushButton(f"Switch key: {switch_text}  (change)")
-        self.layer_btn.clicked.connect(self.choose_layer)
-        self.switch_btn.clicked.connect(self.choose_switch)
+        lay.addWidget(h1)
+        lay.addWidget(intro)
+
+        # 1. Permissions (macOS)
+        self.perm_header = self._h2("1. Allow access", lay)
+        self.perm_box = QVBoxLayout()
+        lay.addLayout(self.perm_box)
+        self.perm_rows = {}
+
+        # 2. Zoom key
+        self._h2("2. Your zoom key", lay)
+        card, c = self._card(lay)
+        self.key_label = QLabel()
+        self.key_label.setWordWrap(True)
+        self.key_state = QLabel()
+        self.key_state.setAlignment(Qt.AlignCenter)
+        self.key_state.setMinimumHeight(56)
+        change = QPushButton("Use a different key…")
+        change.clicked.connect(self.choose_layer)
+        c.addWidget(self.key_label)
+        c.addWidget(self.key_state)
+        c.addWidget(change, alignment=Qt.AlignLeft)
+        self.set_key_text(key_text)
+        self.set_layer_state(False)
+
+        # 3. Voice
+        self._h2("3. Voice", lay)
+        card, c = self._card(lay)
+        c.addWidget(QLabel("Microphone:"))
         self.mic = QComboBox()
+        self.mic.setAccessibleName("Microphone")
         self.mic.addItem("System default microphone", None)
         for m in mics:
             self.mic.addItem(m, m)
         if current_mic in mics:
             self.mic.setCurrentIndex(mics.index(current_mic) + 1)
-        done = QPushButton("Start")
-        done.clicked.connect(self.accept)
-        lay = QVBoxLayout(self)
-        lay.addWidget(intro)
-        lay.addWidget(self.layer_btn)
-        lay.addWidget(self.switch_btn)
-        lay.addWidget(QLabel("Microphone:"))
-        lay.addWidget(self.mic)
-        lay.addWidget(done)
-        self.resize(680, 600)
+        self.mic.currentIndexChanged.connect(lambda _: self.mic_changed.emit(self.mic.currentData()))
+        c.addWidget(self.mic)
+        self.meter = QProgressBar()
+        self.meter.setRange(0, 100)
+        self.meter.setTextVisible(False)
+        self.meter.setAccessibleName("Microphone level")
+        c.addWidget(self.meter)
+        self.heard = QLabel("Say \u201czoom in\u201d to try it.")
+        self.heard.setWordWrap(True)
+        c.addWidget(self.heard)
+        self.voice_status = QLabel("")
+        self.voice_status.setObjectName("muted")
+        self.voice_status.setWordWrap(True)
+        c.addWidget(self.voice_status)
+
+        # 4. Switch
+        self._h2("4. Switch (optional)", lay)
+        card, c = self._card(lay)
+        self.switch_label = QLabel()
+        self.switch_label.setWordWrap(True)
+        sw = QPushButton("Set up my switch…")
+        sw.clicked.connect(self.choose_switch)
+        c.addWidget(self.switch_label)
+        c.addWidget(sw, alignment=Qt.AlignLeft)
+        self.set_switch_text(switch_text)
+
+        # Finish
+        self.login = None
+        if login is not None:
+            self.login = QCheckBox("Open Limitless Zoom when I log in")
+            self.login.setChecked(login)
+            self.login.toggled.connect(self.login_changed)
+            lay.addWidget(self.login)
+        self.start_btn = QPushButton("Start zooming")
+        self.start_btn.setObjectName("primary")
+        self.start_btn.clicked.connect(self._finish)
+        lay.addWidget(self.start_btn)
+        tip = QLabel("You can open this again any time from the magnifier icon in the menu bar.")
+        tip.setObjectName("muted")
+        tip.setWordWrap(True)
+        lay.addWidget(tip)
+
+        scroll = QScrollArea()
+        scroll.setWidget(body)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll)
+        self.resize(760, 860)
+
+    def _h2(self, text, lay):
+        h = QLabel(text)
+        h.setObjectName("h2")
+        lay.addWidget(h)
+        return h
+
+    def _card(self, lay):
+        card = QFrame()
+        card.setObjectName("card")
+        c = QVBoxLayout(card)
+        c.setContentsMargins(18, 16, 18, 16)
+        c.setSpacing(10)
+        lay.addWidget(card)
+        return card, c
+
+    def set_permissions(self, perms):
+        self.perm_header.setVisible(bool(perms))
+        for p in perms:
+            row = self.perm_rows.get(p["key"])
+            if row is None:
+                card = QFrame()
+                card.setObjectName("card")
+                h = QHBoxLayout(card)
+                h.setContentsMargins(16, 12, 16, 12)
+                mark = QLabel()
+                mark.setFixedWidth(44)
+                mark.setAlignment(Qt.AlignCenter)
+                text = QLabel()
+                text.setWordWrap(True)
+                btn = QPushButton("Allow…")
+                btn.clicked.connect(lambda _=False, k=p["key"]: self.request_permission.emit(k))
+                h.addWidget(mark)
+                h.addWidget(text, 1)
+                h.addWidget(btn)
+                self.perm_box.addWidget(card)
+                row = self.perm_rows[p["key"]] = (mark, text, btn)
+            mark, text, btn = row
+            symbol, color = STATE_MARK.get(p["state"], STATE_MARK["unknown"])
+            mark.setText(symbol)
+            mark.setStyleSheet(f"font-size:30px; font-weight:800; color:{color};")
+            need = "" if p["required"] else " (optional)"
+            text.setText(f"<b>{p['title']}{need}</b><br><span style='color:#bbb'>{p['why']}</span>")
+            btn.setVisible(p["state"] != "ok")
+            btn.setText("Open Settings…" if p["state"] == "unknown" else "Allow…")
+            btn.setAccessibleName(f"Allow {p['title']}")
+        missing = [p["title"] for p in perms if p["required"] and p["state"] == "missing"]
+        self.start_btn.setText("Start zooming" if not missing
+                               else f"Start (still needs {', '.join(missing)})")
+
+    def set_key_text(self, key_text):
+        self.key_text = key_text
+        self.key_label.setText(f"Tap <b>{key_text}</b> to turn the zoom keys on. Then, with one hand: "
+                               "<b>E</b> zoom in, <b>Q</b> out, <b>S</b> taller, <b>W</b> shorter, "
+                               "<b>A</b> fit. Tap it again to turn them off. Try it now:")
+
+    def set_layer_state(self, on):
+        if on:
+            self.key_state.setText("ZOOM KEYS ON")
+            self.key_state.setStyleSheet("background:#ffcc00; color:#000; font-size:24px;"
+                                         "font-weight:800; border-radius:12px;")
+        else:
+            self.key_state.setText(f"Zoom keys off. Tap {self.key_text}.")
+            self.key_state.setStyleSheet("background:#2a2a2a; color:#ddd; font-size:20px;"
+                                         "border-radius:12px;")
+
+    def set_switch_text(self, switch_text):
+        self.switch_label.setText(f"If you use a switch, it starts the big-button panel scanning, "
+                                  f"then picks the lit button. Your switch key: <b>{switch_text}</b>.")
+
+    def set_level(self, value):
+        self.meter.setValue(int(value * 100))
+
+    def set_heard(self, text):
+        self.heard.setText(f"Heard: \u201c{text}\u201d")
+
+    def set_voice_status(self, text):
+        self.voice_status.setText(text)
+
+    def _finish(self):
+        self.finished.emit()
+        self.close()

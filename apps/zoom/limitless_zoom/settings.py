@@ -9,7 +9,7 @@ from pathlib import Path
 from .actions import DEFAULT_LAYER_MAP
 
 DEFAULTS = {
-    "layer_key": "f13",        # one key turns the one-handed zoom keys on and off
+    "layer_key": None,         # one key turns the zoom keys on and off (None: per-OS default)
     "switch_key": "f19",       # the key an accessibility switch sends, for scanning
     "dwell_ms": 900,           # rest the pointer this long on a panel button to press it
     "scan_ms": 1500,           # how long each panel button stays lit while scanning
@@ -61,6 +61,10 @@ class Settings(dict):
             for k, v in data.items():
                 if k in DEFAULTS:
                     self[k] = v
+
+    def get_layer_key(self):
+        """Tap Right Option on a Mac (every Mac keyboard has one), Right Ctrl elsewhere."""
+        return self["layer_key"] or ("right_alt" if os_name() == "mac" else "right_ctrl")
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)

@@ -9,9 +9,10 @@ import os
 import threading
 import time
 
-from .keys import MAC_BY_CODE, WIN_BY_VK, normalize_key
+from .keys import MAC_BY_CODE, MAC_RIGHT_MOD_BITS, MODIFIER_TAPS, WIN_BY_VK, normalize_key
 
 REPEAT_GAP = 0.12  # seconds between actions while a layer key is held down
+TAP_TIME = 0.6     # a modifier pressed and let go within this, alone, is a tap
 
 
 class KeyLogic:
@@ -26,6 +27,7 @@ class KeyLogic:
         self.down = set()
         self.last_fire = {}
         self.capture = None  # callback waiting for the next key press
+        self.tap = None      # (modifier, time) while a modifier might become a tap
         self.lock = threading.Lock()
 
     def set_layer(self, on):
@@ -42,6 +44,10 @@ class KeyLogic:
         """Returns True if the key should be hidden from other apps."""
         if name is None:
             return False
+        if name in MODIFIER_TAPS:
+            self._modifier(name, is_down)
+            return False  # modifiers always reach other apps
+        self.tap = None   # Right Option + another key is a shortcut, not a tap
         repeat = is_down and name in self.down
         if is_down:
             self.down.add(name)
@@ -78,6 +84,21 @@ class KeyLogic:
                 return True
         return False
 
+    def _modifier(self, name, is_down):
+        if is_down:
+            self.tap = (name, self.clock())
+            return
+        tap, self.tap = self.tap, None
+        if not tap or tap[0] != name or self.clock() - tap[1] > TAP_TIME:
+            return
+        if self.capture is not None:
+            cb, self.capture = self.capture, None
+            cb(name)
+        elif name == self.switch_key:
+            self.on_switch()
+        elif name == self.layer_key:
+            self.set_layer(not self.layer_on)
+
 
 class GlobalKeys:
     """Listens to the whole keyboard. Needs Accessibility + Input Monitoring on macOS."""
@@ -108,6 +129,15 @@ class GlobalKeys:
     def _mac_intercept(self, event_type, event):
         import Quartz
 
+        if event_type == Quartz.kCGEventFlagsChanged:
+            code = Quartz.CGEventGetIntegerValueField(event, Quartz.kCGKeyboardEventKeycode)
+            name = MAC_BY_CODE.get(code)
+            if name in MAC_RIGHT_MOD_BITS:
+                down = bool(Quartz.CGEventGetFlags(event) & MAC_RIGHT_MOD_BITS[name])
+                self.logic.handle(name, down, False)
+            elif name is None:
+                self.logic.tap = None  # another modifier joined in
+            return event
         if event_type not in (Quartz.kCGEventKeyDown, Quartz.kCGEventKeyUp):
             return event
         # Ignore the keys this app presses itself (e.g. "z" for Logic's fit).
@@ -128,8 +158,12 @@ class GlobalKeys:
         import ctypes
 
         state = ctypes.windll.user32.GetAsyncKeyState
+        name = WIN_BY_VK.get(data.vkCode)
+        if data.vkCode in (0xA0, 0xA2, 0xA4, 0x5B):  # left-hand modifiers break a tap
+            self.logic.tap = None
+            return True
         has_mods = any(state(vk) & 0x8000 for vk in (0x11, 0x12, 0x5B, 0x5C))
-        if self.logic.handle(WIN_BY_VK.get(data.vkCode), msg in (0x100, 0x104), has_mods):
+        if self.logic.handle(name, msg in (0x100, 0x104), has_mods):
             self.listener.suppress_event()
         return True
 

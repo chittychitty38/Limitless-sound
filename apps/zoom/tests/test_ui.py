@@ -156,3 +156,56 @@ def test_remote_command(qapp, tmp_path):
         if b.sent:
             break
     assert b.sent == [(("cmd",), "left")]
+
+
+class PermBackend(FakeBackend):
+    def __init__(self):
+        super().__init__()
+        self.allowed = False
+        self.requested = []
+
+    def permissions(self):
+        state = "ok" if self.allowed else "missing"
+        return [{"key": "accessibility", "title": "Accessibility", "why": "keys",
+                 "state": state, "required": True},
+                {"key": "microphone", "title": "Microphone", "why": "voice",
+                 "state": "missing", "required": False}]
+
+    def request_permission(self, key):
+        self.requested.append(key)
+
+
+def test_setup_shows_live_permissions_and_restarts_keys(qapp, tmp_path):
+    s = Settings(tmp_path / "s.json")
+    s["speak"] = False
+    b = PermBackend()
+    app = ZoomApp(s, b, use_keys=False, use_voice=False, use_tray=False)
+    started = []
+    app.start_keys = lambda: started.append(1)
+    app.start()
+    QTest.qWait(400)
+    w = app.setup_window
+    assert w is not None and w.isVisible()  # first run opens setup
+    mark, text, btn = w.perm_rows["accessibility"]
+    assert mark.text() == "!" and btn.isVisible()
+    assert "still needs Accessibility" in w.start_btn.text()
+    btn.click()
+    assert b.requested == ["accessibility"]
+    b.allowed = True
+    app._check_permissions()
+    assert mark.text() == "\u2713" and not btn.isVisible()
+    assert started == [1, 1]  # started at launch, then again once allowed
+    assert w.start_btn.text() == "Start zooming"
+    app.run("keys")
+    assert w.key_state.text() == "ZOOM KEYS ON"
+    app._heard("zoom in")
+    assert "zoom in" in w.heard.text()
+    w.start_btn.click()
+    assert not s["first_run"]
+
+
+def test_panel_shows_key_state(qapp, tmp_path):
+    app, b = make_app(tmp_path)
+    assert "Tap" in app.panel.keys_label.text()
+    app.run("keys")
+    assert app.panel.keys_label.text().startswith("Zoom keys ON")

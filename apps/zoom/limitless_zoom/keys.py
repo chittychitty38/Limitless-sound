@@ -16,7 +16,13 @@ ALIASES = {
     "escape": "esc", "return": "enter", "plus": "=", "minus": "-",
     "arrowleft": "left", "arrowright": "right", "arrowup": "up", "arrowdown": "down",
     "page_up": "pageup", "page_down": "pagedown", "scrolllock": "scroll_lock",
+    "alt_r": "right_alt", "ctrl_r": "right_ctrl", "cmd_r": "right_cmd", "shift_r": "right_shift",
+    "right_option": "right_alt", "right_command": "right_cmd", "right_control": "right_ctrl",
 }
+
+# Modifier keys that work as a key of their own when tapped alone. Every Mac
+# keyboard has a Right Option, so tapping it is the default zoom key there.
+MODIFIER_TAPS = {"right_alt", "right_ctrl", "right_cmd", "right_shift"}
 
 
 def normalize_key(name):
@@ -44,10 +50,17 @@ def parse_combo(text):
     return tuple(out), normalize_key(key)
 
 
-def format_key(name):
+def format_key(name, os_name="mac"):
     """Human-readable key name for on-screen text and speech."""
+    if not name:
+        return "not set"
+    mac = os_name == "mac"
     pretty = {"esc": "Escape", "scroll_lock": "Scroll Lock", "pause": "Pause",
-              "space": "Space", "enter": "Enter", "tab": "Tab"}
+              "space": "Space", "enter": "Enter", "tab": "Tab",
+              "right_alt": "Right Option" if mac else "Right Alt",
+              "right_ctrl": "Right Control" if mac else "Right Ctrl",
+              "right_cmd": "Right Command" if mac else "Right Windows key",
+              "right_shift": "Right Shift"}
     if name in pretty:
         return pretty[name]
     if len(name) > 1 and name[0] == "f" and name[1:].isdigit():
@@ -69,7 +82,12 @@ MAC_KEYCODES = {
     "f14": 107, "f15": 113, "f16": 106, "f17": 64, "f18": 79, "f19": 80, "f20": 90,
     "left": 123, "right": 124, "down": 125, "up": 126,
     "home": 115, "end": 119, "pageup": 116, "pagedown": 121, "delete": 117,
+    "right_cmd": 54, "right_shift": 60, "right_alt": 61, "right_ctrl": 62,
 }
+
+# Device-specific modifier bits in a macOS event's flags (NX_DEVICER*KEYMASK).
+MAC_RIGHT_MOD_BITS = {"right_ctrl": 0x2000, "right_shift": 0x04, "right_cmd": 0x10,
+                      "right_alt": 0x40}
 
 # Windows virtual-key codes (VK_*).
 WIN_VK = {
@@ -82,6 +100,7 @@ WIN_VK = {
     "left": 0x25, "up": 0x26, "right": 0x27, "down": 0x28,
     "home": 0x24, "end": 0x23, "pageup": 0x21, "pagedown": 0x22,
     "insert": 0x2D, "delete": 0x2E, "pause": 0x13, "scroll_lock": 0x91,
+    "right_shift": 0xA1, "right_ctrl": 0xA3, "right_alt": 0xA5, "right_cmd": 0x5C,
 }
 
 MAC_BY_CODE = {v: k for k, v in MAC_KEYCODES.items()}

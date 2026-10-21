@@ -6,7 +6,9 @@ import ctypes
 import os
 import shutil
 import subprocess
+import sys
 import time
+from pathlib import Path
 
 from .keys import MAC_KEYCODES, WIN_VK
 from .settings import os_name
@@ -81,8 +83,27 @@ class Backend:
     def prepare_panel(self, widget):
         pass
 
-    def permission_problems(self):
+    def bring_to_front(self):
+        """Put our own windows in front (a menu-bar app isn't in front by default)."""
+
+    def permissions(self):
+        """What the OS must allow, as a list of dicts with key, title, why,
+        state ("ok", "missing" or "unknown") and required."""
         return []
+
+    def request_permission(self, key):
+        pass
+
+    # Open at login -------------------------------------------------------------
+
+    def can_open_at_login(self):
+        return False
+
+    def open_at_login(self):
+        return False
+
+    def set_open_at_login(self, on):
+        pass
 
 
 class MacBackend(Backend):
@@ -121,19 +142,136 @@ class MacBackend(Backend):
         except Exception:
             pass
 
-    def permission_problems(self):
-        problems = []
+    def bring_to_front(self):
         try:
-            from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+            from AppKit import NSApplication
 
-            if not AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True}):
-                problems.append(
-                    "Limitless Zoom needs Accessibility permission to press zoom keys. "
-                    "Open System Settings > Privacy & Security > Accessibility and switch it on, "
-                    "then also allow it under Input Monitoring.")
+            NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         except Exception:
             pass
-        return problems
+
+    # Permissions -------------------------------------------------------------
+
+    SETTINGS = "x-apple.systempreferences:com.apple.preference.security?Privacy_"
+
+    def _accessibility(self):
+        try:
+            from ApplicationServices import AXIsProcessTrusted
+
+            return "ok" if AXIsProcessTrusted() else "missing"
+        except Exception:
+            return "unknown"
+
+    def _iokit(self):
+        lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/IOKit.framework/IOKit")
+        lib.IOHIDCheckAccess.restype = ctypes.c_int
+        lib.IOHIDCheckAccess.argtypes = [ctypes.c_int]
+        lib.IOHIDRequestAccess.restype = ctypes.c_bool
+        lib.IOHIDRequestAccess.argtypes = [ctypes.c_int]
+        return lib
+
+    def _input_monitoring(self):
+        try:
+            # kIOHIDRequestTypeListenEvent = 1; kIOHIDAccessTypeGranted = 0
+            return "ok" if self._iokit().IOHIDCheckAccess(1) == 0 else "missing"
+        except Exception:
+            return "unknown"
+
+    def _microphone(self):
+        try:
+            from AVFoundation import AVCaptureDevice, AVMediaTypeAudio
+
+            status = AVCaptureDevice.authorizationStatusForMediaType_(AVMediaTypeAudio)
+            return {3: "ok", 0: "ask"}.get(status, "missing")
+        except Exception:
+            return "unknown"
+
+    def _zoom_shortcuts(self):
+        try:
+            out = subprocess.run(["defaults", "read", "com.apple.universalaccess",
+                                  "closeViewHotkeysEnabled"], capture_output=True, text=True,
+                                 timeout=2).stdout.strip()
+        except Exception:
+            return "unknown"
+        return {"1": "ok", "0": "missing"}.get(out, "unknown")
+
+    def permissions(self):
+        mic = self._microphone()
+        return [
+            {"key": "accessibility", "title": "Accessibility",
+             "why": "Lets Limitless Zoom press zoom keys in Logic, Pro Tools and other apps.",
+             "state": self._accessibility(), "required": True},
+            {"key": "input", "title": "Input Monitoring",
+             "why": "Lets your zoom key and switch work in every app.",
+             "state": self._input_monitoring(), "required": True},
+            {"key": "microphone", "title": "Microphone",
+             "why": "For voice commands. Audio is understood on this Mac and never sent anywhere.",
+             "state": "missing" if mic == "ask" else mic, "required": False},
+            {"key": "zoom", "title": "Screen zoom shortcuts",
+             "why": "In Accessibility > Zoom, turn on \"Use keyboard shortcuts to zoom\" so the "
+                    "whole screen can zoom outside your DAW.",
+             "state": self._zoom_shortcuts(), "required": False},
+        ]
+
+    def request_permission(self, key):
+        if key == "accessibility":
+            try:
+                from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+
+                AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+            except Exception:
+                pass
+            self._open(self.SETTINGS + "Accessibility")
+        elif key == "input":
+            try:
+                if self._iokit().IOHIDRequestAccess(1):
+                    return
+            except Exception:
+                pass
+            self._open(self.SETTINGS + "ListenEvent")
+        elif key == "microphone":
+            if self._microphone() == "ask":
+                try:
+                    from AVFoundation import AVCaptureDevice, AVMediaTypeAudio
+
+                    AVCaptureDevice.requestAccessForMediaType_completionHandler_(
+                        AVMediaTypeAudio, lambda granted: None)
+                    return
+                except Exception:
+                    pass
+            self._open(self.SETTINGS + "Microphone")
+        elif key == "zoom":
+            self._open("x-apple.systempreferences:com.apple.preference.universalaccess?Seeing_Zoom")
+
+    def _open(self, url):
+        subprocess.Popen(["open", url])
+
+    # Open at login: a LaunchAgent that opens the app bundle ------------------------
+
+    def _bundle(self):
+        exe = Path(sys.executable)
+        return exe.parents[2] if getattr(sys, "frozen", False) and exe.parent.name == "MacOS" else None
+
+    def _agent(self):
+        return Path.home() / "Library" / "LaunchAgents" / "org.limitlesssound.zoom.plist"
+
+    def can_open_at_login(self):
+        return self._bundle() is not None
+
+    def open_at_login(self):
+        return self._agent().exists()
+
+    def set_open_at_login(self, on):
+        import plistlib
+
+        agent = self._agent()
+        if on and self._bundle():
+            agent.parent.mkdir(parents=True, exist_ok=True)
+            with open(agent, "wb") as f:
+                plistlib.dump({"Label": "org.limitlesssound.zoom", "RunAtLoad": True,
+                               "ProgramArguments": ["/usr/bin/open", "-a", str(self._bundle())]}, f)
+        elif not on and agent.exists():
+            agent.unlink()
 
 
 class WinBackend(Backend):
@@ -174,6 +312,33 @@ class WinBackend(Backend):
         self.user32.keybd_event(0x12, 0, 0, 0)
         self.user32.keybd_event(0x12, 0, 2, 0)
         self.user32.SetForegroundWindow(hwnd)
+
+    RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+    def can_open_at_login(self):
+        return getattr(sys, "frozen", False)
+
+    def open_at_login(self):
+        import winreg
+
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.RUN_KEY) as k:
+                winreg.QueryValueEx(k, "Limitless Zoom")
+            return True
+        except OSError:
+            return False
+
+    def set_open_at_login(self, on):
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.RUN_KEY, 0, winreg.KEY_SET_VALUE) as k:
+            if on:
+                winreg.SetValueEx(k, "Limitless Zoom", 0, winreg.REG_SZ, f'"{sys.executable}"')
+            else:
+                try:
+                    winreg.DeleteValue(k, "Limitless Zoom")
+                except OSError:
+                    pass
 
     def prepare_panel(self, widget):
         hwnd = int(widget.winId())

@@ -6,7 +6,7 @@ from limitless_zoom.actions import (DEFAULT_LAYER_MAP, LABELS, PANEL_BUTTONS, VO
                                     ZOOM_ACTIONS)
 from limitless_zoom.hotkeys import KeyLogic
 from limitless_zoom.keymaps import TARGETS, find_target
-from limitless_zoom.keys import MAC_KEYCODES, WIN_VK, parse_combo
+from limitless_zoom.keys import MAC_KEYCODES, MODIFIER_TAPS, WIN_VK, format_key, parse_combo
 from limitless_zoom.router import Router
 from limitless_zoom.settings import Settings
 from limitless_zoom.voice import grammar, match_phrase
@@ -34,7 +34,7 @@ def test_every_default_combo_is_pressable():
 
 
 def test_layer_and_switch_keys_exist_on_both_oses():
-    for key in list(DEFAULT_LAYER_MAP) + ["f13", "f19", "esc"]:
+    for key in list(DEFAULT_LAYER_MAP) + ["f13", "f19", "esc"] + sorted(MODIFIER_TAPS):
         assert key in MAC_KEYCODES and key in WIN_VK
 
 
@@ -191,7 +191,8 @@ def test_switch_and_capture():
 
 def test_settings_roundtrip(tmp_path):
     s = Settings(tmp_path / "s.json")
-    assert s["layer_key"] == "f13"
+    assert s["layer_key"] is None
+    assert s.get_layer_key() in ("right_alt", "right_ctrl")
     s["layer_key"] = "f8"
     s.save()
     assert Settings(tmp_path / "s.json")["layer_key"] == "f8"
@@ -204,3 +205,61 @@ def test_settings_ignore_bad_file(tmp_path):
 
 def test_panel_buttons_are_actions():
     assert all(a in ZOOM_ACTIONS for a, _ in PANEL_BUTTONS)
+
+
+# Tapping a modifier on its own (the default zoom key is a Right Option tap) ----
+
+def make_tap_logic(t):
+    r = Recorder()
+    logic = KeyLogic("right_alt", "right_cmd", DEFAULT_LAYER_MAP, r.actions.append, r.layers.append,
+                     lambda: setattr(r, "switches", r.switches + 1), clock=lambda: t[0])
+    return logic, r
+
+
+def test_modifier_tap_toggles_layer():
+    t = [0.0]
+    logic, r = make_tap_logic(t)
+    assert logic.handle("right_alt", True, False) is False  # never hidden from apps
+    t[0] += 0.1
+    assert logic.handle("right_alt", False, False) is False
+    assert r.layers == [True]
+    assert tap(logic, "e") is True and r.actions == ["in"]
+
+
+def test_modifier_used_in_a_shortcut_is_not_a_tap():
+    t = [0.0]
+    logic, r = make_tap_logic(t)
+    logic.handle("right_alt", True, False)
+    tap(logic, "e", mods=True)  # Option+E
+    logic.handle("right_alt", False, False)
+    assert r.layers == [] and r.actions == []
+
+
+def test_long_modifier_hold_is_not_a_tap():
+    t = [0.0]
+    logic, r = make_tap_logic(t)
+    logic.handle("right_alt", True, False)
+    t[0] += 2
+    logic.handle("right_alt", False, False)
+    assert r.layers == []
+
+
+def test_modifier_tap_as_switch_and_capture():
+    t = [0.0]
+    logic, r = make_tap_logic(t)
+    logic.handle("right_cmd", True, False)
+    logic.handle("right_cmd", False, False)
+    assert r.switches == 1
+    got = []
+    logic.capture_next(got.append)
+    logic.handle("right_shift", True, False)
+    assert got == []  # waits for the tap to finish
+    logic.handle("right_shift", False, False)
+    assert got == ["right_shift"]
+
+
+def test_key_names_read_well():
+    assert format_key("right_alt", "mac") == "Right Option"
+    assert format_key("right_alt", "win") == "Right Alt"
+    assert format_key("f19") == "F19"
+    assert format_key(None) == "not set"

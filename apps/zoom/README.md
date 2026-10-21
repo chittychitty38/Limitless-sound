@@ -13,7 +13,7 @@ Linux works too, for testing.
 | Way | How |
 |---|---|
 | **Voice** | Say "zoom in", "zoom out", "zoom way in", "taller", "shorter", "fit", "show everything", "magnifier", "magnify", "preset one"…"preset five", "again". "Stop listening" pauses it; "start listening" brings it back. |
-| **One hand** | Tap your zoom key once (you choose it on first run) to turn the zoom keys on. A yellow "ZOOM KEYS ON" badge shows. Then: **E** in, **Q** out, **S** taller, **W** shorter, **A** fit, **R/F** in/out a lot, **Z** magnifier, **X/C** magnify more/less, **1–5** presets. Hold a key to keep zooming. Tap the zoom key again, or Escape, to turn them off. Shortcuts with Cmd/Ctrl/Alt still work as normal while it's on. |
+| **One hand** | Tap **Right Option** on a Mac (Right Ctrl on Windows, or any key you choose) to turn the zoom keys on. A yellow "ZOOM KEYS ON" badge shows. Then: **E** in, **Q** out, **S** taller, **W** shorter, **A** fit, **R/F** in/out a lot, **Z** magnifier, **X/C** magnify more/less, **1–5** presets. Hold a key to keep zooming. Tap the zoom key again, or Escape, to turn them off. Shortcuts with Cmd/Ctrl/Alt still work as normal while it's on. |
 | **Eyes, head pointer, trackball** | A floating panel of big buttons. Rest the pointer on one for under a second and it presses; keep resting to keep zooming. It never takes focus away from the DAW. |
 | **One switch** | Press your switch (you choose its key on first run) to start scanning. Buttons light up one at a time; press again to pick the lit one. |
 | **Other tools** | `"Limitless Zoom" --do in` (or any action name) tells the running app to act, so Voice Control, Stream Deck, Shortcuts or other Limitless Sound tools can drive it. |
@@ -39,20 +39,28 @@ These are the factory key commands. If a DAW has been remapped, change them in
 
 ## Installing
 
-Download the installer for your computer from the project's Releases page.
+Download the installer for your computer from the project's Releases page (or the
+build's artifacts): `Limitless-Zoom-mac-apple-silicon.dmg` for M1/M2/M3/M4 Macs,
+`Limitless-Zoom-mac-intel.dmg` for Intel Macs, `Limitless-Zoom-Setup-windows.exe` for Windows.
 
-**Mac:** open the `.dmg` and drag Limitless Zoom to Applications. The first time,
-right-click it and choose Open (it isn't signed by Apple yet). macOS will ask for:
-- **Accessibility** and **Input Monitoring** (System Settings > Privacy & Security), so it can press zoom keys and hear your zoom key.
-- **Microphone**, for voice commands.
-- For whole-screen zoom, switch on System Settings > Accessibility > Zoom > "Use keyboard shortcuts to zoom".
+**Mac** (macOS 12 or newer)
+1. Open the `.dmg` and drag Limitless Zoom onto Applications.
+2. Double-click it in Applications. It isn't signed by Apple yet, so the first time
+   macOS may refuse. Go to System Settings > Privacy & Security, click **Open Anyway**
+   next to Limitless Zoom, and confirm. This is needed only once.
+3. The setup window opens. Click **Allow…** next to Accessibility, Input Monitoring and
+   Microphone. Each turns into a green tick the moment it's allowed, and the zoom keys
+   start working straight away with no restart. Optionally turn on Accessibility > Zoom >
+   "Use keyboard shortcuts to zoom" for whole-screen zoom.
+4. Tap **Right Option** and press E, or say "zoom in". The setup window shows what
+   it heard and a live microphone meter.
+
+The app lives in the menu bar (magnifier icon): voice on/off, microphone, your keys,
+Open at login, and Setup.
 
 **Windows:** run `Limitless-Zoom-Setup-windows.exe`. If SmartScreen warns, choose
-More info > Run anyway (it isn't signed yet). You can tick "Start when I sign in".
+More info > Run anyway (it isn't signed yet). The zoom key is a tap of **Right Ctrl**.
 If Pro Tools runs as administrator, run Limitless Zoom as administrator too.
-
-The app lives in the menu bar (Mac) or system tray (Windows). Its menu has voice on/off,
-microphone choice, speech on/off, and choosing your zoom and switch keys.
 
 ## Settings file
 
