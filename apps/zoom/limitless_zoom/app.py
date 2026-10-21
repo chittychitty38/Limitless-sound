@@ -345,12 +345,15 @@ class ZoomApp(QObject):
         sock = self.server.nextPendingConnection()
 
         def read():
+            # The sender may have written and gone before we get here, so read
+            # whatever is already waiting as well as anything that arrives later.
             for line in bytes(sock.readAll()).decode("utf-8", "ignore").split():
                 if line in LABELS:
                     self.run(line)
-            sock.disconnectFromServer()
 
         sock.readyRead.connect(read)
+        sock.disconnected.connect(sock.deleteLater)
+        read()
 
 
 def send_remote(action, timeout_ms=1000):
@@ -360,8 +363,11 @@ def send_remote(action, timeout_ms=1000):
     if not sock.waitForConnected(timeout_ms):
         return False
     sock.write((action + "\n").encode())
+    sock.flush()
     sock.waitForBytesWritten(timeout_ms)
     sock.disconnectFromServer()
+    if sock.state() != QLocalSocket.UnconnectedState:
+        sock.waitForDisconnected(timeout_ms)
     return True
 
 

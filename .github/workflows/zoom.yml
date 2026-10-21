@@ -2,7 +2,7 @@ name: Limitless Zoom
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags: ["zoom-v*"]
     paths: ["apps/zoom/**", ".github/workflows/zoom.yml"]
   pull_request:
@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14      # Apple Silicon
+          - os: macos-15        # Apple Silicon
             name: mac-apple-silicon
-          - os: macos-13      # Intel Macs
+          - os: macos-15-intel  # Intel Macs
             name: mac-intel
           - os: windows-latest
             name: windows
@@ -93,7 +93,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: limitless-zoom-${{ matrix.name }}
+          name: Limitless-Zoom-${{ matrix.name }}
           path: |
             apps/zoom/dist/*.dmg
             apps/zoom/dist/*.exe
