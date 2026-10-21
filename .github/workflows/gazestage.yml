@@ -27,6 +27,7 @@ jobs:
       - run: xvfb-run -a npm test
 
   package:
+    name: package (${{ matrix.artifact }})
     needs: test
     strategy:
       fail-fast: false
@@ -40,6 +41,9 @@ jobs:
       contents: write
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder skips signing on pull requests by default, which leaves the Mac app
+      # with a broken signature. Ours is an ad-hoc signature with no secrets, so it is safe here.
+      CSC_FOR_PULL_REQUEST: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
