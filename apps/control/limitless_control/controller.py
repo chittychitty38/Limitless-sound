@@ -65,7 +65,15 @@ class ControllerReader:
 
     def start(self) -> None:
         # The event queue needs SDL's video system, but no window is ever opened.
-        pygame.display.init()
+        # Without a window system (a Mac build server, a Linux service) fall back
+        # to SDL's dummy video driver; controller input still arrives.
+        try:
+            pygame.display.init()
+        except pygame.error as exc:
+            self.log(f"No window system ({exc}); using background video driver")
+            pygame.display.quit()
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+            pygame.display.init()
         pygame.joystick.init()
         sdl_controller.init()
         for i in range(sdl_controller.get_count()):
