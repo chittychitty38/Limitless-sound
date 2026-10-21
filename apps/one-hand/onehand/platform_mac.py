@@ -25,6 +25,10 @@ MOD_FLAGS = {
     "alt_l": Quartz.kCGEventFlagMaskAlternate, "alt_r": Quartz.kCGEventFlagMaskAlternate,
     "ctrl_l": Quartz.kCGEventFlagMaskControl, "ctrl_r": Quartz.kCGEventFlagMaskControl,
 }
+CLASS_FLAGS = {
+    "cmd": Quartz.kCGEventFlagMaskCommand, "shift": Quartz.kCGEventFlagMaskShift,
+    "alt": Quartz.kCGEventFlagMaskAlternate, "ctrl": Quartz.kCGEventFlagMaskControl,
+}
 ARROWS = {"left_arrow", "right_arrow", "up_arrow", "down_arrow"}
 
 ACCESSIBILITY_URL = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
@@ -100,13 +104,20 @@ class MacBackend:
         name = CODE_TO_NAME.get(code)
         if not name:
             return event
+        flags = Quartz.CGEventGetFlags(event)
         if etype == Quartz.kCGEventFlagsChanged:
             if name not in MOD_FLAGS:
                 return event          # Caps Lock and Fn are left alone
-            down = bool(Quartz.CGEventGetFlags(event) & MOD_FLAGS[name])
+            # With both Command keys held, letting go of one keeps the Command flag
+            # set, so the flag alone can't tell press from release. Each flags event
+            # is one press or one release of this key, so flip what we know.
+            down = bool(flags & MOD_FLAGS[name]) and name not in self.engine.held_mods
         else:
             down = etype == Quartz.kCGEventKeyDown
         try:
+            if etype != Quartz.kCGEventFlagsChanged:
+                # Every key event carries the true modifier state; drop any release we missed.
+                self.engine.sync_mods({cls for cls, bit in CLASS_FLAGS.items() if flags & bit})
             action = self.engine.handle(name, down, time.monotonic(), self.front_app())
         except Exception:
             action = PASS
