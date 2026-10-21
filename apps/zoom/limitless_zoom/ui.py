@@ -1,7 +1,7 @@
 """On-screen parts: the big-text toast, the "zoom keys on" badge, the
 big-button panel (dwell and switch scanning), and the first-run welcome."""
 
-from PySide6.QtCore import QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QElapsedTimer, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QComboBox, QDialog, QGridLayout, QHBoxLayout, QLabel,
                                QPushButton, QVBoxLayout, QWidget)
@@ -63,14 +63,17 @@ class DwellButton(QPushButton):
         self.dwell_enabled = True
         self.scanned = False
         self.progress = 0.0
-        self._elapsed = 0
+        # Measure real time, not timer ticks: macOS slows timers down for
+        # apps in the background, which would stretch the dwell time.
+        self._clock = QElapsedTimer()
         self._tick = QTimer(self, interval=30, timeout=self._step)
+        self._tick.setTimerType(Qt.PreciseTimer)
         self.setFocusPolicy(Qt.NoFocus)
         self.setMouseTracking(True)
 
     def enterEvent(self, e):
         if self.dwell_enabled and self.isEnabled():
-            self._elapsed = 0
+            self._clock.start()
             self._tick.start()
         super().enterEvent(e)
 
@@ -81,11 +84,10 @@ class DwellButton(QPushButton):
         super().leaveEvent(e)
 
     def _step(self):
-        self._elapsed += self._tick.interval()
-        self.progress = min(1.0, self._elapsed / max(1, self.dwell_ms))
+        self.progress = min(1.0, self._clock.elapsed() / max(1, self.dwell_ms))
         if self.progress >= 1.0:
             # Fire, then start over so resting on a button keeps zooming.
-            self._elapsed = 0
+            self._clock.restart()
             self.progress = 0.0
             self.dwelled.emit()
         self.update()

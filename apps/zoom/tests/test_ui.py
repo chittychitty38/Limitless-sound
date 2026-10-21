@@ -1,4 +1,7 @@
 import os
+import subprocess
+import sys
+import time
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -8,7 +11,7 @@ from PySide6.QtGui import QEnterEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from limitless_zoom.app import ZoomApp, send_remote
+from limitless_zoom.app import ZoomApp
 from limitless_zoom.platforms import Backend
 from limitless_zoom.settings import Settings
 from limitless_zoom.ui import Panel
@@ -47,7 +50,10 @@ def test_dwell_presses_button(qapp):
     p.action.connect(got.append)
     p.show()
     hover(p.buttons[1])
-    QTest.qWait(260)
+    for _ in range(100):  # CI machines can be slow; give it up to 2 s
+        if got:
+            break
+        QTest.qWait(20)
     assert got and got[0] == "in"
     QApplication.sendEvent(p.buttons[1], QEvent(QEvent.Leave))
     n = len(got)
@@ -134,7 +140,17 @@ def test_layer_from_voice_and_badge(qapp, tmp_path):
 
 def test_remote_command(qapp, tmp_path):
     app, b = make_app(tmp_path)
-    assert send_remote("out")
+    # Like "--do out": the sender is another process and waits for the app's answer.
+    code = ("import sys; from PySide6.QtCore import QCoreApplication; "
+            "from limitless_zoom.app import send_remote; app = QCoreApplication([]); "
+            "sys.exit(0 if send_remote('out', 3000) else 1)")
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    proc = subprocess.Popen([sys.executable, "-c", code], cwd=root)
+    t0 = time.monotonic()
+    while proc.poll() is None and time.monotonic() - t0 < 10:
+        QTest.qWait(20)
+    assert proc.returncode == 0
+    assert time.monotonic() - t0 < 2.5  # answered, not timed out
     for _ in range(50):
         QTest.qWait(20)
         if b.sent:
