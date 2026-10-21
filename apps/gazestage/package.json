@@ -1,0 +1,25 @@
+{
+  "name": "gazestage",
+  "productName": "GazeStage",
+  "version": "0.2.0",
+  "description": "Eye, head and sound control for Pro Tools and virtual instruments. Limitless Sound.",
+  "main": "main.js",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/smoke.mjs",
+    "postinstall": "node scripts/fetch-assets.mjs",
+    "package:mac": "npm run package:mac-arm64 && npm run package:mac-x64",
+    "package:mac-arm64": "electron-packager . GazeStage --platform=darwin --arch=arm64 --out=dist --overwrite --extend-info=build/Info.plist --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
+    "package:mac-x64": "electron-packager . GazeStage --platform=darwin --arch=x64 --out=dist --overwrite --extend-info=build/Info.plist --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
+    "package:win-x64": "electron-packager . GazeStage --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
+    "package:linux-x64": "electron-packager . GazeStage --platform=linux --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@mediapipe/tasks-vision": "0.10.14",
+    "electron": "39.8.10",
+    "playwright": "1.56.1"
+  },
+  "dependencies": {}
+}
