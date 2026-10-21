@@ -136,6 +136,7 @@ class ZoomApp(QObject):
     # Start-up ---------------------------------------------------------------
 
     def start(self):
+        self.backend.keep_responsive()
         self.suite.start()
         self.start_keys()
         if self.settings["show_panel_on_start"]:

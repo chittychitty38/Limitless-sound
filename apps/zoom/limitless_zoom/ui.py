@@ -176,6 +176,7 @@ class Panel(QWidget):
 
         self.scan_index = -1
         self.scan_timer = QTimer(self, interval=scan_ms, timeout=self._advance)
+        self.scan_timer.setTimerType(Qt.PreciseTimer)
         self.resize(int(440 * scale), int(700 * scale))
 
     def set_keys_state(self, on, key_text):

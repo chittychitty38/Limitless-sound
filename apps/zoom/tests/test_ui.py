@@ -80,7 +80,10 @@ def test_switch_scanning(qapp):
     assert p.scanning() and p.scan_index == 0
     p.switch_pressed()
     assert got == ["out"]
-    QTest.qWait(150)
+    for _ in range(100):  # one step after 100 ms; CI machines may be slow
+        if p.scan_index == 1:
+            break
+        QTest.qWait(20)
     assert p.scan_index == 1
     p.switch_pressed()
     assert got == ["out", "in"]

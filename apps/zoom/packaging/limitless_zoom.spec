@@ -17,7 +17,7 @@ binaries = collect_dynamic_libs("vosk")
 
 if sys.platform == "darwin":
     hidden = ["pynput.keyboard._darwin", "pynput.mouse._darwin", "AppKit", "Quartz",
-              "ApplicationServices", "AVFoundation", "objc"]
+              "ApplicationServices", "AVFoundation", "Foundation", "objc"]
 elif sys.platform.startswith("win"):
     hidden = ["pynput.keyboard._win32", "pynput.mouse._win32"]
 else:
@@ -42,6 +42,7 @@ if sys.platform == "darwin":
                      "CFBundleVersion": __version__,
                      "LSMinimumSystemVersion": "12.0",
                      "LSUIElement": True,  # menu bar app, no Dock icon
+                     "NSAppSleepDisabled": True,  # no App Nap: it works from the background
                      "NSMicrophoneUsageDescription":
                          "Limitless Zoom listens for spoken zoom commands like \"zoom in\". "
                          "Audio never leaves your Mac.",

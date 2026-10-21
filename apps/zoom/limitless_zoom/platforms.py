@@ -86,6 +86,9 @@ class Backend:
     def bring_to_front(self):
         """Put our own windows in front (a menu-bar app isn't in front by default)."""
 
+    def keep_responsive(self):
+        """Stop the OS slowing this app down while another app is in front."""
+
     def permissions(self):
         """What the OS must allow, as a list of dicts with key, title, why,
         state ("ok", "missing" or "unknown") and required."""
@@ -141,6 +144,19 @@ class MacBackend(Backend):
             win.setCollectionBehavior_((1 << 0) | (1 << 8))
         except Exception:
             pass
+
+    def keep_responsive(self):
+        # Limitless Zoom is always in the background behind the DAW, and App Nap
+        # would otherwise slow its timers: dwell, scanning and voice would lag.
+        try:
+            from Foundation import NSProcessInfo
+
+            # NSActivityUserInitiatedAllowingIdleSystemSleep | NSActivityLatencyCritical
+            user_initiated, latency_critical = 0x00EFFFFF, 0xFF00000000
+            self._activity = NSProcessInfo.processInfo().beginActivityWithOptions_reason_(
+                user_initiated | latency_critical, "Listening for zoom commands")
+        except Exception:
+            self._activity = None
 
     def bring_to_front(self):
         try:
