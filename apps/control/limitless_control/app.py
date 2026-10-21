@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import __version__, frontmost, keys, profiles
+from . import __version__, frontmost, keys, login, profiles
 from .engine import Engine
 
 PORT = 47820
@@ -43,6 +43,18 @@ def accessibility_ok() -> bool:
         return bool(lib.AXIsProcessTrusted())
     except Exception:
         return True
+
+
+def request_accessibility() -> None:
+    """Ask macOS to list Limitless Control under Accessibility, then open that settings pane."""
+    if sys.platform != "darwin":
+        return
+    try:
+        from HIServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+        AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+    except Exception:
+        pass
+    subprocess.Popen(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
 
 
 def validate(config: dict) -> list[str]:
@@ -115,8 +127,13 @@ class App:
         self.reader = None
         self.front_app: str | None = None
         self.last_input = {"name": None, "at": 0.0}
+        self.last_action = {"input": None, "label": None, "at": 0.0}
         self.token = secrets.token_urlsafe(16)
+        self.url = ""
         self.running = True
+        self.restart = False
+        self.menu = None
+        self.engine.on_fire = self._fired
         from .suite import Suite
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
@@ -132,6 +149,46 @@ class App:
         with self.lock:
             self.engine.release(name, time.monotonic())
 
+    def _fired(self, name: str, action: dict) -> None:
+        self.last_action = {"input": name, "label": self.action_label(action), "at": time.time()}
+
+    def action_label(self, action: dict) -> str:
+        """The name a person would use for an action: "Record", "Layer 2 for the next switch"."""
+        ident = action.get("id") or action.get("command")
+        if ident in profiles.COMMANDS:
+            return profiles.COMMANDS[ident]["label"]
+        if action.get("command") == "suite":
+            for a in self.suite.suite_actions():
+                if a.get("id") == action.get("suite"):
+                    return a.get("label", action["suite"])
+            return action.get("suite", "")
+        profile = (self.engine.profile or {}).get("name", "")
+        for name in (profile, *profiles.CATALOG):
+            entry = profiles.CATALOG.get(name, {}).get(ident or "")
+            if entry and entry.get("keys") == action.get("keys"):
+                return entry["label"]
+        k = keys.resolve(action.get("keys"))
+        try:
+            return keys.describe(k) if k else ""
+        except ValueError:
+            return k or ""
+
+    def open_settings(self) -> None:
+        if self.url:
+            webbrowser.open(self.url)
+
+    def toggle_enabled(self) -> None:
+        with self.lock:
+            self.engine.set_enabled(not self.engine.enabled)
+
+    def next_layer(self) -> None:
+        with self.lock:
+            self.engine._run("layer", {})
+            self.engine.on_change()
+
+    def quit(self) -> None:
+        self.running = False
+
     # Settings API (server threads)
 
     def state(self) -> dict:
@@ -146,8 +203,13 @@ class App:
                 "app": self.front_app,
                 "controllers": self.reader.connected if self.reader else [],
                 "lastInput": self.last_input,
+                "lastAction": self.last_action,
+                "held": self.reader.held if self.reader else [],
                 "now": time.time(),
                 "accessibility": accessibility_ok(),
+                "setupDone": bool(self.config.get("setupDone")),
+                "startAtLogin": login.is_enabled(),
+                "menuBar": self.menu is not None,
                 "log": list(self.output.log.lines)[-12:],
             }
 
@@ -169,6 +231,9 @@ class App:
         if problems:
             return problems
         with self.lock:
+            # The settings page and a reset never undo the finished welcome steps.
+            if self.config.get("setupDone") and "setupDone" not in config:
+                config["setupDone"] = True
             self.config = config
             profiles.save(config)
             self.engine.reload(config, self.front_app)
@@ -181,18 +246,25 @@ class App:
     def run(self, open_browser: bool) -> None:
         from .controller import ControllerReader
         server = self._serve()
-        url = f"http://127.0.0.1:{server.server_address[1]}/?t={self.token}"
+        self.url = f"http://127.0.0.1:{server.server_address[1]}/?t={self.token}"
         self._write_session(server.server_address[1])
-        self.log(f"Limitless Control {__version__} running. Settings: {url}")
+        self.log(f"Limitless Control {__version__} running. Settings: {self.url}")
         if not accessibility_ok():
             self.log("Mac: allow Accessibility access so key commands reach your apps.")
-        if open_browser:
-            webbrowser.open(url)
+        # The first time, always show the guided setup.
+        if open_browser or not self.config.get("setupDone"):
+            self.open_settings()
 
         self.suite.start()
         self.reader = ControllerReader(self._press, self._release, self.log)
         self.reader.threshold = float(self.config.get("analogThreshold", 0.6))
         self.reader.start()
+        if sys.platform == "darwin" and self.reader.video_driver == "cocoa":
+            try:
+                from .macmenu import MenuBar
+                self.menu = MenuBar(self.open_settings, self.toggle_enabled, self.next_layer, self.quit)
+            except Exception as exc:
+                self.log(f"Menu bar icon unavailable: {exc}")
         next_app_check = 0.0
         try:
             while self.running:
@@ -208,14 +280,22 @@ class App:
                             self.front_app = app
                             self.engine.app_changed(app)
                             self.suite.report_state()
+                    if self.menu:
+                        with self.lock:
+                            p = self.engine.profile or {}
+                            state = (self.engine.enabled, self.engine.layer + 1, p.get("name"))
+                        self.menu.update(*state, self.reader.connected)
                 time.sleep(0.01)
         except KeyboardInterrupt:
             pass
         finally:
             server.shutdown()
+            server.server_close()
             self.suite.stop()
             self.reader.stop()
             self._clear_session()
+            if self.restart:
+                relaunch()
 
     def _serve(self) -> ThreadingHTTPServer:
         app = self
@@ -281,10 +361,33 @@ class App:
                         app.engine.set_enabled(bool(data.get("enabled")))
                     return self._json({"ok": True})
                 if path == "/api/open-accessibility" and sys.platform == "darwin":
-                    subprocess.Popen(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
+                    request_accessibility()
+                    return self._json({"ok": True})
+                if path == "/api/login":
+                    try:
+                        login.set_enabled(bool(data.get("enabled")))
+                    except OSError as exc:
+                        return self._json({"ok": False, "problems": [str(exc)]}, 500)
+                    return self._json({"ok": True, "enabled": login.is_enabled()})
+                if path == "/api/setup-done":
+                    with app.lock:
+                        config = copy.deepcopy(app.config)
+                    config["setupDone"] = True
+                    app.apply(config)
+                    return self._json({"ok": True})
+                if path == "/api/restart":
+                    app.restart = True
+                    app.running = False
                     return self._json({"ok": True})
                 if path == "/api/quit":
                     app.running = False
+                    return self._json({"ok": True})
+                if path == "/api/simulate" and app.output.dry_run and app.reader:
+                    # Test mode only: act as if a switch was pressed or released.
+                    name, down = str(data.get("input", "")), bool(data.get("down"))
+                    held = app.reader._down.setdefault(-1, set())
+                    (held.add if down else held.discard)(name)
+                    (app._press if down else app._release)(name)
                     return self._json({"ok": True})
                 self._json({"error": "not found"}, 404)
 
@@ -312,6 +415,19 @@ class App:
             pass
 
 
+def relaunch() -> None:
+    """Start a fresh copy (macOS reads a new Accessibility grant reliably only at launch)."""
+    if getattr(sys, "frozen", False):
+        exe = Path(sys.executable)
+        bundle = exe.parents[2]
+        if sys.platform == "darwin" and bundle.suffix == ".app":
+            subprocess.Popen(["/usr/bin/open", "-n", str(bundle)])
+        else:
+            subprocess.Popen([str(exe)])
+    else:
+        subprocess.Popen([sys.executable, "-m", "limitless_control"])
+
+
 def already_running() -> dict | None:
     """If another copy is running, return its session so we can just open its settings."""
     with socket.socket() as s:
@@ -334,6 +450,16 @@ def self_test() -> int:
     reader = ControllerReader(lambda n: None, lambda n: None, app.log)
     reader.start()
     reader.poll()
+    app.reader = reader
+    login.is_enabled()
+    if sys.platform == "darwin":
+        # Make sure the Mac pieces made it into the package.
+        import AppKit  # noqa: F401
+        import HIServices  # noqa: F401
+        from . import macmenu  # noqa: F401
+        frontmost.frontmost_app()
+    state = app.state()
+    assert "setupDone" in state and "held" in state, "state incomplete"
     server = app._serve()
     port = server.server_address[1]
     try:

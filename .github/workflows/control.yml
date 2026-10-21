@@ -76,11 +76,16 @@ jobs:
       - name: Make the Mac disk image
         if: runner.os == 'macOS'
         run: |
-          mkdir -p dmg
-          cp -R "dist/Limitless Control.app" dmg/
-          ln -s /Applications dmg/Applications
-          hdiutil create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO \
-            "dist/LimitlessControl-${{ matrix.name }}.dmg"
+          OUT="dist/LimitlessControl-${{ matrix.name }}.dmg"
+          pip install dmgbuild==1.6.7
+          # Styled window: app icon, arrow, Applications folder. Plain image if that fails.
+          if ! dmgbuild -s packaging/dmg_settings.py -D app="dist/Limitless Control.app" "Limitless Control" "$OUT"; then
+            mkdir -p dmg
+            cp -R "dist/Limitless Control.app" dmg/
+            ln -s /Applications dmg/Applications
+            hdiutil create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO "$OUT"
+          fi
+          hdiutil verify "$OUT"
 
       - name: Make the Windows installer
         if: runner.os == 'Windows'
@@ -90,7 +95,8 @@ jobs:
             choco install innosetup -y --no-progress
             $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
           }
-          iscc /DMyVersion=0.1.0 packaging\windows\installer.iss
+          $version = python -c "import limitless_control; print(limitless_control.__version__)"
+          iscc /DMyVersion=$version packaging\windows\installer.iss
 
       - name: Make the Linux archive
         if: runner.os == 'Linux'

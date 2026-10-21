@@ -18,6 +18,7 @@
     }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg);
          font: 18px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
   main { max-width: 980px; margin: 0 auto; padding: 16px; }
@@ -57,6 +58,31 @@
   pre { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 240px; overflow: auto; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .errors { color: var(--off); font-weight: 600; }
+  .ok { color: var(--on); font-weight: 700; }
+  .steps { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: step; }
+  .steps li { display: grid; grid-template-columns: 44px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .steps li:last-child { border-bottom: 0; }
+  .steps h3 { margin: 0 0 4px; font-size: 1.1rem; }
+  .tick { counter-increment: step; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line);
+          display: grid; place-items: center; font-weight: 700; background: var(--bg); }
+  .tick::before { content: counter(step); }
+  li.done .tick { background: var(--on); border-color: var(--on); color: var(--bg); }
+  li.done .tick::before { content: "✓"; }
+  .now { font-size: 1.4rem; font-weight: 700; margin: 12px 0 0; min-height: 2.1rem; }
+  .pad { width: 100%; max-width: 760px; height: auto; display: block; margin: 8px auto 0; }
+  .pad .body { fill: var(--bg); stroke: var(--line); stroke-width: 3; }
+  .pad .btn { cursor: pointer; }
+  .pad .btn .shape { fill: var(--panel); stroke: var(--fg); stroke-width: 2; transition: fill .08s; }
+  .pad .btn.big .shape { stroke-width: 3; }
+  .pad .btn text { fill: var(--fg); font: 600 15px -apple-system, "Segoe UI", system-ui, sans-serif; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  .pad .btn text.act { font-weight: 400; font-size: 13px; fill: var(--muted); }
+  .pad .btn.small text { font-size: 12px; }
+  .pad .btn.big text { font-size: 24px; }
+  .pad .btn.big text.act { font-size: 15px; }
+  .pad .btn.down .shape { fill: var(--accent); }
+  .pad .btn.down text { fill: var(--accent-fg); }
+  .pad .btn:focus-visible .shape { stroke: var(--focus); stroke-width: 5; }
+  .pad .btn:focus { outline: none; }
   @media (max-width: 640px) {
     thead { display: none; }
     tr { display: block; border-bottom: 2px solid var(--line); padding: 8px 0; }
@@ -71,6 +97,36 @@
   <p class="muted">Play and record with an Xbox Adaptive Controller, switches or any gamepad.</p>
   <div id="announce" class="sr-only" aria-live="polite"></div>
 
+  <section id="setup" aria-labelledby="setup-h" hidden>
+    <h2 id="setup-h">Welcome. Let's get you playing.</h2>
+    <ol class="steps">
+      <li id="step-pad"><span class="tick" aria-hidden="true"></span><div>
+        <h3>Connect your controller</h3>
+        <p>Plug the Xbox Adaptive Controller in with a USB-C cable. Or pair it: hold its small pair button until the Xbox light flashes fast, then choose it in your computer's Bluetooth settings.</p>
+        <p id="step-pad-status" class="muted">Waiting for a controller…</p>
+      </div></li>
+      <li id="step-ax"><span class="tick" aria-hidden="true"></span><div>
+        <h3>Let Limitless Control press keys for you</h3>
+        <p>Your Mac asks you to allow this once. Choose the button, then switch on <strong>Limitless Control</strong> in the list that opens. You may need your Mac password.</p>
+        <p><button id="ax-allow" class="primary">Allow key commands</button></p>
+        <p id="step-ax-status" class="muted">Not allowed yet.</p>
+        <p id="ax-restart-help" hidden>Already switched on and this still says not allowed? <button id="ax-restart">Restart Limitless Control</button></p>
+      </div></li>
+      <li id="step-try"><span class="tick" aria-hidden="true"></span><div>
+        <h3>Try a button</h3>
+        <p>Press the big <strong>A</strong> button, or any switch.</p>
+        <p id="step-try-status" class="muted">Nothing pressed yet.</p>
+      </div></li>
+      <li id="step-go"><span class="tick" aria-hidden="true"></span><div>
+        <h3>Open your music app</h3>
+        <p>Open Logic Pro, Pro Tools or Ableton Live. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.</p>
+        <p>Big <strong>A</strong> plays and stops. <strong>Hold</strong> the big <strong>B</strong> to record. Hold <strong>Menu</strong> to turn the controller off and on.</p>
+        <label class="check"><input type="checkbox" id="setup-login" checked> Start Limitless Control when I log in</label>
+      </div></li>
+    </ol>
+    <button id="setup-done" class="primary">Done. I'm ready to play</button>
+  </section>
+
   <section aria-labelledby="status-h">
     <h2 id="status-h">Status</h2>
     <button id="power" class="power" aria-pressed="true">Controller is on</button>
@@ -80,11 +136,18 @@
       <div><b>Layer</b><span id="layer">1</span></div>
       <div><b>Last switch pressed</b><span id="last">None yet</span></div>
     </div>
+    <p class="now" id="now" aria-live="polite"></p>
     <div id="ax-warn" class="warn" hidden>
       <p><strong>One step left on Mac:</strong> allow Limitless Control in Accessibility settings so it can send key commands to Logic and Pro Tools. Then quit and reopen Limitless Control.</p>
       <button id="ax-open" class="primary">Open Accessibility settings</button>
     </div>
     <p id="conn-lost" class="warn" hidden>Limitless Control is not running. Open it again to change settings.</p>
+  </section>
+
+  <section aria-labelledby="pad-h">
+    <h2 id="pad-h">Your controller</h2>
+    <p class="muted">Each button shows what it does in <span id="pad-profile">this app</span>. Buttons light up as you press them. Select a button to change it.</p>
+    <svg id="pad" class="pad" viewBox="0 0 640 300" role="group" aria-label="Controller buttons"></svg>
   </section>
 
   <section aria-labelledby="buttons-h">
@@ -120,6 +183,10 @@
   <section aria-labelledby="more-h">
     <h2 id="more-h">More</h2>
     <div class="row-controls">
+      <label class="check"><input type="checkbox" id="login"> Start Limitless Control when I log in</label>
+    </div>
+    <div class="row-controls">
+      <button id="show-setup">Show the welcome steps again</button>
       <button id="reset">Reset everything to defaults</button>
       <button id="quit">Quit Limitless Control</button>
     </div>
@@ -147,6 +214,32 @@ const SLIDERS = [
   ["repeatIntervalSeconds", "Time between repeats", 0.03, 1, 0.01, "Smaller is faster."],
 ];
 const EVERYWHERE = "__global__";
+const DAWS = ["Logic Pro", "Pro Tools", "Ableton Live"];
+// Layout of the Xbox Adaptive Controller: big A and B pads on the right, d-pad on the left.
+const PAD = [
+  { input: "lb", rect: [60, 4, 84, 30], name: "LB" },
+  { input: "lt", rect: [156, 4, 84, 30], name: "LT" },
+  { input: "rt", rect: [400, 4, 84, 30], name: "RT" },
+  { input: "rb", rect: [496, 4, 84, 30], name: "RB" },
+  { input: "view", circle: [244, 84, 25], name: "View", small: true },
+  { input: "xbox", circle: [312, 84, 25], name: "Xbox", small: true },
+  { input: "menu", circle: [380, 84, 25], name: "Menu", small: true },
+  { input: "x", circle: [462, 84, 20], name: "X" },
+  { input: "y", circle: [512, 84, 20], name: "Y" },
+  { input: "dpad_up", rect: [108, 122, 44, 44], name: "▲" },
+  { input: "dpad_left", rect: [62, 168, 44, 44], name: "◀" },
+  { input: "dpad_right", rect: [154, 168, 44, 44], name: "▶" },
+  { input: "dpad_down", rect: [108, 214, 44, 44], name: "▼" },
+  { input: "ls", circle: [214, 264, 18], name: "LS" },
+  { input: "rs", circle: [262, 264, 18], name: "RS" },
+  { input: "a", circle: [340, 186, 72], name: "A", big: true },
+  { input: "b", circle: [508, 186, 72], name: "B", big: true },
+];
+const SVG_NS = "http://www.w3.org/2000/svg";
+let lastActionAt = 0;
+let setupShown = false;
+let axAskedAt = 0;
+let triedSomething = false;
 
 let token = new URLSearchParams(location.search).get("t");
 try { if (token) sessionStorage.setItem("lc-token", token); else token = sessionStorage.getItem("lc-token"); } catch (e) {}
@@ -253,6 +346,22 @@ function renderRows() {
     const b = bindings[input] || {};
     const tr = document.createElement("tr"); tr.id = "row-" + input;
     const th = document.createElement("th"); th.scope = "row"; th.textContent = INPUT_LABELS[input] || input; tr.appendChild(th);
+    const globalBinding = profileName !== EVERYWHERE && (S.config.global || {})[input];
+    if (globalBinding) {
+      // Set in "Every app", which wins over app settings: say so instead of showing "Nothing".
+      const td = document.createElement("td"); td.colSpan = 3;
+      const parts = [labelOf(globalBinding.tap, "Everyday") && "Tap: " + labelOf(globalBinding.tap, "Everyday"),
+                     labelOf(globalBinding.hold, "Everyday") && "Hold: " + labelOf(globalBinding.hold, "Everyday")].filter(Boolean);
+      td.append(document.createTextNode(parts.join(". ") + ". Set for every app. "));
+      const btn = document.createElement("button"); btn.textContent = "Change";
+      btn.setAttribute("aria-label", `Change ${INPUT_LABELS[input]} for every app`);
+      btn.addEventListener("click", () => {
+        $("profile-pick").value = EVERYWHERE; renderRows(); renderPad();
+        const row = $("row-" + input); if (row) { row.scrollIntoView({ block: "center" }); row.querySelector("select").focus(); }
+      });
+      td.appendChild(btn); tr.appendChild(td); tbody.appendChild(tr);
+      continue;
+    }
     for (const kind of ["tap", "hold"]) {
       const td = document.createElement("td"); td.dataset.label = kind === "tap" ? "Tap" : "Hold";
       const sel = document.createElement("select");
@@ -289,6 +398,94 @@ function renderRows() {
   }
 }
 
+function labelOf(action, catalogName) {
+  if (!action) return "";
+  if (action.command === "suite") return action.label || action.suite;
+  const id = action.id || action.command;
+  if (id && S.commands[id]) return S.commands[id].label;
+  const cat = S.catalog[catalogName] || {};
+  if (id && cat[id]) return cat[id].label;
+  return describeKeys(action.keys);
+}
+
+function svg(tag, attrs, parent) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+function shorten(text, max) { return text.length > max ? text.slice(0, max - 1) + "…" : text; }
+
+function renderPad() {
+  const pad = $("pad"); pad.textContent = "";
+  const profileName = currentProfileName();
+  const catalogName = profileName === EVERYWHERE ? "Everyday" : profileName;
+  $("pad-profile").textContent = profileName === EVERYWHERE ? "every app" : profileName +
+    (currentLayer() === 1 ? " (layer 2)" : "");
+  const glob = S.config.global || {};
+  const own = currentBindings();
+  svg("rect", { class: "body", x: 20, y: 30, width: 600, height: 262, rx: 56 }, pad);
+  for (const b of PAD) {
+    const binding = glob[b.input] || own[b.input] || {};
+    const tap = labelOf(binding.tap, catalogName);
+    const hold = labelOf(binding.hold, catalogName);
+    const spoken = [tap && `tap: ${tap}`, hold && `hold: ${hold}`].filter(Boolean).join(", ") || "nothing yet";
+    const g = svg("g", { class: "btn" + (b.big ? " big" : "") + (b.small ? " small" : ""), "data-input": b.input, role: "button", tabindex: 0,
+                         "aria-label": `${INPUT_LABELS[b.input]}, ${spoken}. Change it.` }, pad);
+    svg("title", {}, g).textContent = `${INPUT_LABELS[b.input]}: ${spoken}`;
+    let cx, cy;
+    if (b.circle) {
+      [cx, cy] = b.circle;
+      svg("circle", { class: "shape", cx, cy, r: b.circle[2] }, g);
+    } else {
+      const [x, y, w, h] = b.rect; cx = x + w / 2; cy = y + h / 2;
+      svg("rect", { class: "shape", x, y, width: w, height: h, rx: 10 }, g);
+    }
+    if (b.big) {
+      svg("text", { x: cx, y: cy - 24 }, g).textContent = b.name;
+      svg("text", { x: cx, y: cy + 6, class: "act" }, g).textContent = shorten(tap || "–", 16);
+      if (hold) svg("text", { x: cx, y: cy + 28, class: "act" }, g).textContent = shorten("Hold: " + hold, 18);
+    } else {
+      svg("text", { x: cx, y: cy }, g).textContent = b.name;
+    }
+    const go = () => {
+      const row = $("row-" + b.input);
+      if (!row) return;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      const target = row.querySelector("select, button"); if (target) target.focus({ preventScroll: true });
+    };
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  }
+}
+
+function renderSetup(st) {
+  const show = setupShown || !st.setupDone;
+  $("setup").hidden = !show;
+  if (!show) return;
+  const mark = (id, done) => $(id).classList.toggle("done", !!done);
+  mark("step-pad", st.controllers.length);
+  $("step-pad-status").textContent = st.controllers.length
+    ? "Connected: " + st.controllers.join(", ") : "Waiting for a controller…";
+  $("step-pad-status").className = st.controllers.length ? "ok" : "muted";
+
+  $("step-ax").hidden = st.platform !== "mac";
+  mark("step-ax", st.accessibility);
+  $("step-ax-status").textContent = st.accessibility ? "Allowed. Key commands will reach your apps." : "Not allowed yet.";
+  $("step-ax-status").className = st.accessibility ? "ok" : "muted";
+  $("ax-allow").hidden = st.accessibility;
+  $("ax-restart-help").hidden = st.accessibility || !axAskedAt || Date.now() - axAskedAt < 8000;
+
+  if (st.lastAction && st.lastAction.label) triedSomething = true;
+  mark("step-try", triedSomething);
+  if (triedSomething && st.lastAction && st.lastAction.input) {
+    $("step-try-status").textContent = `You pressed ${INPUT_LABELS[st.lastAction.input] || st.lastAction.input}: ${st.lastAction.label}.`;
+    $("step-try-status").className = "ok";
+  }
+  mark("step-go", DAWS.includes(st.profile));
+}
+
 function renderTiming() {
   const box = $("sliders"); box.textContent = "";
   const t = S.config.timing || (S.config.timing = {});
@@ -321,6 +518,7 @@ function renderProfiles(keep) {
 }
 
 function scheduleSave() {
+  renderPad();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
@@ -336,6 +534,7 @@ async function loadSettings(keepProfile) {
   $("path").textContent = S.path;
   renderProfiles(keepProfile);
   renderRows();
+  renderPad();
   renderTiming();
 }
 
@@ -349,8 +548,16 @@ async function poll() {
     $("pads").textContent = st.controllers.length ? st.controllers.join(", ") : "None connected. Plug in by USB or pair over Bluetooth.";
     $("profile").textContent = (st.profile || "none") + (st.app ? ` (${st.app})` : "");
     $("layer").textContent = st.layer;
-    $("ax-warn").hidden = st.accessibility;
+    $("ax-warn").hidden = st.accessibility || !st.setupDone;
     $("log").textContent = st.log.join("\n");
+    if (document.activeElement !== $("login")) $("login").checked = st.startAtLogin;
+    renderSetup(st);
+    document.querySelectorAll("#pad .btn").forEach(g => g.classList.toggle("down", st.held.includes(g.dataset.input)));
+    const la = st.lastAction;
+    if (la && la.label && la.at !== lastActionAt) {
+      lastActionAt = la.at;
+      $("now").textContent = `${INPUT_LABELS[la.input] || la.input}: ${la.label}`;
+    }
     const li = st.lastInput;
     if (li && li.name && li.at !== lastSeenInput) {
       lastSeenInput = li.at;
@@ -369,7 +576,7 @@ async function poll() {
   } catch (e) {
     $("conn-lost").hidden = false;
   }
-  setTimeout(poll, 300);
+  setTimeout(poll, 150);
 }
 
 $("power").addEventListener("click", async () => {
@@ -377,8 +584,30 @@ $("power").addEventListener("click", async () => {
   await api("/api/enabled", { enabled: on });
   say(on ? "Controller on" : "Controller off");
 });
-$("profile-pick").addEventListener("change", renderRows);
-document.querySelectorAll("input[name=layer]").forEach(r => r.addEventListener("change", renderRows));
+$("profile-pick").addEventListener("change", () => { renderRows(); renderPad(); });
+document.querySelectorAll("input[name=layer]").forEach(r => r.addEventListener("change", () => { renderRows(); renderPad(); }));
+$("ax-allow").addEventListener("click", () => { axAskedAt = Date.now(); api("/api/open-accessibility", {}); });
+$("ax-restart").addEventListener("click", async () => {
+  await api("/api/restart", {});
+  document.body.innerHTML = "<main><h1>Restarting Limitless Control…</h1><p>A new settings page opens in a moment. You can close this one.</p></main>";
+});
+$("setup-done").addEventListener("click", async () => {
+  try { await api("/api/login", { enabled: $("setup-login").checked }); } catch (e) {}
+  await api("/api/setup-done", {});
+  S.config.setupDone = true;
+  setupShown = false;
+  $("setup").hidden = true;
+  say("Setup complete. Enjoy playing.");
+  $("power").focus();
+});
+$("show-setup").addEventListener("click", () => {
+  setupShown = true; $("setup").hidden = false; $("setup").scrollIntoView({ behavior: "smooth" });
+  $("setup-h").setAttribute("tabindex", "-1"); $("setup-h").focus();
+});
+$("login").addEventListener("change", async () => {
+  const r = await api("/api/login", { enabled: $("login").checked }).catch(e => ({ ok: false }));
+  say(r.ok ? ($("login").checked ? "Will start when you log in" : "Will not start at login") : "Could not change that setting");
+});
 $("speak").addEventListener("change", () => { S.config.speak = $("speak").checked; scheduleSave(); });
 $("sticky").addEventListener("change", () => { S.config.layerMode = $("sticky").checked ? "oneShot" : "toggle"; scheduleSave(); });
 $("ax-open").addEventListener("click", () => api("/api/open-accessibility", {}));

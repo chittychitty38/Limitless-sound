@@ -1,8 +1,8 @@
 ; Windows installer for Limitless Control (Inno Setup 6).
-; Built by CI:  iscc /DMyVersion=0.1.0 packaging\windows\installer.iss
+; Built by CI:  iscc /DMyVersion=<version> packaging\windows\installer.iss
 
 #ifndef MyVersion
-  #define MyVersion "0.1.0"
+  #define MyVersion "0.2.0"
 #endif
 
 [Setup]
@@ -20,6 +20,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\Limitless Control.exe
+SetupIconFile=..\icons\icon.ico
 
 [Tasks]
 Name: "startup"; Description: "Start Limitless Control when I sign in to Windows"; GroupDescription: "Options:"

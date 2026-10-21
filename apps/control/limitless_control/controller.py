@@ -12,6 +12,8 @@ from typing import Callable
 
 # Keep receiving the controller while Logic, Pro Tools or another app is in front.
 os.environ.setdefault("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1")
+# On Mac, stay a background app: no Dock icon and never take focus from the DAW.
+os.environ.setdefault("SDL_MAC_BACKGROUND_APP", "1")
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import pygame  # noqa: E402
@@ -78,6 +80,17 @@ class ControllerReader:
         sdl_controller.init()
         for i in range(sdl_controller.get_count()):
             self._open(i)
+
+    @property
+    def video_driver(self) -> str:
+        try:
+            return pygame.display.get_driver()
+        except pygame.error:
+            return ""
+
+    @property
+    def held(self) -> list[str]:
+        return sorted(set().union(*self._down.values())) if self._down else []
 
     @property
     def connected(self) -> list[str]:

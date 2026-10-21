@@ -55,6 +55,8 @@ class Engine:
         self.on_change: Callable[[], None] = lambda: None
         self.on_suite: Callable[[str], None] = lambda action: None   # another Limitless Sound app's action
         self.on_fired: Callable[[dict], None] = lambda action: None  # after keys were sent
+        # Called with (input name, action) each time an action fires, for the live display.
+        self.on_fire: Callable[[str, dict], None] = lambda name, action: None
         self._pressed: dict[str, _Press] = {}
         self._last_fired: dict[str, float] = {}
 
@@ -149,10 +151,16 @@ class Engine:
         command = action.get("command")
         if command:
             self._run(command, action)
+            self.on_fire(name, action)
+            # Another app's action counts as the one action a one-shot layer allows.
+            if command == "suite" and self.enabled and self.layer != 0 \
+                    and self.config.get("layerMode", "oneShot") == "oneShot":
+                self.layer = 0
             self.on_change()
             return
         if not self.enabled:
             return
+        self.on_fire(name, action)
         keys = action.get("keys")
         if keys:
             self.output.send(keys)

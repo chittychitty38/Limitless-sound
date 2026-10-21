@@ -18,16 +18,20 @@ accessibility switches, or any game controller.
 ## 2. Install
 
 **Mac**
-1. Open the `.dmg` file. Choose **Apple silicon** for newer Macs (M1 and later) or **Intel** for
-   older ones. To check, open the Apple menu and choose About This Mac.
-2. Drag **Limitless Control** into **Applications**.
-3. Open it from Applications. The first time, macOS may say it can't check the app. If so, open
-   **System Settings > Privacy & Security**, scroll down, and choose **Open Anyway**.
-4. Your web browser opens the Limitless Control page. If it shows **One step left on Mac**,
-   choose **Open Accessibility settings** and switch on **Limitless Control**. Then quit and
-   reopen the app. This lets it send commands to Logic and Pro Tools.
-5. If the controller doesn't respond while Logic or Pro Tools is in front, also switch on
-   Limitless Control in **Privacy & Security > Input Monitoring**.
+1. Open the `.dmg` file. Choose **mac-apple-silicon** for Macs with an M chip, or **mac-intel**
+   for older Macs. To check, open the Apple menu and choose **About This Mac**.
+2. In the window that opens, drag **Limitless Control** onto **Applications**.
+3. Open **Limitless Control** from Applications. The first time, macOS says it can't check the
+   app for malware, because it isn't from the App Store yet. Choose **Done**, then open
+   **System Settings > Privacy & Security**, scroll down to **Limitless Control was blocked**,
+   and choose **Open Anyway**. You only do this once.
+4. A controller icon appears in the menu bar at the top of the screen, and your web browser
+   opens the **Welcome** steps:
+   - **Connect your controller.** It ticks itself when the controller is found.
+   - **Let Limitless Control press keys for you.** Choose **Allow key commands**, then switch on
+     **Limitless Control** in the list. It ticks itself when it works.
+   - **Try a button.** Press the big A. The page shows what it did.
+   - **Open your music app**, and choose **Done**.
 
 **Windows**
 1. Run the `Setup.exe` file. If Windows shows **Windows protected your PC**, choose
@@ -35,8 +39,9 @@ accessibility switches, or any game controller.
 2. Tick **Start Limitless Control when I sign in** if you want it always on.
 3. When setup finishes, Limitless Control opens its page in your web browser.
 
-On a Mac, Limitless Control runs quietly in the background with no Dock icon. To open the
-settings page again, open the app again from Applications or the Start menu.
+On a Mac, Limitless Control lives in the **menu bar** (the controller icon at the top of the
+screen) and has no Dock icon. Click the icon to turn the controller on or off, switch layer,
+open Settings or quit. A filled icon means on; an outline means off.
 
 ## 3. Play
 
@@ -79,11 +84,17 @@ settings page.
   Preferences > Operation, set Numeric Keypad to **Classic** or **Transport**. On Windows,
   previous/next track uses Start+P and Start+; which Windows may intercept. Pick different
   keys if they don't work.
-- **Logic Pro:** mute and solo use Control+M and Control+S.
-- **Ableton Live:** record uses F9. On Mac laptops, F9 may need the fn key or the
-  "Use F1, F2, etc. keys as standard function keys" setting.
+- **Pro Tools:** record uses F12 (⌘Space would open Spotlight on a Mac).
+- **Ableton Live:** record uses F9.
 
 ## Help
+
+- **The controller works in the settings page but not in Logic or Pro Tools:** open the
+  menu bar icon, choose **Open Settings…**, then **Show the welcome steps again**, and check
+  the key commands step. If it says allowed but nothing happens, choose **Restart Limitless Control**.
+- **The controller only works while the settings page is in front:** in **System Settings >
+  Privacy & Security > Input Monitoring**, switch on Limitless Control, then quit it from the
+  menu bar icon and open it again.
 
 - **Nothing happens when I press a switch:** check the Status box on the settings page. It
   should name your controller. If it says **None connected**, reconnect by USB.
