@@ -94,6 +94,7 @@ class Listener:
         self._stop = threading.Event()
         self._audio = queue.Queue(maxsize=200)
         self._cmd_parts = []
+        self._rebuild = False
         self.paused = False
 
     # -- lifecycle -------------------------------------------------------
@@ -123,10 +124,9 @@ class Listener:
             self.start()
 
     def set_phrases(self, phrases):
+        """New command phrases take effect at the next audio chunk, without reopening the mic."""
         self.phrases = phrases
-        if self._thread:
-            self.stop()
-            self.start()
+        self._rebuild = True
 
     # -- worker ----------------------------------------------------------
 
@@ -162,6 +162,7 @@ class Listener:
     def _listen_once(self, sd):
         info = sd.query_devices(self.device, "input")
         rate = int(info["default_samplerate"]) or 16000
+        self._rebuild = False
         recs = self._make_recognizers(rate)
         block = int(rate * 0.1)
 
@@ -181,6 +182,11 @@ class Listener:
                 except queue.Empty:
                     continue
                 self.on_level(level_of(data))
+                if self._rebuild:
+                    # the phrase list changed (an app joined or left the suite)
+                    self._rebuild = False
+                    recs = self._make_recognizers(rate)
+                    self._cmd_parts = []
                 if self.paused:
                     was_paused = True
                     continue

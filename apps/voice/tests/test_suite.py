@@ -129,6 +129,14 @@ class ForOtherApps(unittest.TestCase):
         self.assertTrue(ok)
         self.assertFalse(s.invoke("do", {"phrase": "make me a sandwich"}, "x")[0])
 
+    def test_commands_that_need_a_yes_are_refused(self):
+        s, e, p = make()
+        ok, _ = s.invoke("do", {"phrase": "quit the app"}, "streamdeck")
+        self.assertFalse(ok)
+        self.assertIsNone(e.pending)                  # a later "yes" from the user can't quit
+        e.handle("yes")
+        self.assertEqual(pressed(p), [])
+
     def test_every_intent_phrase_is_a_real_command(self):
         for app in ("Logic Pro", "Pro Tools"):
             s, e, _ = make(app)
@@ -179,6 +187,10 @@ class OtherAppsByVoice(unittest.TestCase):
         s.on_actions(SUITE_ACTIONS)
         self.assertNotIn("screen colors off", s.phrases())
         self.assertNotIn("say", s.phrases())
+
+    def test_spoken_forms_keep_numbers(self):
+        self.assertEqual(spoken_forms({"label": "Layer 2"}), {"layer two"})
+        self.assertEqual(spoken_forms({"label": "Zoom 150%"}), {"zoom one hundred fifty"})
 
     def test_spoken_forms(self):
         self.assertEqual(spoken_forms({"label": "Play (Pro Tools link)"}), {"play"})

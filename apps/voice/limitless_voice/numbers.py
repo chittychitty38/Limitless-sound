@@ -125,3 +125,17 @@ def _expects_number(out):
     # Only trust homophones ("for" -> 4) right after a word that expects a number.
     return bool(out) and out[-1] in _NUMBER_CONTEXT
 
+
+
+def number_to_words(n):
+    """12 -> "twelve", 105 -> "one hundred five". For 0..999999."""
+    if n < 20:
+        return next(w for w, v in UNITS.items() if v == n)
+    if n < 100:
+        tens = next(w for w, v in TENS.items() if v == n // 10 * 10)
+        return tens + (" " + number_to_words(n % 10) if n % 10 else "")
+    if n < 1000:
+        rest = n % 100
+        return number_to_words(n // 100) + " hundred" + (" " + number_to_words(rest) if rest else "")
+    rest = n % 1000
+    return number_to_words(n // 1000) + " thousand" + (" " + number_to_words(rest) if rest else "")

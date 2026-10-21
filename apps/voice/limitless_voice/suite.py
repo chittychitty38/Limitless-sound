@@ -18,6 +18,7 @@ import re
 from . import __version__
 from .engine import normalize
 from .limitless_link import Link
+from .numbers import number_to_words
 
 # Shared DAW intents -> the phrase Limitless Voice runs for it.
 INTENT_PHRASES = {
@@ -74,7 +75,10 @@ def spoken_forms(action):
     forms = set()
     for text in [action.get("label", "")] + list(action.get("phrases") or []):
         text = re.sub(r"\(.*?\)", " ", text.lower())
-        text = re.sub(r"[^a-z' ]", " ", text.replace("+", " plus "))
+        text = re.sub(r"[^a-z0-9' ]", " ", text.replace("+", " plus "))
+        # spell numbers out, so "Layer 2" and "Layer 3" stay different actions
+        text = re.sub(r"\d{1,6}", lambda m: f" {number_to_words(int(m.group()))} ", text)
+        text = re.sub(r"\d", " ", text)
         text = " ".join(text.split())
         if text and len(text.split()) <= 8:
             forms.add(text)
@@ -168,8 +172,12 @@ class Suite:
         e.awake, e.take, e.dictating, e.pending = True, False, False, None
         try:
             result = e.handle(phrase)
+            needs_yes = e.pending is not None
         finally:
-            e.awake, e.take, e.dictating, _ = saved
+            e.awake, e.take, e.dictating, e.pending = saved
+        if needs_yes:
+            # quit, close and the like need the person's own spoken "yes"
+            return False, "That command needs a spoken yes, so it can't be run from another app."
         if result.handled:
             self.report(result)
         return result.handled, result.message
