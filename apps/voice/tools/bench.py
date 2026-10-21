@@ -213,6 +213,15 @@ def main():
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(report + "\n")
     Path(args.out).write_text(json.dumps(results, indent=2))
+    if os.environ.get("GITHUB_ACTIONS"):
+        # annotations can be read back through the checks API, unlike logs
+        for name, r in results.items():
+            c, n = r["clean"], r["noisy"]
+            body = (f"commands clean {c['commands']:.0%}, noisy {n['commands']:.0%}; false triggers "
+                    f"{c['false_triggers'] + n['false_triggers']}/{c['of'] + n['of']}; dictation WER "
+                    f"{c['dictation_wer']:.0%}/{n['dictation_wer']:.0%}; cpu {r['realtime']:.2f}s/s; "
+                    f"load {r['load_seconds']}s%0A" + "%0A".join(r["misses"][:60] + r["false_triggers"]))
+            print(f"::notice title=Speech benchmark {name}::{body}")
 
 
 if __name__ == "__main__":
