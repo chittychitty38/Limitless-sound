@@ -249,3 +249,19 @@ def test_two_copies_of_one_app_do_not_fight(hub):
     assert len({id(c) for c in flips}) == 1, "the two copies kept kicking each other off"
     first.stop()
     second.stop()
+
+
+def test_answers_are_never_dropped_behind_a_burst_of_events():
+    from limitless_hub.server import Outbox
+    box = Outbox()
+    for i in range(3000):
+        box.put(f"event {i}", True)
+        if i % 150 == 0:
+            box.put(f"result {i}", False)
+    lines = []
+    box.close()
+    while (line := box.get()) is not None:
+        lines.append(line)
+    assert len([x for x in lines if x.startswith("result")]) == 20
+    assert len([x for x in lines if x.startswith("event")]) == Outbox.MAX_EVENTS
+    assert lines[-1] == "event 2999"
