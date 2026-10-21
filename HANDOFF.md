@@ -47,10 +47,10 @@ app that isn't on `main` yet, test the newest open pull request's branch. At the
 |---|---|---|---|---|
 | Limitless Sound hub | `shared/hub` | `suite/hub-page-installer-clients` (PR #7) | `shared.yml` | `Limitless-Sound-mac-apple-silicon` / `-mac-intel` |
 | Limitless One-Hand | `apps/one-hand` | `one-hand-mac-polish` (PR #10) | `one-hand.yml` | `Limitless-One-Hand-mac-…` |
-| Limitless Voice | `apps/voice` | `claude/voice` (PR #1) | `voice.yml` | `Limitless-Voice-mac-…` |
+| Limitless Voice | `apps/voice` | `claude/voice` (PR #1) | `voice.yml` | `LimitlessVoice-mac-…` |
 | Limitless Zoom | `apps/zoom` | `zoom-view-control` (PR #6) | `zoom.yml` | `Limitless-Zoom-mac-…` |
 | Limitless Color | `apps/color` | `color-app` (PR #2) | `color.yml` | `Limitless-Color-mac-…` |
-| Limitless Control | `apps/control` | `claude/limitless-control` (PR #3) | `control.yml` | `Limitless-Control-mac-…` |
+| Limitless Control | `apps/control` | `claude/limitless-control` (PR #3) | `control.yml` | `LimitlessControl-mac-…` |
 | GazeStage | `apps/gazestage` | `gazestage/v0.3` (PR #11) | `gazestage.yml` | `GazeStage-mac-…` |
 
 Test the **installed apps** (what a musician would get), not source runs. For each app, download
