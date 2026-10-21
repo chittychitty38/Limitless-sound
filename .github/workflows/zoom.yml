@@ -1,0 +1,114 @@
+name: Limitless Zoom
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["zoom-v*"]
+    paths: ["apps/zoom/**", ".github/workflows/zoom.yml"]
+  pull_request:
+    paths: ["apps/zoom/**", ".github/workflows/zoom.yml"]
+  workflow_dispatch:
+
+env:
+  MODEL: vosk-model-small-en-us-0.15
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14      # Apple Silicon
+            name: mac-apple-silicon
+          - os: macos-13      # Intel Macs
+            name: mac-intel
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/zoom
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pytest
+      - name: Unit and UI tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+
+      - name: Get the offline voice model
+        shell: bash
+        run: |
+          mkdir -p models
+          curl -sSL -o model.zip "https://alphacephei.com/vosk/models/$MODEL.zip"
+          unzip -q model.zip -d models && rm model.zip
+
+      - name: Make test recordings (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p wavs
+          for p in "zoom in" "zoom out" "taller" "zoom to fit" "magnifier" "again"; do
+            say --file-format=WAVE --data-format=LEI16@16000 -o "wavs/${p// /_}.wav" "$p"
+          done
+      - name: Make test recordings (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Speech
+          New-Item -ItemType Directory -Force wavs | Out-Null
+          foreach ($p in "zoom in","zoom out","taller","zoom to fit","magnifier","again") {
+            $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+            $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, 'Sixteen', 'Mono')
+            $s.SetOutputToWaveFile("wavs\$($p -replace ' ','_').wav", $fmt)
+            $s.Speak($p); $s.Dispose()
+          }
+      - name: Voice recognition check
+        run: python packaging/voice_check.py models/${{ env.MODEL }} wavs
+
+      - name: Build app
+        run: pyinstaller --noconfirm packaging/limitless_zoom.spec
+
+      - name: Self test and package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          "dist/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" --selftest --no-voice
+          hdiutil create -volname "Limitless Zoom" -srcfolder "dist/Limitless Zoom.app" \
+            -ov -format UDZO "dist/Limitless-Zoom-${{ matrix.name }}.dmg"
+      - name: Self test and package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\Limitless Zoom\Limitless Zoom.exe" -ArgumentList "--selftest","--no-voice" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "self test failed" }
+          $env:APP_VERSION = (python -c "import limitless_zoom; print(limitless_zoom.__version__)")
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }
+          iscc packaging\windows.iss
+          Move-Item "dist\Limitless Zoom Setup.exe" "dist\Limitless-Zoom-Setup-windows.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: limitless-zoom-${{ matrix.name }}
+          path: |
+            apps/zoom/dist/*.dmg
+            apps/zoom/dist/*.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/zoom-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
