@@ -50,6 +50,12 @@ class Engine:
         self._shift_down_at = None
         self._shift_dirty = False
         self._last_shift_tap = None
+        # Practice mode: while this app's own window is in front, layer keys
+        # light up their card instead of pressing anything.
+        self.self_app_ids = set()
+        self.preview_app = None           # layout id shown in the window
+        self.last_preview = None          # (physical key, command label)
+        self.previews = 0                 # bumps on every practice press
 
     # ---- on/off -------------------------------------------------------
 
@@ -82,12 +88,26 @@ class Engine:
 
     def layer_for(self, app_id):
         """{physical key: Tap} for the app in front."""
-        app = self.profile_for(app_id)
+        return self.layer_of(self.profile_for(app_id))
+
+    def layer_of(self, app):
         if not app:
             return {}
         names = MOD_TO_KEY[self.platform]
         return {self.layer_key(c): Tap(c["send"], tuple(names[m] for m in c.get("mods", [])))
                 for c in app["commands"]}
+
+    def _practice(self, key, app_id):
+        """True if this press is a practice press in our own window."""
+        if not app_id or app_id.lower() not in self.self_app_ids or not self.preview_app:
+            return False
+        app = next((a for a in self.layouts["apps"] if a["id"] == self.preview_app), None)
+        cmd = next((c for c in (app or {}).get("commands", []) if self.layer_key(c) == key), None)
+        if not cmd:
+            return False
+        self.last_preview = (key, cmd["label"])
+        self.previews += 1
+        return True
 
     # ---- the main entry point ----------------------------------------
 
@@ -150,6 +170,10 @@ class Engine:
 
         if self._held_mods:
             return PASS                          # let real shortcuts like Cmd+S through
+
+        if self._practice(key, app_id):
+            self._consumed.add(key)
+            return SUPPRESS
 
         tap = self.layer_for(app_id).get(key)
         if tap:

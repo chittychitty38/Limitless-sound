@@ -39,6 +39,11 @@ class Prefs:
     play_sounds: bool = True
     speak: bool = False
     keep_on_top: bool = False
+    show_badge: bool = True
+    open_at_login: bool = False
+    larger_text: bool = False
+    start_on: bool = False
+    seen_menu_tip: bool = False
 
     @classmethod
     def load(cls):

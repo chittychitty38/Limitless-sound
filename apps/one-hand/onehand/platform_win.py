@@ -118,6 +118,11 @@ class WindowsBackend:
     def stop(self):
         if self._thread_id:
             user32.PostThreadMessageW(self._thread_id, WM_QUIT, 0, 0)
+            self._thread_id = None
+
+    @property
+    def running(self):
+        return self._thread_id is not None
 
     # ---- the hook -----------------------------------------------------
 
@@ -190,5 +195,44 @@ class WindowsBackend:
     def permission_help(self):
         return "Windows would not let the app watch the keyboard. Try restarting the app."
 
-    def open_permission_settings(self):
+    def open_permission_settings(self, which=None):
+        pass
+
+    def permission_status(self):
+        return {}
+
+    def relaunch(self):
+        import subprocess
+        import sys
+        args = sys.argv[1:] if getattr(sys, "frozen", False) else sys.argv
+        subprocess.Popen([sys.executable, *args])
+
+    # ---- about this app -----------------------------------------------
+
+    def own_app_id(self):
+        import sys
+        return os.path.basename(sys.executable)
+
+    RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+    def login_item_supported(self):
+        import sys
+        return getattr(sys, "frozen", False)
+
+    def set_login_item(self, on):
+        import sys
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+            if on:
+                winreg.SetValueEx(key, "Limitless One-Hand", 0, winreg.REG_SZ, f'"{sys.executable}" --hidden')
+            else:
+                try:
+                    winreg.DeleteValue(key, "Limitless One-Hand")
+                except FileNotFoundError:
+                    pass
+
+    def float_window(self, widget):
+        pass
+
+    def announce(self, text):
         pass

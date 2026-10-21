@@ -158,3 +158,29 @@ def test_no_duplicate_keys_per_app():
 
 def test_mac_and_windows_codes_cover_same_keys():
     assert set(MAC_CODES) <= set(WIN_CODES)
+
+
+def test_practice_in_own_window_lights_card_without_typing():
+    e = mac()
+    e.self_app_ids = {"org.limitlesssound.onehand"}
+    e.preview_app = "protools"
+    e.set_enabled(True)
+    assert press(e, "e", app="org.limitlesssound.onehand") == (SUPPRESS, SUPPRESS)
+    assert e.last_preview == ("e", "Record") and e.previews == 1
+    assert press(e, "y", app="org.limitlesssound.onehand") == (PASS, PASS)
+
+
+def test_practice_follows_hand():
+    e = mac(hand="right")
+    e.self_app_ids = {"me"}
+    e.preview_app = "logic"
+    e.set_enabled(True)
+    press(e, "p", app="me")
+    assert e.last_preview == ("p", "Undo")
+
+
+def test_no_practice_when_off():
+    e = mac()
+    e.self_app_ids = {"me"}
+    e.preview_app = "logic"
+    assert press(e, "q", app="me") == (PASS, PASS)
