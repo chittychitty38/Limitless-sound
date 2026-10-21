@@ -67,6 +67,7 @@ class Hub:
         self.port = self.tcp.server_address[1]
         self.http_port = self.http.server_address[1]
         self._stop = threading.Event()
+        self.quit = threading.Event()  # set by the page's Quit button
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -222,6 +223,8 @@ class Hub:
                 query = parse_qs(url.query)
                 if not self._host_ok():
                     return self._text("Wrong host.", 403)
+                if url.path == "/favicon.ico":
+                    return self._send(204, b"", "image/x-icon")
                 authed = secrets.compare_digest(self._token(query), hub.token)
                 if url.path in ("/", "/index.html"):
                     if not authed:
@@ -280,6 +283,9 @@ class Hub:
                             hub._save(hub.settings)
                     except OSError as e:
                         return self._json({"ok": False, "message": str(e)}, 500)
+                    return self._json({"ok": True})
+                if p == "/api/quit":
+                    hub.quit.set()
                     return self._json({"ok": True})
                 if p == "/api/open":
                     tool = str(body.get("tool") or "")

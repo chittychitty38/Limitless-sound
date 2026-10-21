@@ -128,7 +128,7 @@ def main(argv=None) -> int:
         except (ValueError, OSError):
             pass
     try:
-        while not stop.wait(1):
+        while not stop.wait(0.5) and not hub.quit.is_set():
             pass
     finally:
         hub.stop()
