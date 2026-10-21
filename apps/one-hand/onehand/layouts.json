@@ -1,0 +1,61 @@
+{
+  "_comment": "What each key does in one-hand mode. Keys are written for the LEFT hand; the right hand is the mirror image. Modifiers use Mac names (command, option, control, shift); on Windows they become Ctrl, Alt, Win and Shift. To customise, copy this file into the app's settings folder and edit it there.",
+  "apps": [
+    {
+      "id": "logic",
+      "name": "Logic Pro",
+      "mac": ["com.apple.logic10"],
+      "windows": [],
+      "commands": [
+        {"key": "1", "label": "Go to start",        "send": "return_or_enter"},
+        {"key": "2", "label": "Back one bar",       "send": "comma"},
+        {"key": "3", "label": "Forward one bar",    "send": "period"},
+        {"key": "4", "label": "Cycle on/off",       "send": "c"},
+        {"key": "5", "label": "Metronome on/off",   "send": "k"},
+        {"key": "q", "label": "Undo",               "send": "z", "mods": ["command"]},
+        {"key": "w", "label": "Redo",               "send": "z", "mods": ["command", "shift"]},
+        {"key": "e", "label": "Record",             "send": "r"},
+        {"key": "r", "label": "Split at playhead",  "send": "t", "mods": ["command"]},
+        {"key": "t", "label": "New track",          "send": "n", "mods": ["option", "command"]},
+        {"key": "a", "label": "Mute track",         "send": "m", "mods": ["control"]},
+        {"key": "s", "label": "Solo track",         "send": "s", "mods": ["control"]},
+        {"key": "d", "label": "Duplicate track",    "send": "d", "mods": ["command"]},
+        {"key": "f", "label": "Zoom to fit",        "send": "z"},
+        {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
+        {"key": "z", "label": "Zoom out",           "send": "left_arrow", "mods": ["command"]},
+        {"key": "x", "label": "Zoom in",            "send": "right_arrow", "mods": ["command"]},
+        {"key": "c", "label": "Mixer",              "send": "x"},
+        {"key": "v", "label": "Editor",             "send": "e"},
+        {"key": "b", "label": "Library",            "send": "y"}
+      ]
+    },
+    {
+      "id": "protools",
+      "name": "Pro Tools",
+      "mac": ["com.avid.ProTools"],
+      "windows": ["protools.exe"],
+      "commands": [
+        {"key": "1", "label": "Go to start",        "send": "return_or_enter"},
+        {"key": "2", "label": "Go to end",          "send": "return_or_enter", "mods": ["option"]},
+        {"key": "3", "label": "Loop playback",      "send": "l", "mods": ["command", "shift"]},
+        {"key": "4", "label": "Edit/Mix window",    "send": "equal_sign", "mods": ["command"]},
+        {"key": "5", "label": "New tracks",         "send": "n", "mods": ["command", "shift"]},
+        {"key": "q", "label": "Undo",               "send": "z", "mods": ["command"]},
+        {"key": "w", "label": "Redo",               "send": "z", "mods": ["command", "shift"]},
+        {"key": "e", "label": "Record",             "send": "spacebar", "mods": ["command"], "note": "On a Mac, turn off the Spotlight shortcut (Cmd+Space) in System Settings so this reaches Pro Tools."},
+        {"key": "r", "label": "Separate clip",      "send": "e", "mods": ["command"]},
+        {"key": "t", "label": "Duplicate",          "send": "d", "mods": ["command"]},
+        {"key": "a", "label": "Mute track",         "send": "m", "mods": ["shift"]},
+        {"key": "s", "label": "Solo track",         "send": "s", "mods": ["shift"]},
+        {"key": "d", "label": "Copy",               "send": "c", "mods": ["command"]},
+        {"key": "f", "label": "Paste",              "send": "v", "mods": ["command"]},
+        {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
+        {"key": "z", "label": "Zoom out",           "send": "open_bracket", "mods": ["command"]},
+        {"key": "x", "label": "Zoom in",            "send": "close_bracket", "mods": ["command"]},
+        {"key": "c", "label": "Cut",                "send": "x", "mods": ["command"]},
+        {"key": "v", "label": "Heal separation",    "send": "h", "mods": ["command"]},
+        {"key": "b", "label": "Delete",             "send": "delete_or_backspace"}
+      ]
+    }
+  ]
+}
