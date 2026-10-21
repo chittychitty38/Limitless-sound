@@ -220,6 +220,7 @@ class MainWindow(QWidget):
         with self.engine.lock:
             self.engine.settings = self._engine_settings()
         self.refresh_keys()
+        self.suite.hand_changed(hand)
 
     # ---- live updates ------------------------------------------------
 

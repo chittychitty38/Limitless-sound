@@ -26,7 +26,8 @@ def make(front="com.apple.logic10", platform="mac"):
     b = Backend(front)
     b.platform = platform
     hands = []
-    s = Suite(Engine(LAYOUTS, platform, Settings()), b, hands.append)
+    s = Suite(Engine(LAYOUTS, platform, Settings()), b, None)
+    s.set_hand = lambda h: (hands.append(h), s.hand_changed(h))
     reported = []
     s.link.did = lambda action, intent=None, value=None: reported.append((action, intent))
     s.link.state = lambda key, value: reported.append((key, value))
@@ -75,6 +76,19 @@ def test_intent_missing_from_this_daw():
     s, b, _, _ = make(front="com.avid.ProTools")
     ok, msg = s.invoke("metronome", {}, "gaze")
     assert not ok and "Pro Tools" in msg
+
+
+def test_mixer_in_pro_tools_uses_edit_mix_window():
+    s, b, _, _ = make(front="com.avid.ProTools")
+    assert s.invoke("mixer", {}, "voice")[0]
+    assert b.sent == [Tap("equal_sign", ("cmd_l",))]
+
+
+def test_reports_current_state_when_hub_connects():
+    s, _, _, reported = make()
+    s.engine.set_enabled(True)
+    s._connected(True)
+    assert reported == [("mode", True), ("hand", "left")]
 
 
 def test_every_intent_label_exists_somewhere():

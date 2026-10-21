@@ -27,6 +27,8 @@ INTENT_LABELS = {
     "daw.zoomFit": "Zoom to fit",
     "daw.mixer": "Mixer",
 }
+# Other labels that do the same job in some DAWs.
+ALIASES = {"daw.mixer": ["Edit/Mix window"]}
 
 ACTIONS = [
     {"id": "on", "label": "One-hand mode on"},
@@ -43,7 +45,8 @@ class Suite:
         self.backend = backend
         self.set_hand = set_hand
         self.link = Link("onehand", "Limitless One-Hand", VERSION, actions=ACTIONS,
-                         on_invoke=self.invoke, dispatch=dispatch, subscribe=["daw.*", "zoom.keys"])
+                         on_invoke=self.invoke, on_connected=self._connected, dispatch=dispatch,
+                         subscribe=["daw.*", "zoom.keys"])
 
     def start(self):
         self.link.start()
@@ -58,7 +61,6 @@ class Suite:
             return True, "One-hand mode " + ("on" if self.engine.enabled else "off")
         if action in ("left", "right"):
             self.set_hand(action)
-            self.link.state("hand", action)
             return True, f"{action.title()}-hand layout"
         intent = f"daw.{action}"
         if intent in INTENT_LABELS:
@@ -70,8 +72,8 @@ class Suite:
         app = self.engine.profile_for(self.backend.front_app())
         if not app:
             return False, "No app One-Hand knows is in front."
-        label = INTENT_LABELS[intent].lower()
-        cmd = next((c for c in app["commands"] if c["label"].lower() == label), None)
+        labels = {l.lower() for l in [INTENT_LABELS[intent], *ALIASES.get(intent, [])]}
+        cmd = next((c for c in app["commands"] if c["label"].lower() in labels), None)
         if not cmd:
             return False, f"{app['name']} has no {INTENT_LABELS[intent]} in the one-hand layout."
         send = getattr(self.backend, "send", None)
@@ -82,8 +84,16 @@ class Suite:
         self.link.did(intent.split(".")[1], intent)
         return True, f"{INTENT_LABELS[intent]} in {app['name']}"
 
+    def _connected(self, up):
+        if up:  # tell a newly started hub where things stand
+            self.mode_changed(self.engine.enabled)
+            self.hand_changed(self.engine.settings.hand)
+
     def mode_changed(self, on):
         self.link.state("mode", bool(on))
+
+    def hand_changed(self, hand):
+        self.link.state("hand", hand)
 
     def say(self, text):
         """True when the suite's one voice said it."""
