@@ -74,3 +74,21 @@ To build one locally: `pyinstaller packaging/limitless_control.spec`.
 1. MIDI output so triggers and sticks can act as faders in any DAW.
 2. Single-switch scanning: a spoken menu that steps through actions, chosen with one switch.
 3. Shared actions with the voice control and eye tracking tools in Limitless Sound.
+
+## Works with the rest of Limitless Sound
+
+When the Limitless Sound hub is running, Limitless Control joins the suite by itself:
+
+- **Any switch can drive any app.** On the settings page, the pick list for each switch has an
+  "Other Limitless Sound apps" group: screen colors on, zoom in, one-hand mode, Voice to sleep,
+  GazeStage pages and more.
+- **The controller presses DAW keys for other apps.** When GazeStage or another app asks for
+  record, undo, save, mute, solo, zoom and more, Control presses the key command for the DAW in
+  front.
+- It reports what each switch did, whether the controller is on, its layer and whether a DAW is
+  in front, so links can react. For example, a recording started with the big B button puts
+  Limitless Voice into take mode.
+- Spoken confirmations go through the suite's one voice when that setting is on.
+
+Without the hub nothing changes. The link is `limitless_control/suite.py`, using a copy of
+`shared/clients/python/limitless_link.py`.

@@ -53,6 +53,8 @@ class Engine:
         self.layer = 0
         self.enabled = True
         self.on_change: Callable[[], None] = lambda: None
+        self.on_suite: Callable[[str], None] = lambda action: None   # another Limitless Sound app's action
+        self.on_fired: Callable[[dict], None] = lambda action: None  # after keys were sent
         self._pressed: dict[str, _Press] = {}
         self._last_fired: dict[str, float] = {}
 
@@ -154,6 +156,7 @@ class Engine:
         keys = action.get("keys")
         if keys:
             self.output.send(keys)
+            self.on_fired(action)
         if action.get("say"):
             self._say(action["say"])
         # A one-shot layer drops back after one action, like Sticky Keys.
@@ -172,6 +175,11 @@ class Engine:
             # Drop other held switches so nothing fires after switching off.
             self._pressed = {k: p for k, p in self._pressed.items() if _is_on_off(p.binding)}
             self._say("Controller on" if self.enabled else "Controller off")
+        elif command == "suite":
+            if self.enabled:
+                self.on_suite(action.get("suite", ""))
+                if action.get("say"):
+                    self._say(action["say"])
         elif command == "announce":
             if self.profile:
                 self._say(f"{self.profile.get('name', '')}, layer {self.layer + 1}")

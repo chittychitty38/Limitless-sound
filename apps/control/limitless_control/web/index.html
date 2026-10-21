@@ -204,11 +204,21 @@ function actionOptions(select, profileName, current) {
   const g2 = document.createElement("optgroup"); g2.label = "Controller";
   for (const [id, a] of Object.entries(S.commands)) add(g2, "id:" + id, a.label);
   select.appendChild(g2);
+  // Actions of the other Limitless Sound apps (Voice, Zoom, Color, One-Hand, GazeStage...).
+  const suite = (S.suite || []).slice();
+  if (current && current.command === "suite" && !suite.some(a => a.id === current.suite))
+    suite.push({ id: current.suite, label: current.label || current.suite, tool: "closed app" });
+  if (suite.length) {
+    const g3 = document.createElement("optgroup"); g3.label = "Other Limitless Sound apps";
+    for (const a of suite) add(g3, "suite:" + a.id, `${a.label} (${a.tool === "daw" ? "your DAW" : a.tool})`);
+    select.appendChild(g3);
+  }
   add(select, "custom", "Custom key command…");
 
   let value = "";
   if (current) {
-    if (current.id && (catalog[current.id] || S.commands[current.id])) value = "id:" + current.id;
+    if (current.command === "suite") value = "suite:" + current.suite;
+    else if (current.id && (catalog[current.id] || S.commands[current.id])) value = "id:" + current.id;
     else if (current.command && S.commands[current.command]) value = "id:" + current.command;
     else if (current.keys) value = "custom";
   }
@@ -218,6 +228,11 @@ function actionOptions(select, profileName, current) {
 function actionFrom(value, profileName, customText) {
   if (!value) return null;
   if (value === "custom") return { keys: customText || "" };
+  if (value.startsWith("suite:")) {
+    const id = value.slice(6);
+    const a = (S.suite || []).find(x => x.id === id);
+    return { command: "suite", suite: id, label: a ? a.label : id, say: a ? a.label : undefined };
+  }
   const id = value.slice(3);
   const src = S.commands[id] || (S.catalog[profileName] || {})[id];
   const out = JSON.parse(JSON.stringify(src)); delete out.label; out.id = id;

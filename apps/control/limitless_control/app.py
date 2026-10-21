@@ -88,6 +88,7 @@ class Output:
         self.sender = None if dry_run else KeySender(log)
         self.speaker = Speaker(log)
         self.last_action = ""
+        self.suite_say = None
 
     def send(self, k) -> None:
         text = keys.resolve(k)
@@ -98,6 +99,9 @@ class Output:
             self.sender.send(k)
 
     def speak(self, text: str) -> None:
+        # With Limitless Sound's one voice on, the hub speaks so apps never talk over each other.
+        if self.suite_say and self.suite_say(text):
+            return
         self.speaker.speak(text)
 
 
@@ -113,6 +117,9 @@ class App:
         self.last_input = {"name": None, "at": 0.0}
         self.token = secrets.token_urlsafe(16)
         self.running = True
+        from .suite import Suite
+        self.suite = Suite(self)
+        self.output.suite_say = self.suite.say
 
     # Controller callbacks (main thread)
 
@@ -151,6 +158,7 @@ class App:
                 "config": copy.deepcopy(self.config),
                 "catalog": profiles.CATALOG,
                 "commands": profiles.COMMANDS,
+                "suite": self.suite.suite_actions(),
                 "inputs": ALL_INPUTS,
                 "platform": keys.platform_name(),
                 "path": str(profiles.config_path()),
@@ -181,6 +189,7 @@ class App:
         if open_browser:
             webbrowser.open(url)
 
+        self.suite.start()
         self.reader = ControllerReader(self._press, self._release, self.log)
         self.reader.threshold = float(self.config.get("analogThreshold", 0.6))
         self.reader.start()
@@ -198,11 +207,13 @@ class App:
                         with self.lock:
                             self.front_app = app
                             self.engine.app_changed(app)
+                            self.suite.report_state()
                 time.sleep(0.01)
         except KeyboardInterrupt:
             pass
         finally:
             server.shutdown()
+            self.suite.stop()
             self.reader.stop()
             self._clear_session()
 
