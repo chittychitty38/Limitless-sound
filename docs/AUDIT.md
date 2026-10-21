@@ -25,7 +25,7 @@ What "tested" means below:
 | Hub | While a closed app's command line ran (up to 10 s), the whole suite froze. | Fixed on PR #7 (1.4 s stall → 52 ms). |
 | Hub | A message could carry a negative step count and run a link loop past the 4-step safety limit (17 steps). | Fixed on PR #7. |
 | Hub | Two copies of the same app knocked each other off the hub forever (30 reconnects in 3 s). | Fixed on PR #7. |
-| Hub | When an app is busy (seen on the Intel Mac build machine) and a burst of events arrives, the hub throws away the answers to that app's own requests along with the extra events, so the app waits for an answer that never comes. | Sent to the hub thread for PR #7. The stress test reproduces it on every machine. |
+| Hub | When an app is busy (seen on the Intel Mac build machine) and a burst of events arrives, the hub throws away the answers to that app's own requests along with the extra events, so the app waits for an answer that never comes. | Fixed on PR #7 (9630402): only extra events are dropped, never answers. |
 | GazeStage | A note held with a switch kept sounding forever when the window lost focus, and the switch stopped working. | Fixed on PR #11. |
 | Voice | "Delete fifty times" pressed Delete 50 times from one utterance; same for cut and paste. One misheard phrase could wipe a session. | Fixed on PR #1 (4dc4aff): at most 3. |
 | Control | A trigger held near its threshold with a tremor fired 9 commands in 3 seconds. | Fixed on PR #3 (0.2.1): triggers and sticks now have hysteresis, plus tremor timing presets. |
