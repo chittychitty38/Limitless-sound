@@ -1,7 +1,7 @@
 """The control window: one big on/off button, hand choice, the key map, options."""
 import sys
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QComboBox, QFrame, QGridLayout,
                                QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget)
@@ -10,6 +10,7 @@ from .engine import Engine, Settings
 from .keys import MIRROR, ROWS, cap, shortcut_text
 from .platform_sim import get_backend
 from .settings import APP_NAME, Prefs, load_layouts
+from .suite import Suite
 
 STYLE = """
 QWidget { background: #111; color: #fff; font-size: 18px; }
@@ -57,6 +58,15 @@ class KeyCard(QFrame):
         self.cmd.setText(label)
         self.sends.setText(sends)
         self.setAccessibleName(f"{cap(key)} key: {label or 'nothing'}")
+
+
+class MainThread(QObject):
+    """Runs calls from the Limitless Sound link on the window's thread."""
+    call = Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self.call.connect(lambda fn: fn())
 
 
 class MainWindow(QWidget):
@@ -155,6 +165,9 @@ class MainWindow(QWidget):
 
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=QApplication.quit)
 
+        self._main_thread = MainThread()
+        self.suite = Suite(self.engine, backend, self.set_hand, dispatch=self._main_thread.call.emit).start()
+
         self.timer = QTimer(self, interval=150, timeout=self.tick)
         self.timer.start()
         self.apply_on_top()
@@ -202,9 +215,12 @@ class MainWindow(QWidget):
     def set_hand(self, hand):
         self.prefs.hand = hand
         self.prefs.save()
+        for b in self.hand_group.buttons():
+            b.setChecked(b.text().lower().startswith(hand))
         with self.engine.lock:
             self.engine.settings = self._engine_settings()
         self.refresh_keys()
+        self.suite.hand_changed(hand)
 
     # ---- live updates ------------------------------------------------
 
@@ -215,8 +231,11 @@ class MainWindow(QWidget):
             on = self.engine.enabled
             if self.prefs.play_sounds:
                 self.backend.play_sound(on)
+            self.suite.mode_changed(on)
             if self.prefs.speak:
-                self.backend.speak("One hand on" if on else "One hand off")
+                text = "One hand on" if on else "One hand off"
+                if not self.suite.say(text):
+                    self.backend.speak(text)
         front = self.backend.front_app()
         if front != self._front:
             self._front = front
@@ -261,6 +280,7 @@ class MainWindow(QWidget):
         self.note.setVisible(bool(notes))
 
     def closeEvent(self, event):
+        self.suite.stop()
         self.backend.stop()
         super().closeEvent(event)
 
