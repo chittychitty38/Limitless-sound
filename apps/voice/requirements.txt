@@ -1,6 +1,6 @@
 PyYAML>=6
 platformdirs>=4
-vosk==0.3.45
+vosk==0.3.44  # 0.3.45 has no macOS wheel
 sounddevice>=0.4.6
 pynput>=1.7.7
 PySide6-Essentials>=6.7
