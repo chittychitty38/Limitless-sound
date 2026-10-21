@@ -90,7 +90,8 @@ footer {
   z-index: 50; display: none;
 }
 #cam { position: fixed; right: 16px; bottom: 56px; width: 180px; border-radius: 10px;
-  transform: scaleX(-1); border: 1px solid var(--line); z-index: 40; background: #000; }
+  transform: scaleX(-1); border: 1px solid var(--line); z-index: 40; background: #000;
+  pointer-events: none; opacity: .85; } /* never blocks clicks or gaze on the targets under it */
 #cam.hidden { display: none; }
 #calib { position: fixed; inset: 0; background: var(--bg); z-index: 60; display: none; }
 #calib.active { display: block; }
