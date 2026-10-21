@@ -8,18 +8,68 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/smoke.mjs",
+    "test:packaged": "node test/smoke.mjs --packaged",
     "postinstall": "node scripts/fetch-assets.mjs",
-    "package:mac": "npm run package:mac-arm64 && npm run package:mac-x64",
-    "package:mac-arm64": "electron-packager . GazeStage --platform=darwin --arch=arm64 --out=dist --overwrite --extend-info=build/Info.plist --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
-    "package:mac-x64": "electron-packager . GazeStage --platform=darwin --arch=x64 --out=dist --overwrite --extend-info=build/Info.plist --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
-    "package:win-x64": "electron-packager . GazeStage --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test",
-    "package:linux-x64": "electron-packager . GazeStage --platform=linux --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/build --ignore=^/scripts --ignore=^/test"
+    "dist:mac-arm64": "electron-builder --mac --arm64 --publish never",
+    "dist:mac-x64": "electron-builder --mac --x64 --publish never",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:linux": "electron-builder --linux dir --x64 --publish never"
   },
   "devDependencies": {
-    "@electron/packager": "20.3.0",
     "@mediapipe/tasks-vision": "0.10.14",
     "electron": "39.8.10",
+    "electron-builder": "^26.16.1",
     "playwright": "1.56.1"
   },
-  "dependencies": {}
+  "author": "Limitless Sound",
+  "build": {
+    "appId": "org.limitlesssound.gazestage",
+    "productName": "GazeStage",
+    "directories": {
+      "output": "dist",
+      "buildResources": "packaging"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "artifactName": "GazeStage-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg"
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "GazeStage uses the camera to follow your head and eyes. Video stays on this computer.",
+        "NSMicrophoneUsageDescription": "GazeStage can use a short sound, like a pop or click, as a switch. Nothing is recorded."
+      }
+    },
+    "dmg": {
+      "writeUpdateInfo": false
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chittychitty38/limitless-sound.git",
+    "directory": "apps/gazestage"
+  }
 }

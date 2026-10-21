@@ -30,7 +30,8 @@ app.whenReady().then(async () => {
   });
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED.has(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => ALLOWED.has(perm));
-  if (process.platform === 'darwin') {
+  // Skipped under the test's fake camera so CI never waits on a permission prompt.
+  if (process.platform === 'darwin' && !app.commandLine.hasSwitch('use-fake-device-for-media-stream')) {
     await systemPreferences.askForMediaAccess('camera').catch(() => {});
   }
   createWindow();

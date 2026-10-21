@@ -7,11 +7,18 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// `--packaged` tests the built app in dist/ instead of the source tree.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const app = await electron.launch({
-  executablePath: createRequire(import.meta.url)('electron'),
-  args: [root, '--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
-});
+const packaged = process.argv.includes('--packaged');
+const BUILT = {
+  darwin: join(root, 'dist', process.arch === 'arm64' ? 'mac-arm64' : 'mac', 'GazeStage.app', 'Contents', 'MacOS', 'GazeStage'),
+  win32: join(root, 'dist', 'win-unpacked', 'GazeStage.exe'),
+  linux: join(root, 'dist', 'linux-unpacked', 'gazestage'),
+};
+const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'];
+const app = await electron.launch(packaged
+  ? { executablePath: BUILT[process.platform], args: flags }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags] });
 try {
   const win = await app.firstWindow();
   const errors = [];

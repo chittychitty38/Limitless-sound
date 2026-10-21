@@ -1,4 +1,4 @@
-# GazeStage 0.2.0: setup guide
+# GazeStage
 
 GazeStage lets you play virtual instruments and run the Pro Tools transport using your head, your eyes, a sound into the microphone, or any switch. It runs completely offline. Video and audio never leave the computer, and nothing is recorded.
 
@@ -9,17 +9,19 @@ GazeStage lets you play virtual instruments and run the Pro Tools transport usin
 - **A microphone (optional):** the built-in mic or any USB or headset mic. You only need it if you want to use a sound as the switch.
 - **A switch (optional):** anything that types a key. That includes an adaptive switch interface, a foot pedal, a big-button keyboard, or an Xbox Adaptive Controller with a key-mapping tool.
 
-## Download and open
+## Download and install
+
+Get the installer from the newest `gazestage-v…` release on the repository's Releases page.
 
 | Computer | File |
 | --- | --- |
-| Mac with Apple Silicon (M1 or later) | `GazeStage-0.2.0-mac-apple-silicon.zip` |
-| Mac with Intel | `GazeStage-0.2.0-mac-intel.zip` |
-| Windows PC | `GazeStage-0.2.0-windows-x64.zip` |
+| Mac with Apple Silicon (M1 or later) | `GazeStage-<version>-mac-arm64.dmg` |
+| Mac with Intel | `GazeStage-<version>-mac-x64.dmg` |
+| Windows PC | `GazeStage-<version>-win-x64.exe` |
 
-**Mac:** Unzip, then drag GazeStage to Applications. The first time, macOS will say it can't check the developer. Open System Settings > Privacy & Security, scroll down and click **Open Anyway**. When asked, allow the camera, and the microphone too if you want sound control.
+**Mac:** Open the .dmg file and drag GazeStage to Applications. The first time, macOS will say it can't check the developer. Open System Settings > Privacy & Security, scroll down and click **Open Anyway**. When asked, allow the camera, and the microphone too if you want sound control.
 
-**Windows:** Right-click the zip and choose Extract All. Then open the folder and run `GazeStage.exe`. If SmartScreen appears, click **More info > Run anyway**.
+**Windows:** Run the installer. If SmartScreen appears, click **More info > Run anyway**.
 
 These warnings appear because this test build isn't signed with a paid developer certificate yet.
 
@@ -66,10 +68,11 @@ GazeStage sends MIDI through virtual MIDI ports. You need three of them:
 ## For developers
 
 ```sh
-npm install          # also fetches the MediaPipe runtime and face model into renderer/vendor
-npm start            # run the app
-npm test             # smoke test (on Linux: xvfb-run -a npm test)
-npm run package:mac  # or package:win-x64 / package:linux-x64; output in dist/
+npm install              # also fetches the MediaPipe runtime and face model into renderer/vendor
+npm start                # run the app
+npm test                 # smoke test (on Linux: xvfb-run -a npm test)
+npm run dist:mac-arm64   # or dist:mac-x64 / dist:win / dist:linux; output in dist/
+npm run test:packaged    # smoke test the built app in dist/
 ```
 
-The app is a small Electron shell (`main.js`) around one page (`renderer/index.html`). The page is served from `app://` so the camera, microphone and Web MIDI behave the same on every platform. CI builds the Mac and Windows zips on every pull request (`.github/workflows/gazestage.yml`).
+The app is a small Electron shell (`main.js`) around one page (`renderer/index.html`). The page is served from `app://`, so the camera, microphone and Web MIDI behave the same on every platform. CI (`.github/workflows/gazestage.yml`) tests every pull request and builds the Mac .dmg files and the Windows installer. A `gazestage-v*` tag attaches them to a release.

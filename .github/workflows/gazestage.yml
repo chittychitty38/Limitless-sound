@@ -3,9 +3,10 @@ name: GazeStage
 on:
   push:
     branches: [main]
-    paths: ['apps/gazestage/**', '.github/workflows/gazestage.yml']
+    tags: ["gazestage-v*"]
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
   pull_request:
-    paths: ['apps/gazestage/**', '.github/workflows/gazestage.yml']
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
   workflow_dispatch:
 
 defaults:
@@ -31,10 +32,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, target: mac-arm64, dir: GazeStage-darwin-arm64, name: GazeStage-mac-apple-silicon }
-          - { os: macos-latest, target: mac-x64, dir: GazeStage-darwin-x64, name: GazeStage-mac-intel }
-          - { os: windows-latest, target: win-x64, dir: GazeStage-win32-x64, name: GazeStage-windows-x64 }
+          - { os: macos-15, script: dist:mac-arm64, artifact: GazeStage-mac-apple-silicon, files: "dist/*.dmg" }
+          - { os: macos-15-intel, script: dist:mac-x64, artifact: GazeStage-mac-intel, files: "dist/*.dmg" }
+          - { os: windows-latest, script: dist:win, artifact: GazeStage-windows, files: "dist/*.exe" }
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,18 +48,17 @@ jobs:
           cache: npm
           cache-dependency-path: apps/gazestage/package-lock.json
       - run: npm ci
-      - run: npm run package:${{ matrix.target }}
-      # Ad-hoc signature: required for Apple Silicon to launch at all. A Developer ID
-      # certificate and notarization replace this once the project has one.
+      - run: npm run ${{ matrix.script }}
+      # Ad-hoc signed until the project has an Apple Developer ID; check the signature holds.
       - if: runner.os == 'macOS'
-        run: codesign --force --deep --sign - "dist/${{ matrix.dir }}/GazeStage.app"
-      - if: runner.os == 'macOS'
-        run: cd dist && ditto -c -k --keepParent "${{ matrix.dir }}/GazeStage.app" "${{ matrix.name }}.zip"
-      - if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -Path "dist/${{ matrix.dir }}" -DestinationPath "dist/${{ matrix.name }}.zip"
+        run: codesign --verify --deep --strict --verbose=2 dist/mac*/GazeStage.app
+      - run: npm run test:packaged
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
-          path: apps/gazestage/dist/${{ matrix.name }}.zip
+          name: ${{ matrix.artifact }}
+          path: apps/gazestage/${{ matrix.files }}
           if-no-files-found: error
+      - if: startsWith(github.ref, 'refs/tags/gazestage-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/gazestage/${{ matrix.files }}
