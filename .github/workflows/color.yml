@@ -54,6 +54,10 @@ jobs:
           echo "helper said: $out"
           # CI machines may have no GPU; either answer proves the helper starts and reads commands.
           echo "$out" | grep -Eq '^(ready|error no-gpu)'
+          # The one-shot permission check the setup guide uses must answer and exit.
+          perm=$(perl -e "alarm 30; exec @ARGV" app/src-tauri/binaries/limitless-overlay-${{ matrix.arch }}-apple-darwin --check-permission)
+          echo "permission check said: $perm"
+          echo "$perm" | grep -Eq '^(granted|denied)$'
       - name: Build the app
         working-directory: apps/color/app
         run: npx --yes @tauri-apps/cli@2.9.4 build

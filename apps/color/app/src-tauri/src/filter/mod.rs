@@ -10,7 +10,7 @@ use color_core::Profile;
 use tauri::AppHandle;
 
 #[cfg(target_os = "macos")]
-mod macos;
+pub mod macos;
 #[cfg(windows)]
 pub mod windows;
 
@@ -20,6 +20,8 @@ pub trait ScreenFilter: Send {
     /// Shows the profile on screen (or removes the filter when `on` is false).
     /// Returns a short note for the person, such as how close the match is.
     fn apply(&mut self, profile: &Profile, on: bool) -> Result<String, String>;
+    /// Starts over from scratch on the next `apply`, for example after a permission was granted.
+    fn restart(&mut self) {}
 }
 
 struct Unsupported;

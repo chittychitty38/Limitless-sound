@@ -10,11 +10,13 @@ use std::sync::Mutex;
 use color_core::helper::{offline_reply, HelperState, Suggestion};
 use color_core::lut::{Lut3D, DEFAULT_SIZE};
 use color_core::prompt::{self, Turn};
-use color_core::Profile;
+use color_core::tune::{auto_tune, TuneResult};
+use color_core::{CvdType, Profile};
 use serde::Serialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent, Wry};
+use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 /// Toggles the screen filter from anywhere, with one hand.
@@ -28,6 +30,8 @@ struct Inner {
     helper: HelperState,
     history: Vec<Turn>,
     tray_check: Option<CheckMenuItem<Wry>>,
+    /// First-launch progress: "" (not started), a step name, or "done".
+    onboarding: String,
 }
 
 pub struct AppState(Mutex<Inner>);
@@ -42,6 +46,8 @@ pub struct Status {
     platform: &'static str,
     has_api_key: bool,
     shortcut: &'static str,
+    onboarding: String,
+    autostart: bool,
 }
 
 fn platform() -> &'static str {
@@ -63,7 +69,15 @@ fn status(inner: &Inner) -> Status {
         platform: platform(),
         has_api_key: assistant::api_key().is_some(),
         shortcut: TOGGLE_SHORTCUT,
+        onboarding: inner.onboarding.clone(),
+        autostart: false,
     }
+}
+
+fn full_status(app: &AppHandle, inner: &Inner) -> Status {
+    let mut st = status(inner);
+    st.autostart = app.autolaunch().is_enabled().unwrap_or(false);
+    st
 }
 
 /// Pushes the current profile to the screen and remembers it.
@@ -77,8 +91,8 @@ fn sync(app: &AppHandle, inner: &mut Inner) {
     if let Some(c) = &inner.tray_check {
         let _ = c.set_checked(inner.filter_on);
     }
-    store::save(app, &inner.profile, inner.filter_on);
-    let _ = app.emit("status", status(inner));
+    store::save(app, &inner.profile, inner.filter_on, &inner.onboarding);
+    let _ = app.emit("status", full_status(app, inner));
 }
 
 fn toggle(app: &AppHandle) {
@@ -89,8 +103,8 @@ fn toggle(app: &AppHandle) {
 }
 
 #[tauri::command]
-fn get_status(state: State<AppState>) -> Status {
-    status(&state.0.lock().unwrap())
+fn get_status(app: AppHandle, state: State<AppState>) -> Status {
+    full_status(&app, &state.0.lock().unwrap())
 }
 
 #[tauri::command]
@@ -159,6 +173,69 @@ async fn ask_assistant(app: AppHandle, state: State<'_, AppState>, message: Stri
     Ok(AssistantReply { reply: suggestion.reply, question: suggestion.question, changes, source, note, status: status(&inner) })
 }
 
+/// "Make it clear for me": finds the clearest natural-looking profile for this
+/// kind and strength of color vision. The window previews it before applying.
+#[tauri::command]
+async fn auto_tune_profile(cvd: CvdType, severity: f64) -> Result<TuneResult, String> {
+    tauri::async_runtime::spawn_blocking(move || auto_tune(cvd, severity)).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_onboarding(app: AppHandle, state: State<AppState>, step: String) -> Status {
+    let mut inner = state.0.lock().unwrap();
+    inner.onboarding = step;
+    store::save(&app, &inner.profile, inner.filter_on, &inner.onboarding);
+    full_status(&app, &inner)
+}
+
+#[tauri::command]
+fn set_autostart(app: AppHandle, state: State<AppState>, on: bool) -> Result<Status, String> {
+    let al = app.autolaunch();
+    if on { al.enable() } else { al.disable() }.map_err(|e| format!("Couldn't change start at login: {e}"))?;
+    Ok(full_status(&app, &state.0.lock().unwrap()))
+}
+
+/// Screen Recording permission on Mac: "granted", "denied", or "not-needed" elsewhere.
+#[tauri::command]
+async fn screen_permission(app: AppHandle, request: bool) -> Result<&'static str, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let ok = filter::macos::screen_permission(&app, request).await?;
+        return Ok(if ok { "granted" } else { "denied" });
+    }
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, request);
+        Ok("not-needed")
+    }
+}
+
+/// Opens the system settings page where Screen Recording is allowed.
+#[tauri::command]
+fn open_screen_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Starts the screen filter from scratch, for example once permission was granted.
+#[tauri::command]
+fn restart_filter(app: AppHandle, state: State<AppState>) -> Status {
+    let mut inner = state.0.lock().unwrap();
+    inner.filter.restart();
+    sync(&app, &mut inner);
+    full_status(&app, &inner)
+}
+
+/// Quits and opens the app again (macOS sometimes needs this after a permission change).
+#[tauri::command]
+fn relaunch(app: AppHandle) {
+    app.restart();
+}
+
 #[tauri::command]
 fn set_api_key(key: String) -> Result<bool, String> {
     assistant::set_api_key(key.trim())?;
@@ -208,8 +285,14 @@ fn build_tray(app: &AppHandle, filter_on: bool) -> tauri::Result<CheckMenuItem<W
     let open = MenuItem::with_id(app, "open", "Open Color Tuner…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Limitless Color", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&check, &open, &PredefinedMenuItem::separator(app)?, &quit])?;
+    // Mac: a monochrome icon that matches the menu bar. Windows: the color app icon.
+    #[cfg(target_os = "macos")]
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
+    #[cfg(not(target_os = "macos"))]
+    let icon = app.default_window_icon().cloned().expect("app icon is bundled");
     TrayIconBuilder::with_id("main")
-        .icon(app.default_window_icon().cloned().expect("app icon is bundled"))
+        .icon(icon)
+        .icon_as_template(cfg!(target_os = "macos"))
         .tooltip("Limitless Color")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -229,11 +312,21 @@ fn build_tray(app: &AppHandle, filter_on: bool) -> tauri::Result<CheckMenuItem<W
 }
 
 fn show_tuner(app: &AppHandle) {
+    // The Dock icon shows only while the window is open; the rest of the time
+    // Limitless Color lives in the menu bar.
+    #[cfg(target_os = "macos")]
+    let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
         let _ = w.unminimize();
         let _ = w.set_focus();
     }
+}
+
+fn hide_tuner(window: &tauri::Window) {
+    let _ = window.hide();
+    #[cfg(target_os = "macos")]
+    let _ = window.app_handle().set_activation_policy(tauri::ActivationPolicy::Accessory);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -252,16 +345,18 @@ pub fn run() {
         )
         .setup(|app| {
             let handle = app.handle().clone();
-            let (profile, filter_on) = store::load(&handle);
+            let saved = store::load(&handle);
+            let filter_on = saved.filter_on;
             let filter = filter::create(&handle);
             let mut inner = Inner {
-                profile,
+                profile: saved.profile,
                 filter_on,
                 filter,
                 filter_note: String::new(),
                 helper: HelperState::default(),
                 history: vec![],
                 tray_check: None,
+                onboarding: saved.onboarding,
             };
             inner.tray_check = Some(build_tray(&handle, filter_on)?);
             sync(&handle, &mut inner);
@@ -270,10 +365,14 @@ pub fn run() {
                 eprintln!("could not register {TOGGLE_SHORTCUT}: {e}");
             }
             // Started at login: stay in the menu bar / tray with the filter running.
-            if std::env::args().any(|a| a == "--background") {
+            // Before first-launch setup is finished, always show the window.
+            let finished = app.state::<AppState>().0.lock().unwrap().onboarding == "done";
+            if finished && std::env::args().any(|a| a == "--background") {
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.hide();
                 }
+                #[cfg(target_os = "macos")]
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
             Ok(())
         })
@@ -281,7 +380,7 @@ pub fn run() {
             // Closing the tuner keeps the screen filter running; Quit is in the tray menu.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                let _ = window.hide();
+                hide_tuner(window);
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -291,8 +390,23 @@ pub fn run() {
             ask_assistant,
             set_api_key,
             export_cube,
-            start_dictation
+            start_dictation,
+            auto_tune_profile,
+            set_onboarding,
+            set_autostart,
+            screen_permission,
+            open_screen_settings,
+            restart_filter,
+            relaunch
         ])
-        .run(tauri::generate_context!())
-        .expect("Limitless Color failed to start");
+        .build(tauri::generate_context!())
+        .expect("Limitless Color failed to start")
+        .run(|app, event| {
+            // Opening the app again from Finder or Launchpad while it runs in the menu bar.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                show_tuner(app);
+            }
+            let _ = (app, event);
+        });
 }

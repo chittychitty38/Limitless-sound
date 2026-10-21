@@ -11,6 +11,9 @@
 //   fps <n>             frames per second (15-120, default 60)
 //   quit
 // It answers on stdout with: ready, on, off, error <reason>.
+//
+// Run with --check-permission or --request-permission instead, it prints
+// "granted" or "denied" for Screen Recording and exits.
 
 import AppKit
 import CoreMedia
@@ -296,6 +299,18 @@ final class Controller: NSObject {
             }
         }
     }
+}
+
+// One-shot checks, so the app can guide the person through setup without starting the filter.
+// A fresh process always sees the current permission, even right after it was granted.
+if CommandLine.arguments.contains("--check-permission") {
+    print(CGPreflightScreenCaptureAccess() ? "granted" : "denied")
+    exit(0)
+}
+if CommandLine.arguments.contains("--request-permission") {
+    // Shows the system prompt the first time, and lists the app in System Settings.
+    print(CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() ? "granted" : "denied")
+    exit(0)
 }
 
 let app = NSApplication.shared

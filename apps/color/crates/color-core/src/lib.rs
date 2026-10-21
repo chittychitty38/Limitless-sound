@@ -9,6 +9,7 @@ pub mod lut;
 pub mod matrix;
 pub mod profile;
 pub mod prompt;
+pub mod tune;
 #[cfg(test)]
 mod testdata;
 

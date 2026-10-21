@@ -23,18 +23,31 @@ Download the latest installer from the repository's **Releases** page (tags name
 
 1. Open Limitless Color. macOS will say it can't be opened.
 2. Go to **System Settings › Privacy & Security**, scroll down, and click **Open Anyway**.
-3. When you switch screen colors on, macOS asks for **Screen Recording** permission. Turn it on for Limitless Color, then switch the colors off and on again. The app only looks at the screen to recolor it. Nothing is recorded or sent anywhere.
+3. The setup guide opens. It walks you through a one-minute eye check, tunes your colors automatically, and then helps you allow **Screen Recording** in System Settings. It notices by itself when you've turned it on. If macOS offers to **Quit & Reopen**, choose it and the guide carries on. The app only looks at the screen to recolor it. Nothing is recorded or sent anywhere.
 
 macOS 15 may ask again about once a month whether Limitless Color can keep recording the screen. Choose **Allow**.
 
 **Windows:** run the installer. Windows may show "Windows protected your PC". Click **More info**, then **Run anyway**. No administrator rights are needed.
+
+## First launch
+
+A short setup guide opens the first time (about two minutes):
+
+1. **Welcome.**
+2. **Quick eye check.** Six pairs of circles. Or choose your kind of color vision and how strong it is yourself.
+3. **Your colors, tuned.** The app tries thousands of settings for your kind of color vision and picks the one that makes Record and Play, Solo and Mute, the meter stages and the track colors clearly different, while keeping everything else looking natural. You see before and after side by side, and can ask for stronger or gentler.
+4. **Screen access** (Mac only).
+5. **Switch on.** Try Hold to compare, and choose whether it starts when you log in.
+
+You can run the guide again from the bottom of the window.
 
 ## Use
 
 - **Screen colors: On/Off.** Applies your profile to the whole screen. Closing the tuner window keeps the colors on. Use the menu bar (Mac) or tray (Windows) icon to switch off or quit.
 - **Hold to compare.** Shows the original colors while you hold it. It works like bypass on a plugin.
 - **Command + Option + C** (Mac) or **Ctrl + Alt + C** (Windows) switches the colors from any app.
-- **Quick eye check.** Six pairs of circles, about a minute. It works out which kind of color vision difference you have and sets a starting correction.
+- **Can you tell them apart?** A live check of the controls you should never mix up, estimated for your kind of color vision. **Make it clear for me** tunes everything automatically, keeping any colors you pinned.
+- **Quick eye check.** Six pairs of circles, about a minute. It works out which kind of color vision difference you have and tunes your colors for it.
 - **Use a screenshot of my session.** Tunes against a picture of your real session instead of the sample.
 - **Save .cube profile.** Saves your profile to Documents › Limitless Color as a standard color lookup file, to back up or share.
 
@@ -43,12 +56,11 @@ macOS 15 may ask again about once a month whether Limitless Color can keep recor
 ```
 crates/color-core     Shared color math in Rust: color vision simulation (Machado 2009),
                       correction, pinned colors, 3D lookup tables, the Windows matrix fit,
-                      the assistant's prompt and the offline helper. Unit tested.
+                      automatic tuning, the assistant's prompt and the offline helper. Unit tested.
 app/src-tauri         The desktop app (Tauri 2): tuner window, tray menu, shortcut,
                       start at login, screen filters, Claude calls.
 app/macos-overlay     The Mac screen filter helper (Swift: ScreenCaptureKit + Metal).
 app/ui                The tuner window (one HTML file, no build step).
-tools/build_ui.py     Builds app/ui/index.html from the browser Color Tuner page.
 ../../.github/workflows/color.yml
                       Tests, builds and smoke-tests the Mac .dmg (Apple Silicon and Intel)
                       and the Windows installer; color-v* tags publish a release.

@@ -93,7 +93,39 @@ code,.mono{font-family:var(--f-mono);font-size:14px}
 input[type=password]{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);flex:1;min-width:0}
 details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
 #screenBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.note{margin:0;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line)}
+.note{margin:0;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note[hidden]{display:none}
+
+/* clarity check */
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pair{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center}
+.pair .sws{display:flex;gap:4px;grid-row:span 3}
+.pair .sws span{width:34px;height:44px;border-radius:6px;border:2px solid var(--line)}
+.pair b{font-weight:600;line-height:1.25}
+.pair .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.pair .bar i{display:block;height:100%;background:var(--ink);border-radius:99px}
+.pair small{color:var(--ink-2);font-size:14px}
+.pair small strong{color:var(--ink);font-weight:600}
+
+/* first-launch setup */
+dialog#setup{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:auto}
+dialog#setup::backdrop{background:rgba(10,12,16,.62)}
+#setup .setup-title{font-size:clamp(24px,3.4vw,32px);text-transform:none;letter-spacing:-.01em;color:var(--ink);font-weight:800;margin:6px 0 10px;line-height:1.15}
+#setupBody{display:flex;flex-direction:column;gap:14px}
+#setupBody p{margin:0;max-width:62ch}
+#setupBody ol,#setupBody ul{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+#setupBody .big{font-size:18px;min-height:52px;padding:10px 22px}
+#setupBody canvas{width:100%;height:auto;border-radius:8px;display:block}
+.cmp{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:6px 14px;align-items:center}
+.cmp .hd{font-size:14px;color:var(--ink-2);font-weight:600}
+.cmp .duo{display:flex;gap:4px}
+.cmp .duo span{width:40px;height:40px;border-radius:6px;border:2px solid var(--line)}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:6px}
+legend{font-weight:600;padding:0 4px}
+.choice{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:6px 4px;cursor:pointer}
+.choice input{width:22px;height:22px;margin-top:2px;flex:none}
+.choice small{display:block;color:var(--ink-2)}
+.ok{font-weight:600}
 </style>
 </head>
 <body>
@@ -148,6 +180,13 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
     </section>
   </div>
 
+  <section class="card" aria-labelledby="cl-h">
+    <div class="row"><h2 id="cl-h">Can you tell them apart?</h2><span class="spacer"></span><span class="badge" id="clarityBadge"></span><button class="primary" id="tuneBtn" type="button" hidden>Make it clear for me</button></div>
+    <p class="hint">Controls you should never mix up, in your colors. The bars estimate how different each pair looks with your kind of color vision. Your own eyes have the final say.</p>
+    <div class="pairs" id="pairs"></div>
+    <p class="hint" id="tuneMsg" aria-live="polite"></p>
+  </section>
+
   <div class="desk">
     <section class="card" aria-labelledby="f-h">
       <div class="row"><h2 id="f-h">Faders</h2></div>
@@ -196,6 +235,12 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
     </div>
   </section>
 </div>
+
+<dialog id="setup" aria-labelledby="setup-h">
+  <span class="badge" id="setupStep"></span>
+  <h2 id="setup-h" class="setup-title"></h2>
+  <div id="setupBody"></div>
+</dialog>
 
 <script>
 (()=>{
@@ -433,7 +478,7 @@ function simFn(){const M=simMatrix(S.type,S.severity);return l=>mul(M,l).map(cla
 function render(){
   raf=0;
   const sim=drawPreview();
-  renderRoles(sim);renderFaders();persist();if(desktop)pushProfile();
+  renderRoles(sim);renderClarity(sim);renderFaders();persist();if(desktop)pushProfile();
   $("#jsonOut").value=JSON.stringify({S,anchors},null,1);
 }
 function drawPreview(){
@@ -508,6 +553,29 @@ function renderRoles(sim){
   });
   if(keep)box.querySelector(`[data-anchor="${keep}"]`)?.focus();
 }
+/* ---------- clarity check ---------- */
+// Same pairs and thresholds as the automatic tuning (color-core/src/tune.rs).
+const KEY_PAIRS=[["record","play","Record vs Play"],["solo","mute","Solo vs Mute"],["meterLow","meterClip","Meter: safe vs clipping"],["meterLow","meterMid","Meter: safe vs hot"],["meterMid","meterClip","Meter: hot vs clipping"],["record","input","Record vs Input"],["tKick","tKeys","Red track vs green track"],["tVox","tBgv","Blue track vs purple track"],["tGtr","tVox","Teal track vs blue track"]];
+const CLEAR=0.12;
+function pairDistances(Tn,type,sev){
+  const M=simMatrix(type,sev);const see=hex=>toLab(mul(M,Tn(hexToLin(hex))).map(clamp01));
+  return KEY_PAIRS.map(([a,b])=>{const x=see(R[a].hex),y=see(R[b].hex);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])});
+}
+const clarityWord=d=>d>=CLEAR?"Clear":d>=CLEAR/2?"Getting there":"Hard to tell apart";
+function renderClarity(sim){
+  const ds=pairDistances(T,S.type,S.severity);const box=$("#pairs");box.replaceChildren();
+  KEY_PAIRS.forEach(([a,b,label],i)=>{
+    const d=ds[i];const show=hex=>{const o=T(hexToLin(hex));return linToHex(sim?sim(o):o)};
+    const el=document.createElement("div");el.className="pair";
+    el.innerHTML=`<div class="sws" aria-hidden="true"><span></span><span></span></div><b></b><div class="bar" aria-hidden="true"><i></i></div><small><strong></strong></small>`;
+    const sp=el.querySelectorAll(".sws span");sp[0].style.background=show(R[a].hex);sp[1].style.background=show(R[b].hex);
+    el.querySelector("b").textContent=label;el.querySelector("i").style.width=Math.round(Math.min(1,d/(1.5*CLEAR))*100)+"%";
+    el.querySelector("strong").textContent=clarityWord(d);
+    box.appendChild(el);
+  });
+  const n=ds.filter(d=>d>=CLEAR).length;$("#clarityBadge").textContent=`${n} of ${ds.length} clear`;
+}
+
 let ptimer=0;function schedulePartial(){clearTimeout(ptimer);ptimer=setTimeout(()=>{drawPreview();persist()},60)}
 
 $("#undo").addEventListener("click",()=>{const h=history.pop();if(!h)return;const o=JSON.parse(h);S=o.S;anchors=o.anchors;schedule()});
@@ -676,10 +744,16 @@ function renderCheck(){
     else{
       const nm={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"}[best[0]];
       const sev=clamp(0.4+best[1]*0.3,0.4,1);
+      if(desktop){
+        p.textContent=`Your answers match ${nm} color vision. Tuning your colors for that…`;body.appendChild(p);
+        tuneFor(best[0],sev).then(r=>{const m=useTune(r,true);p.textContent=`Your answers match ${nm} color vision. I tuned your colors for it. `+m;
+          addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I tuned your colors for it. `+m,{question:"How does the session look now? Tell me anything that still looks wrong."})}).catch(e=>{p.textContent="Automatic tuning didn't work: "+e});
+      }else{
       p.textContent=`Your answers match ${nm} color vision. I set the tuner to that and turned on a starting correction.`;body.appendChild(p);
       snapshot();S.type=best[0];S.severity=+sev.toFixed(2);S.daltonize=Math.max(S.daltonize,0.5);schedule();
       if(best[0]==="deutan"||best[0]==="protan"){S.redShift=Math.min(S.redShift,-15);S.greenShift=Math.max(S.greenShift,15)}else{S.bySplit=Math.max(S.bySplit,0.25)}
       addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I set a starting correction.`,{question:"How does the session look now? Tell me anything that still looks wrong."});
+      }
     }
     const again=document.createElement("button");again.type="button";again.textContent="Do it again";again.onclick=()=>{ck.i=-1;renderCheck()};body.appendChild(again);return;
   }
@@ -712,7 +786,11 @@ $("#copyJson").addEventListener("click",async()=>{
 loadSample();
 
 /* ---------- desktop app ---------- */
-function note(t){const n=$("#screenNote");n.textContent=t||"";n.hidden=!t}
+function note(t,action){
+  const n=$("#screenNote");n.replaceChildren();n.hidden=!t;if(!t)return;
+  const sp=document.createElement("span");sp.textContent=t;n.appendChild(sp);
+  if(action){const b=document.createElement("button");b.type="button";b.textContent=action.label;b.onclick=action.run;n.appendChild(b)}
+}
 function applyStatus(st){
   if(!bypass)screenOn=st.filterOn;platform=st.platform;
   const b=$("#screenBtn");b.setAttribute("aria-pressed",String(st.filterOn||bypass));b.textContent="Screen colors: "+(st.filterOn||bypass?"On":"Off");
@@ -720,6 +798,7 @@ function applyStatus(st){
   $("#aiBadge").textContent=st.hasApiKey?"Claude":"Offline helper";
   $("#keyMsg").textContent=st.hasApiKey?"A key is saved. Save an empty box to remove it.":"";
   if(!bypass)note(st.filterOn?(st.filterNote||""):"");
+  if(setup.open&&su.step==="on")renderSetup();
   schedule();
 }
 let pushT=0;
@@ -739,19 +818,193 @@ async function askDesktop(text){
   }catch(e){thinking.remove();addMsg("bot","Something went wrong: "+e)}
   busy=false;$("#send").disabled=false;
 }
+
+/* Automatic tuning: searches the faders for the clearest natural-looking profile. */
+const TYPE_NAME={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"};
+async function tuneFor(type,sev){return invoke("auto_tune_profile",{cvd:type,severity:+(+sev).toFixed(2)})}
+function useTune(r,keepPins){
+  snapshot();
+  const mine=keepPins?anchors:{};
+  S={...DEFAULTS,...r.profile.S};anchors={...(r.profile.anchors||{}),...mine};schedule();
+  const clearNow=r.pairs.filter(p=>p.after>=CLEAR).length,clearBefore=r.pairs.filter(p=>p.before>=CLEAR).length;
+  return `${clearNow} of ${r.pairs.length} key pairs are now clear for ${TYPE_NAME[S.type]} color vision (${clearBefore} before).`+(r.pinned.length?` I also gave ${r.pinned.join(", ")} their own colorblind-safe colors.`:"");
+}
+async function makeClear(){
+  const b=$("#tuneBtn");b.disabled=true;$("#tuneMsg").textContent="Trying thousands of settings for your eyes…";
+  try{const msg=useTune(await tuneFor(S.type,S.severity),true);$("#tuneMsg").textContent=msg+" Undo takes you back.";
+    addMsg("bot","I tuned the colors automatically. "+msg,{question:"Look at your session. What still looks wrong, if anything?"})}
+  catch(e){$("#tuneMsg").textContent="Automatic tuning didn't work: "+e}
+  b.disabled=false;
+}
+
+/* Hold to compare: shows the original colors while held, like bypass on a plugin. */
+const holdOn=async()=>{if(bypass||!screenOn)return;bypass=true;note("Showing the original colors. Let go to see yours.");try{await invoke("set_filter",{on:false})}catch(e){}};
+const holdOff=async()=>{if(!bypass)return;bypass=false;await setScreen(true)};
+function bindHold(bp){
+  bp.addEventListener("pointerdown",holdOn);["pointerup","pointerleave","pointercancel"].forEach(ev=>bp.addEventListener(ev,holdOff));
+  bp.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&!e.repeat){e.preventDefault();holdOn()}});
+  bp.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")holdOff()});
+}
+
+/* ---------- first-launch setup ---------- */
+const setup=$("#setup");
+let su={step:"welcome",ck:null,tune:null,type:"deutan",sev:0.8,fix:false,poll:0,stuck:false};
+let shortcutText="";
+const h=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(k==="on")for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(k==="class")e.className=v;else if(k in e)e[k]=v;else e.setAttribute(k,v)}e.append(...kids.flat().filter(x=>x!=null&&x!==false));return e};
+const setupSteps=()=>platform==="mac"?["welcome","check","tune","permission","on"]:["welcome","check","tune","on"];
+function go(step){
+  clearInterval(su.poll);
+  if(step==="done"){finishSetup();return}
+  su.step=step;if(!setup.open)setup.showModal();
+  if(!su.fix)invoke("set_onboarding",{step}).catch(()=>{});
+  renderSetup();
+}
+function nextStep(){const st=setupSteps();go(st[st.indexOf(su.step)+1]||"done")}
+function finishSetup(){
+  clearInterval(su.poll);if(setup.open)setup.close();
+  if(!su.fix)invoke("set_onboarding",{step:"done"}).catch(()=>{});
+  su.fix=false;$("#ask").focus();
+}
+function startSetup(){su={...su,ck:null,tune:null,type:S.type,sev:S.severity,fix:false,stuck:false};go("welcome")}
+setup.addEventListener("cancel",e=>{e.preventDefault();finishSetup()});
+function focusFirst(){setTimeout(()=>($("#setupBody .primary")||$("#setupBody button,#setupBody input"))?.focus(),30)}
+
+function renderSetup(){
+  const body=$("#setupBody"),title=$("#setup-h"),st=setupSteps();
+  $("#setupStep").textContent=su.fix?"Screen access":`Step ${st.indexOf(su.step)+1} of ${st.length}`;
+  body.replaceChildren();const btn=(label,run,primary)=>h("button",{type:"button",class:primary?"primary big":"big",on:{click:run}},label);
+  const p=t=>h("p",{},t);
+
+  if(su.step==="welcome"){
+    title.textContent="Welcome to Limitless Color";
+    body.append(
+      p("Limitless Color changes the colors on your whole screen, in Logic Pro, Pro Tools, plugins and everything else, so the things you need to tell apart really look different to you."),
+      p("Setup takes about two minutes: a quick eye check, automatic tuning for your eyes, then you switch it on. You can change anything later by telling the color assistant what you see, or with the faders."),
+      h("div",{class:"row"},btn("Let's start",()=>go("check"),true),btn("Skip setup",finishSetup)));
+  }
+
+  else if(su.step==="check"){
+    title.textContent="Quick eye check";
+    const ck=su.ck;
+    if(screenOn&&!bypass)setScreen(false);
+    if(!ck){
+      body.append(p("You'll see two circles at a time. Say whether they look like the same color to you. Six pairs, about a minute. There are no wrong answers."),
+        h("div",{class:"row"},btn("Start the check",()=>{su.ck={i:0,score:{protan:0,deutan:0,tritan:0}};renderSetup()},true),btn("I already know my color vision",()=>{su.ck={manual:true};renderSetup()})));
+    }else if(ck.manual){
+      const types=[["deutan","Red-green, green-weak","The most common kind. Reds and greens look alike, often brownish or yellowish."],["protan","Red-green, red-weak","Reds look dark, almost black or brown, and get confused with greens."],["tritan","Blue-yellow","Blues and greens look alike, and yellows look pink or grey."]];
+      const sevs=[[0.4,"Mild","I can usually tell, but it takes effort."],[0.7,"Medium","I mix these colors up often."],[1,"Strong","These colors look the same to me."]];
+      const fs1=h("fieldset",{},h("legend",{},"Which colors do you mix up?"),types.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"sutype",value:v,checked:su.type===v}),h("span",{},l,h("small",{},d)))));
+      const pick=sevs.reduce((a,b)=>Math.abs(b[0]-su.sev)<Math.abs(a[0]-su.sev)?b:a)[0];
+      const fs2=h("fieldset",{},h("legend",{},"How strong is it?"),sevs.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"susev",value:v,checked:v===pick}),h("span",{},l,h("small",{},d)))));
+      body.append(fs1,fs2,h("div",{class:"row"},btn("Continue",()=>{su.type=body.querySelector("[name=sutype]:checked").value;su.sev=+body.querySelector("[name=susev]:checked").value;su.tune=null;go("tune")},true),btn("Do the eye check instead",()=>{su.ck=null;renderSetup()})));
+    }else if(ck.i<CHECK.length){
+      const it=CHECK[ck.i];
+      body.append(h("p",{class:"ok"},`Pair ${ck.i+1} of ${CHECK.length}: do these two circles look like the same color?`));
+      const pair=h("div",{class:"check-pair",role:"img","aria-label":"Two colored circles"},h("span"),h("span"));
+      pair.children[0].style.background=it.pair[0];pair.children[1].style.background=it.pair[1];body.append(pair);
+      body.append(h("div",{class:"row"},[["Same color",1],["Almost the same",0.5],["Clearly different",0]].map(([l,v],j)=>btn(l,()=>{ck.score[it.t]+=v;ck.i++;renderSetup();focusFirst()},j===0))));
+    }else{
+      const best=Object.entries(ck.score).sort((a,b)=>b[1]-a[1])[0];
+      if(best[1]<0.75){
+        body.append(p("Every pair looked clearly different to you, so the usual colorblind confusions may not affect you, or only a little."),
+          p("If some things in your session still look alike, choose your color vision yourself and the app will tune for it."),
+          h("div",{class:"row"},btn("Choose it myself",()=>{su.ck={manual:true};renderSetup()},true),btn("Finish without changes",finishSetup)));
+      }else{
+        su.type=best[0];su.sev=+clamp(0.4+best[1]*0.3,0.4,1).toFixed(2);su.tune=null;
+        body.append(p(`Your answers match ${TYPE_NAME[su.type]} color vision. Next, the app tunes your colors for that.`),
+          h("div",{class:"row"},btn("Tune my colors",()=>go("tune"),true),btn("That's not right, let me choose",()=>{su.ck={manual:true};renderSetup()})));
+      }
+    }
+    focusFirst();
+  }
+
+  else if(su.step==="tune"){
+    title.textContent="Your colors, tuned";
+    if(!su.tune){
+      body.append(p(`Trying thousands of color settings for ${TYPE_NAME[su.type]} color vision…`));
+      tuneFor(su.type,su.sev).then(r=>{su.tune=r;useTune(r,false);renderSetup()}).catch(e=>{body.replaceChildren(p("Automatic tuning didn't work: "+e),h("div",{class:"row"},btn("Continue anyway",nextStep,true)))});
+      return;
+    }
+    const Tn=makeTransform(S,anchors);const after=hex=>linToHex(Tn(hexToLin(hex)));
+    const cv=h("canvas",{"aria-label":"A sample music session. Left half: original colors. Right half: your tuned colors."});
+    const W=1100,H=560,dpr=Math.min(2,window.devicePixelRatio||1),src=drawDaw(Math.round(760*dpr),Math.round(387*dpr));
+    cv.width=src.width;cv.height=src.height;const cx=cv.getContext("2d");
+    const sd=src.getContext("2d").getImageData(0,0,src.width,src.height),out=new ImageData(src.width,src.height);applyLut(sd,buildLut(Tn),out);
+    cx.putImageData(out,0,0);cx.putImageData(sd,0,0,0,0,Math.round(src.width/2),src.height);
+    const u=src.width/W;cx.fillStyle="#fff";cx.fillRect(src.width/2-u,0,3*u,src.height);cx.font=`700 ${16*u}px system-ui`;cx.textBaseline="top";
+    [["Original",src.width/2-110*u],["Yours",src.width/2+12*u]].forEach(([t,x])=>{const w=cx.measureText(t).width+16*u;cx.fillStyle="rgba(0,0,0,.75)";cx.fillRect(x,src.height-34*u,w,26*u);cx.fillStyle="#fff";cx.fillText(t,x+8*u,src.height-30*u)});
+    const rows=[0,1,2,4,6].map(i=>KEY_PAIRS[i]);
+    const duo=(a,b)=>{const d=h("div",{class:"duo","aria-hidden":"true"},h("span"),h("span"));d.children[0].style.background=a;d.children[1].style.background=b;return d};
+    const cmp=h("div",{class:"cmp"},h("span",{class:"hd"},"Pair"),h("span",{class:"hd"},"Before"),h("span",{class:"hd"},"After"),
+      rows.flatMap(([a,b,l])=>[h("span",{},l),duo(R[a].hex,R[b].hex),duo(after(R[a].hex),after(R[b].hex))]));
+    const strength=Math.round(su.sev*100);
+    body.append(cv,p("Compare the pairs. Can you tell each pair apart more easily in the After column, and in the right half of the picture?"),cmp,
+      h("p",{class:"hint"},`Tuned for ${TYPE_NAME[su.type]} color vision at ${strength}% strength.`),
+      h("div",{class:"row"},
+        btn("Yes, use this",nextStep,true),
+        su.sev<1&&btn("Make it stronger",()=>{su.sev=Math.min(1,su.sev+0.2);su.tune=null;renderSetup()}),
+        su.sev>0.2&&btn("Too much, make it gentler",()=>{su.sev=Math.max(0.2,su.sev-0.2);su.tune=null;renderSetup()})));
+    focusFirst();
+  }
+
+  else if(su.step==="permission"){
+    title.textContent="Let Limitless Color see the screen";
+    body.append(p("Checking screen access…"));
+    const done=()=>{clearInterval(su.poll);body.replaceChildren(h("p",{class:"ok"},"Screen access is on."));
+      invoke("restart_filter").then(applyStatus).catch(()=>{});setTimeout(su.fix?finishSetup:nextStep,900)};
+    const check=()=>invoke("screen_permission",{request:false}).then(r=>{if(r!=="denied")done();return r}).catch(()=>"denied");
+    check().then(r=>{
+      if(r!=="denied"||su.step!=="permission")return;
+      body.replaceChildren(
+        p("To recolor Logic Pro and everything else, macOS needs to let Limitless Color see the screen. It only uses the picture to redraw it in your colors. Nothing is recorded, saved, or sent anywhere."),
+        h("ol",{},h("li",{},"Click Open System Settings."),h("li",{},"Turn on Limitless Color in the list. Your Mac may ask for your password."),h("li",{},"If macOS offers to Quit & Reopen, choose it. This window comes back by itself.")),
+        h("div",{class:"row"},
+          btn("Open System Settings",async()=>{try{if(await invoke("screen_permission",{request:true})==="granted")return done();await invoke("open_screen_settings")}catch(e){}
+            clearInterval(su.poll);su.poll=setInterval(check,1500);
+            const w=$("#permWait");if(w)w.hidden=false},true),
+          btn(su.fix?"Not now":"Skip for now",()=>su.fix?finishSetup():nextStep())),
+        h("p",{class:"hint",id:"permWait",hidden:true},"Waiting for you to turn it on… This page notices by itself."),
+        h("details",{},h("summary",{},"I turned it on, but nothing changed"),
+          p("macOS sometimes only applies the change after Limitless Color reopens."),
+          h("div",{class:"row"},btn("Quit & Reopen Limitless Color",()=>invoke("relaunch")))));
+      focusFirst();
+    });
+  }
+
+  else if(su.step==="on"){
+    title.textContent=screenOn?"Your colors are on":"Switch on your colors";
+    if(!screenOn&&!bypass){
+      body.append(p("Press the button and your whole screen changes to your colors, in every app."),
+        h("div",{class:"row"},btn("Switch on screen colors",()=>setScreen(true),true)));
+    }else{
+      const hold=h("button",{type:"button",class:"big"},"Hold to compare");bindHold(hold);
+      const auto=h("input",{type:"checkbox",id:"suAuto",checked:true});
+      body.append(p("Hold the button below to see the original colors for a moment, like bypass on a plugin. Let go to see yours."),
+        h("div",{class:"row"},hold),
+        h("ul",{},
+          h("li",{},`Press ${shortcutText} in any app to switch your colors on or off.`),
+          h("li",{},platform==="mac"?"The Limitless Color icon in the menu bar has the same switch. Closing this window keeps your colors on.":"The Limitless Color icon in the taskbar tray has the same switch. Closing this window keeps your colors on."),
+          h("li",{},"Something still hard to see? Tell the color assistant in your own words, for example \"Solo and Mute look the same\".")),
+        h("label",{class:"choice"},auto,h("span",{},"Start Limitless Color when I log in",h("small",{},"Your colors come back on by themselves after a restart."))),
+        h("div",{class:"row"},btn("Finish",async()=>{try{await invoke("set_autostart",{on:auto.checked})}catch(e){}finishSetup()},true)));
+    }
+    focusFirst();
+  }
+}
+
 if(desktop){
-  ["#screenBtn","#talkBtn","#claudeBox"].forEach(id=>$(id).hidden=false);
+  ["#screenBtn","#talkBtn","#claudeBox","#tuneBtn"].forEach(id=>$(id).hidden=false);
+  $(".sub").textContent="Your colors apply to your whole screen. Tell the assistant what you see, move the faders, or press Make it clear for me, and keep going until it looks right to you.";
   document.querySelector('[aria-labelledby="p-h"]').innerHTML=`<h2 id="p-h">How it works</h2><div class="plan">
     <div><h3>Screen colors</h3><p>Switch them on and your profile is applied to the whole screen: Logic Pro, Pro Tools, plugins and everything else. Closing this window keeps them on. Use the menu bar or tray icon to switch them off or quit.</p></div>
     <div><h3>Quick switch</h3><p id="shortcutHelp"></p></div>
-    <div><h3>Talk instead of typing</h3><p>Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.</p></div></div>`;
+    <div><h3>Talk instead of typing</h3><p>Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.</p></div></div>
+    <div class="row"><button type="button" id="setupAgain">Run the setup guide again</button></div>`;
+  $("#setupAgain").addEventListener("click",startSetup);
   $(".split").hidden=true;
+  $("#tuneBtn").addEventListener("click",makeClear);
   $("#screenBtn").addEventListener("click",()=>setScreen(!($("#screenBtn").getAttribute("aria-pressed")==="true")));
-  const holdOn=async()=>{if(bypass||!screenOn)return;bypass=true;note("Showing the original colors. Let go to see yours.");try{await invoke("set_filter",{on:false})}catch(e){}};
-  const holdOff=async()=>{if(!bypass)return;bypass=false;await setScreen(true)};
-  const bp=$("#bypassBtn");bp.addEventListener("pointerdown",holdOn);["pointerup","pointerleave","pointercancel"].forEach(ev=>bp.addEventListener(ev,holdOff));
-  bp.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&!e.repeat){e.preventDefault();holdOn()}});
-  bp.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")holdOff()});
+  bindHold($("#bypassBtn"));
   $("#talkBtn").addEventListener("click",async()=>{$("#ask").focus();try{await invoke("start_dictation")}catch(e){}
     note(platform==="mac"?"Speak now. If nothing happens, press the Fn key twice, or turn on Dictation in System Settings › Keyboard.":"Speak now. If nothing happens, press Windows key + H.")});
   $("#saveKey").addEventListener("click",async()=>{try{await invoke("set_api_key",{key:$("#apiKey").value});$("#apiKey").value="";applyStatus(await invoke("get_status"))}catch(e){$("#keyMsg").textContent=String(e)}});
@@ -759,11 +1012,14 @@ if(desktop){
   $("#dlCube").textContent="Save .cube profile";
   TAURI.event.listen("status",e=>applyStatus(e.payload));
   TAURI.event.listen("filter-error",e=>note(e.payload));
+  TAURI.event.listen("permission-needed",()=>{if(setup.open&&su.step==="permission")return;su.fix=!setup.open;go("permission")});
+  TAURI.event.listen("filter-stopped",()=>note("The screen filter stopped unexpectedly.",{label:"Restart it",run:()=>invoke("restart_filter").then(applyStatus).catch(e=>note(String(e)))}));
   invoke("get_status").then(st=>{
     S={...DEFAULTS,...st.profile.S};anchors=st.profile.anchors||{};
-    const k=st.shortcut.replace("CommandOrControl",st.platform==="mac"?"Command":"Ctrl").replace("Alt",st.platform==="mac"?"Option":"Alt").split("+").join(" + ");
-    $("#shortcutHelp").textContent="Press "+k+" from any app to switch the screen colors on or off.";
+    shortcutText=st.shortcut.replace("CommandOrControl",st.platform==="mac"?"Command":"Ctrl").replace("Alt",st.platform==="mac"?"Option":"Alt").split("+").join(" + ");
+    $("#shortcutHelp").textContent="Press "+shortcutText+" from any app to switch the screen colors on or off.";
     applyStatus(st);
+    if(st.onboarding!=="done"){su.type=S.type;su.sev=S.severity;go(setupSteps().includes(st.onboarding)?st.onboarding:"welcome")}
   });
 }
 })();
