@@ -1,0 +1,106 @@
+name: Limitless Control
+
+on:
+  push:
+    branches: [main]
+    tags: ["control-v*"]
+    paths: ["apps/control/**", ".github/workflows/control.yml"]
+  pull_request:
+    paths: ["apps/control/**", ".github/workflows/control.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: apps/control
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            name: mac-apple-silicon
+          - os: macos-15-intel
+            name: mac-intel
+          - os: windows-latest
+            name: windows
+          - os: ubuntu-22.04
+            name: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ".[dev]"
+      - run: pyinstaller --noconfirm packaging/limitless_control.spec
+
+      - name: Smoke test the built app
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: ${{ runner.os == 'Linux' && 'dummy' || '' }}
+          SDL_AUDIODRIVER: dummy
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            "dist/Limitless Control.app/Contents/MacOS/Limitless Control" --self-test
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            "dist/Limitless Control/Limitless Control.exe" --self-test
+          else
+            "dist/Limitless Control/Limitless Control" --self-test
+          fi
+
+      - name: Make the Mac disk image
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dmg
+          cp -R "dist/Limitless Control.app" dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO \
+            "dist/LimitlessControl-${{ matrix.name }}.dmg"
+
+      - name: Make the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+            $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
+          }
+          iscc /DMyVersion=0.1.0 packaging\windows\installer.iss
+
+      - name: Make the Linux archive
+        if: runner.os == 'Linux'
+        run: tar -C dist -czf "dist/LimitlessControl-linux.tar.gz" "Limitless Control"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LimitlessControl-${{ matrix.name }}
+          path: |
+            apps/control/dist/*.dmg
+            apps/control/dist/*Setup.exe
+            apps/control/dist/*.tar.gz
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/control-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/control/dist/*.dmg
+            apps/control/dist/*Setup.exe
+            apps/control/dist/*.tar.gz
