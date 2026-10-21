@@ -73,6 +73,23 @@ try {
   await win.click('[data-action=chords]');
   assert.match(await win.locator('#pads .target').first().textContent(), /^[A-G][♯]?(m|°|\+)?/);
 
+  step('a held switch is released when the window loses focus');
+  await win.evaluate(() => { window.__gs.S.mode = 'mouse'; window.__gs.S.select = 'switch'; });
+  const box = await win.locator('#pads .target').nth(5).boundingBox();
+  await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await win.waitForTimeout(250);
+  await win.keyboard.down('Space'); await win.waitForTimeout(150);
+  assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the switch plays the pad');
+  await win.evaluate(() => window.dispatchEvent(new Event('blur')));
+  assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'losing focus stops the note');
+  await win.keyboard.up('Space');
+  await win.keyboard.down('Space'); await win.waitForTimeout(150);
+  assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the next press still works');
+  await win.keyboard.up('Space'); await win.waitForTimeout(100);
+  assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'key-up releases the note');
+  await win.evaluate(() => { window.__gs.S.mode = 'head'; window.__gs.S.select = 'dwell'; });
+  await win.mouse.move(5, 5);
+
   step('settings open and close');
   await win.click('#settingsBtn');
   await win.waitForSelector('#settings.open');

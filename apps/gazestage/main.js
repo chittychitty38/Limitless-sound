@@ -97,7 +97,8 @@ function createWindow() {
     ...(saved || {}),
     title: 'GazeStage', show: false, autoHideMenuBar: true, backgroundColor: '#101216',
     titleBarStyle: isMac ? 'hiddenInset' : 'default', trafficLightPosition: { x: 16, y: 18 },
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
+    // Keep tracking, timers and the Pro Tools link running when Pro Tools covers the window.
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false },
   });
   win.once('ready-to-show', () => win.show());
   win.on('close', saveBounds);

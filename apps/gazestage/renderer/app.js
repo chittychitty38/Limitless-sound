@@ -370,6 +370,17 @@ addEventListener('keyup', (e) => {
   switchDown = false;
   if (state.current && state.fired && isHoldable(state.current)) release(state.current);
 });
+// When GazeStage loses focus (say, a click into Pro Tools) the switch's key-up never arrives.
+// Let go of everything momentary so no note or rewind is left stuck, and re-arm the switch.
+// Notes latched with Hold stay on: the player chose those.
+function releaseMomentary() {
+  switchDown = false;
+  if (state.heldHui) release(state.heldHui.t);
+  document.querySelectorAll('#pads .target[data-down]').forEach(release);
+}
+addEventListener('blur', releaseMomentary);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseMomentary(); });
+
 function onSwitch(kind) {
   if (state.onboardStep === 'select' && kind === 'sound' && S.select === 'sound') markTest('Heard it!');
   if (S.select !== kind || !state.current || state.calibrating || state.settingsOpen) return;
