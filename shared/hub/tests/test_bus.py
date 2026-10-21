@@ -304,3 +304,18 @@ def test_default_routes_are_valid(bus):
     known = bus.known_action_ids()
     for r in routes.DEFAULT_ROUTES:
         assert routes.validate(r, known) == [], r["id"]
+
+
+def test_link_to_closed_app_is_quiet(bus):
+    control, _ = connect(bus, "control")
+    bus.receive(control, {"op": "did", "action": "record", "intent": "daw.record"})
+    assert not any(e["kind"] == "warn" for e in bus.log)
+
+
+def test_vendored_clients_match_shared_copy():
+    """Apps carry a copy of the Python client; it must not drift from shared/."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[3]
+    shared = (root / "shared" / "clients" / "python" / "limitless_link.py").read_text()
+    for copy in (root / "apps").rglob("limitless_link.py"):
+        assert copy.read_text() == shared, f"{copy} differs from shared/clients/python/limitless_link.py"

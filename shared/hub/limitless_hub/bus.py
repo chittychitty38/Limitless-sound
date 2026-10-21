@@ -41,6 +41,14 @@ DEFAULT_PREFS = {
 }
 
 
+STATE_LABELS = {
+    "voice.listening": "Voice listening", "onehand.mode": "One-hand mode", "onehand.hand": "One-Hand hand",
+    "zoom.keys": "Zoom keys", "color.filter": "Screen colors", "control.enabled": "Controller on/off",
+    "control.layer": "Controller layer", "gaze.tracking": "Eye tracking", "hub.speaking": "Speaking",
+    "app.front": "App in front", "app.daw": "DAW in front",
+}
+
+
 def _clean_text(v, limit=500) -> str:
     return str(v if v is not None else "")[:limit]
 
@@ -217,6 +225,8 @@ class Bus:
         return sorted(found, key=lambda p: rank.get(p[0], len(rank)))
 
     def label_for(self, action: str) -> str:
+        if action in STATE_LABELS:
+            return STATE_LABELS[action]
         tool, _, act = action.partition(".")
         if tool == "daw":
             return catalog.INTENTS.get(action, action)
@@ -398,6 +408,12 @@ class Bus:
                     self._note(f"Paused the link “{route.get('name', route['id'])}”: it kept setting itself off.", "warn")
                     continue
                 for step in route.get("do", []):
+                    target = step["action"].partition(".")[0]
+                    if target in catalog.TOOLS and target not in self.tools:
+                        cli = catalog.TOOLS[target].get("cli") or {}
+                        act = step["action"].partition(".")[2]
+                        if not ((act in cli or "*" in cli) and self.launcher and self.launcher.find(target)):
+                            continue  # a link to an app that's closed simply waits for it
                     self._note(f"Link: {self.label_for(name)} → {self.label_for(step['action'])}", "link")
                     self.invoke(step["action"], step.get("args") or {}, source=f"link:{route['id']}", depth=depth + 1)
 
