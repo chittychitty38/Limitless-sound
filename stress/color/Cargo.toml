@@ -1,0 +1,14 @@
+# Stress tests for Limitless Color's color engine. Kept outside the app's workspace so the
+# suite builds against whatever color-core is in this checkout.
+#   cargo test --release --manifest-path stress/color/Cargo.toml -- --nocapture
+[package]
+name = "color-stress"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dev-dependencies]
+color-core = { path = "../../apps/color/crates/color-core" }
+serde_json = "1"
