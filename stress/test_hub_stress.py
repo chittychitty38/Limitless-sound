@@ -7,6 +7,7 @@ that set each other off, and hours of uptime.
 
 from __future__ import annotations
 
+import itertools
 import json
 import random
 import socket
@@ -81,7 +82,7 @@ def hub(tmp_path, monkeypatch):
     h.stop()
 
 
-def connect(tool_id, counter=None, delay=0.0):
+def connect(tool_id, counter=None, delay=0.0, subscribe=None, on_event=None):
     def on_invoke(action, args, source):
         if delay:
             time.sleep(delay)
@@ -89,7 +90,8 @@ def connect(tool_id, counter=None, delay=0.0):
             counter[tool_id] = counter.get(tool_id, 0) + 1
         return True, action
 
-    link = Link(tool_id, tool_id.title(), "stress", actions=ACTIONS, on_invoke=on_invoke, retry=0.05).start()
+    link = Link(tool_id, tool_id.title(), "stress", actions=ACTIONS, on_invoke=on_invoke, retry=0.05,
+                subscribe=subscribe, on_event=on_event).start()
     LIVE.append(link)
     assert wait_for(lambda: link.connected, 5), f"{tool_id} never connected"
     return link
@@ -172,7 +174,8 @@ def test_a_hung_app_does_not_hold_up_the_others(hub):
     """One app freezes (beachball) and stops reading. Everyone else carries on."""
     stuck = raw(hub, tool="color")
     stuck.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
-    a, b = connect("voice"), connect("zoom")
+    # The asking app doesn't listen to the flood itself: that case is the next test.
+    a, b = connect("voice", subscribe=["zoom.connected"]), connect("zoom")
     # Bury the frozen app in events until its socket buffer and the hub's queue are full.
     for i in range(3000):
         b.state("keys", i)
@@ -188,6 +191,40 @@ def test_a_hung_app_does_not_hold_up_the_others(hub):
     stuck.close()
     a.stop()
     b.stop()
+
+
+@KNOWN_BUG
+def test_answers_are_never_dropped_behind_a_burst_of_events(hub):
+    """A slow app (an older Intel Mac, a busy Qt window) gets a burst of events, then asks for something.
+
+    The hub keeps at most 1,000 messages waiting per app and drops the rest. It must drop
+    events, never the answer to something the app asked for, or that app waits forever.
+    """
+    gate = threading.Event()
+    slow = connect("voice", subscribe=["zoom.keys"], on_event=lambda n, v, s: gate.wait(60))
+    noisy = connect("zoom")
+    sent = itertools.count()
+    flooding = threading.Event()
+    flooding.set()
+
+    def flood():
+        while flooding.is_set():
+            noisy.state("keys", f"{next(sent):07d}" + "x" * 400)
+
+    flooder = threading.Thread(target=flood, daemon=True)
+    flooder.start()
+    # Far more than the operating system buffers between two apps, so the hub's own queue for
+    # the busy app is full, and stays full while the events keep coming.
+    assert wait_for(lambda: int(str(hub.bus.states.get("zoom.keys", "0"))[:7]) > 40000, 60)
+    answered = []
+    for _ in range(20):
+        assert slow.invoke("zoom.a1", on_result=answered.append)
+        time.sleep(0.05)
+    time.sleep(0.5)
+    flooding.clear()
+    flooder.join()
+    gate.set()                      # the app catches up
+    assert wait_for(lambda: len(answered) == 20, 30), f"only {len(answered)} of 20 answers arrived"
 
 
 @KNOWN_BUG
