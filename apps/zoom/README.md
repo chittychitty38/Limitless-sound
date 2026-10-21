@@ -85,3 +85,18 @@ Layout: `actions.py` (actions and phrases), `keymaps.py` (per-app keys), `router
 - Not code-signed. Signing needs an Apple Developer ID ($99/year) and a Windows code-signing certificate.
 - Pro Tools Windows Start-key shortcuts (track height, presets) may be caught by Windows itself; needs checking.
 - Voice is English only for now; Vosk has models for 20+ languages.
+
+## Works with the rest of Limitless Sound
+
+When the Limitless Sound hub is running, Zoom joins the suite by itself:
+
+- Any other app can zoom: a controller button, a glance in GazeStage, a voice command, a
+  Stream Deck button. Every zoom action is available, plus "zoom keys on" and "zoom keys off".
+- Zoom answers the suite's shared zoom requests (zoom in, zoom out, fit) for the app in front.
+- When the zoom keys layer turns on, the suite turns one-hand mode off, and the other way
+  round, so the two never fight over the same keys.
+- The panel follows the suite's shared dwell time and scanning speed, and spoken feedback goes
+  through the suite's one voice when that setting is on.
+
+Without the hub nothing changes. The link is `limitless_zoom/suite.py`, using a copy of
+`shared/clients/python/limitless_link.py`.

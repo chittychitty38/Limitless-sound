@@ -19,6 +19,7 @@ from .hotkeys import GlobalKeys, KeyLogic
 from .keys import format_key
 from .router import Router
 from .settings import Settings, config_dir
+from .suite import Suite
 from .ui import KeyCaptureDialog, Panel, Toast, Welcome
 
 SERVER_NAME = f"limitless-zoom-{getpass.getuser()}"
@@ -33,6 +34,7 @@ class Bus(QObject):
     status = Signal(str)
     captured = Signal(str)
     voice_ready = Signal(str)
+    call = Signal(object)   # calls from the Limitless Sound link
 
 
 def app_icon():
@@ -102,9 +104,13 @@ class ZoomApp(QObject):
         self.tray = self._make_tray() if use_tray and QSystemTrayIcon.isSystemTrayAvailable() else None
         self.use_voice = use_voice
 
+        self.bus.call.connect(lambda fn: fn())
+        self.suite = Suite(self, dispatch=self.bus.call.emit)
+
     # Start-up ---------------------------------------------------------------
 
     def start(self):
+        self.suite.start()
         for problem in self.backend.permission_problems():
             self._status(problem)
         if self.keys:
@@ -142,6 +148,7 @@ class ZoomApp(QObject):
             action = self.last_action
         if action in APP_ACTIONS:
             self._app_action(action)
+            self.suite.did(action)
             return
 
         self._poll_front()
@@ -151,6 +158,7 @@ class ZoomApp(QObject):
         if not plan.ok:
             return
         self.last_action = action
+        self.suite.did(action)
         # If the panel or a dialog of ours is in front, put the DAW back first.
         _, front = self.backend.frontmost()
         reactivate = handle if (front is not None and self.backend.is_self(front)) else None
@@ -181,6 +189,8 @@ class ZoomApp(QObject):
 
     def feedback(self, text):
         self.toast.show_text(text)
+        if self.settings["speak"] and self.suite.say(text):
+            return  # the suite's one voice said it
         if self.settings["speak"] and self.tts is not None:
             self.tts.stop()
             self.tts.say(text)
@@ -191,6 +201,7 @@ class ZoomApp(QObject):
         else:
             self.badge.hide()
         self.feedback("Zoom keys on" if on else "Zoom keys off")
+        self.suite.keys_changed(on)
         if self.tray:
             self.keys_action.setChecked(on)
 
