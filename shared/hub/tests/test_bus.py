@@ -319,3 +319,14 @@ def test_vendored_clients_match_shared_copy():
     shared = (root / "shared" / "clients" / "python" / "limitless_link.py").read_text()
     for copy in (root / "apps").rglob("limitless_link.py"):
         assert copy.read_text() == shared, f"{copy} differs from shared/clients/python/limitless_link.py"
+
+
+def test_mac_executable_reads_info_plist(tmp_path):
+    import plistlib
+    from limitless_hub.catalog import mac_executable
+    app = tmp_path / "Limitless Color.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    with open(app / "Contents" / "Info.plist", "wb") as f:
+        plistlib.dump({"CFBundleExecutable": "limitless-color"}, f)
+    assert mac_executable(app, "Limitless Color").name == "limitless-color"
+    assert mac_executable(tmp_path / "Missing.app", "Fallback").name == "Fallback"

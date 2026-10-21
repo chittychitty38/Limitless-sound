@@ -69,6 +69,36 @@ pub fn config_dir() -> PathBuf {
     }
 }
 
+/// The installed Limitless Sound hub, if there is one.
+pub fn hub_app() -> Option<PathBuf> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let candidates: Vec<PathBuf> = if cfg!(target_os = "macos") {
+        vec!["/Applications/Limitless Sound.app".into(), PathBuf::from(home).join("Applications/Limitless Sound.app")]
+    } else if cfg!(windows) {
+        std::env::var("LOCALAPPDATA")
+            .map(|d| vec![PathBuf::from(d).join("Programs\\Limitless Sound\\Limitless Sound.exe")])
+            .unwrap_or_default()
+    } else {
+        vec![]
+    };
+    candidates.into_iter().find(|p| p.exists())
+}
+
+/// Start the installed hub in the background. `true` if it was found.
+pub fn launch_hub() -> bool {
+    let Some(app) = hub_app() else { return false };
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        c.args(["-g", "-j"]).arg(&app).args(["--args", "--background"]);
+        c
+    } else {
+        let mut c = std::process::Command::new(&app);
+        c.arg("--background");
+        c
+    };
+    cmd.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().is_ok()
+}
+
 type InvokeFn = dyn Fn(&str, &Value, &str) -> (bool, String) + Send + Sync;
 type EventFn = dyn Fn(&str, &Value, &str) + Send + Sync;
 
@@ -123,10 +153,17 @@ impl Link {
         thread::Builder::new()
             .name("limitless-link".into())
             .spawn(move || {
+                let mut tried_hub = false;
                 while !inner.stopped.load(Ordering::SeqCst) {
+                    let mut reached = false;
                     if let Some((port, token)) = read_link() {
-                        let _ = session(&inner, port, &token, &*on_invoke, &*on_event);
+                        reached = session(&inner, port, &token, &*on_invoke, &*on_event).is_ok();
                         close(&inner);
+                    }
+                    // Every app brings the suite up with it: open the hub if it's installed.
+                    if !reached && !tried_hub {
+                        tried_hub = true;
+                        launch_hub();
                     }
                     thread::sleep(inner.retry);
                 }

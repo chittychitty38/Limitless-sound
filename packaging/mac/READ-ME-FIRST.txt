@@ -1,0 +1,24 @@
+LIMITLESS SOUND FOR MAC
+
+1. Double-click "Install Limitless Sound".
+   The first time, macOS says it can't check the developer. Open
+   System Settings > Privacy & Security, scroll down, and click "Open Anyway"
+   next to "Install Limitless Sound". This is needed once, for the whole suite.
+2. Every app is copied into Applications and Limitless Sound opens in your
+   web browser. From there you can open the apps you use and choose which
+   ones open together.
+
+Or drag the apps you want into the Applications shortcut yourself. Then each
+app needs "Open Anyway" the first time you open it.
+
+What's inside
+  Limitless Sound      Joins the apps into one suite. Runs quietly in the background.
+  Limitless Voice      Voice commands for Logic Pro, Pro Tools and the whole computer.
+  Limitless One-Hand   The keys under one hand become DAW commands.
+  Limitless Zoom       Zoom the DAW or the screen by voice, one hand, dwell or a switch.
+  Limitless Color      Recolors the screen for colorblind musicians.
+  Limitless Control    Xbox Adaptive Controller, switches and gamepads as DAW commands.
+  GazeStage            Play instruments and run the transport with your eyes or head.
+
+The apps aren't signed with an Apple Developer ID yet. Signing will remove the
+"Open Anyway" step entirely.

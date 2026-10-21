@@ -224,3 +224,14 @@ def test_cli_do_against_running_hub(hub, capsys):
     assert "did in" in capsys.readouterr().out
     assert cli.main(["do", "voice.do", "solo", "track"]) == 1  # voice not open, not installed here
     zoom.stop()
+
+
+def test_cli_autostart(tmp_path, monkeypatch, capsys):
+    from limitless_hub import cli, launcher
+    monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))
+    calls = []
+    monkeypatch.setattr(launcher, "set_autostart", calls.append)
+    assert cli.main(["autostart", "on"]) == 0
+    assert calls == [True]
+    assert json.loads(paths.settings_file().read_text())["autostart"] is True
+    assert cli.main(["autostart", "off"]) == 0 and calls == [True, False]

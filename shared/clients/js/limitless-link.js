@@ -24,11 +24,36 @@ function configDir() {
   return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'Limitless Sound');
 }
 
+// The installed Limitless Sound hub, if there is one.
+function hubApp() {
+  const candidates = process.platform === 'darwin'
+    ? ['/Applications/Limitless Sound.app', path.join(os.homedir(), 'Applications', 'Limitless Sound.app')]
+    : process.platform === 'win32' && process.env.LOCALAPPDATA
+      ? [path.join(process.env.LOCALAPPDATA, 'Programs', 'Limitless Sound', 'Limitless Sound.exe')] : [];
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+// Start the installed hub in the background. true if it was found.
+function launchHub() {
+  const app = hubApp();
+  if (!app) return false;
+  const { spawn } = require('node:child_process');
+  try {
+    const child = process.platform === 'darwin'
+      ? spawn('open', ['-g', '-j', app, '--args', '--background'], { detached: true, stdio: 'ignore' })
+      : spawn(app, ['--background'], { detached: true, stdio: 'ignore', windowsHide: true });
+    child.on('error', () => {});
+    child.unref();
+    return true;
+  } catch { return false; }
+}
+
 class Link extends EventEmitter {
   // Events: 'connected' (bool), 'event' (name, value, source), 'prefs' (prefs), 'actions' (list)
-  constructor({ tool, name, version = '', actions = [], onInvoke = null, subscribe = ['*'], retryMs = 2000 }) {
+  constructor({ tool, name, version = '', actions = [], onInvoke = null, subscribe = ['*'], retryMs = 2000, startHub = true }) {
     super();
-    Object.assign(this, { tool, name, version, onInvoke, subscribe, retryMs });
+    Object.assign(this, { tool, name, version, onInvoke, subscribe, retryMs, startHub });
+    this._triedHub = false;
     this.actions = actions;
     this.connected = false;
     this.prefs = {};
@@ -68,6 +93,11 @@ class Link extends EventEmitter {
 
   _retry() {
     if (this._stopped) return;
+    if (this.startHub && !this._triedHub && !this.connected) {
+      // Every app brings the suite up with it: open the hub if it's installed.
+      this._triedHub = true;
+      launchHub();
+    }
     clearTimeout(this._timer);
     this._timer = setTimeout(() => this._connect(), this.retryMs);
     this._timer.unref?.();
@@ -129,4 +159,4 @@ class Link extends EventEmitter {
   }
 }
 
-module.exports = { Link, configDir };
+module.exports = { Link, configDir, launchHub };

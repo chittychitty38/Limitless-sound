@@ -9,6 +9,7 @@ command line ("--do in", "do 'solo track'").
 from __future__ import annotations
 
 import os
+import plistlib
 import sys
 from pathlib import Path
 
@@ -176,6 +177,16 @@ def _win_roots() -> list[Path]:
     return roots
 
 
+def mac_executable(bundle: Path, fallback: str) -> Path:
+    """The program inside a .app, as its Info.plist names it."""
+    try:
+        with open(bundle / "Contents" / "Info.plist", "rb") as f:
+            name = plistlib.load(f).get("CFBundleExecutable") or fallback
+    except (OSError, ValueError):
+        name = fallback
+    return bundle / "Contents" / "MacOS" / name
+
+
 def find_install(tool_id: str, overrides: dict | None = None) -> Path | None:
     """Path of the program to run for a tool, or None when it isn't installed."""
     spec = TOOLS[tool_id]
@@ -183,14 +194,16 @@ def find_install(tool_id: str, overrides: dict | None = None) -> Path | None:
     if custom:
         p = Path(custom)
         if p.suffix == ".app" and p.is_dir():
-            return p / "Contents" / "MacOS" / spec.get("mac_exe", p.stem)
+            return mac_executable(p, spec.get("mac_exe", p.stem))
         return p if p.exists() else None
     plat = platform_key()
     if plat == "mac":
         for root in (Path("/Applications"), Path.home() / "Applications"):
-            exe = root / spec["mac_app"] / "Contents" / "MacOS" / spec["mac_exe"]
-            if exe.exists():
-                return exe
+            bundle = root / spec["mac_app"]
+            if bundle.is_dir():
+                exe = mac_executable(bundle, spec["mac_exe"])
+                if exe.exists():
+                    return exe
         return None
     if plat == "windows":
         exes = [spec["win_exe"], *spec.get("win_alt_exes", [])]
