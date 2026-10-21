@@ -130,7 +130,9 @@ jobs:
 
   # How well it understands real (synthetic) Mac voices, clean and noisy,
   # for each speech model we could ship. Results land on the run's summary page.
+  # About 35 Mac minutes, so it only runs when started by hand (Actions > Run workflow).
   benchmark:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
