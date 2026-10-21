@@ -1,0 +1,25 @@
+[project]
+name = "limitless-hub"
+version = "0.1.0"
+description = "Limitless Sound hub: one action bus for every Limitless Sound tool"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6.10"]
+
+[project.scripts]
+limitless-sound = "limitless_hub.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["limitless_hub"]
+
+[tool.setuptools.package-data]
+limitless_hub = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

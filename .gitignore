@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+# Builds
+build/
+dist/
+/apps/*/target/
+target/
+node_modules/
+*.dmg
+*.exe
+# Downloaded at build time
+models/
+wavs/
+# Color app generated files
+apps/color/app/src-tauri/binaries/limitless-overlay-*
+apps/color/app/src-tauri/gen
+# OS
+.DS_Store
+Thumbs.db

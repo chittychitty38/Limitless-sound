@@ -1,0 +1,29 @@
+name: Hub and clients
+
+on:
+  push:
+    branches: [main]
+    tags: ["hub-v*"]
+    paths: ["shared/**", ".github/workflows/shared.yml"]
+  pull_request:
+    paths: ["shared/**", ".github/workflows/shared.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: shared/hub
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - run: python -m pytest -q
