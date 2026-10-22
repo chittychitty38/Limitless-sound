@@ -595,7 +595,14 @@ class MainWindow(QWidget):
         super().closeEvent(event)
 
     def shutdown(self):
+        if getattr(self, "_shut", False):
+            return
+        self._shut = True
+        self.timer.stop()
+        self.perm_timer.stop()
         self.badge.hide()
+        if self.tray:
+            self.tray.hide()
         self.suite.stop()
         self.backend.stop()
 
