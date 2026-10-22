@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from onehand.engine import Engine, Settings, Tap
-from onehand.suite import ACTIONS, INTENT_LABELS, Suite
+from onehand.suite import ACTIONS, INTENT_LABELS, Suite, combine
 
 LAYOUTS = json.loads((Path(__file__).parents[1] / "onehand" / "layouts.json").read_text())
 
@@ -89,6 +89,28 @@ def test_reports_current_state_when_hub_connects():
     s.engine.set_enabled(True)
     s._connected(True)
     assert reported == [("mode", True), ("hand", "left")]
+
+
+def test_shared_settings_combine_with_larger_text():
+    # Whichever is more accessible wins: the bigger text, and high contrast or reduced motion if the suite asks.
+    assert combine(False, {}) == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+    assert combine(True, {"textScale": 1.0})["textScale"] == 1.25
+    assert combine(True, {"textScale": 1.5})["textScale"] == 1.5
+    assert combine(False, {"textScale": 1.5})["textScale"] == 1.5
+    assert combine(False, {"textScale": 9})["textScale"] == 2.0
+    assert combine(True, {"highContrast": True, "reduceMotion": True, "dwellMs": 900}) == \
+        {"textScale": 1.25, "highContrast": True, "reduceMotion": True}
+
+
+def test_shared_settings_from_the_hub():
+    s, _, _, reported = make()
+    changed = []
+    s.prefs_changed = lambda: changed.append(s.look(larger_text=False))
+    s._prefs({"speak": True, "textScale": 1.75, "highContrast": True, "reduceMotion": False, "scanMs": 1500})
+    assert changed == [{"textScale": 1.75, "highContrast": True, "reduceMotion": False}]
+    s.prefs_applied(changed[0])
+    # Only the settings One-Hand really honors, with the values in use.
+    assert reported == [("prefs.applied", {"textScale": 1.75, "highContrast": True, "reduceMotion": False})]
 
 
 def test_every_intent_label_exists_somewhere():

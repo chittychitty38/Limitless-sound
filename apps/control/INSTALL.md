@@ -72,6 +72,8 @@ On the settings page:
 - **Timing:** if tremor or bumps set off switches, raise **Ignore presses shorter than**. If
   holds are hard, raise or lower **Hold time**.
 - Switch spoken feedback on or off.
+- **Bigger text, high contrast or less motion:** set them once in the Limitless Sound app and
+  this page follows. Your computer's own high contrast and reduce motion settings work here too.
 
 Changes save automatically and work straight away.
 

@@ -265,3 +265,41 @@ def test_answers_are_never_dropped_behind_a_burst_of_events():
     assert len([x for x in lines if x.startswith("result")]) == 20
     assert len([x for x in lines if x.startswith("event")]) == Outbox.MAX_EVENTS
     assert lines[-1] == "event 2999"
+
+
+def test_opening_settings_answers_without_waiting_for_the_browser(monkeypatch):
+    """The hub must answer hub.settings within 3 s even when the browser takes half a minute."""
+    import webbrowser
+    from limitless_hub import launcher
+
+    monkeypatch.setattr(launcher.sys, "platform", "linux")
+    monkeypatch.setattr(webbrowser, "open", lambda url: time.sleep(5))
+    started = time.monotonic()
+    r = launcher.Launcher({}, settings_url=lambda: "http://127.0.0.1:1/").open_settings()
+    assert r["ok"] and time.monotonic() - started < 0.5
+
+
+def test_open_the_log_folder(hub, tmp_path, monkeypatch):
+    logs = tmp_path / "Logs"
+    monkeypatch.setenv("LIMITLESS_SOUND_LOGS", str(logs))
+    opened = []
+    hub.launcher.popen = lambda cmd, **kw: opened.append(cmd)
+    assert http(hub, "POST", "/api/open-logs", {}, token=False)[0] == 403
+    status, body = http(hub, "POST", "/api/open-logs", {})
+    assert status == 200 and json.loads(body)["ok"] is True
+    # Made if no app has written a log yet, so the file manager never says it's missing.
+    assert logs.is_dir() and opened == [[opened[0][0], str(logs)]]
+
+
+@pytest.mark.parametrize("platform, opener", [("darwin", "open"), ("win32", "explorer"), ("linux", "xdg-open")])
+def test_open_folder_uses_the_computers_file_manager(tmp_path, monkeypatch, platform, opener):
+    from limitless_hub.launcher import Launcher
+    opened = []
+    monkeypatch.setattr(sys, "platform", platform)
+    result = Launcher({}, popen=lambda cmd, **kw: opened.append(cmd)).open_folder(tmp_path)
+    assert result["ok"] is True and opened == [[opener, str(tmp_path)]]
+
+    def broken(cmd, **kw):
+        raise OSError("no file manager")
+    result = Launcher({}, popen=broken).open_folder(tmp_path)
+    assert result == {"ok": False, "message": f"Couldn't open {tmp_path}: no file manager"}

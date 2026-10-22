@@ -23,13 +23,26 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import __version__, frontmost, keys, login, profiles
+from . import __version__, applog, frontmost, keys, login, mac_keys, profiles
 from .engine import Engine
 
 PORT = 47820
 WEB_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "limitless_control" / "web"
 if not WEB_DIR.exists():
     WEB_DIR = Path(__file__).resolve().parent / "web"
+
+
+def open_in_browser(url: str) -> None:
+    """Open a page without waiting for the browser. Python's webbrowser waits for
+    osascript on a Mac, which can take half a minute, and the controller loop runs
+    on this thread: no button press may ever wait for a browser."""
+    if sys.platform == "darwin":
+        try:
+            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except OSError:
+            pass
+    threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
 def accessibility_ok() -> bool:
@@ -134,7 +147,9 @@ class App:
         self.restart = False
         self.menu = None
         self.engine.on_fire = self._fired
-        from .suite import Suite
+        from .suite import OWN_LOOK, Suite
+        # Text size, high contrast and reduced motion for the settings page; the suite can change them.
+        self.look = dict(OWN_LOOK)
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
 
@@ -175,7 +190,7 @@ class App:
 
     def open_settings(self) -> None:
         if self.url:
-            webbrowser.open(self.url)
+            open_in_browser(self.url)
 
     def toggle_enabled(self) -> None:
         with self.lock:
@@ -210,6 +225,7 @@ class App:
                 "setupDone": bool(self.config.get("setupDone")),
                 "startAtLogin": login.is_enabled(),
                 "menuBar": self.menu is not None,
+                "look": dict(self.look),
                 "log": list(self.output.log.lines)[-12:],
             }
 
@@ -250,13 +266,13 @@ class App:
         self.url = f"http://127.0.0.1:{server.server_address[1]}/?t={self.token}"
         self._write_session(server.server_address[1])
         self.log(f"Limitless Control {__version__} running. Settings: {self.url}")
+        self.suite.start()
         if not accessibility_ok():
             self.log("Mac: allow Accessibility access so key commands reach your apps.")
         # The first time, always show the guided setup.
         if open_browser or not self.config.get("setupDone"):
             self.open_settings()
 
-        self.suite.start()
         self.reader = ControllerReader(self._press, self._release, self.log)
         self.reader.threshold = float(self.config.get("analogThreshold", 0.6))
         self.reader.start()
@@ -286,7 +302,9 @@ class App:
                             p = self.engine.profile or {}
                             state = (self.engine.enabled, self.engine.layer + 1, p.get("name"))
                         self.menu.update(*state, self.reader.connected)
-                time.sleep(0.01)
+                # Every 10 ms while a controller is plugged in or a switch is held. With
+                # nothing connected, 20 times a second still notices one being plugged in.
+                time.sleep(0.01 if self.reader.connected or self.engine.busy else 0.05)
         except KeyboardInterrupt:
             pass
         finally:
@@ -482,13 +500,15 @@ def main(argv=None) -> None:
     parser.add_argument("--test-mode", action="store_true", help="log key commands instead of pressing them")
     parser.add_argument("--self-test", action="store_true", help="check the app starts, then quit")
     args = parser.parse_args(argv)
+    applog.start("Limitless Control", __version__)
+    mac_keys.prepare()   # before anything presses keys, on this, the main thread
     if args.self_test:
         sys.exit(self_test())
 
     other = already_running()
     if other is not None:
         if other.get("token"):
-            webbrowser.open(f"http://127.0.0.1:{other.get('port', PORT)}/?t={other['token']}")
+            open_in_browser(f"http://127.0.0.1:{other.get('port', PORT)}/?t={other['token']}")
         else:
             print(f"Something else is using port {PORT}.")
         return

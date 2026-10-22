@@ -3,7 +3,8 @@
 Built to be usable by voice alone, by keyboard alone, with a screen reader
 (VoiceOver, NVDA, Narrator, JAWS), or with low vision: every control has an
 accessible name, results are announced, text can be enlarged and there's a
-high-contrast theme.
+high-contrast theme. With the Limitless Sound hub running, the suite's shared
+text size, high contrast and reduced motion settings apply too (look.py).
 """
 
 import os
@@ -11,7 +12,7 @@ import sys
 import threading
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QFont, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMainWindow,
@@ -19,12 +20,13 @@ from PySide6.QtWidgets import (
     QMenu, QVBoxLayout, QWidget,
 )
 
-from . import __version__
+from . import __version__, applog, mac_keys
 from .actions import APP_ALIASES
 from .audio import Listener, list_input_devices
 from .engine import BUILTIN_PHRASES, Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases
 from .keys import spoken_vocabulary
+from .look import grow, in_use, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .numbers import NUMBER_WORDS
 from .platforms import current_os, get_platform
@@ -40,7 +42,15 @@ QWidget { background: #000; color: #ffeb3b; }
 QPushButton { background: #111; color: #fff; border: 3px solid #ffeb3b; padding: 4px 10px; }
 QPushButton:checked { background: #003a40; }
 QPushButton:focus { border-color: #00e5ff; }
+QPushButton:disabled { color: #9e9e9e; border: 3px dashed #9e9e9e; }
 QComboBox, QLineEdit, QListWidget, QDoubleSpinBox { background: #111; color: #fff; border: 2px solid #ffeb3b; }
+QComboBox, QLineEdit, QListWidget, QDoubleSpinBox, QComboBox QAbstractItemView, QMenu {
+    selection-background-color: #ffeb3b; selection-color: #000; }
+QComboBox:focus, QLineEdit:focus, QListWidget:focus, QDoubleSpinBox:focus, QSlider:focus {
+    border: 3px solid #00e5ff; }
+QMenu, QToolTip { background: #000; color: #fff; border: 2px solid #ffeb3b; }
+QMenu::item:selected { background: #ffeb3b; color: #000; }
+QMenu::item:disabled, QCheckBox:disabled { color: #9e9e9e; }
 QCheckBox::indicator { width: 18px; height: 18px; border: 2px solid #ffeb3b; background: #111; }
 QCheckBox::indicator:checked { background: #00e5ff; }
 QCheckBox:focus { color: #00e5ff; }
@@ -204,7 +214,8 @@ class MainWindow(QMainWindow):
         self._own_busy = self._suite_busy = False
         self.bridge.call.connect(lambda fn: fn())
         self.suite = Suite(self.engine, on_change=self._update_state, on_phrases=self._suite_phrases,
-                           on_speaking=self._suite_speaking, dispatch=self.bridge.call.emit)
+                           on_speaking=self._suite_speaking, on_look=self.apply_look,
+                           dispatch=self.bridge.call.emit)
 
         self._quitting = False
         self.hud = Hud()
@@ -288,7 +299,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(root)
         layout.setSpacing(12)
 
-        self.listen_btn = QPushButton()
+        self.listen_btn = sized(QPushButton(), 1.6, bold=True)
         self.listen_btn.setCheckable(True)
         self.listen_btn.setMinimumHeight(90)
         self.listen_btn.clicked.connect(self.toggle_listening)
@@ -311,7 +322,7 @@ class MainWindow(QMainWindow):
         self.permission_box.hide()
         layout.addWidget(self.permission_box)
 
-        self.heard_label = QLabel("Say something, like \"what can I say\".")
+        self.heard_label = sized(QLabel("Say something, like \"what can I say\"."), 1.25)
         self.heard_label.setWordWrap(True)
         self.heard_label.setAccessibleName("Last thing heard")
         self.did_label = QLabel("")
@@ -416,26 +427,38 @@ class MainWindow(QMainWindow):
 
     def apply_settings(self):
         s = self.settings
-        app = QApplication.instance()
-        font = QFont(app.font())
-        base = getattr(self, "_base_point_size", None) or font.pointSizeF()
-        self._base_point_size = base
-        font.setPointSizeF(base * s.text_scale)
-        app.setFont(font)
-        big = QFont(font)
-        big.setPointSizeF(font.pointSizeF() * 1.6)
-        big.setBold(True)
-        self.listen_btn.setFont(big)
-        self.heard_label.setFont(QFont(font.family(), int(font.pointSizeF() * 1.25)))
-        app.setStyleSheet(HIGH_CONTRAST if s.high_contrast else "")
+        self.apply_look()
         self.setWindowFlag(Qt.WindowStaysOnTopHint, s.keep_on_top)
-        for b in self.findChildren(QPushButton):
-            if b is not self.listen_btn:
-                b.setMinimumHeight(int(font.pointSizeF() * 2.6))
         self.show()
         self.speaker.enabled = s.speak_feedback
         self.speaker.rate = s.voice_rate
         self._setup_hotkey()
+
+    def apply_look(self):
+        """Text size, high contrast and reduced motion, for every window: the more accessible
+        of this app's settings and the suite's. Runs again whenever either changes."""
+        look = in_use(self.settings, self.suite.prefs)
+        app = QApplication.instance()
+        if not hasattr(self, "_base_point_size"):
+            self._base_point_size = app.font().pointSizeF()
+            self._effects = QApplication.isEffectEnabled(Qt.UI_General)
+        # colours first: changing the style sheet puts back each widget's earlier font
+        app.setStyleSheet(HIGH_CONTRAST if look["highContrast"] else "")
+        size = self._base_point_size * look["textScale"]
+        resize_text(size)
+        # reduced motion: menus, lists and tooltips appear without sliding or fading in
+        QApplication.setEffectEnabled(Qt.UI_General, self._effects and not look["reduceMotion"])
+        for b in self.findChildren(QPushButton):
+            if b is not self.listen_btn:
+                b.setMinimumHeight(int(size * 2.6))
+        if hasattr(self, "look"):
+            # larger text than before: the open windows grow with it, so nothing gets squeezed
+            for win in (self, getattr(self, "wizard", None)):
+                if win is not None:
+                    grow(win, look["textScale"] / self.look["textScale"])
+        self.look = look
+        self.hud.set_look(look["textScale"], look["highContrast"], look["reduceMotion"])
+        self.suite.report_look(look)
 
     def _setup_hotkey(self):
         if self.hotkey_listener:
@@ -574,7 +597,9 @@ class MainWindow(QMainWindow):
             first_line = result.message.splitlines()[0]
             self._show_did(("✓ " if result.handled else "? ") + first_line)
             if self.settings.show_hud and not self.isActiveWindow():
-                did = first_line if result.handled else "Didn't catch a command"
+                # The transcript is shown above it, so a miss needs only these words; any other
+                # refusal (a DAW command with no DAW in front, say) shows its reason.
+                did = "Didn't catch a command" if first_line.startswith("Didn't catch") else first_line
                 self.hud.show_message(shown.replace("[unk]", "").strip(), did, result.handled,
                                       self.settings.hud_seconds)
             self.history.insertItem(0, f"{shown}  →  {first_line}")
@@ -742,6 +767,8 @@ def ensure_model(parent, name=""):
 
 
 def run(argv=None):
+    applog.start("Limitless Voice", __version__)
+    mac_keys.prepare()   # before anything presses or listens for keys, on this, the main thread
     # Qt on macOS activates the whole app whenever any window is raised, which
     # would pull focus away from Logic or Pro Tools. Turn that off.
     os.environ.setdefault("QT_MAC_SET_RAISE_PROCESS", "0")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 import webbrowser
 from pathlib import Path
 
@@ -18,6 +19,18 @@ def _detached_kwargs() -> dict:
         flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         return {"creationflags": flags, "close_fds": True}
     return {"start_new_session": True, "close_fds": True}
+
+
+def open_in_browser(url: str) -> None:
+    """Open a page without waiting for the browser. Python's webbrowser waits for
+    osascript on a Mac, which can take half a minute; the hub has to answer within 3 s."""
+    if sys.platform == "darwin":
+        try:
+            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except OSError:
+            pass
+    threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
 def _app_bundle(exe: Path) -> Path | None:
@@ -77,10 +90,26 @@ class Launcher:
         out = (r.stdout or "").strip().splitlines()
         return r.returncode == 0, out[-1] if out else ""
 
+    def open_folder(self, folder: Path) -> dict:
+        """Show a folder in Finder, File Explorer or the desktop's file manager."""
+        if sys.platform == "darwin":
+            opener = "open"
+        elif sys.platform.startswith("win"):
+            opener = "explorer"
+        else:
+            opener = "xdg-open"
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            self.popen([opener, str(folder)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       **_detached_kwargs())
+        except OSError as e:
+            return {"ok": False, "message": f"Couldn't open {folder}: {e}"}
+        return {"ok": True, "message": f"Opening {folder}"}
+
     def open_settings(self) -> dict:
         url = self.settings_url()
         if url:
-            webbrowser.open(url)
+            open_in_browser(url)
         return {"ok": True, "message": "Opening Limitless Sound settings"}
 
 

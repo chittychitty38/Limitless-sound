@@ -1,0 +1,171 @@
+name: Stress tests
+
+# Every app pushed hard: floods, tremor, held keys, noise and mishearing, hung and crashing
+# apps, lost focus, and long soaks. Apps whose folder isn't in the checkout yet are skipped.
+# Pull requests run short soaks; the nightly run and a manual run go long.
+
+on:
+  pull_request:
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
+  push:
+    branches: [main]
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: "How long each soak runs, in seconds"
+        default: "600"
+
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: stress-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  STRESS_SECONDS: ${{ github.event_name == 'pull_request' && '20' || github.event.inputs.seconds || '600' }}
+  PYTHONUNBUFFERED: "1"
+  PYTHONUTF8: "1"   # Windows consoles default to cp1252; the reports print arrows and µ
+
+jobs:
+  # On a pull request, the app-specific stress jobs run only when that app, the stress tests
+  # or this workflow changed. Main, the nightly run and a manual run always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      voice: ${{ steps.diff.outputs.voice }}
+      gazestage: ${{ steps.diff.outputs.gazestage }}
+      color: ${{ steps.diff.outputs.color }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            for app in voice gazestage color; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          echo "$changed"
+          for app in voice gazestage color; do
+            if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
+              echo "$app=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$app=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
+  engines:
+    name: Engines and hub (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest psutil numpy pyyaml platformdirs pygame-ce==2.5.8
+      - run: python -m pytest stress -v -s --durations=10
+
+  voice-recognizer:
+    name: Voice vs noise and music (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.voice == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      MODEL: vosk-model-small-en-us-0.15
+    steps:
+      - uses: actions/checkout@v4
+      - id: has
+        shell: bash
+        run: echo "voice=$([ -f apps/voice/limitless_voice/engine.py ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - if: steps.has.outputs.voice == 'yes'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: steps.has.outputs.voice == 'yes'
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: vosk-${{ env.MODEL }}
+      - if: steps.has.outputs.voice == 'yes'
+        name: Install, fetch the speech model the app ships, make spoken clips
+        shell: bash
+        run: |
+          pip install pytest psutil numpy pyyaml platformdirs vosk==0.3.44
+          if [ ! -d "models/$MODEL" ]; then
+            mkdir -p models
+            curl -sSfL -o model.zip "https://alphacephei.com/vosk/models/${MODEL}.zip"
+            python -m zipfile -e model.zip models/
+          fi
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng; fi
+          python stress/tools/make_speech.py "$RUNNER_TEMP/speech"
+      - if: steps.has.outputs.voice == 'yes'
+        shell: bash
+        run: |
+          VOSK_MODEL="$PWD/models/$MODEL" TTS_WAV_DIR="$RUNNER_TEMP/speech" \
+            python -m pytest stress/test_voice_stress.py -v -s
+
+  gazestage:
+    name: GazeStage soak and focus (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.gazestage == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - id: has
+        run: echo "gaze=$([ -f apps/gazestage/package.json ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - if: steps.has.outputs.gaze == 'yes'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: steps.has.outputs.gaze == 'yes'
+        working-directory: apps/gazestage
+        run: |
+          npm ci
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node ../../stress/gazestage_stress.mjs
+          else
+            node ../../stress/gazestage_stress.mjs
+          fi
+
+  color:
+    name: Color engine (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-latest]
+    needs: changes
+    if: needs.changes.outputs.color == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - id: has
+        shell: bash
+        run: echo "color=$([ -f apps/color/crates/color-core/Cargo.toml ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - if: steps.has.outputs.color == 'yes'
+        run: cargo test --release --manifest-path stress/color/Cargo.toml -- --nocapture

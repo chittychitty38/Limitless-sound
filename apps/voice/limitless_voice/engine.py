@@ -224,6 +224,12 @@ class Engine:
             body, times = split_repeat(text)
             found = self._fuzzy(body, commands)
         if not found:
+            elsewhere = self._works_in(texts)
+            if elsewhere:
+                # Heard right, but it's a DAW command and that DAW isn't in front.
+                return Result(raw, False, f"\"{text}\" works in {elsewhere}. "
+                              f"Bring {'it' if ' and ' not in elsewhere else 'one of them'} to the front, "
+                              "then say it again.")
             return Result(raw, False, f"Didn't catch a command in \"{text}\"")
         cmd, params = found
         if cmd.repeatable is False:
@@ -245,6 +251,19 @@ class Engine:
             if params is not None:
                 return cmd, params
         return None
+
+    def _works_in(self, texts):
+        """The apps where this phrase is a command, when the app in front has none: "Logic Pro and
+        Pro Tools". Exact matches only, so a near-miss is never sent off to another app."""
+        names = []
+        for pack in self.packs:
+            if pack.is_global or pack.name in names:
+                continue
+            if any(self._match(split_repeat(t)[0], pack.commands) for t in texts):
+                names.append(pack.name)
+        if len(names) > 1:
+            return ", ".join(names[:-1]) + " and " + names[-1]
+        return names[0] if names else ""
 
     def _fuzzy(self, text, commands):
         """Catch near-misses like "solo the trak" vs "solo the track"."""
