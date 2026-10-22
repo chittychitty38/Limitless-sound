@@ -45,8 +45,8 @@ Every app and the hub are on `main`, and the whole suite is one released Mac dow
 
 ```sh
 mkdir -p downloads && cd downloads
-curl -fLO https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.dmg
-# Intel Mac: Limitless-Sound-Suite-mac-intel.dmg
+curl -fLO https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
+# Intel Mac: Limitless-Sound-Suite-mac-intel.pkg
 cd ..
 ```
 
@@ -71,11 +71,12 @@ gh run download "$RUN" -D "downloads/$WF"     # artifact names end in -mac-apple
 
 If the artifact names differ, list them with `gh api repos/chittychitty38/Limitless-sound/actions/runs/$RUN/artifacts -q '.artifacts[].name'`.
 
-Open the suite `.dmg` and have Bennet double-click **Install Limitless Sound**; it copies every
-app into Applications (a single app's `.dmg` from a workflow build is dragged there instead).
-The apps aren't signed yet, so the first time macOS refuses: he goes to **System Settings →
-Privacy & Security**, scrolls down and clicks **Open Anyway**. Record how many clicks that took and whether anything
-was confusing; that is what every musician will meet.
+Have Bennet double-click the suite `.pkg`: the standard Mac installer puts every app in
+Applications and starts Limitless Sound (a single app's `.dmg` from a workflow build is dragged
+there instead). The installer isn't signed yet, so the first time macOS refuses: he clicks
+**Done**, goes to **System Settings → Privacy & Security**, scrolls down, clicks **Open Anyway**
+and confirms; then **Continue**, **Install** and his Mac password. Record how many clicks that
+took and whether anything was confusing; that is what every musician will meet.
 
 ### 3. Run the automated stress tests on this Mac
 
@@ -122,8 +123,8 @@ how it feels.
 
 Do them app by app, in this order (each builds on the last). Before each app, tell Bennet in two
 sentences what it does and what he'll be checking. If something fails: write down exactly what
-he did and saw, attach the app's log from `~/Library/Logs/Limitless Sound/` (one file per app,
-plus a `crash.log` if it died) and any crash report from Console.app › Crash Reports, take a
+he did and saw, attach the app's log (Limitless Sound's page › Activity › **Open the log folder**,
+or `~/Library/Logs/Limitless Sound/`: one file per app, plus a `crash.log` if a Python app died) and any crash report from Console.app › Crash Reports, take a
 screenshot, then continue. At the end, fix what you can on a branch and open a pull request per
 app, or open an issue.
 
