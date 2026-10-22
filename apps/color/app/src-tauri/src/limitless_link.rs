@@ -1,6 +1,5 @@
 //! Limitless Link for Rust: connect an app to the Limitless Sound hub.
-//! (A copy of shared/clients/rust/src/lib.rs: update it from there, never by hand.
-//! This copy adds `Link::on_prefs`, which the shared client doesn't have yet.)
+//! (A copy of shared/clients/rust/src/lib.rs: update it from there, never by hand.)
 //!
 //! Standard library plus `serde_json`. Runs on its own thread, reconnects by itself,
 //! and does nothing when the hub isn't running.

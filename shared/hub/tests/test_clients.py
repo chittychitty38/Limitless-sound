@@ -57,6 +57,10 @@ def test_rust_client_end_to_end(tmp_path, monkeypatch):
         proc = subprocess.Popen([str(exe)], stdout=subprocess.PIPE, text=True)
         assert wait_for(lambda: "color" in hub.bus.tools, 5)
         assert wait_for(lambda: hub.bus.states.get("color.ready") is True)  # sent on connect
+        # Shared settings reach Rust on joining and on every change; it reports what it applied.
+        assert wait_for(lambda: (hub.bus.states.get("color.prefs.applied") or {}).get("textScale") == 1.0)
+        hub.bus.set_prefs({"textScale": 1.5})
+        assert wait_for(lambda: (hub.bus.states.get("color.prefs.applied") or {}).get("textScale") == 1.5)
         assert wait_for(lambda: zseen["invokes"], 5)          # Rust asked Zoom to zoom in
         assert zseen["invokes"][0][2] == "color"
         results = []
