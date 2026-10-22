@@ -27,4 +27,4 @@ Name: "{userdesktop}\Limitless Zoom"; Filename: "{app}\Limitless Zoom.exe"; Task
 Name: "{userstartup}\Limitless Zoom"; Filename: "{app}\Limitless Zoom.exe"; Tasks: startup
 
 [Run]
-Filename: "{app}\Limitless Zoom.exe"; Description: "Start Limitless Zoom now"; Flags: nowait postinstall
+Filename: "{app}\Limitless Zoom.exe"; Description: "Start Limitless Zoom now"; Flags: nowait postinstall skipifsilent

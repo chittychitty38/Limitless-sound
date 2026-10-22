@@ -20,7 +20,7 @@ from .keys import format_key
 from .router import Router
 from .settings import Settings, config_dir
 from .suite import Suite
-from .ui import KeyCaptureDialog, Panel, Setup, Toast
+from .ui import KeyCaptureDialog, Look, Panel, Setup, Toast
 
 SERVER_NAME = f"limitless-zoom-{getpass.getuser()}"
 
@@ -86,7 +86,10 @@ class ZoomApp(QObject):
         self.last_action = None
         self.voice = None
         self.setup_window = None
+        self.capture_dialog = None
         self._perms_ok = None
+        self.look = Look()   # the suite's shared text size, contrast and motion (set_look)
+        self.ui_effects = QApplication.isEffectEnabled(Qt.UI_General)
 
         self.toast = Toast()
         self.badge = Toast(persistent=True)
@@ -289,6 +292,19 @@ class ZoomApp(QObject):
         if self.setup_window is not None and self.setup_window.isVisible():
             self.setup_window.set_level(value)
 
+    def set_look(self, look):
+        """The suite's text size, high contrast and reduced motion, live in every window.
+        The panel's own button_scale wins when it makes the panel's text bigger."""
+        self.look = look
+        self.toast.set_look(look)
+        self.badge.set_look(look)
+        self.panel.set_look(look.combined(Look(self.settings["button_scale"])))
+        for w in (self.setup_window, self.capture_dialog):
+            if w is not None:
+                w.set_look(look)
+        # Menus, pop-up lists and tooltips appear at once instead of sliding or fading in.
+        QApplication.setEffectEnabled(Qt.UI_General, self.ui_effects and not look.reduce_motion)
+
     # Voice -----------------------------------------------------------------
 
     def start_voice(self):
@@ -338,10 +354,11 @@ class ZoomApp(QObject):
     # Choosing keys --------------------------------------------------------------
 
     def capture_key(self, title, prompt):
-        dlg = KeyCaptureDialog(title, prompt, lambda cb: None)
+        dlg = self.capture_dialog = KeyCaptureDialog(title, prompt, lambda cb: None, look=self.look)
         self.bus.captured.connect(dlg.got_key)
         self.logic.capture_next(self.bus.captured.emit)
         dlg.exec()
+        self.capture_dialog = None
         self.logic.capture = None
         self.bus.captured.disconnect(dlg.got_key)
         return dlg.key
@@ -381,7 +398,7 @@ class ZoomApp(QObject):
             mics = []
         login = self.backend.open_at_login() if self.backend.can_open_at_login() else None
         w = Setup(self.key_text(), format_key(self.settings["switch_key"], self.backend.os_name),
-                  mics, self.settings["voice_device"], login)
+                  mics, self.settings["voice_device"], login, look=self.look)
         w.request_permission.connect(self.backend.request_permission)
         w.choose_layer.connect(self.choose_layer_key)
         w.choose_switch.connect(self.choose_switch_key)
