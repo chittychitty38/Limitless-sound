@@ -1,0 +1,22 @@
+LIMITLESS ONE-HAND: FIRST TIME ON A MAC
+
+1. Drag "Limitless One-Hand" onto the Applications folder next to it.
+
+2. Open Applications and double-click Limitless One-Hand.
+   One-Hand isn't signed by Apple yet, so macOS may say it can't check the app.
+   If it does:
+     - Click Done (or OK).
+     - Open System Settings > Privacy & Security.
+     - Scroll down and click "Open Anyway" next to Limitless One-Hand.
+     - Click Open Anyway again and enter your Mac password if asked.
+   You only do this once.
+
+3. One-Hand shows a welcome page with two switches to turn on:
+   Accessibility and Input Monitoring. Each has a button that opens the right
+   page in System Settings. The welcome page notices by itself when they're on.
+
+4. Click the big button, or double-tap Shift, to switch one-hand mode on.
+   Then press keys in the One-Hand window to practise, and open Logic Pro or
+   Pro Tools to use them for real.
+
+One-Hand keeps running in the menu bar (the 1H key icon) when you close its window.

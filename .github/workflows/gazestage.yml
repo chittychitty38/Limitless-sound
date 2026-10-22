@@ -1,0 +1,68 @@
+name: GazeStage
+
+on:
+  push:
+    branches: [main]
+    tags: ["gazestage-v*"]
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
+  pull_request:
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/gazestage
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+      - run: npm ci
+      - run: xvfb-run -a npm test
+
+  package:
+    name: package (${{ matrix.artifact }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, script: dist:mac-arm64, artifact: GazeStage-mac-apple-silicon, files: "dist/*.dmg" }
+          - { os: macos-15-intel, script: dist:mac-x64, artifact: GazeStage-mac-intel, files: "dist/*.dmg" }
+          - { os: windows-latest, script: dist:win, artifact: GazeStage-windows, files: "dist/*.exe" }
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder skips signing on pull requests by default, which leaves the Mac app
+      # with a broken signature. Ours is an ad-hoc signature with no secrets, so it is safe here.
+      CSC_FOR_PULL_REQUEST: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+      # Ad-hoc signed until the project has an Apple Developer ID; check the signature holds.
+      - if: runner.os == 'macOS'
+        run: codesign --verify --deep --strict --verbose=2 dist/mac*/GazeStage.app
+      - run: npm run test:packaged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: apps/gazestage/${{ matrix.files }}
+          if-no-files-found: error
+      - if: startsWith(github.ref, 'refs/tags/gazestage-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/gazestage/${{ matrix.files }}

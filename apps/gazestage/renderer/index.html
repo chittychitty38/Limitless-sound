@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; worker-src 'self' blob:">
+<title>GazeStage</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--
+  GazeStage: play music and run Pro Tools with your head, eyes, a sound or a switch.
+  Limitless Sound. Everything runs on this computer; nothing is recorded or sent anywhere.
+-->
+<header class="topbar">
+  <div class="brand" aria-label="GazeStage">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="16" cy="16" r="6" fill="#ffc233"/><path d="M4 16c3-6 7.5-9 12-9s9 3 12 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    GazeStage
+  </div>
+  <div class="chips" role="status" aria-live="polite">
+    <span class="chip" id="chipCamera"><span class="dot"></span><span>Camera <b>off</b></span></span>
+    <span class="chip opt" id="chipSelect"><span class="dot ok"></span><span>Select <b>Dwell</b></span></span>
+    <span class="chip" id="chipMidi"><span class="dot"></span><span>MIDI <b>…</b></span></span>
+    <span class="chip" id="chipPT"><span class="dot"></span><span>Pro Tools <b>not linked</b></span></span>
+  </div>
+  <div class="preview hidden" id="preview" title="Camera preview"><video id="cam" playsinline muted></video><span class="dot face" id="faceDot"></span></div>
+  <button class="tool" id="recenterBtn" title="Recenter pointer (⌘R)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>Recenter</button>
+  <button class="tool" id="calibBtn" title="Calibrate (⌘K)">Calibrate</button>
+  <button class="tool" id="settingsBtn" title="Settings (⌘,)" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>Settings</button>
+</header>
+
+<main>
+  <nav class="tabs" aria-label="Pages">
+    <button class="target" data-goto="transport" aria-current="page"><span class="glyph" aria-hidden="true">▶︎</span>Transport</button>
+    <button class="target" data-goto="play"><span class="glyph" aria-hidden="true">🎹</span>Instrument</button>
+    <button class="target pause" data-action="pause"><span class="glyph" aria-hidden="true">⏸︎</span>Pause</button>
+  </nav>
+
+  <div class="banner" id="faceBanner" role="alert"><span class="dot warn"></span><span id="faceBannerText">I can't see your face. Move back into view of the camera.</span></div>
+
+  <section class="page active" id="transport" aria-label="Pro Tools transport">
+    <button class="target" data-hui="rewind" aria-label="Rewind (hold)"><span class="glyph" aria-hidden="true">⏪︎</span>Rewind<small>keep looking to keep rewinding</small></button>
+    <button class="target" data-hui="play" id="tPlay"><span class="glyph" aria-hidden="true">▶︎</span>Play<small id="tPlayState">Pro Tools play</small></button>
+    <button class="target" data-hui="fastForward" aria-label="Fast forward (hold)"><span class="glyph" aria-hidden="true">⏩︎</span>Fast forward<small>keep looking to keep going</small></button>
+    <button class="target rec" data-hui="record" id="tRec"><span class="glyph" aria-hidden="true">●</span>Record<small id="tRecState">record arm the transport</small></button>
+    <button class="target stop" data-hui="stop"><span class="glyph" aria-hidden="true">■</span>Stop<small>Pro Tools stop</small></button>
+    <p class="hint" id="transportHint"></p>
+  </section>
+
+  <section class="page" id="play" aria-label="Instrument">
+    <div class="controls">
+      <button class="target" data-action="octdown">Octave −<small id="octLabel">C4</small></button>
+      <button class="target" data-action="octup">Octave +<small>&nbsp;</small></button>
+      <button class="target" data-action="scale">Scale<small id="scaleLabel">C Major</small></button>
+      <button class="target" data-action="chords" aria-pressed="false">Chords<small id="chordsLabel">off</small></button>
+      <button class="target" data-action="hold" aria-pressed="false">Hold notes<small id="holdLabel">off</small></button>
+      <button class="target" data-action="sound">Sound<small id="soundLabel">Soft keys</small></button>
+      <button class="target" data-action="panic">Stop all<small>notes off</small></button>
+    </div>
+    <div id="pads" aria-label="Note pads"></div>
+  </section>
+</main>
+
+<div id="cursor" aria-hidden="true"><svg viewBox="0 0 56 56"><circle class="halo" cx="28" cy="28" r="20"/><circle class="ring" cx="28" cy="28" r="20"/><circle class="fill" id="cursorFill" cx="28" cy="28" r="20" stroke-dasharray="0 126"/></svg></div>
+
+<div class="overlay" id="pauseOverlay" role="dialog" aria-label="Paused">
+  <button class="target" data-action="resume"><span class="glyph" aria-hidden="true">▶︎</span>Resume<small>look here to continue</small></button>
+</div>
+
+<div class="overlay" id="calib" aria-live="polite"><div class="msg" id="calibMsg"></div><div class="tgt" id="calibDot"></div></div>
+
+<aside id="settings" role="dialog" aria-label="Settings" aria-hidden="true">
+  <header><h2>Settings</h2><button class="tool" id="closeSettings">Done</button></header>
+  <div class="body">
+    <section>
+      <h3>Pointer</h3>
+      <div class="row"><label for="sMode">Move the pointer with</label>
+        <select id="sMode"><option value="head">My head</option><option value="eyes">My eyes</option><option value="mouse">Mouse or another pointer</option></select>
+        <div class="help" id="sModeHelp"></div></div>
+      <div class="row"><label for="sRange">Head movement needed</label>
+        <select id="sRange"><option value="10">Small</option><option value="16">Medium</option><option value="24">Large</option></select></div>
+      <div class="row"><label for="sSmooth">Smoothing</label><input type="range" id="sSmooth" min="0" max="10" step="1"></div>
+      <div class="row"><label for="sCamera">Camera</label><select id="sCamera"><option value="">Default camera</option></select></div>
+      <div class="row"><label for="sPreview">Show camera preview</label><input type="checkbox" class="switch" id="sPreview"></div>
+      <div class="btnrow"><button class="tool" data-cmd="recenter">Recenter</button><button class="tool" data-cmd="calibrate">Calibrate</button><button class="tool" id="clearCal">Clear calibration</button></div>
+      <div class="help" id="calInfo" style="color:var(--muted);font-size:.85em"></div>
+    </section>
+    <section>
+      <h3>Selecting</h3>
+      <div class="row"><label for="sSelect">Select by</label>
+        <select id="sSelect"><option value="dwell">Dwell (look and hold)</option><option value="switch">Switch or key</option><option value="sound">Sound (pop, click or “ta”)</option><option value="blink">Long blink</option></select></div>
+      <div class="row"><label for="sDwell">Dwell time for buttons</label><span><input type="range" id="sDwell" min="300" max="2500" step="50"> <output id="sDwellOut"></output></span></div>
+      <div class="row"><label for="sPadDwell">Dwell time for note pads</label><span><input type="range" id="sPadDwell" min="0" max="1500" step="25"> <output id="sPadDwellOut"></output></span>
+        <div class="help">Short is best for playing. Zero plays a pad the moment you look at it.</div></div>
+      <div class="row"><label for="sBlink">Long blink length</label><span><input type="range" id="sBlink" min="250" max="1200" step="25"> <output id="sBlinkOut"></output></span></div>
+      <div class="row"><label for="sMic">Sound sensitivity</label><span><input type="range" id="sMic" min="1" max="20" step="1"> <meter id="micMeter" min="0" max="1" value="0"></meter></span></div>
+      <div class="row"><label for="sTick">Click sound when something is selected</label><input type="checkbox" class="switch" id="sTick"></div>
+    </section>
+    <section>
+      <h3>Instrument</h3>
+      <div class="row"><label for="sBuiltIn">Play the built-in sound</label><input type="checkbox" class="switch" id="sBuiltIn">
+        <div class="help">Turn this off when a Pro Tools instrument is playing the notes, so you don't hear both.</div></div>
+      <div class="row"><label for="sPreset">Built-in sound</label><select id="sPreset"></select></div>
+      <div class="row"><label for="sVolume">Volume</label><input type="range" id="sVolume" min="0" max="1" step="0.05"></div>
+      <div class="row"><label for="sKey">Key</label><select id="sKey"></select></div>
+      <div class="row"><label for="sScale">Scale</label><select id="sScale"></select></div>
+      <div class="row"><label for="sPads">Number of pads</label><select id="sPads"><option value="6">6 (largest)</option><option value="8">8</option><option value="12">12</option></select></div>
+      <div class="row"><label for="sVelocity">Loudness of notes</label><input type="range" id="sVelocity" min="30" max="127" step="1"></div>
+    </section>
+    <section>
+      <h3>Pro Tools and MIDI</h3>
+      <div id="midiNative">
+        <p style="margin:4px 0 8px">GazeStage has its own MIDI ports, so there is nothing to install.</p>
+        <ol class="steps">
+          <li>In Pro Tools choose <b>Setup › Peripherals › MIDI Controllers</b>.</li>
+          <li>Add a <b>HUI</b> with <b>Receive From</b> and <b>Send To</b> both set to <code>GazeStage HUI</code>.</li>
+          <li>For instruments, set an instrument track's MIDI input to <code>GazeStage Notes</code> and record-enable it.</li>
+        </ol>
+      </div>
+      <div id="midiWeb">
+        <div class="row"><label for="sOutHui">Pro Tools out</label><select id="sOutHui"></select></div>
+        <div class="row"><label for="sInHui">Pro Tools in</label><select id="sInHui"></select></div>
+        <div class="row"><label for="sOutNotes">Instrument out</label><select id="sOutNotes"></select></div>
+        <ol class="steps" id="midiWebSteps"></ol>
+      </div>
+    </section>
+    <section>
+      <h3>Display</h3>
+      <div class="row"><label for="sTheme">Appearance</label><select id="sTheme"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Match system</option></select></div>
+      <div class="row"><label for="sContrast">High contrast</label><input type="checkbox" class="switch" id="sContrast"></div>
+      <div class="row"><label for="sSize">Text size</label><select id="sSize"><option value="normal">Normal</option><option value="large">Large</option><option value="xlarge">Extra large</option></select></div>
+      <div class="row"><label for="sSpacing">Space between targets</label><select id="sSpacing"><option value="normal">Normal</option><option value="wide">Wide</option></select></div>
+      <div class="row"><label for="sOnTop">Keep window on top</label><input type="checkbox" class="switch" id="sOnTop"></div>
+    </section>
+    <section>
+      <h3>Setup</h3>
+      <div class="btnrow"><button class="tool" data-cmd="onboarding">Run guided setup again</button><button class="tool" id="resetAll">Reset all settings</button></div>
+      <p class="help" style="color:var(--muted);font-size:.85em" id="aboutLine"></p>
+    </section>
+  </div>
+</aside>
+
+<div class="overlay" id="onboard" role="dialog" aria-label="Guided setup"><div class="card" id="onboardCard"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

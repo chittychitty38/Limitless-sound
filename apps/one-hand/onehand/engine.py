@@ -45,11 +45,18 @@ class Engine:
         self.lock = threading.RLock()
         self._held_mods = set()
         self._consumed = set()            # keys whose press we replaced; swallow their release
+        self._held_commands = set()       # layer and toggle keys held down: auto-repeat must not fire them again
         self._space_held = False
         self._space_used = False
         self._shift_down_at = None
         self._shift_dirty = False
         self._last_shift_tap = None
+        # Practice mode: while this app's own window is in front, layer keys
+        # light up their card instead of pressing anything.
+        self.self_app_ids = set()
+        self.preview_app = None           # layout id shown in the window
+        self.last_preview = None          # (physical key, command label)
+        self.previews = 0                 # bumps on every practice press
 
     # ---- on/off -------------------------------------------------------
 
@@ -82,12 +89,31 @@ class Engine:
 
     def layer_for(self, app_id):
         """{physical key: Tap} for the app in front."""
-        app = self.profile_for(app_id)
+        return self.layer_of(self.profile_for(app_id))
+
+    def layer_of(self, app):
         if not app:
             return {}
         names = MOD_TO_KEY[self.platform]
         return {self.layer_key(c): Tap(c["send"], tuple(names[m] for m in c.get("mods", [])))
                 for c in app["commands"]}
+
+    def _practice(self, key, app_id):
+        """True if this press is a practice press in our own window."""
+        if not app_id or app_id.lower() not in self.self_app_ids or not self.preview_app:
+            return False
+        app = next((a for a in self.layouts["apps"] if a["id"] == self.preview_app), None)
+        cmd = next((c for c in (app or {}).get("commands", []) if self.layer_key(c) == key), None)
+        if not cmd:
+            return False
+        self.last_preview = (key, cmd["label"])
+        self.previews += 1
+        return True
+
+    def repeats(self, app_id, key):
+        """True for the few commands that should keep going while held (bar and zoom moves)."""
+        app = self.profile_for(app_id)
+        return any(c.get("repeat") and self.layer_key(c) == key for c in (app or {}).get("commands", []))
 
     # ---- the main entry point ----------------------------------------
 
@@ -121,8 +147,15 @@ class Engine:
         return PASS
 
     def _key(self, key, down, app_id):
+        if not down:
+            self._held_commands.discard(key)
         if not down and key in self._consumed:
             self._consumed.discard(key)
+            return SUPPRESS
+
+        # A held key auto-repeats (and a tremor can hold a key a moment too long).
+        # Record, Undo or the on/off switch must happen once per press, not ten times.
+        if down and key in self._held_commands:
             return SUPPRESS
 
         if key in self.settings.toggle_keys:
@@ -130,6 +163,7 @@ class Engine:
                 self._last_shift_tap = None
                 self.toggle()
                 self._consumed.add(key)
+                self._held_commands.add(key)
             return SUPPRESS
 
         if not self.enabled:
@@ -151,9 +185,16 @@ class Engine:
         if self._held_mods:
             return PASS                          # let real shortcuts like Cmd+S through
 
+        if self._practice(key, app_id):
+            self._consumed.add(key)
+            self._held_commands.add(key)
+            return SUPPRESS
+
         tap = self.layer_for(app_id).get(key)
         if tap:
             self._consumed.add(key)
+            if not self.repeats(app_id, key):
+                self._held_commands.add(key)
             return tap
         return PASS
 
@@ -169,6 +210,18 @@ class Engine:
             return PASS
         self._space_held = False
         return SUPPRESS if self._space_used else Tap("spacebar")
+
+    def sync_mods(self, down_classes):
+        """Forget modifiers the OS says are no longer held (a release we never saw).
+
+        down_classes: the set of "cmd", "shift", "alt", "ctrl" that are down right now.
+        Without this a lost release (sleep, a password field, a crash elsewhere) leaves a
+        modifier "held" forever and one-hand mode silently stops working.
+        """
+        with self.lock:
+            self._held_mods = {m for m in self._held_mods if m.split("_")[0] in down_classes}
+            if not self._held_mods & SHIFT_KEYS:
+                self._shift_down_at = None
 
     @property
     def held_mods(self):

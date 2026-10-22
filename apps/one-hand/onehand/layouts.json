@@ -8,8 +8,8 @@
       "windows": [],
       "commands": [
         {"key": "1", "label": "Go to start",        "send": "return_or_enter"},
-        {"key": "2", "label": "Back one bar",       "send": "comma"},
-        {"key": "3", "label": "Forward one bar",    "send": "period"},
+        {"key": "2", "label": "Back one bar",       "send": "comma", "repeat": true},
+        {"key": "3", "label": "Forward one bar",    "send": "period", "repeat": true},
         {"key": "4", "label": "Cycle on/off",       "send": "c"},
         {"key": "5", "label": "Metronome on/off",   "send": "k"},
         {"key": "q", "label": "Undo",               "send": "z", "mods": ["command"]},
@@ -22,8 +22,8 @@
         {"key": "d", "label": "Duplicate track",    "send": "d", "mods": ["command"]},
         {"key": "f", "label": "Zoom to fit",        "send": "z"},
         {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
-        {"key": "z", "label": "Zoom out",           "send": "left_arrow", "mods": ["command"]},
-        {"key": "x", "label": "Zoom in",            "send": "right_arrow", "mods": ["command"]},
+        {"key": "z", "label": "Zoom out",           "send": "left_arrow", "mods": ["command"], "repeat": true},
+        {"key": "x", "label": "Zoom in",            "send": "right_arrow", "mods": ["command"], "repeat": true},
         {"key": "c", "label": "Mixer",              "send": "x"},
         {"key": "v", "label": "Editor",             "send": "e"},
         {"key": "b", "label": "Library",            "send": "y"}
@@ -50,8 +50,8 @@
         {"key": "d", "label": "Copy",               "send": "c", "mods": ["command"]},
         {"key": "f", "label": "Paste",              "send": "v", "mods": ["command"]},
         {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
-        {"key": "z", "label": "Zoom out",           "send": "open_bracket", "mods": ["command"]},
-        {"key": "x", "label": "Zoom in",            "send": "close_bracket", "mods": ["command"]},
+        {"key": "z", "label": "Zoom out",           "send": "open_bracket", "mods": ["command"], "repeat": true},
+        {"key": "x", "label": "Zoom in",            "send": "close_bracket", "mods": ["command"], "repeat": true},
         {"key": "c", "label": "Cut",                "send": "x", "mods": ["command"]},
         {"key": "v", "label": "Heal separation",    "send": "h", "mods": ["command"]},
         {"key": "b", "label": "Delete",             "send": "delete_or_backspace"}
