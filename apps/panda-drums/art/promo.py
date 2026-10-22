@@ -36,7 +36,7 @@ DESIGN = (1280, 860)
 SCALE = 2.0
 SHOTS = {
     "stage": (0, 64, 1280, 720),
-    "panda": (470, 78, 640, 360),
+    "panda": (436, 80, 632, 356),      # clear of the stage toggles at x 1072
     "hits": (0, 430, 760, 428),
     "key": (380, 0, 900, 506),
     "tiles": (0, 560, 760, 300),
@@ -614,7 +614,7 @@ def intro_frame(t, hero):
         place(canvas, text("presents", 46, PINK), W / 2, 640, 1.0, a * clamp((t - 0.7) / 0.4))
     if t >= 2.0:
         k = t - 2.0
-        z = 1.12 - 0.12 * ease_out(k / 1.4)
+        z = 1.12 - 0.12 * ease_out(k / 1.4) + 0.008 * max(0.0, k - 1.4)     # then a slow push in, never a still
         img = hero.resize((int(hero.width * z), int(hero.height * z)), Image.LANCZOS)
         img.putalpha(int(255 * clamp(k / 0.2)))
         canvas.alpha_composite(img, (int((W - img.width) / 2), int((H - img.height) / 2)))

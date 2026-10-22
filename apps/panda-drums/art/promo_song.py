@@ -29,8 +29,9 @@ FADE = 4.0           # the song fades under the end card
 
 
 def cut_list(tl):
-    """(start, end, shot, caption) in song seconds, on the song's bars (16 steps of its click)."""
-    bar = 16 * 60.0 / tl["bpm"] / 2
+    """(start, end, shot, caption) in song seconds, on the song's bars: 16 sixteenths of the part's
+    half-time grid from its first downbeat (the timeline's start)."""
+    bar = 16 * 15.0 / tl["bpm"]
     b = lambda n: tl["start"] + n * bar
     key = tl["key"].upper()
     cuts = [(INTRO, b(4), "window", "meet"),
