@@ -2,7 +2,7 @@
 Separates the Panda Drums hero picture (the panda at the kit) into the layers the stage draws,
 so the stage is that picture, alive.
 
-    ESRGAN=RealESRGAN_x4plus.pth LAMA=big-lama.pt python hero_layers.py hero.jpg <outdir>
+    HERO_SCALE=2.725 ESRGAN=RealESRGAN_x4plus.pth LAMA=big-lama.pt python hero_layers.py hero.jpg <outdir>
 
 The picture is upscaled 4x with Real-ESRGAN first (kept as <outdir>/hero4x.png; an already
 upscaled picture is used as it is).
@@ -13,8 +13,9 @@ it stands in front of the floor tom. Inside its outline a piece takes everything
 pink wall. The wall is spread smoothly back in behind everything that moves; LaMa paints in the
 parts of a piece that another one hid (the crash behind the ride, the bottom hi-hat under the top one, the floor tom
 behind the china's stand, the shirt under the arms and the chin), and a guided filter softens
-each edge (fur, cymbal rims), with the wall's pink taken back out of the edge colour. What stays
-in the room is its stands and the panda's legs.
+each edge (fur, cymbal rims), with the wall's pink taken back out of the edge colour. The kit as
+it stands in the room (its stands, the drums, his legs behind them) is a layer of its own, with
+the outer cymbals' stands apart, and backdrop.png is the room without it.
 
 Writes <name>.png (RGBA, 2x the hero) for every layer and layers.json: each layer's box and the
 rig's points (shoulders, wrists, stick tips), in hero pixels.
@@ -117,6 +118,19 @@ SHOULDERS = [(588, 266), (800, 296)]
 WRISTS = [(546, 258), (819, 316)]
 FUR_PATCH = (822, 296, 846, 326)        # plain fur on the left fist
 FUR_R = 30                              # an arm's radius (hero pixels)
+
+# The kit as it stands in the room (the stands, the drums, the pedals and his legs behind them) is
+# cut out too, so the plugin can draw the whole kit bigger than the picture's. Where it may be, and
+# the row where the wall ends and the floor (and the platform's edge) begins.
+# (clear of the plants: the bamboo on the left, the palm behind the crash's stand on the right)
+KIT_AREA = poly((150, 140), (1153, 140), (1153, 480), (1206, 500), (1206, HERO_H), (70, HERO_H), (70, 560), (150, 470))
+SPECK_AREA = rect(120, 64, 1150, HERO_H)
+# The outer cymbals' stands, cut apart from the rest of the kit (kit_left, kit_right) so the plugin
+# can grow them with the kit but keep them within his reach: the two on the left (with the leg the
+# nearer one puts out toward the floor tom), and the crash's on the right (not the hi-hat's).
+STANDS_LEFT = [poly((70, 140), (298, 140), (298, 575), (270, HERO_H), (70, HERO_H)), line(262, 520, 352, 660, 16)]
+STANDS_RIGHT = [poly((1036, 140), (1206, 140), (1206, HERO_H), (1060, HERO_H), (1100, 560), (1100, 252), (1036, 196))]
+FLOOR_Y = 520
 
 
 def draw_shape(mask, shape, value=255):
@@ -381,8 +395,7 @@ def main(src, outdir):
     masks["sleeve_l"] &= masks["torso"]
 
     # ---- the room: what moves is painted out of it (the cymbals swing, the panda leans and plays);
-    # everything else, the drums and stands that never move included, stays the picture's own,
-    # so at rest the stage is the picture to the pixel.
+    # the kit that stands still is cut from it after (still_kit).
     moving = [n for n in MOVING if n in masks]
     own = np.zeros(hw, bool)
     for name in moving:
@@ -423,6 +436,7 @@ def main(src, outdir):
     # ---- each piece, back to front: soft edge, its colour unmixed from exactly what's drawn
     # behind it, and completed only where a piece in front hides it.
     info = {}
+    still_kit(room, masks, panda, gone, outdir, info)
     behind = room.astype(np.float32)
     order = [p for p in PIECES if p[0] not in ("sleeve_r", "sleeve_l")]
     in_front = {}
@@ -478,6 +492,88 @@ def main(src, outdir):
     with open(os.path.join(outdir, "layers.json"), "w") as f:
         json.dump(dict(scale=SCALE, size=[HERO_W, HERO_H], layers=info, rig=rig), f, indent=1)
     print("wrote", len(info), "layers", flush=True)
+
+
+def still_kit(room, masks, panda, gone, outdir, info):
+    """The kit as the room has it, as a layer of its own (kit_still), and the room without it
+    (backdrop.png): the wall carried in smoothly from round it, the floor carried on along its
+    rows (it runs across the picture; a fill that looks round would draw the legs back in). The
+    chrome mirrors the pink room, so a stand is found by its edges, filled across, and its layer
+    takes whatever differs from the room behind it."""
+    s = SCALE
+    hw = room.shape[:2]
+    h, sat, v = hsv_of(room)
+    yy = np.mgrid[0:hw[0], 0:hw[1]][0]
+    # The room behind the kit: the pink wall; lower down the floor and the platform's dark edge,
+    # all of them pink however dark; the plants.
+    pink = ((h >= 150) | (h <= 6)) & (sat >= 45) & (v >= 30)
+    green = (h >= 30) & (h <= 95) & (sat >= 40)
+    behind = np.where(yy >= FLOOR_Y * s, pink, wall_of(room)) | green
+    area = region([KIT_AREA], hw)
+    core = area & ~behind
+    # A leg's two edges, and the pink it mirrors between them.
+    k = int(9 * s) | 1
+    core = cv2.morphologyEx(core.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))) > 0
+    for name in ("floor", "drum_center", "drum_right", "kick", "front_stand"):
+        core |= masks[name]
+    core &= area & ~green
+    # Specks (a cymbal's last flecks) aren't the kit; they go from the room too, as the bigger
+    # kit's cymbals no longer hide them.
+    n, lab, st, _ = cv2.connectedComponentsWithStats(core.astype(np.uint8), connectivity=8)
+    big = np.zeros(n, bool)
+    big[1:] = st[1:, cv2.CC_STAT_AREA] > 300 * s * s
+    specks = region([SPECK_AREA], hw) & ~behind & ~big[lab] & ~panda
+    core = big[lab]
+    top = int((FLOOR_Y - 60) * s)
+    grown = cv2.dilate(core.astype(np.uint8), np.ones((int(5 * s) | 1,) * 2, np.uint8)) > 0
+    # Low down a leg's shaded side can pass for the floor: the hole is wider there.
+    grown |= (cv2.dilate(core.astype(np.uint8), np.ones((int(10 * s) | 1,) * 2, np.uint8)) > 0) & (yy >= top) & area
+    hole = grown | (cv2.dilate(specks.astype(np.uint8), np.ones((int(5 * s) | 1,) * 2, np.uint8)) > 0)
+    # The wall: carried in smoothly from the picture's own wall clear of everything, over the kit
+    # and over whatever was painted in already (behind him and the cymbals), so the room the
+    # bigger kit leaves showing is the wall and nothing else.
+    near = cv2.dilate((hole | gone).astype(np.uint8), np.ones((int(4 * s) | 1,) * 2, np.uint8)) > 0
+    known = wall_of(room) & ~near
+    redo = hole | (region([SPECK_AREA], hw) & (yy < FLOOR_Y * s) & ~known & ~green)
+    fill = smooth_fill(room, redo, known)
+    rng = np.random.default_rng(5)
+    fill += cv2.GaussianBlur(rng.normal(0, 2.2, hw).astype(np.float32), (0, 0), 1.2)[..., None]
+    # The floor: along its rows.
+    wide = cv2.dilate(hole.astype(np.uint8), np.ones((int(6 * s) | 1,) * 2, np.uint8)) > 0
+    painted = row_fill(room, hole, behind & ~wide & ~green, top)
+    w = np.clip((yy - (FLOOR_Y - 40) * s) / (30 * s), 0, 1)[..., None]
+    fill = fill * (1 - w) + painted * w
+    backdrop = np.where(redo[..., None], fill, room).clip(0, 255).astype(np.uint8)
+    Image.fromarray(backdrop).save(os.path.join(outdir, "backdrop.png"))
+    # Its layer: the core, soft at the edge, and whatever else in the hole isn't the room behind.
+    _, a = soften(room, core, backdrop)
+    d = np.abs(room.astype(np.float32) - backdrop.astype(np.float32)).max(2)
+    a = np.where(grown & ~green, np.maximum(a, np.clip((d - 14) / 30, 0, 1)), 0.0).astype(np.float32)
+    F = room.astype(np.float32)
+    edge = (a > 0.03) & (a < 0.999)
+    B = backdrop.astype(np.float32)
+    F[edge] = np.clip((F[edge] - (1 - a[edge, None]) * B[edge]) / a[edge, None], 0, 255)
+    left, right = region(STANDS_LEFT, hw), region(STANDS_RIGHT, hw)
+    for name, part in (("kit_still", ~(left | right)), ("kit_left", left), ("kit_right", right)):
+        ap = a * part
+        save_layer(np.dstack([F.astype(np.uint8), (ap * 255 + 0.5).clip(0, 255).astype(np.uint8)]), name, outdir, info)
+
+
+def row_fill(rgb, hole, known, top):
+    """Below row top, each row's hole carried across from the known pixels either side of it in
+    that row, then softened (more along the row than across)."""
+    out = rgb.astype(np.float32).copy()
+    xs = np.arange(rgb.shape[1])
+    for y in range(top, rgb.shape[0]):
+        hy, ky = hole[y], known[y]
+        if hy.any() and ky.sum() >= 2:
+            for c in range(3):
+                out[y, hy, c] = np.interp(xs[hy], xs[ky], out[y, ky, c])
+    soft = cv2.GaussianBlur(out, (0, 0), sigmaX=4 * SCALE, sigmaY=1.2 * SCALE)
+    out[hole] = soft[hole]
+    rng = np.random.default_rng(9)
+    out += cv2.GaussianBlur(rng.normal(0, 2.2, hole.shape).astype(np.float32), (0, 0), 1.2)[..., None] * hole[..., None]
+    return out
 
 
 def largest(mask):

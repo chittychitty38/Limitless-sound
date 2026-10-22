@@ -1120,6 +1120,11 @@ void PandaStage::paint (juce::Graphics& g)
         {
             bg.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
             skin.draw (bg, skin.sprite ("stage"));
+            // The kit as it stands in the room (its stands, the drums at rest, bigger than the
+            // picture's): it never moves, so it's drawn with the room.
+            if (auto* still = skin.at ("stage/kit").getArray())
+                for (auto& layer : *still)
+                    skin.draw (bg, skin.sprite (layer.toString()));
         }
         else
             art::drawStage (bg, { 0.0f, 0.0f, designW, designH });

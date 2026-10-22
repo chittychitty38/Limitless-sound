@@ -4,9 +4,10 @@ the panda's rig, at 1x and 2x the 1280 x 736 stage, with manifest.json.
 
     python hero_stage.py <hero_layers out> <sheet pieces (sheet_cut.py out)> <outdir>
 
-The stage is the hero picture, scaled to fill the stage's height. Each drum and cymbal of the
-picture becomes a piece of the kit at its own place and size, so the factory kit looks exactly
-like the picture; other kits put their drums in the same slots, scaled by size. Laid out the
+The stage is the hero picture, scaled to fill the stage's height, with the kit drawn bigger than
+the picture has it (KIT_GROW) and the panda as he is. Each drum and cymbal of the picture becomes
+a piece of the kit at its own place, so the factory kit is the picture's kit; other kits put
+their drums in the same slots, scaled by size. Laid out the
 way a real kit is around the drummer: the snare in front of him, the hi-hat, rack tom 1 and the
 first crash on his left (the picture's right), a second rack tom, the floor tom, the ride, the
 china and the second crash on his right.
@@ -44,6 +45,47 @@ def R(r):
 
 def E(cx, cy, a, b):
     return S(cx, cy) + [R(a), R(b)]
+
+
+# The kit is drawn bigger than the picture has it: everything of it (drums, stands, cymbals) grown
+# by KIT_GROW about KIT_PIVOT, about where his sticks meet the heads, so the drums he plays stay
+# under his hands while the kick and the stands run on past the bottom of the stage. The panda
+# stays as the picture has him: a drummer behind a big kit. The outer cymbals' stands are moved
+# back in after growing (hero px), as a drummer sets his cymbals where he can reach them: the
+# near edge of each is where the picture has it.
+KIT_GROW = 1.3
+KIT_PIVOT = (706.0, 345.0)
+GROUP_SHIFT = {"main": (0.0, 0.0), "left": (110.0, 0.0), "right": (-70.0, 30.0)}
+GROUP_LAYER = {"main": "kit_still", "left": "kit_left", "right": "kit_right"}
+
+
+def group_at(x, kind):
+    """Which stand a piece in the picture at x is on: a cymbal (or a percussion piece) out to
+    either side is on an outer stand; everything else is the kit's middle."""
+    if kind in ("crash", "ride", "china", "splash", "perc", "crash_alt"):
+        if x < 400:
+            return "left"
+        if x > 1020:
+            return "right"
+    return "main"
+
+
+def G(x, y, group="main"):
+    px, py = KIT_PIVOT
+    dx, dy = GROUP_SHIFT[group]
+    return px + (x - px) * KIT_GROW + dx, py + (y - py) * KIT_GROW + dy
+
+
+def SK(x, y, group="main"):
+    return S(*G(x, y, group))
+
+
+def RK(r):
+    return round(r * K * KIT_GROW, 2)
+
+
+def EK(cx, cy, a, b, group="main"):
+    return SK(cx, cy, group) + [RK(a), RK(b)]
 
 
 # The kit in the picture, in hero pixels: head ellipse (centre, radii), bottom of the shell, size.
@@ -91,9 +133,7 @@ RIG = dict(grip=(526, 200), tip=(549, 100),
            neck=(720, 262), head=(720, 160, 137, 105), seat=(712, 430))
 FACES = ["neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh", "surprised", "tongue_out",
          "angry", "sad"]
-# The kit and the panda exactly as big as the picture has them (other kits' drums are sized from
-# here by their inches; the panda's scale is there for a different picture).
-KIT_GROW = 1.0
+# The panda exactly as big as the picture has him (his scale is there for a different picture).
 PANDA_SCALE = 1.0
 OWN_FACES = ("excited", "happy", "open_mouth", "neutral", "smile", "surprised", "tongue_out")
 EYES = [(658, 146), (789, 166)]        # a point on the white of each eye (his right, his left), hero px
@@ -121,23 +161,29 @@ class Out:
         self.files[name] = dict(file=name, x=0, y=0, w=STAGE_W, h=STAGE_H)
 
 
-def hero_layer(src, info, out, name, as_name=None):
+def hero_layer(src, info, out, name, as_name=None, kit=False, group="main"):
+    """A layer at its place on the stage; kit=True: grown with the kit (on that group's stand)."""
     x, y, w, h = info["layers"][name]
     img = Image.open(os.path.join(src, name + ".png")).convert("RGBA")
-    sx, sy = S(x, y)
-    out.write(as_name or name, img, sx, sy, w * K, h * K)
+    if kit:
+        (sx, sy), k = SK(x, y, group), K * KIT_GROW
+    else:
+        (sx, sy), k = S(x, y), K
+    out.write(as_name or name, img, sx, sy, w * k, h * k)
 
 
 def main(src, pieces, outdir):
     with open(os.path.join(src, "layers.json")) as f:
         info = json.load(f)
     out = Out(outdir)
-    man = dict(stage=dict(w=STAGE_W, h=STAGE_H, centre_x=S(712, 0)[0]), files=out.files, kit={}, slots={},
-               panda=dict(mode="rig"))
+    man = dict(stage=dict(w=STAGE_W, h=STAGE_H, centre_x=S(712, 0)[0], kit_grow=KIT_GROW), files=out.files, kit={},
+               slots={}, panda=dict(mode="rig"))
 
-    # ---- the room: the picture with everything that moves taken out, filling the stage
-    room = Image.open(os.path.join(src, "room.png")).convert("RGB")
-    sc = info["scale"]
+    # ---- the room: the picture with the kit and everything that moves taken out, filling the
+    # stage; the kit as it stands in it is a layer of its own, grown with the rest of the kit
+    room = Image.open(os.path.join(src, "backdrop.png")).convert("RGB")
+    sc = K * 2
+    room = room.resize((round(info["size"][0] * sc), round(info["size"][1] * sc)), Image.LANCZOS)
     canvas = Image.new("RGB", (STAGE_W * 2, STAGE_H * 2))
     ox, oy = round(-OX * sc), round(OY * 2)
     canvas.paste(room, (ox, oy))
@@ -157,20 +203,24 @@ def main(src, pieces, outdir):
             rgb = small[lab == i].mean(0) / 255
             bulbs.append(dict(at=[round(float(ce[i][0]), 2), round(float(ce[i][1]), 2)], colour=[round(float(c), 3) for c in rgb]))
     man["stage"]["bulbs"] = bulbs
+    for group, layer in GROUP_LAYER.items():
+        hero_layer(src, info, out, layer, kit=True, group=group)
+    man["stage"]["kit"] = list(GROUP_LAYER.values())
 
     # ---- slots
     for kind, slots in SLOTS.items():
         sizes = DEFAULT_SIZE[kind]
-        man["slots"][kind] = [dict(at=S(*at), ppi=round(R(r) * KIT_GROW / sizes[min(i, len(sizes) - 1)], 4)) for i, (at, r) in enumerate(slots)]
+        man["slots"][kind] = [dict(at=SK(*at, group_at(at[0], kind)), ppi=round(RK(r) / sizes[min(i, len(sizes) - 1)], 4))
+                              for i, (at, r) in enumerate(slots)]
 
     # ---- drums
     wraps = ["purple", "brass", "maple", "chrome", "walnut", "black"]
     for kind, d in DRUMS.items():
-        hero_layer(src, info, out, d["layer"], kind)
+        hero_layer(src, info, out, d["layer"], kind, kit=True)
         cx, cy, a, b = d["head"]
-        entry = dict(anchor=S(cx, cy), radius=R(a), size=d["size"], head=E(cx, cy, a, b), wraps={w: kind for w in wraps})
+        entry = dict(anchor=SK(cx, cy), radius=RK(a), size=d["size"], head=EK(cx, cy, a, b), wraps={w: kind for w in wraps})
         if "bottom" in d:
-            entry["shell"] = R(d["bottom"] - cy)
+            entry["shell"] = RK(d["bottom"] - cy)
             entry["depth"] = d["depth"]
         man["kit"][kind] = entry
     man["kit"]["tom_alt"] = dict(man["kit"]["tom"])          # the left rack tom: the same drum
@@ -178,22 +228,24 @@ def main(src, pieces, outdir):
     # ---- cymbals
     written = set()
     for kind, c in CYMBALS.items():
-        if c["layer"] not in written:
-            hero_layer(src, info, out, c["layer"], "cym_" + c["layer"])
-            written.add(c["layer"])
         cx, cy, a, b = c["disc"]
-        entry = dict(anchor=S(cx, cy), size=c["size"], radius=R(a), file="cym_" + c["layer"], ellipse=E(cx, cy, a, b), post=S(cx, cy)[1])
+        group = "main" if c.get("front") else group_at(cx, kind)
+        if c["layer"] not in written:
+            hero_layer(src, info, out, c["layer"], "cym_" + c["layer"], kit=True, group=group)
+            written.add(c["layer"])
+        entry = dict(anchor=SK(cx, cy, group), size=c["size"], radius=RK(a), file="cym_" + c["layer"],
+                     ellipse=EK(cx, cy, a, b, group), post=SK(cx, cy, group)[1])
         if c.get("front"):
             entry["front"] = True
         man["kit"][kind] = entry
         if "stand" in c:
-            hero_layer(src, info, out, c["stand"])
-            man["kit"].setdefault("stands", {})[kind] = [dict(top=S(cx, cy), file=c["stand"])]
+            hero_layer(src, info, out, c["stand"], kit=True, group=group)
+            man["kit"].setdefault("stands", {})[kind] = [dict(top=SK(cx, cy, group), file=c["stand"])]
     h = HIHAT
-    hero_layer(src, info, out, h["top"])
-    hero_layer(src, info, out, h["bottom"])
-    man["kit"]["hihat"] = dict(anchor=S(*h["centre"]), size=h["size"], top=S(*h["top_at"]), bottom=S(*h["bottom_at"]),
-                               ellipse=E(h["centre"][0], h["centre"][1], h["radius"], h["ry"]), radius=R(h["radius"]),
+    hero_layer(src, info, out, h["top"], kit=True)
+    hero_layer(src, info, out, h["bottom"], kit=True)
+    man["kit"]["hihat"] = dict(anchor=SK(*h["centre"]), size=h["size"], top=SK(*h["top_at"]), bottom=SK(*h["bottom_at"]),
+                               ellipse=EK(h["centre"][0], h["centre"][1], h["radius"], h["ry"]), radius=RK(h["radius"]),
                                top_file=h["top"], bottom_file=h["bottom"])
 
     # ---- the panda

@@ -392,6 +392,10 @@ public:
 
         beginTest ("every layer the stage draws is there, at 1x and 2x");
         juce::StringArray names { "stage", skin.at ("kit/hihat/top_file").toString(), skin.at ("kit/hihat/bottom_file").toString() };
+        // The kit as it stands in the room: its middle and the outer cymbals' stands.
+        expect (skin.at ("stage/kit").size() == 3);
+        for (int i = 0; i < skin.at ("stage/kit").size(); ++i)
+            names.add (skin.at ("stage/kit")[i].toString());
         for (auto* kind : { "kick", "tom", "tom_alt", "floor", "snare" })
             for (auto* wrap : { "purple", "brass", "maple", "chrome", "walnut", "black" })
                 names.add (skin.at (juce::String ("kit/") + kind + "/wraps/" + wrap).toString());
@@ -457,6 +461,23 @@ public:
         expect (same (skin.at ("slots/rack2")[0], skin.at ("slots/rack2")[1]));
         expect (same (skin.at ("slots/splash")[0], skin.at ("slots/crash")[0]));
         expect (std::abs (Skin::number (skin.at ("panda/scale"), 1.0f) - 1.0f) < 1.0e-4f);
+
+        beginTest ("a big kit, every cymbal within his reach");
+        // The kit is drawn bigger than the picture has it; the panda isn't.
+        expect (Skin::number (skin.at ("stage/kit_grow"), 1.0f) >= 1.25f);
+        auto reach = 2.0f * Skin::number (skin.at ("panda/stick/real"));
+        for (auto* kind : { "crash", "crash_alt", "ride", "china", "splash", "hihat" })
+        {
+            auto e = Skin::ellipse (skin.at (juce::String ("kit/") + kind + "/ellipse"));
+            auto nearest = 1.0e9f;
+            for (int i = 0; i < 360; ++i)
+            {
+                auto a = juce::degreesToRadians ((float) i);
+                juce::Point<float> edge (e.getCentreX() + e.getWidth() * 0.5f * std::cos (a), e.getCentreY() + e.getHeight() * 0.5f * std::sin (a));
+                nearest = std::min ({ nearest, edge.getDistanceFrom (right), edge.getDistanceFrom (left) });
+            }
+            expect (nearest < reach, juce::String (kind) + " is out of his reach");
+        }
 
         beginTest ("slots and anchors for every kind of drum");
         for (auto* kind : { "kick", "rack1", "rack2", "rack3", "rack4", "floor", "snare", "hihat", "crash", "ride", "china", "splash", "perc" })
