@@ -1,3 +1,2 @@
-Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono
-Copyright Braille Institute of America, Inc.
-Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+Atkinson Hyperlegible Next and Mono (Braille Institute), Bricolage Grotesque, Instrument Serif
+and JetBrains Mono are licensed under the SIL Open Font License 1.1: https://openfontlicense.org
