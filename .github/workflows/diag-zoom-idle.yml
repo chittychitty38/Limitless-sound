@@ -1,5 +1,5 @@
-# Temporary: finds what keeps the released Limitless Zoom busy while it sits idle on a Mac
-# (the proof's 3.2% on Intel, 0.3% on Apple silicon; the limit is 3%).
+# Temporary: what listening to the microphone costs Limitless Zoom on a Mac sitting idle
+# (Zoom: 3.2% on the proof's Intel Mac with voice on, 0.5% with it off; the limit is 3%).
 name: Diagnose Zoom idle CPU
 
 on:
@@ -7,46 +7,17 @@ on:
     branches: [diag/zoom-idle]
 
 jobs:
-  diag:
-    runs-on: macos-15-intel
-    timeout-minutes: 30
+  mic:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Install the released Limitless Zoom
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release download zoom-v0.1.2 -R "$GITHUB_REPOSITORY" -p Limitless-Zoom-mac-intel.dmg -D "$RUNNER_TEMP"
-          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "$RUNNER_TEMP/Limitless-Zoom-mac-intel.dmg"
-          cp -R "$RUNNER_TEMP/mnt/Limitless Zoom.app" "$RUNNER_TEMP/"
-          xattr -cr "$RUNNER_TEMP/Limitless Zoom.app"
-      - name: Measure, as the proof starts it
-        timeout-minutes: 8
-        run: |
-          pip3 install --break-system-packages py-spy >/dev/null 2>&1 || pip3 install py-spy >/dev/null
-          spy="$(python3 -c 'import sysconfig; print(sysconfig.get_path("scripts"))')/py-spy"
-          export LIMITLESS_SOUND_LOGS="$RUNNER_TEMP/logs"
-          "$RUNNER_TEMP/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" > zoom.log 2>&1 &
-          pid=$!
-          sleep 25
-          a=$(ps -o time= -p "$pid")
-          sudo "$spy" record -p "$pid" -d 60 -r 100 -f raw --threads -o spy.txt --nonblocking >/dev/null 2>&1 || true
-          b=$(ps -o time= -p "$pid")
-          echo "$a $b" | awk 'function s(t, n, p, i, x) { n = split(t, p, ":"); x = 0; for (i = 1; i <= n; i++) x = x * 60 + p[i]; return x }
-            { printf "== Zoom over the 60 s: %.1f%%\n", (s($2) - s($1)) / 60 * 100 }'
-          echo "== Busiest Python stacks (samples at 100 a second, waiting ones left out):"
-          awk '{ c = $NF; $NF = ""; print c "\t" $0 }' spy.txt | sort -nr | grep -v "wait (threading\|get (queue\|select (selectors\|_run (darwin.py:241)\|main (app.py:643) *$" | head -30 | cut -c1-700
-          kill "$pid" || true
-          echo "== Log"; cat "$LIMITLESS_SOUND_LOGS"/*.log 2>/dev/null | tail -20
-      - name: Measure with voice off
-        timeout-minutes: 5
-        run: |
-          "$RUNNER_TEMP/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" --no-voice > zoom2.log 2>&1 &
-          pid=$!
-          sleep 25
-          for w in 1 2; do
-            a=$(ps -o time= -p "$pid"); sleep 15; b=$(ps -o time= -p "$pid")
-            echo "$a $b" | awk -v w=$w 'function s(t, n, p, i, x) { n = split(t, p, ":"); x = 0; for (i = 1; i <= n; i++) x = x * 60 + p[i]; return x }
-              { printf "voice off, window %d: %.1f%%\n", w, (s($2) - s($1)) / 15 * 100 }'
-          done
-          kill "$pid" || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "$(grep -i '^sounddevice' apps/zoom/requirements.txt || echo sounddevice)"
+      - run: python .github/diag/mic_cost.py
