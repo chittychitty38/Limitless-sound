@@ -1,0 +1,36 @@
+# Temporary: finds what keeps the released GazeStage busy while it sits idle on a Mac
+# (the proof's 7.5% on Apple silicon and 3.4% on Intel; the limit is 3%).
+name: Diagnose GazeStage idle CPU
+
+on:
+  push:
+    branches: [diag/gazestage-idle]
+
+jobs:
+  diag:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, dmg: GazeStage-0.3.4-mac-arm64.dmg }
+          - { os: macos-15-intel, dmg: GazeStage-0.3.4-mac-x64.dmg }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the released GazeStage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download gazestage-v0.3.4 -R "$GITHUB_REPOSITORY" -p "${{ matrix.dmg }}" -D "$RUNNER_TEMP"
+          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "$RUNNER_TEMP/${{ matrix.dmg }}"
+          cp -R "$RUNNER_TEMP/mnt/GazeStage.app" "$RUNNER_TEMP/"
+          xattr -cr "$RUNNER_TEMP/GazeStage.app"
+      - name: Measure
+        working-directory: .github/diag
+        run: |
+          npm init -y >/dev/null && npm install --no-save playwright@1.56.1 >/dev/null
+          node gazestage-idle.cjs "$RUNNER_TEMP/GazeStage.app/Contents/MacOS/GazeStage"
