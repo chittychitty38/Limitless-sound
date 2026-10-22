@@ -40,34 +40,41 @@ gh auth status || gh auth login                                 # Bennet signs i
 gh repo clone chittychitty38/Limitless-sound LimitlessSound && cd LimitlessSound
 ```
 
-Some apps may still be waiting in pull requests. Check with `gh pr list --state all`. For any
-app that isn't on `main` yet, test the newest open pull request's branch. At the time of writing:
-
-| App | Folder | Branch if not merged | Workflow | Mac download (artifact) |
-|---|---|---|---|---|
-| Limitless Sound hub | `shared/hub` | `suite/hub-page-installer-clients` (PR #7) | `shared.yml` | `Limitless-Sound-mac-apple-silicon` / `-mac-intel` |
-| Limitless One-Hand | `apps/one-hand` | `one-hand-mac-polish` (PR #10) | `one-hand.yml` | `Limitless-One-Hand-mac-…` |
-| Limitless Voice | `apps/voice` | `claude/voice` (PR #1) | `voice.yml` | `LimitlessVoice-mac-…` |
-| Limitless Zoom | `apps/zoom` | `zoom-view-control` (PR #6) | `zoom.yml` | `Limitless-Zoom-mac-…` |
-| Limitless Color | `apps/color` | `color-app` (PR #2) | `color.yml` | `Limitless-Color-mac-…` |
-| Limitless Control | `apps/control` | `claude/limitless-control` (PR #3) | `control.yml` | `LimitlessControl-mac-…` |
-| GazeStage | `apps/gazestage` | `gazestage/v0.3` (PR #11) | `gazestage.yml` | `GazeStage-mac-…` |
-
-Test the **installed apps** (what a musician would get), not source runs. For each app, download
-the newest successful Mac build for his chip (`apple-silicon` or `intel`):
+Every app and the hub are on `main`, and the whole suite is one released Mac download. Test the
+**installed apps** (what a musician would get), not source runs. Download the suite for his chip:
 
 ```sh
-WF=one-hand.yml; BRANCH=main          # or the branch from the table
+mkdir -p downloads && cd downloads
+curl -fLO https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.dmg
+# Intel Mac: Limitless-Sound-Suite-mac-intel.dmg
+cd ..
+```
+
+To test a fix that isn't released yet, download the newest successful build of that app's
+workflow instead:
+
+| App | Folder | Workflow | Mac download (artifact) |
+|---|---|---|---|
+| Limitless Sound hub | `shared/hub` | `shared.yml` | `Limitless-Sound-mac-apple-silicon` / `-mac-intel` |
+| Limitless One-Hand | `apps/one-hand` | `one-hand.yml` | `Limitless-One-Hand-mac-…` |
+| Limitless Voice | `apps/voice` | `voice.yml` | `LimitlessVoice-mac-…` |
+| Limitless Zoom | `apps/zoom` | `zoom.yml` | `Limitless-Zoom-mac-…` |
+| Limitless Color | `apps/color` | `color.yml` | `Limitless-Color-mac-…` |
+| Limitless Control | `apps/control` | `control.yml` | `LimitlessControl-mac-…` |
+| GazeStage | `apps/gazestage` | `gazestage.yml` | `GazeStage-mac-…` |
+
+```sh
+WF=one-hand.yml; BRANCH=main          # or the fix's branch
 RUN=$(gh run list -w "$WF" -b "$BRANCH" -s success -L 1 --json databaseId -q '.[0].databaseId')
 gh run download "$RUN" -D "downloads/$WF"     # artifact names end in -mac-apple-silicon or -mac-intel
 ```
 
 If the artifact names differ, list them with `gh api repos/chittychitty38/Limitless-sound/actions/runs/$RUN/artifacts -q '.artifacts[].name'`.
-If a "Limitless Sound Suite" dmg exists (PR #7's `suite.yml`), it holds every app in one download; use it.
 
-Open each `.dmg`, have Bennet drag the app to Applications, then open it. The apps aren't signed
-yet, so the first time macOS refuses: he goes to **System Settings → Privacy & Security**,
-scrolls down and clicks **Open Anyway**. Record how many clicks that took and whether anything
+Open the suite `.dmg` and have Bennet double-click **Install Limitless Sound**; it copies every
+app into Applications (a single app's `.dmg` from a workflow build is dragged there instead).
+The apps aren't signed yet, so the first time macOS refuses: he goes to **System Settings →
+Privacy & Security**, scrolls down and clicks **Open Anyway**. Record how many clicks that took and whether anything
 was confusing; that is what every musician will meet.
 
 ### 3. Run the automated stress tests on this Mac
@@ -80,14 +87,14 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install pytest psutil numpy pyyaml platformdirs pygame-ce==2.5.8 vosk==0.3.44
 ```
 
-Then, for each app branch that isn't on `main` yet, run against a worktree of it (from the repo root):
+Then, from the repo root on `main`:
 
 ```sh
-git fetch origin && git worktree add ../ls-<app> origin/<branch>
-STRESS_REPO_ROOT=../ls-<app> python -m pytest stress -v -s
+python -m pytest stress -v -s
 ```
 
-(On `main`, plain `python -m pytest stress -v -s`.) Voice with the real recognizer and real Mac voices:
+(To stress a fix on another branch, `git worktree add ../ls-fix origin/<branch>` and run with
+`STRESS_REPO_ROOT=../ls-fix`.) Voice with the real recognizer and real Mac voices:
 
 ```sh
 curl -sSfLO https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && unzip -q vosk-model-small-en-us-0.15.zip
@@ -98,7 +105,7 @@ VOSK_MODEL=$PWD/vosk-model-small-en-us-0.15 TTS_WAV_DIR=/tmp/ls-speech python -m
 GazeStage (uses a fake camera, so no face needed yet) and Color:
 
 ```sh
-(cd apps/gazestage && npm ci && node ../../stress/gazestage_stress.mjs)     # or in ../ls-gazestage
+(cd apps/gazestage && npm ci && node ../../stress/gazestage_stress.mjs)
 rustup-init -y && source ~/.cargo/env
 cargo test --release --manifest-path stress/color/Cargo.toml -- --nocapture
 ```
