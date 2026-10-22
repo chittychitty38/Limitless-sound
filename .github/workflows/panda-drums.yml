@@ -134,3 +134,11 @@ jobs:
           name: Panda Drums ${{ github.ref_name }}
           # The repo's Latest release is the Limitless Sound suite download.
           make_latest: "false"
+          # A -beta or -rc tag is a test build, marked as a pre-release.
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          body: |
+            **Mac** (Apple silicon and Intel, macOS 10.13 or later): open the `.pkg` and click through. It installs the Audio Unit, the VST3 and the app. It isn't signed by Apple yet, so the first time macOS refuses: System Settings > Privacy & Security > **Open Anyway**. In Logic, rescan in Plug-in Manager if it doesn't show under Instruments > The Panda Studios.
+
+            **Windows:** run the `.exe`. SmartScreen: More info > Run anyway.
+
+            **Playing along with a song:** turn on **Showtime sync** (top right of the Kit page). The panda then sees every hit coming, and your DAW's delay compensation lines him up with the track.
