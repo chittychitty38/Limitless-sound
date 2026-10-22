@@ -286,9 +286,11 @@ try {
   assert.match(chosen, /^(CPU|GPU), /, 'says which face tracking it runs');
   if (/software graphics/.test(chosen)) {
     // No graphics chip to speak of (as under xvfb): the CPU, straight away, and a quick first face.
+    // About 1.2-1.4 s here and 2.05 s on the old Intel Mac runner, all with the page slowed 4x;
+    // the GPU delegate on software graphics took 4.4-6.4 s.
     assert.match(chosen, /^CPU, /);
     const took = faceVideo ? first('face') : first('frame read');
-    assert.ok(took < 2000, `first ${faceVideo ? 'face' : 'frame'} after ${took} ms`);
+    assert.ok(took < 3000, `first ${faceVideo ? 'face' : 'frame'} after ${took} ms`);
   }
   assert.deepEqual(errors, []);
   console.log('smoke test passed');
