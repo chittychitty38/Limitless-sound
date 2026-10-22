@@ -39,6 +39,7 @@ jobs:
           - os: macos-15-intel
             arch: mac-intel
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Download every app's newest Mac build
@@ -88,6 +89,7 @@ jobs:
   windows:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -121,8 +123,12 @@ jobs:
       - name: Install it on this PC, as a musician would, and check every app
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath out\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=suite-install.log" -Wait -PassThru
+          $p = Start-Process -FilePath out\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=suite-install.log" -PassThru
+          $null = $p.Handle  # keeps the exit code readable after it exits
+          # Wait for the installer itself: -Wait would also wait for any app an installer opens.
+          $done = $p.WaitForExit(900000)
           Get-Content suite-install.log -Tail 40
+          if (-not $done) { $p.Kill(); throw "The suite installer was still running after 15 minutes" }
           if ($p.ExitCode -ne 0) { throw "The suite installer failed with code $($p.ExitCode)" }
           # Find each app the way the hub does when someone presses Open.
           $env:PYTHONPATH = "shared\hub"
