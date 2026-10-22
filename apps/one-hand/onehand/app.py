@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QApplication, QBoxLayout, QButtonGroup, QCheckBox
                                QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QStackedWidget,
                                QSystemTrayIcon, QVBoxLayout, QWidget)
 
+from . import __version__, applog
 from .engine import Engine, Settings
 from .icons import app_icon, tray_icon
 from .keys import MIRROR, ROWS, cap, shortcut_text
@@ -613,6 +614,7 @@ class MainWindow(QWidget):
 
 
 def main(backend=None):
+    applog.start("Limitless One-Hand", __version__)
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_NAME)
