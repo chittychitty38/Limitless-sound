@@ -170,6 +170,7 @@ class PermissionPage(QWidget):
 
     def __init__(self, main):
         super().__init__()
+        self._shown = None
         outer = QVBoxLayout(self)
         outer.setContentsMargins(48, 36, 48, 36)
         outer.setSpacing(16)
@@ -217,6 +218,10 @@ class PermissionPage(QWidget):
         outer.addStretch()
 
     def refresh(self, status, tried):
+        # Called every second while this page waits; restyling it each time kept the CPU busy.
+        if (dict(status), tried) == self._shown:
+            return
+        self._shown = (dict(status), tried)
         for name, (box, tick, btn) in self.steps.items():
             done = status.get(name, False)
             box.setProperty("done", done)
