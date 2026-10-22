@@ -200,8 +200,14 @@ jobs:
           $start = Get-Date
           # A browser marks a download as coming from the internet; so does this.
           Set-Content -Path dl\Limitless-Sound-Suite-windows.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
-          $p = Start-Process dl\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log" -PassThru
-          $null = $p.Handle  # keeps the exit code readable after it exits
+          # A musician then sees SmartScreen and clicks More info › Run anyway (it's unsigned).
+          # Nobody can click here: opening it through the shell (Start-Process) asks and is
+          # cancelled, so start it directly, as Windows does once Run anyway is clicked.
+          $run = [System.Diagnostics.ProcessStartInfo]::new((Resolve-Path dl\Limitless-Sound-Suite-windows.exe).Path,
+                   "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log")
+          $run.UseShellExecute = $false
+          $run.WorkingDirectory = (Get-Location).Path
+          $p = [System.Diagnostics.Process]::Start($run)
           # Wait for the installer itself: -Wait would also wait for any app an installer opens.
           $done = $p.WaitForExit(900000)
           Get-Content install.log -Tail 30
