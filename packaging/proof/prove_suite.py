@@ -24,6 +24,7 @@ import io
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -48,6 +49,9 @@ READY_LIMIT = 15.0   # seconds a musician should ever wait for an app to be read
 IDLE_SECONDS = 15    # how long to watch CPU while everything sits idle
 SETTLE_SECONDS = 5   # quiet time after the last action before that
 IDLE_CPU_LIMIT = 3.0 # % of one core an app may use sitting idle, so laptops last a session
+# A refusal that only says the app didn't answer in time is no answer: the test kit counts any
+# refusal with a reason, and GazeStage's 8 unanswered actions on the Intel Mac passed that way.
+TIMED_OUT = re.compile(r"(didn[’']t|did not|never) answer|still starting|in time|timed out", re.I)
 
 
 def run(cmd: list[str], timeout: float = 30) -> str:
@@ -290,6 +294,10 @@ def main(argv=None) -> int:
              "check": "Still running after every one of its actions was pressed",
              "detail": "" if connected(hub, tool) else "It quit or crashed. See the crash report in the log."},
         ]
+        timed_out = [f"{a}: {m}" for a, m in rep.refused if TIMED_OUT.search(m)]
+        app["proof"].append({"id": "P4", "ok": not timed_out,
+                             "check": "Every action ran, or was refused for a reason, never timed out",
+                             "detail": "; ".join(timed_out)})
         app["actionsTried"] = len([a for a in hub.state()["actions"] if a.get("tool") == tool and a.get("live")])
         state = hub.state()
         app["version"] = next((t["version"] for t in state["tools"] if t["id"] == tool), "")

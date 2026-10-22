@@ -118,6 +118,7 @@ class Report:
     def __init__(self, tool: str):
         self.tool = tool
         self.checks: list[dict] = []
+        self.refused: list[tuple[str, str]] = []   # C4: (action, the reason it gave)
 
     def add(self, level: str, cid: str, ok: bool, what: str, detail: str = "") -> None:
         self.checks.append({"level": level, "id": cid, "ok": ok, "check": what, "detail": detail})
@@ -167,6 +168,7 @@ def check(hub: Hub, args) -> Report:
                 silent.append(action)
             elif not r.get("ok"):
                 failed.append(f"{action}: {r.get('message')}")
+                rep.refused.append((action, str(r.get("message"))))
         rep.add("connected", "C4", not slow and not silent,
                 f"Answers every action within 3 seconds ({len(wanted)} tried)",
                 "; ".join(x for x in [f"too slow: {slow}" if slow else "",
