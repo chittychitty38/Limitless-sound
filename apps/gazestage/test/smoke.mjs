@@ -1,7 +1,8 @@
 // End-to-end smoke test. Launches the app with a fake camera and microphone on a fresh
 // profile, walks the guided setup, plays a note, opens settings, and checks for page errors.
-// On macOS it also checks that GazeStage created its own virtual MIDI ports.
-//   npm test                 the source tree (on Linux: xvfb-run -a npm test)
+// On macOS it also checks that GazeStage created its own virtual MIDI ports. Then it starts
+// GazeStage again on a slowed-down CPU and checks it answers every action and never freezes.
+//   npm test                the source tree (on Linux: xvfb-run -a npm test)
 //   npm run test:packaged    the built app in dist/
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
@@ -45,9 +46,10 @@ const hubInvoke = async (id, action) => {
   return hub.results.get(id);
 };
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
-const app = await electron.launch(packaged
+const launch = () => electron.launch(packaged
   ? { executablePath: BUILT[process.platform], args: flags, env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
   : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
+let app = await launch();
 
 const step = (name) => console.log('•', name);
 try {
@@ -149,6 +151,45 @@ try {
   step(`MIDI mode: ${midi.mode}${midi.error ? ` (${midi.error})` : ''}${midi.native ? `; virtual ports: ${midi.native}` : ''}`);
   if (process.platform === 'darwin') assert.equal(midi.mode, 'native', 'GazeStage creates its own MIDI ports on macOS');
 
+  assert.deepEqual(errors, []);
+
+  step('starts again on a slow computer: answers every action within 3 seconds, never freezes');
+  // Same profile, so the camera and face model start at launch. The page is slowed 4x, like an
+  // older Intel Mac, and every action is pressed the moment GazeStage joins, like the Access
+  // Standard test kit does.
+  await win.evaluate(() => localStorage.setItem('gazestage.settings.v3', JSON.stringify({ ...window.__gs.S, mode: 'head' })));
+  await app.close();
+  hub.hello = null;
+  app = await launch();
+  const again = await app.firstWindow();
+  again.on('pageerror', (e) => errors.push(e.message));
+  again.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
+  const cdp = await again.context().newCDPSession(again);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  // The page's longest freeze: the slowest round trip to its thread while it starts.
+  let freeze = 0, watching = true;
+  const watcher = (async () => {
+    while (watching) {
+      const t = Date.now(); await again.evaluate(() => 0).catch(() => {});
+      freeze = Math.max(freeze, Date.now() - t); await new Promise((r) => setTimeout(r, 25));
+    }
+  })();
+  for (let t = 0; t < 300 && !hub.hello; t++) await new Promise((r) => setTimeout(r, 100));
+  assert.ok(hub.hello, 'joins Limitless Sound again');
+  const unanswered = [];
+  for (const [n, { id: action }] of hub.hello.actions.entries()) {
+    const id = 100 + n, sent = Date.now();
+    hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args: {}, source: 'kit', depth: 0 }) + '\n');
+    while (!hub.results.has(id) && Date.now() - sent < 3000) await new Promise((r) => setTimeout(r, 10));
+    const r = hub.results.get(id);
+    if (!r || /didn’t answer|still starting/.test(r.message)) unanswered.push(`${action}: ${r ? r.message : 'no answer in 3 s'}`);
+  }
+  await again.waitForFunction(() => window.__gs.state.cameraState === 'noface', null, { timeout: 90000 });   // tracking runs
+  watching = false; await watcher;
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  step(`longest freeze while starting: ${freeze} ms`);
+  assert.deepEqual(unanswered, [], 'every action answered within 3 seconds');
+  assert.ok(freeze < 1500, `the window froze for ${freeze} ms`);
   assert.deepEqual(errors, []);
   console.log('smoke test passed');
 } finally {

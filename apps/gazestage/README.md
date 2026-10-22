@@ -84,7 +84,8 @@ npm run test:packaged    # smoke test the built app in dist/
 | `main.js` | Electron shell: the `app://` protocol, virtual MIDI ports (`@julusian/midi`), the menu, window state, and camera and microphone permissions |
 | `preload.js` | The small bridge the page can use |
 | `renderer/app.js` | Pointer, sticky targeting, selection, pages, guided setup and settings |
-| `renderer/tracker.js` | MediaPipe face and iris tracking |
+| `renderer/tracker.js` | The camera, and face and iris samples for the pointer |
+| `renderer/face-worker.js` | MediaPipe face tracking, in its own thread so the window never freezes while it loads or works |
 | `renderer/lib.js` | Pure logic covered by the unit tests: filter, calibration fit, head mapping, scales and chords, the HUI protocol, sound onsets |
 | `renderer/synth.js` | The built-in instrument |
 | `renderer/midi.js` | Native or Web MIDI routing and the HUI link |

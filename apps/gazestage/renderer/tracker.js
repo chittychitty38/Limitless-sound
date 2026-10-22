@@ -1,14 +1,13 @@
 // Face tracking with MediaPipe Face Landmarker (bundled in ./vendor, runs offline).
-// Emits one sample per camera frame:
-//   { face: bool, yaw, pitch, ix, iy, blink, brightness, centred }
+// MediaPipe runs in face-worker.js, off the page's thread; this side owns the camera and
+// hands the worker one frame at a time. Emits one sample per processed frame:
+//   { face: bool, yaw, pitch, ix, iy, blink, brightness, offCentre, size }
 // yaw/pitch are head angles in radians; ix/iy are iris positions within the eye (0..1).
-
-const VENDOR = new URL('./vendor/', import.meta.url).href;
 
 export class Tracker {
   constructor(video) {
     this.video = video;
-    this.landmarker = null;
+    this.worker = null; this.loading = null; this.busy = false;
     this.running = false;
     this.lastTime = -1;
     this.onSample = () => {};
@@ -17,17 +16,21 @@ export class Tracker {
     this.frame = 0; this.brightness = 0.5;
   }
 
-  async load() {
-    if (this.landmarker) return;
-    const vision = await import(VENDOR + 'vision_bundle.mjs');
-    const files = await vision.FilesetResolver.forVisionTasks(VENDOR + 'wasm');
-    const opts = (delegate) => ({
-      baseOptions: { modelAssetPath: VENDOR + 'face_landmarker.task', delegate },
-      runningMode: 'VIDEO', numFaces: 1,
-      outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
+  // Starts the face model in its worker. Resolves when it's ready; can be tried again after a failure.
+  load() {
+    if (this.loading) return this.loading;
+    const worker = this.worker = new Worker(new URL('./face-worker.js', import.meta.url));
+    this.loading = new Promise((resolve, reject) => {
+      const fail = (message) => { worker.terminate(); this.worker = this.loading = null; reject(new Error(message)); };
+      worker.onmessage = ({ data }) => {
+        if (data.type === 'ready') resolve();
+        else if (data.type === 'error') fail(data.message);
+        else if (data.type === 'sample') { this.busy = false; this.onSample({ ...data.sample, brightness: this.brightness }); }
+      };
+      worker.onerror = (e) => { e.preventDefault(); fail(e.message || 'Face tracking couldn’t start'); };
     });
-    try { this.landmarker = await vision.FaceLandmarker.createFromOptions(files, opts('GPU')); }
-    catch { this.landmarker = await vision.FaceLandmarker.createFromOptions(files, opts('CPU')); }
+    worker.postMessage({ type: 'load' });
+    return this.loading;
   }
 
   static async cameras() {
@@ -49,7 +52,8 @@ export class Tracker {
     this.running = true;
     const loop = () => {
       if (!this.running) return;
-      if (this.video.readyState >= 2 && this.video.currentTime !== this.lastTime) {
+      // One frame at a time: while the worker is busy, newer frames are skipped, never queued.
+      if (!this.busy && this.video.readyState >= 2 && this.video.currentTime !== this.lastTime) {
         this.lastTime = this.video.currentTime;
         this.process();
       }
@@ -61,31 +65,14 @@ export class Tracker {
   }
   stop() { this.running = false; }
 
-  process() {
+  // Hands the current frame to the worker; its sample comes back through onSample.
+  async process() {
     if ((this.frame++ & 15) === 0) this.measureBrightness();
-    const r = this.landmarker.detectForVideo(this.video, performance.now());
-    if (!r.faceLandmarks?.length) { this.onSample({ face: false, brightness: this.brightness }); return; }
-    const L = r.faceLandmarks[0];
-    const m = r.facialTransformationMatrixes[0].data;   // 4x4, column-major
-    const yaw = Math.atan2(m[8], m[10]);
-    const pitch = Math.asin(Math.max(-1, Math.min(1, -m[9])));
-    const eye = (iris, outer, inner, top, bottom) => {
-      const w = L[inner].x - L[outer].x, h = L[bottom].y - L[top].y;
-      return [(L[iris].x - L[outer].x) / (w || 1e-3), (L[iris].y - L[top].y) / (h || 1e-3)];
-    };
-    const a = eye(468, 33, 133, 159, 145), b = eye(473, 263, 362, 386, 374);
-    const bs = Object.fromEntries((r.faceBlendshapes[0]?.categories || []).map(c => [c.categoryName, c.score]));
-    const nose = L[1];
-    this.onSample({
-      face: true, yaw, pitch,
-      ix: (a[0] + (1 - b[0])) / 2, iy: (a[1] + b[1]) / 2,
-      blink: Math.min(bs.eyeBlinkLeft || 0, bs.eyeBlinkRight || 0),
-      brightness: this.brightness,
-      // How centred the face is in the camera frame: 0 = centred, 1 = at the edge.
-      offCentre: Math.max(Math.abs(nose.x - 0.5), Math.abs(nose.y - 0.5)) * 2,
-      // Face width as a fraction of the frame: too small = too far away.
-      size: Math.abs(L[454].x - L[234].x),
-    });
+    this.busy = true;
+    try {
+      const frame = await createImageBitmap(this.video);
+      this.worker.postMessage({ type: 'frame', frame, time: performance.now() }, [frame]);
+    } catch { this.busy = false; }
   }
 
   measureBrightness() {
