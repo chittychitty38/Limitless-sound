@@ -7,7 +7,7 @@
 //   npm run test:packaged    the built app in dist/
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,7 @@ const BUILT = {
   linux: join(root, 'dist', 'linux-unpacked', 'gazestage'),
 };
 const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
+const logs = mkdtempSync(join(tmpdir(), 'gazestage-logs-'));
 
 // A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
 const hubHome = mkdtempSync(join(tmpdir(), 'gazestage-hub-'));
@@ -49,9 +50,10 @@ const hubInvoke = async (id, action) => {
   return hub.results.get(id);
 };
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
+const env = { ...process.env, LIMITLESS_SOUND_HOME: hubHome, LIMITLESS_SOUND_LOGS: logs };
 const launch = (more = []) => electron.launch(packaged
-  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
-  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
+  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env });
 let app = await launch();
 
 const step = (name) => console.log('•', name);
@@ -59,7 +61,7 @@ try {
   const win = await app.firstWindow();
   const errors = [];
   win.on('pageerror', (e) => errors.push(e.message));
-  win.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
+  win.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL|^smoke test:/.test(m.text())) errors.push(m.text()); });
   await win.waitForLoadState();
   await win.setViewportSize({ width: 1280, height: 800 });
   assert.equal(await win.title(), 'GazeStage');
@@ -73,6 +75,17 @@ try {
   await win.waitForFunction(() => window.__gs.state.cameraOn || window.__gs.state.cameraState === 'error', null, { timeout: 90000 });
   assert.equal(await win.evaluate(() => window.__gs.state.cameraState === 'error' ? window.__gs.state.cameraError : 'ok'), 'ok');
   await win.click('[data-ob=next]');
+
+  step('keeps a log file: how it started, the face tracking it runs, and what the page reports');
+  await win.evaluate(() => { for (let i = 0; i < 3; i++) console.error('smoke test: an error the page reports'); console.log('smoke test: not an error'); });
+  const logText = () => { try { return readFileSync(join(logs, 'GazeStage.log'), 'utf8'); } catch { return ''; } };
+  const bothLogged = () => /Face tracking: /.test(logText()) && /Page: smoke test/.test(logText());
+  for (let t = 0; t < 100 && !bothLogged(); t++) await new Promise((r) => setTimeout(r, 100));
+  const logged = logText();
+  assert.match(logged, /^\d{4}-\d\d-\d\d [\d:,]+ INFO    GazeStage: Started GazeStage \d+\.\d+\.\d+ on /);
+  assert.match(logged, /INFO    GazeStage: Face tracking: (CPU|GPU), /);
+  assert.equal(logged.match(/ERROR   GazeStage: Page: smoke test: an error the page reports/g)?.length, 1, logged);
+  assert.doesNotMatch(logged, /not an error/);
 
   step('pointer and select choices');
   await win.click('[data-ob=mode][data-value=head]');
@@ -240,8 +253,11 @@ try {
 
   step('starts again on a slow computer: answers every action within 3 seconds, never freezes');
   // Same profile, so the camera and face model start at launch, this time with a face in front
-  // of the camera. The page is slowed 4x, like an older Intel Mac, and every action is pressed
-  // the moment GazeStage joins, like the Access Standard test kit does.
+  // of the camera. The page is slowed to run like an older Intel Mac, and every action is pressed
+  // the moment GazeStage joins, like the Access Standard test kit does. That's 4x, except on an
+  // Intel Mac, which already is one: slowing the Intel Mac runner 4x on top made the same build
+  // find the first face in 1.7 s on one run and 3.2 s on the next.
+  const slowdown = process.platform === 'darwin' && process.arch === 'x64' ? 2 : 4;
   const faceVideo = await faceCamera(win, hubHome);
   await win.evaluate(() => localStorage.setItem('gazestage.settings.v3', JSON.stringify({ ...window.__gs.S, mode: 'head' })));
   await app.close();
@@ -253,7 +269,7 @@ try {
   again.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
   again.on('console', (m) => { if (/^Face tracking:/.test(m.text())) tracking.push(m.text()); });
   const cdp = await again.context().newCDPSession(again);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: slowdown });
   // The page's longest freeze: the slowest round trip to its thread while it starts.
   let freeze = 0, watching = true;
   const watcher = (async () => {
@@ -279,15 +295,15 @@ try {
   const first = (what) => +(tracking.find((t) => t.includes(`first ${what}`))?.match(/(\d+) ms/)?.[1] ?? NaN);
   for (let t = 0; t < 30 && Number.isNaN(first(faceVideo ? 'face' : 'frame read')); t++) await new Promise((r) => setTimeout(r, 100));
   const chosen = hub.states.faceTracking || '';
-  step(`longest freeze while starting: ${freeze} ms`);
+  step(`longest freeze while starting, the page slowed ${slowdown}x: ${freeze} ms`);
   step(`face tracking: ${chosen.slice(0, 60)}…; first frame ${first('frame read')} ms, first face ${faceVideo ? first('face') + ' ms' : 'not tested (offline)'}`);
   assert.deepEqual(unanswered, [], 'every action answered within 3 seconds');
   assert.ok(freeze < 1500, `the window froze for ${freeze} ms`);
   assert.match(chosen, /^(CPU|GPU), /, 'says which face tracking it runs');
   if (/software graphics/.test(chosen)) {
     // No graphics chip to speak of (as under xvfb): the CPU, straight away, and a quick first face.
-    // About 1.2-1.4 s here and 2.05 s on the old Intel Mac runner, all with the page slowed 4x;
-    // the GPU delegate on software graphics took 4.4-6.4 s.
+    // About 1.2-1.4 s here with the page slowed 4x; the GPU delegate on software graphics
+    // took 4.4-6.4 s.
     assert.match(chosen, /^CPU, /);
     const took = faceVideo ? first('face') : first('frame read');
     assert.ok(took < 3000, `first ${faceVideo ? 'face' : 'frame'} after ${took} ms`);
@@ -299,4 +315,5 @@ try {
   hubServer.close();
   rmSync(profile, { recursive: true, force: true });
   rmSync(hubHome, { recursive: true, force: true });
+  rmSync(logs, { recursive: true, force: true });
 }

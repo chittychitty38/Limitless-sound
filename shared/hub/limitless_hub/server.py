@@ -21,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import __version__, catalog, launcher as launcher_mod, paths
+from . import __version__, applog, catalog, launcher as launcher_mod, paths
 from . import setup as setup_mod
 from .bus import PROTOCOL, Bus
 from .speech import Speaker
@@ -349,6 +349,8 @@ class Hub:
                     if tool not in catalog.TOOLS:
                         return self._json({"ok": False, "message": "Unknown tool."}, 400)
                     return self._json(hub.launcher.open(tool))
+                if p == "/api/open-logs":
+                    return self._json(hub.launcher.open_folder(applog.log_dir()))
                 if p == "/api/install-path":
                     tool = str(body.get("tool") or "")
                     if tool not in catalog.TOOLS:

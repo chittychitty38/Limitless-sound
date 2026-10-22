@@ -1,5 +1,6 @@
-# One download for the whole suite: collects the newest Mac build of every app
-# (from each app's own workflow on main) into Limitless-Sound-Suite-<arch>.dmg.
+# One download for the whole suite: collects the newest build of every app (from each app's
+# own workflow on main) into one Mac installer, Limitless-Sound-Suite-<arch>.pkg (and the same
+# installer in a disk image, .dmg), and one Windows installer, Limitless-Sound-Suite-windows.exe.
 name: Limitless Sound Suite
 
 on:
@@ -8,7 +9,11 @@ on:
                 "Limitless Color", "Limitless Control", "GazeStage"]
     types: [completed]
     branches: [main]
+  # A new packaging/VERSION reaching main publishes that suite version (like the apps' own
+  # releases); merge it after the app releases it should carry have built.
   push:
+    branches: [main]
+    paths: ["packaging/VERSION", "packaging/RELEASE.md", "packaging/mac/**", "packaging/windows/**"]
     tags: ["v*"]
   pull_request:
     paths: ["packaging/**", ".github/workflows/suite.yml"]
@@ -34,6 +39,7 @@ jobs:
           - os: macos-15-intel
             arch: mac-intel
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Download every app's newest Mac build
@@ -53,32 +59,101 @@ jobs:
           find in -maxdepth 3 | sed 's/^/  /'
       - name: Build the suite disk image
         run: packaging/mac/build-suite-dmg.sh in "${{ matrix.arch }}" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg"
-      - name: Check every app in it opens far enough to run
+      - name: Install it on this Mac, as a musician would, and check every app
         run: |
+          pkg="Limitless-Sound-Suite-${{ matrix.arch }}.pkg"
+          sudo installer -pkg "$pkg" -target / -verboseR
+          for app in "Limitless Sound" "Limitless Voice" "Limitless One-Hand" "Limitless Zoom" \
+                     "Limitless Color" "Limitless Control" "GazeStage"; do
+            bundle="/Applications/$app.app"
+            [ -d "$bundle" ] || { echo "::error::$app wasn't installed"; exit 1; }
+            exe="$bundle/Contents/MacOS/$(defaults read "$bundle/Contents/Info" CFBundleExecutable)"
+            file "$exe" | sed "s|/Applications/||"
+            codesign --verify --deep "$bundle" && echo "  signature ok: $app"
+          done
+          # The disk image holds the same installer.
           mnt=$(mktemp -d)
           hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg" >/dev/null
           ls -1 "$mnt"
-          for app in "$mnt"/*.app; do
-            exe="$app/Contents/MacOS/$(defaults read "$app/Contents/Info" CFBundleExecutable)"
-            file "$exe" | sed "s|$mnt/||"
-            codesign --verify --deep "$app" && echo "  signature ok: $(basename "$app")"
-          done
+          test -f "$mnt/Install Limitless Sound.pkg"
           hdiutil detach "$mnt" -quiet
       - uses: actions/upload-artifact@v4
         with:
           name: Limitless-Sound-Suite-${{ matrix.arch }}
-          path: Limitless-Sound-Suite-${{ matrix.arch }}.dmg
+          path: |
+            Limitless-Sound-Suite-${{ matrix.arch }}.dmg
+            Limitless-Sound-Suite-${{ matrix.arch }}.pkg
+
+  # The same for Windows: one installer that runs every app's own installer quietly, for the
+  # person signed in, then turns on Limitless Sound.
+  windows:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download every app's newest Windows build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p in
+          for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
+            run=$(gh run list -R "$GITHUB_REPOSITORY" -w "$wf" -b main -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
+            if [ -z "$run" ]; then echo "::error::No successful $wf build on main yet"; exit 1; fi
+            name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" -q '.artifacts[] | select(.name | endswith("-windows")) | .name' | head -1)
+            if [ -z "$name" ]; then echo "::error::$wf run $run has no Windows build"; exit 1; fi
+            echo "$wf: $name (run $run)"
+            gh run download "$run" -R "$GITHUB_REPOSITORY" -n "$name" -D "in/$wf"
+          done
+          find in -name "*.exe" | sed 's/^/  /'
+      - name: Build the suite installer
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+            $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
+          }
+          $version = (Get-Content packaging\VERSION -Raw).Trim()
+          python packaging\windows\build_suite.py in $version out
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Install it on this PC, as a musician would, and check every app
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath out\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=suite-install.log" -PassThru
+          $null = $p.Handle  # keeps the exit code readable after it exits
+          # Wait for the installer itself: -Wait would also wait for any app an installer opens.
+          $done = $p.WaitForExit(900000)
+          Get-Content suite-install.log -Tail 40
+          if (-not $done) { $p.Kill(); throw "The suite installer was still running after 15 minutes" }
+          if ($p.ExitCode -ne 0) { throw "The suite installer failed with code $($p.ExitCode)" }
+          # Find each app the way the hub does when someone presses Open.
+          $env:PYTHONPATH = "shared\hub"
+          python -c "from limitless_hub import catalog; missing = [t for t in catalog.TOOLS if catalog.find_install(t) is None]; [print(f'{t}: {catalog.find_install(t)}') for t in catalog.TOOLS if t not in missing]; assert not missing, f'not installed: {missing}'"
+          $hub = Join-Path $env:LOCALAPPDATA "Programs\Limitless Sound\Limitless Sound.exe"
+          if (-not (Test-Path $hub)) { throw "Limitless Sound itself wasn't installed" }
+          $run = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "Limitless Sound" -ErrorAction SilentlyContinue
+          if (-not $run) { throw "Limitless Sound wasn't set to start at sign-in" }
+          "starts at sign-in: $($run.'Limitless Sound')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Limitless-Sound-Suite-windows
+          path: out/Limitless-Sound-Suite-windows.exe
 
   # One release page for the whole suite: v<packaging/VERSION>. The first build of a new
   # version publishes it; later builds of the same version refresh its disk images, so the
   # download always carries every app's newest version. Its assets keep the same names, so
-  # https://github.com/<repo>/releases/latest/download/Limitless-Sound-Suite-<arch>.dmg
-  # stays a permanent link.
+  # https://github.com/<repo>/releases/latest/download/Limitless-Sound-Suite-<arch>.pkg
+  # (and the .dmg holding the same installer) stay permanent links.
   release:
-    needs: mac
+    needs: [mac, windows]
     if: >-
       github.event_name == 'workflow_run' ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     env:
@@ -99,10 +174,10 @@ jobs:
           tag="v$version"
           ls -l out
           if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release upload "$tag" out/*.dmg --clobber -R "$GITHUB_REPOSITORY"
+            gh release upload "$tag" out/*.pkg out/*.dmg out/*.exe --clobber -R "$GITHUB_REPOSITORY"
             echo "Refreshed $tag with the newest apps."
           else
-            gh release create "$tag" out/*.dmg -R "$GITHUB_REPOSITORY" --target "$SHA" \
+            gh release create "$tag" out/*.pkg out/*.dmg out/*.exe -R "$GITHUB_REPOSITORY" --target "$SHA" \
               --title "Limitless Sound $version" --notes-file packaging/RELEASE.md --latest
             echo "Published $tag."
           fi

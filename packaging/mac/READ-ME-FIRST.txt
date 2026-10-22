@@ -1,15 +1,13 @@
 LIMITLESS SOUND FOR MAC
 
 1. Double-click "Install Limitless Sound".
-   The first time, macOS says it can't check the developer. Open
+   The first time, macOS says it can't check the developer. Click Done, open
    System Settings > Privacy & Security, scroll down, and click "Open Anyway"
    next to "Install Limitless Sound". This is needed once, for the whole suite.
-2. Every app is copied into Applications and Limitless Sound opens in your
-   web browser. From there you can open the apps you use and choose which
-   ones open together.
-
-Or drag the apps you want into the Applications shortcut yourself. Then each
-app needs "Open Anyway" the first time you open it.
+2. The Mac installer opens. Click Continue, then Install, and type your Mac's
+   password. Every app goes into Applications.
+3. Limitless Sound opens in your web browser. From there you can open the apps
+   you use and choose which ones open together.
 
 What's inside
   Limitless Sound      Joins the apps into one suite. Runs quietly in the background.

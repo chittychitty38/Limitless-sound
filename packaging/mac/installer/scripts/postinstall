@@ -1,0 +1,16 @@
+#!/bin/bash
+# Start Limitless Sound for the person at the Mac, and have it start when they sign in.
+# The installer runs this as root, so the hub is started as that person instead.
+user=$(stat -f %Su /dev/console)
+if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "loginwindow" ]; then
+  exit 0
+fi
+uid=$(id -u "$user")
+hub="/Applications/Limitless Sound.app"
+as_user() { launchctl asuser "$uid" sudo -u "$user" "$@"; }
+if [ -d "$hub" ]; then
+  as_user "$hub/Contents/MacOS/Limitless Sound" autostart on >/dev/null 2>&1
+  as_user open "$hub"
+fi
+as_user say "Limitless Sound is installed." >/dev/null 2>&1 &
+exit 0

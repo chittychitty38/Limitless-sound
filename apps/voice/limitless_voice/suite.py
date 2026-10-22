@@ -10,6 +10,9 @@ With the Limitless Sound hub running:
   Voice in take mode, where only "stop" works. Lyrics can't trigger commands.
 - Voice stops listening while the suite's one voice is talking, so it never
   hears another app's announcement.
+- The suite's shared text size, high contrast and reduced motion settings
+  apply to every Voice window (see look.py), and Voice tells the suite the
+  values it's using.
 Without the hub, none of this does anything.
 """
 
@@ -88,23 +91,27 @@ def spoken_forms(action):
 
 
 class Suite:
-    def __init__(self, engine, on_change=None, on_phrases=None, on_speaking=None, dispatch=None):
+    def __init__(self, engine, on_change=None, on_phrases=None, on_speaking=None, on_look=None,
+                 dispatch=None):
         """
         engine       the voice Engine
         on_change    called after other apps change the listening state, to refresh the window
         on_phrases   called when the suite's vocabulary changes, to update the recognizer
         on_speaking  called with True/False while the suite's one voice talks
+        on_look      called when the suite's shared settings change, to restyle every window
         """
         self.engine = engine
         self.on_change = on_change or (lambda: None)
         self.on_phrases = on_phrases or (lambda: None)
         self.on_speaking = on_speaking or (lambda busy: None)
+        self.on_look = on_look or (lambda: None)
         self.spoken: dict[str, dict] = {}   # normalized spoken form -> action from another app
         self._words: set[str] = set()       # the same forms as plain words, for the recognizer
         self._listening = None
+        self.prefs: dict = {}               # the suite's shared settings; empty until the hub sends them
         self.link = Link("voice", "Limitless Voice", __version__, actions=OWN_ACTIONS,
                          on_invoke=self.invoke, on_event=self.on_event, on_actions=self.on_actions,
-                         on_connected=self.on_connected, dispatch=dispatch)
+                         on_prefs=self.on_prefs, on_connected=self.on_connected, dispatch=dispatch)
         engine.suite = self
 
     def start(self):
@@ -221,6 +228,15 @@ class Suite:
     def on_event(self, name, value, source):
         if name == "hub.speaking":
             self.on_speaking(bool(value))
+
+    def on_prefs(self, prefs):
+        # from the hub's welcome and every change; kept if the hub closes, so text doesn't shrink
+        self.prefs = dict(prefs)
+        self.on_look()
+
+    def report_look(self, look):
+        """Tell the suite the shared settings Voice honors, with the values it's using now."""
+        self.link.state("prefs.applied", dict(look))
 
     def say(self, text):
         return self.link.say(text)
