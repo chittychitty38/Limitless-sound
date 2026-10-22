@@ -202,7 +202,30 @@ async function relaunch() {
   check(ok === 5, `${ok} of 5 back-to-back launches started the camera cleanly`);
 }
 
-for (const t of [focusLoss, switchFlood, dwellFlood, relaunch, soak]) {
+// 6. Left open while the musician works in the DAW: with nothing moving, GazeStage barely draws.
+//    (Hit-testing every target 60 times a second used about 6% of the CPU for nothing.)
+async function quiet() {
+  const { win, close } = await launch();
+  try {
+    await ready(win, { select: 'dwell' });
+    await win.mouse.move(2, 2);
+    await win.waitForTimeout(500);
+    const frames = await win.evaluate(() => new Promise((done) => {
+      let n = 0;
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) => { n++; return raf(cb); };
+      setTimeout(() => { window.requestAnimationFrame = raf; done(n); }, 2000);
+    }));
+    check(frames <= 20, `sitting still, it draws ${frames} frames in 2 s (at most 20)`);
+    await hoverPad(win, 1);
+    check(await win.waitForFunction(() => window.__gs.state.fired, null, { timeout: 5000 }).then(() => true, () => false),
+      'moving onto a pad wakes it at once: the dwell fills and fires');
+  } finally {
+    await close();
+  }
+}
+
+for (const t of [focusLoss, switchFlood, dwellFlood, quiet, relaunch, soak]) {
   try {
     await t();
   } catch (e) {

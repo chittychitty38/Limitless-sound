@@ -80,7 +80,9 @@ try {
   await win.click('[data-ob=select][data-value=sound]');
   await win.waitForTimeout(500);
   assert.doesNotMatch(await win.textContent('#toast'), /Microphone access is off/);
+  assert.equal(await win.evaluate(() => window.__gs.listening()), true, 'the sound switch listens');
   await win.click('[data-ob=select][data-value=dwell]');
+  assert.equal(await win.evaluate(() => window.__gs.listening()), false, 'choosing dwell closes the microphone');
   await win.click('[data-ob=next]');
 
   step('practice targets');
@@ -100,6 +102,15 @@ try {
   await win.waitForTimeout(200);
   assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'a note is sounding');
   await win.mouse.up();
+  // After a while of silence the audio rests (a running audio context kept the computer busy
+  // while idle); the next note wakes it and still plays. A minute in use, 0.3 s here.
+  await win.evaluate(() => { const s = window.__gs.synth; s.allOff(); s.restMs = 300; s.restLater(); });
+  await win.waitForFunction(() => window.__gs.synth.ctx.state === 'suspended', null, { timeout: 5000 });
+  await pad.hover(); await win.mouse.down();
+  await win.waitForFunction(() => window.__gs.synth.ctx.state === 'running' && window.__gs.synth.voices.size > 0,
+    null, { timeout: 3000 });
+  await win.mouse.up();
+  await win.evaluate(() => { window.__gs.synth.restMs = 60000; window.__gs.synth.restLater(); });
   await win.click('[data-action=chords]');
   assert.match(await win.locator('#pads .target').first().textContent(), /^[A-G][♯]?(m|°|\+)?/);
 

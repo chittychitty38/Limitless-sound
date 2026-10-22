@@ -8,12 +8,26 @@ const PRESETS = {
 export const SYNTH_PRESETS = Object.fromEntries(Object.entries(PRESETS).map(([k, v]) => [k, v.name]));
 
 export class Synth {
-  constructor() { this.ctx = null; this.voices = new Map(); this.preset = 'keys'; }
+  constructor() {
+    this.ctx = null; this.voices = new Map(); this.preset = 'keys'; this.volume = 0.9;
+    this.restMs = 60000; this.keepAwake = false;   // keepAwake: the sound switch listens through it
+  }
+
+  // A minute after the last sound the audio context is suspended: a running one keeps the
+  // computer's audio (and the reverb) busy while GazeStage sits idle. The next sound resumes it.
+  restLater() {
+    clearTimeout(this.restTimer);
+    this.restTimer = setTimeout(() => {
+      if (this.voices.size || this.keepAwake) this.restLater();
+      else this.ctx?.suspend();
+    }, this.restMs);
+  }
 
   ensure() {
+    this.restLater();
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return this.ctx; }
     const ctx = this.ctx = new AudioContext({ latencyHint: 'interactive' });
-    this.master = ctx.createGain(); this.master.gain.value = 0.9;
+    this.master = ctx.createGain(); this.master.gain.value = this.volume;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
     this.dry = ctx.createGain(); this.wet = ctx.createGain();
@@ -40,7 +54,9 @@ export class Synth {
     const p = PRESETS[this.preset];
     this.wet.gain.value = p.reverb; this.dry.gain.value = 1 - p.reverb * 0.5;
   }
-  setVolume(v) { this.ensure(); this.master.gain.value = v; }
+  // Kept until the first note: an audio context started at launch keeps the computer's audio
+  // running (and the reverb with it) while GazeStage sits idle.
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
 
   noteOn(note, velocity = 100) {
     const ctx = this.ensure();
