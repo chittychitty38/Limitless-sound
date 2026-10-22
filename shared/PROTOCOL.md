@@ -1,7 +1,7 @@
 # Limitless Link protocol (version 1)
 
 How a Limitless Sound app talks to the Limitless Sound hub. Use a client in
-`shared/clients/` rather than writing this by hand.
+`shared/clients/` (Python, JavaScript, Rust or C++) rather than writing this by hand.
 
 ## Finding the hub
 
