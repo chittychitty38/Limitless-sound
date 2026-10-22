@@ -64,7 +64,7 @@ clicked on the Limitless Voice window.
 | "show the mixer", "piano roll", "midi editor" | Windows and views |
 | "press command shift N" | Any shortcut. Letters can be said the pilot way: "press command shift november" |
 | "open Pro Tools", "switch to Logic" | Apps |
-| "start dictation" ... "stop dictation" | Type what you say (track names, notes, lyrics), with "comma", "period", "new line", "scratch that" |
+| "begin dictation" ... "stop dictation" | Type what you say (track names, notes, lyrics), with "comma", "period", "new line", "scratch that" |
 
 Built-in safety:
 - "quit the app" and "close the window" ask you to say "yes" first.
