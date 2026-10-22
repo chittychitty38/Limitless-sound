@@ -17,7 +17,7 @@ You describe what looks wrong, for example "what's supposed to be red looks like
 
 ## Install
 
-Download the latest installer from the repository's **Releases** page (tags named `color-v…`), or from the newest **Limitless Color** run under **Actions**. Mac has two downloads: **apple-silicon** for M1 and newer, **intel** for older Macs.
+Download the latest installer from the repository's **Releases** page (tags named `color-v…`), or from the newest **Limitless Color** run under **Actions**. Mac has two downloads: `Limitless-Color-mac-apple-silicon.dmg` for M1 and newer, `Limitless-Color-mac-intel.dmg` for older Macs. Windows: `Limitless-Color-Setup-windows.exe`.
 
 **Mac:** open the `.dmg` and drag Limitless Color to Applications. The app isn't signed with an Apple developer certificate yet, so the first time:
 
@@ -63,7 +63,8 @@ app/macos-overlay     The Mac screen filter helper (Swift: ScreenCaptureKit + Me
 app/ui                The tuner window (one HTML file, no build step).
 ../../.github/workflows/color.yml
                       Tests, builds and smoke-tests the Mac .dmg (Apple Silicon and Intel)
-                      and the Windows installer; color-v* tags publish a release.
+                      and the Windows installer; a new version in tauri.conf.json
+                      reaching main publishes a color-v<version> release.
 ```
 
 The tuner preview in the window (JavaScript) and the screen filter (Rust) run the same math. A test in `color-core` checks that they give identical colors.

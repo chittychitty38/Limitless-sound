@@ -81,7 +81,8 @@ pyinstaller packaging/limitless_zoom.spec       # build the app for this OS
 
 GitHub Actions (`.github/workflows/zoom.yml` at the repo root) builds the Mac (Apple Silicon and Intel)
 and Windows installers on every push, runs the tests, checks voice recognition with
-recorded speech, and attaches installers to a release when a `zoom-v*` tag is pushed.
+recorded speech, and publishes a `zoom-v<version>` release when a new version in
+`limitless_zoom/__init__.py` reaches `main`.
 
 Layout: `actions.py` (actions and phrases), `keymaps.py` (per-app keys), `router.py`
 (action → keys), `hotkeys.py` (zoom key layer and switch), `voice.py` (offline speech),
