@@ -50,6 +50,8 @@ public:
     {
         return { shownArms[0].pivot, shownArms[1].pivot, shownArms[0].tip, shownArms[1].tip };
     }
+    // And where his head (crown, cheek) and shoulders are.
+    std::array<juce::Point<float>, 4> bodyPoints() const;
 
 private:
     using P = juce::Point<float>;

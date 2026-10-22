@@ -660,7 +660,7 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
             }
             h.piece = s.piece;
             h.moveStart = now;
-            h.moveEnd = early ? std::max (now + 0.04, strikeTime - 0.02) : now;
+            h.moveEnd = early ? std::min (strikeTime, std::max (now + 0.04, strikeTime - 0.02)) : now;
             if (atHome > 0.001f)
             {
                 // Out of the picture's pose: it fades on the way to the stroke.
@@ -2025,6 +2025,15 @@ juce::AffineTransform PandaStage::headTransform() const
     return juce::AffineTransform::rotation (pose.tilt * 1.2f + juce::jlimit (-0.14f, 0.14f, headLean.x * 0.09f), neck.x, neck.y)
         .translated (nodBy.x * 0.7f, nodBy.y * 0.7f + juce::jlimit (-4.0f, 18.0f, headDip.x * 0.12f))
         .followedBy (torsoTransform());
+}
+
+std::array<juce::Point<float>, 4> PandaStage::bodyPoints() const
+{
+    auto neck = Skin::point (Skin::get().at ("panda/neck"));
+    auto seat = Skin::point (Skin::get().at ("panda/seat"));
+    auto H = headTransform(), T = torsoTransform();
+    return { (neck + P (0.0f, -150.0f)).transformedBy (H), (neck + P (110.0f, -70.0f)).transformedBy (H),
+             (seat + P (-120.0f, -110.0f)).transformedBy (T), (seat + P (120.0f, -110.0f)).transformedBy (T) };
 }
 
 juce::Rectangle<float> PandaStage::pieceBounds (const PieceView& v) const

@@ -559,7 +559,7 @@ int motion (bool showtime)
     auto notes = groove (128.0, 4, 0.3);
     auto& stage = s.editor->getKitPage().stage;
     const int rate = 240;
-    std::vector<std::array<juce::Point<float>, 4>> trace;
+    std::vector<std::array<juce::Point<float>, 8>> trace;
     std::vector<double> times;
     for (int f = 0; f < rate * 10; ++f)
     {
@@ -567,13 +567,18 @@ int motion (bool showtime)
         auto t = (double) s.clock / sampleRate;
         s.pump (t);
         stage.advanceTo (t);
-        trace.push_back (stage.handPoints());
+        auto hands = stage.handPoints();
+        auto body = stage.bodyPoints();
+        trace.push_back ({ hands[0], hands[1], hands[2], hands[3], body[0], body[1], body[2], body[3] });
         times.push_back (t);
     }
-    const char* names[] = { "his right fist", "his left fist", "his right stick's tip", "his left stick's tip" };
+    const char* names[] = { "his right fist", "his left fist", "his right stick's tip", "his left stick's tip",
+                            "his crown", "his cheek", "his right shoulder", "his left shoulder" };
     int pops = 0;
-    for (int k = 0; k < 4; ++k)
+    for (int k = 0; k < 8; ++k)
     {
+        // (his head and body move slowly: a jump there is a smaller one)
+        auto least = k < 4 ? 12.0f : 2.5f;
         double fastest = 0.0;
         for (size_t i = 3; i + 2 < trace.size(); ++i)
         {
@@ -582,8 +587,8 @@ int motion (bool showtime)
                                     trace[i - 2][(size_t) k].getDistanceFrom (trace[i - 3][(size_t) k]));
             auto after = trace[i + 1][(size_t) k].getDistanceFrom (trace[i][(size_t) k]);
             fastest = std::max (fastest, (double) step * rate);
-            // A jump: over 12 px in a 240th of a second, and over four times the steps either side.
-            if (step > 12.0f && step > 4.0f * std::max (before, after) + 2.0f)
+            // A jump: over 12 px in a 240th of a second (a hand), and over four times the steps either side.
+            if (step > least && step > 4.0f * std::max (before, after) + least / 6.0f)
             {
                 if (++pops <= 25)
                     std::printf ("%7.3f s  %-22s jumps %5.1f px (steps either side %4.1f, %4.1f)\n",
