@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   OneEuro, leastSquares, fitCalibration, calibrationGrade, headToScreen,
-  buildPads, chordName, noteName, huiSwitch, HuiParser, HUI, OnsetDetector,
+  buildPads, chordName, noteName, huiSwitch, HuiParser, HUI, OnsetDetector, XY_PROFILES, toCC, xyMessages, XYMotion,
 } from '../renderer/lib.js';
 
 test('least squares recovers a linear map', () => {
@@ -67,4 +67,32 @@ test('onset detector fires once per sound and re-arms after quiet', () => {
   const run = (rms, n) => { for (let i = 0; i < n; i++) hits += d.push(rms, (t += 16), 10).hit ? 1 : 0; };
   run(0.005, 100); run(0.3, 10); run(0.005, 30); run(0.3, 10);
   assert.equal(hits, 2);
+});
+
+test('XY pad: CC messages only for what changed, on the right channel', () => {
+  let r = xyMessages(1, 16, 17, 0, 1);
+  assert.deepEqual(r.bytes, [0xb0, 16, 0, 0xb0, 17, 127]);
+  r = xyMessages(1, 16, 17, 0.5, 1, r.sent);
+  assert.deepEqual(r.bytes, [0xb0, 16, 64]);
+  assert.deepEqual(xyMessages(1, 16, 17, 0.5, 1, r.sent).bytes, []);
+  assert.deepEqual(xyMessages(16, 1, 2, -3, 9).bytes, [0xbf, 1, 0, 0xbf, 2, 127]);
+  assert.equal(toCC(0.25), 32);
+  assert.equal(XY_PROFILES.helix.x, 1);
+});
+
+test('XY pad: glides ease to the target and chase follows a moving point', () => {
+  const m = new XYMotion(0, 0);
+  m.glideTo(1, 0.5, 1000, 0);
+  m.step(0);
+  const [mx] = m.step(500);
+  assert.ok(Math.abs(mx - 0.5) < 1e-9, 'halfway in time is halfway in value');
+  assert.ok(m.step(250)[0] < 0.25, 'eases in');
+  assert.deepEqual(m.step(1000), [1, 0.5]); assert.equal(m.moving, false);
+  m.glideTo(0.2, 0.2, 0, 1000); assert.deepEqual([m.x, m.y], [0.2, 0.2]);
+  m.chaseTo(0.8, 0.8, 100);
+  let t = 1000; m.step(t);
+  for (let i = 0; i < 6; i++) m.step(t += 16);
+  assert.ok(m.x > 0.3 && m.x < 0.8, 'chase moves part of the way quickly');
+  for (let i = 0; i < 200; i++) m.step(t += 16);
+  assert.ok(Math.abs(m.x - 0.8) < 1e-3);
 });

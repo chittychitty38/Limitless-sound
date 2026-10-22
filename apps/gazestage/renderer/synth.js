@@ -18,10 +18,24 @@ export class Synth {
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
     this.dry = ctx.createGain(); this.wet = ctx.createGain();
     this.reverb = ctx.createConvolver(); this.reverb.buffer = this.impulse(2.6);
+    // The tone pad can shape the built-in sound: brightness (a low-pass) and room (reverb).
+    this.shapeFilter = ctx.createBiquadFilter(); this.shapeFilter.type = 'lowpass';
+    this.shapeFilter.frequency.value = 20000; this.shapeFilter.Q.value = 0.9;
     this.dry.connect(comp); this.wet.connect(this.reverb).connect(comp);
-    comp.connect(this.master).connect(ctx.destination);
+    comp.connect(this.shapeFilter).connect(this.master).connect(ctx.destination);
     this.setPreset(this.preset);
     return ctx;
+  }
+
+  // x, y: 0..1 from the tone pad, or null to put the sound back to its preset.
+  shape(x, y) {
+    this.shaping = x == null ? null : [x, y];
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, p = PRESETS[this.preset];
+    const freq = x == null ? 20000 : 250 * 2 ** (x * 6.3);
+    const wet = x == null ? p.reverb : 0.05 + y * 0.75, dry = x == null ? 1 - p.reverb * 0.5 : 1 - y * 0.4;
+    this.shapeFilter.frequency.setTargetAtTime(freq, t, 0.03);
+    this.wet.gain.setTargetAtTime(wet, t, 0.05); this.dry.gain.setTargetAtTime(dry, t, 0.05);
   }
 
   // Decaying stereo noise: a small, soft room.
@@ -37,6 +51,7 @@ export class Synth {
   setPreset(name) {
     this.preset = PRESETS[name] ? name : 'keys';
     if (!this.ctx) return;
+    if (this.shaping) { this.shape(...this.shaping); return; }
     const p = PRESETS[this.preset];
     this.wet.gain.value = p.reverb; this.dry.gain.value = 1 - p.reverb * 0.5;
   }

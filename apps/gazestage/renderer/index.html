@@ -33,6 +33,7 @@
   <nav class="tabs" aria-label="Pages">
     <button class="target" data-goto="transport" aria-current="page"><span class="glyph" aria-hidden="true">▶︎</span>Transport</button>
     <button class="target" data-goto="play"><span class="glyph" aria-hidden="true">🎹</span>Instrument</button>
+    <button class="target" data-goto="tone"><span class="glyph" aria-hidden="true">◎</span>Tone</button>
     <button class="target pause" data-action="pause"><span class="glyph" aria-hidden="true">⏸︎</span>Pause</button>
   </nav>
 
@@ -58,6 +59,39 @@
       <button class="target" data-action="panic">Stop all<small>notes off</small></button>
     </div>
     <div id="pads" aria-label="Note pads"></div>
+  </section>
+
+  <section class="page" id="tone" aria-label="Tone pad">
+    <div class="xywrap">
+      <button class="target nudge up" data-nudge="up" aria-label="Step up (hold to keep going)">▲</button>
+      <button class="target nudge left" data-nudge="left" aria-label="Step left (hold to keep going)">◀</button>
+      <div class="target xy" id="xy" data-xy role="slider" tabindex="0" aria-label="Tone pad" aria-valuetext="">
+        <svg class="grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M25 0V100M50 0V100M75 0V100M0 25H100M0 50H100M0 75H100"/>
+        </svg>
+        <span class="axis ax" id="xyNameX">X</span><span class="axis ay" id="xyNameY">Y</span>
+        <span class="snapmark" data-mark="A">A</span><span class="snapmark" data-mark="B">B</span><span class="snapmark" data-mark="C">C</span><span class="snapmark" data-mark="D">D</span>
+        <span class="aim" id="xyAim" aria-hidden="true"></span>
+        <span class="puck" id="xyPuck" aria-hidden="true"></span>
+        <span class="readout" id="xyReadout"></span>
+      </div>
+      <button class="target nudge right" data-nudge="right" aria-label="Step right (hold to keep going)">▶</button>
+      <button class="target nudge down" data-nudge="down" aria-label="Step down (hold to keep going)">▼</button>
+    </div>
+    <div class="xyside">
+      <div class="snaps">
+        <button class="target" data-snap="A">A<small>tone A</small></button>
+        <button class="target" data-snap="B">B<small>tone B</small></button>
+        <button class="target" data-snap="C">C<small>tone C</small></button>
+        <button class="target" data-snap="D">D<small>tone D</small></button>
+      </div>
+      <button class="target" data-action="xyStore" aria-pressed="false">Save here<small id="xyStoreLabel">then pick A–D</small></button>
+      <button class="target" data-action="xyFollow" aria-pressed="false">Follow<small id="xyFollowLabel">off: look and hold to place</small></button>
+      <button class="target" data-action="xyGlide">Glide<small id="xyGlideLabel">0.5 s</small></button>
+      <button class="target" data-action="xyCenter">Middle<small>both at 64</small></button>
+      <button class="target" data-action="xyListen" aria-pressed="false">Listen<small>hold a chord</small></button>
+    </div>
+    <p class="hint" id="xyHint"></p>
   </section>
 </main>
 
@@ -106,6 +140,20 @@
       <div class="row"><label for="sScale">Scale</label><select id="sScale"></select></div>
       <div class="row"><label for="sPads">Number of pads</label><select id="sPads"><option value="6">6 (largest)</option><option value="8">8</option><option value="12">12</option></select></div>
       <div class="row"><label for="sVelocity">Loudness of notes</label><input type="range" id="sVelocity" min="30" max="127" step="1"></div>
+    </section>
+    <section>
+      <h3>Tone pad</h3>
+      <div class="row"><label for="sToneOut">Send the tone pad to</label><select id="sToneOut"></select>
+        <div class="help" id="sToneOutHelp"></div></div>
+      <div class="row"><label for="sXyProfile">Controller numbers</label><select id="sXyProfile"></select></div>
+      <div class="row" id="xyCustomRow"><label>Left–right CC, up–down CC</label><span><input type="number" id="sXyCcX" min="0" max="127" class="num"> <input type="number" id="sXyCcY" min="0" max="127" class="num"></span></div>
+      <div class="row"><label for="sXyChannel">MIDI channel</label><select id="sXyChannel"></select></div>
+      <div class="row"><label for="sXyNameX">Name for left–right</label><input type="text" id="sXyNameX" maxlength="24" class="text"></div>
+      <div class="row"><label for="sXyNameY">Name for up–down</label><input type="text" id="sXyNameY" maxlength="24" class="text"></div>
+      <div class="row"><label for="sXyShape">Shape the built-in sound too</label><input type="checkbox" class="switch" id="sXyShape">
+        <div class="help">Left–right makes the built-in sound darker or brighter, and up–down adds room, so you can hear the pad with nothing else connected.</div></div>
+      <div class="btnrow"><button class="tool" id="xyTeachX">Teach left–right</button><button class="tool" id="xyTeachY">Teach up–down</button></div>
+      <p class="help" style="color:var(--muted);font-size:.85em;margin:0">For MIDI learn: start learning on the plugin or amp control, then choose Teach. Only that one controller moves, so it learns the right one.</p>
     </section>
     <section>
       <h3>Pro Tools and MIDI</h3>

@@ -1,6 +1,7 @@
 // GazeStage app: pointer, targeting, selection, pages, guided setup and settings.
 import {
   OneEuro, fitCalibration, calibrationGrade, dot, headToScreen, buildPads, SCALES, NOTE_NAMES, HUI, OnsetDetector,
+  XY_PROFILES, xyMessages, XYMotion, toCC,
 } from './lib.js';
 import { Tracker } from './tracker.js';
 import { Synth, SYNTH_PRESETS } from './synth.js';
@@ -16,6 +17,10 @@ const DEFAULTS = {
   select: 'dwell', dwell: 900, padDwell: 250, blink: 450, mic: 10, tick: true,
   builtIn: true, preset: 'keys', volume: 0.8, key: 0, scale: 'Major', pads: 8, velocity: 100, octave: 4, chords: false, hold: false,
   theme: 'dark', contrast: false, size: 'normal', spacing: 'normal', onTop: false,
+  // Tone pad: where the point is, how it moves, and what it sends.
+  xyX: 0.5, xyY: 0.5, xyFollow: false, xyGlide: 500, xyShape: true,
+  xySnaps: { A: [0.2, 0.8], B: [0.8, 0.8], C: [0.2, 0.2], D: [0.8, 0.2] },
+  xyOut: 'auto', xyProfile: 'learn', xyCcX: 16, xyCcY: 17, xyChannel: 1, xyNameX: 'Brightness', xyNameY: 'Room',
   onboarded: false, cal: {},
 };
 const KEY = 'gazestage.settings.v3';
@@ -32,13 +37,16 @@ const state = {
   current: null, candidate: null, candidateSince: 0, enteredAt: 0, fired: false,
   heldHui: null, blinkSince: 0, calibrating: false, settingsOpen: false,
   onboardStep: null, practiceDone: new Set(),
+  xyStore: false, xyAnchor: null, nudging: null, teaching: null, listen: null,
+  xySent: { x: toCC(S.xyX), y: toCC(S.xyY) },
 };
+const motion = new XYMotion(S.xyX, S.xyY);
 const filterX = new OneEuro(S.smooth), filterY = new OneEuro(S.smooth);
 const tracker = new Tracker($('cam'));
 const synth = new Synth(); synth.setPreset(S.preset);
 const midi = new MidiRouter(store);
 const onset = new OnsetDetector();
-window.__gs = { state, S, synth, midi, suite: () => suiteOn };   // for the smoke test
+window.__gs = { state, S, synth, midi, motion, suite: () => suiteOn };   // for the smoke test
 
 // ---------- display ----------
 function applyDisplay() {
@@ -259,7 +267,8 @@ async function startMic() {
 
 // ---------- targeting ----------
 const isPad = (t) => t?.dataset.pad != null;
-const isHoldable = (t) => isPad(t) || t?.dataset.hui === 'rewind' || t?.dataset.hui === 'fastForward';
+const isXY = (t) => t?.dataset.xy != null;
+const isHoldable = (t) => isPad(t) || t?.dataset.nudge != null || t?.dataset.hui === 'rewind' || t?.dataset.hui === 'fastForward';
 const usable = (el) => el && !el.classList.contains('disabled') && el.offsetParent !== null;
 // The target under the pointer, or (magnetic targeting) the nearest one within reach, so the
 // gaps between targets are never dead zones.
@@ -284,6 +293,7 @@ function inflated(t, pad) {
 function setCurrent(t, now) {
   if (state.current === t) return;
   if (state.current) {
+    if (isXY(state.current)) leaveXY(state.current);
     state.current.classList.remove('gazed'); setProgress(state.current, 0);
     if (state.fired && isHoldable(state.current) && !(S.select === 'switch' && switchDown)) release(state.current);
   }
@@ -298,6 +308,7 @@ function setProgress(t, p) {
 
 function frame(now) {
   requestAnimationFrame(frame);
+  toneTick(now);
   const cursor = $('cursor');
   // Camera modes wait for the automatic centring (about the first second) before anything can fire.
   const active = S.mode === 'mouse' || (state.cameraOn && state.autoCentre === null);
@@ -329,6 +340,7 @@ function frame(now) {
 
   const t = state.current;
   if (!t) { setProgress(document.body, 0); return; }
+  if (isXY(t) && xyPointer(t, now)) return;
   if (S.select === 'dwell' && !state.fired) {
     const need = isPad(t) ? +S.padDwell : +S.dwell;
     const p = need <= 0 ? 1 : (now - state.enteredAt) / need;
@@ -376,6 +388,7 @@ addEventListener('keyup', (e) => {
 function releaseMomentary() {
   switchDown = false;
   if (state.heldHui) release(state.heldHui.t);
+  if (state.nudging) release(state.nudging.t);
   document.querySelectorAll('#pads .target[data-down]').forEach(release);
 }
 addEventListener('blur', releaseMomentary);
@@ -392,6 +405,7 @@ function onSwitch(kind) {
 // Mouse, touch and keyboard always work too (for helpers and for testing).
 document.addEventListener('pointerdown', (e) => {
   const t = e.target.closest('.target'); if (!t || e.button !== 0) return;
+  if (isXY(t)) { dragXY(t, e); return; }
   if (state.current === t) state.fired = true;   // a click counts; don't let dwell fire it again
   press(t, 'mouse');
   try { t.setPointerCapture(e.pointerId); } catch {}
@@ -446,9 +460,22 @@ function press(t, source) {
     t.dataset.down = '1'; notesOn(pad.notes); t.classList.add('on');
     return;
   }
+  if (isXY(t)) {
+    // A switch, sound or blink places the point where the pointer is.
+    const at = xyAt(t);
+    if (at && source !== 'key') placeXY(at[0], at[1]);
+    return;
+  }
   feedback(t);
   const d = t.dataset;
   if (d.goto) return showPage(d.goto);
+  if (d.nudge) {
+    nudgeXY(NUDGE[d.nudge], 0.05);
+    state.nudging = { t, dir: NUDGE[d.nudge], since: performance.now() };
+    if (source !== 'gaze' && source !== 'mouse') setTimeout(() => release(t), 250);
+    return;
+  }
+  if (d.snap) return snapXY(d.snap);
   if (d.hui) {
     const port = HUI.PORT[d.hui];
     if (!midi.transport(port, true)) { askSuite(d.hui); return; }
@@ -468,6 +495,7 @@ function release(t) {
     return;
   }
   if (state.heldHui && state.heldHui.t === t) { midi.transport(state.heldHui.port, false); state.heldHui = null; }
+  if (state.nudging && state.nudging.t === t) state.nudging = null;
 }
 
 // ---------- Limitless Sound ----------
@@ -478,10 +506,22 @@ const SUITE_DO = {
   pads: () => showPage('play'), transport: () => showPage('transport'),
   octaveUp: () => action('octup'), octaveDown: () => action('octdown'), scale: () => action('scale'),
   latch: () => action('hold'), panic: () => action('panic'),
+  tone: () => showPage('tone'),
+  'xy.set': (a) => {
+    // x and y are 0..1, or 0..127 like a MIDI value. A missing axis stays where it is.
+    const v = (n, cur) => (n == null || n === '' || !Number.isFinite(+n) ? cur : +n > 1 ? +n / 127 : +n);
+    placeXY(v(a.x, motion.x), v(a.y, motion.y), a.glide != null && Number.isFinite(+a.glide) ? +a.glide : undefined);
+    return `${S.xyNameX} ${toCC(motion.glide?.x ?? motion.x)}, ${S.xyNameY} ${toCC(motion.glide?.y ?? motion.y)}`;
+  },
+  'xy.snapA': () => snapXY('A'), 'xy.snapB': () => snapXY('B'), 'xy.snapC': () => snapXY('C'), 'xy.snapD': () => snapXY('D'),
+  'xy.center': () => action('xyCenter'),
+  'xy.left': () => nudgeXY(NUDGE.left, 0.1), 'xy.right': () => nudgeXY(NUDGE.right, 0.1),
+  'xy.up': () => nudgeXY(NUDGE.up, 0.1), 'xy.down': () => nudgeXY(NUDGE.down, 0.1),
+  'xy.follow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
 };
 let suiteOn = false;
 
-function suiteInvoke(name) {
+function suiteInvoke(name, args = {}) {
   if (SUITE_TRANSPORT[name]) {
     const port = HUI.PORT[name];
     if (!midi.transport(port, true)) return { ok: false, message: 'GazeStage isn’t linked to Pro Tools.' };
@@ -492,8 +532,8 @@ function suiteInvoke(name) {
   }
   const run = SUITE_DO[name];
   if (!run) return { ok: false, message: `GazeStage has no action “${name}”.` };
-  run();
-  return { ok: true, message: '' };
+  const said = run(args && typeof args === 'object' ? args : {});
+  return { ok: true, message: typeof said === 'string' ? said : '' };
 }
 
 async function askSuite(hui) {
@@ -503,9 +543,9 @@ async function askSuite(hui) {
   toast(r.ok ? (r.message || SUITE_TRANSPORT[hui]) : notLinked, r.ok ? 1800 : 4000);
 }
 
-bridge?.suite?.onInvoke(({ id, action: name }) => {
+bridge?.suite?.onInvoke(({ id, action: name, args }) => {
   let result;
-  try { result = suiteInvoke(String(name)); } catch (e) { result = { ok: false, message: String(e?.message || e) }; }
+  try { result = suiteInvoke(String(name), args); } catch (e) { result = { ok: false, message: String(e?.message || e) }; }
   bridge.suite.reply(id, result);
 });
 bridge?.suite?.onConnected((on) => { suiteOn = !!on; });
@@ -522,6 +562,13 @@ function action(a) {
     case 'hold': S.hold = !S.hold; if (!S.hold) allNotesOff(); break;
     case 'sound': { const k = Object.keys(SYNTH_PRESETS); S.preset = k[(k.indexOf(S.preset) + 1) % k.length]; synth.setPreset(S.preset); break; }
     case 'panic': allNotesOff(); toast('All notes off'); return;
+    case 'xyStore': state.xyStore = !state.xyStore; clearTimeout(state.xyStoreTimer);
+      if (state.xyStore) state.xyStoreTimer = setTimeout(() => { state.xyStore = false; renderTone(); }, 12000);
+      return renderTone();
+    case 'xyFollow': S.xyFollow = !S.xyFollow; save(); state.xyAnchor = null; return renderTone();
+    case 'xyGlide': { const i = GLIDES.indexOf(+S.xyGlide); S.xyGlide = GLIDES[(i + 1) % GLIDES.length]; save(); return renderTone(); }
+    case 'xyCenter': return placeXY(0.5, 0.5);
+    case 'xyListen': return listen(!state.listen);
   }
   save(); if (a !== 'hold' && a !== 'sound') allNotesOff();
   renderInstrument(); syncSettingsForm();
@@ -529,12 +576,14 @@ function action(a) {
 
 function setPaused(p) {
   state.paused = p; $('pauseOverlay').classList.toggle('show', p);
-  if (p) { allNotesOff(); if (state.heldHui) release(state.heldHui.t); }
+  if (p) { allNotesOff(); listen(false); if (state.heldHui) release(state.heldHui.t); state.nudging = null; motion.chase = null; }
   toast(p ? 'Paused. Look at Resume to continue.' : 'Resumed');
 }
 
 function showPage(id) {
-  allNotesOff();
+  // Notes latched with Hold keep sounding (play a chord, then shape it on the tone pad).
+  if (S.hold) document.querySelectorAll('#pads .target[data-down]').forEach(release); else allNotesOff();
+  if (id !== 'tone') listen(false);
   state.page = id;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
   document.querySelectorAll('.tabs [data-goto]').forEach(b => b.setAttribute('aria-current', b.dataset.goto === id ? 'page' : 'false'));
@@ -569,6 +618,214 @@ function addProgressBars(root = document) {
   root.querySelectorAll('.target').forEach(t => { if (!t.querySelector(':scope > .progress')) t.insertAdjacentHTML('beforeend', '<span class="progress"></span>'); });
 }
 
+// ---------- tone pad ----------
+// One point, two MIDI controllers: left–right and down–up. Made for shifting an amp or a
+// plugin hands-free: a Line 6 Helix (EXP 1 and 2), or anything with MIDI learn.
+//   Place (default): look somewhere on the pad and hold still, and the point glides there.
+//                    A switch, sound or blink places it at the pointer straight away.
+//   Follow:          the point follows the pointer while it is on the pad (after a short
+//                    settle, so looking across the pad doesn't sweep the tone). With a switch,
+//                    it follows only while the switch is held.
+//   Arrows step it (keep looking to keep moving), A–D recall saved tones, Glide sets how
+//   long a move takes.
+const NUDGE = { left: [-1, 0], right: [1, 0], up: [0, 1], down: [0, -1] };
+const GLIDES = [0, 250, 500, 1000, 2000, 4000];
+const XY_STILL_PX = 40;
+const xyCC = () => {
+  const p = XY_PROFILES[S.xyProfile] || XY_PROFILES.learn;
+  return S.xyProfile === 'custom' ? [+S.xyCcX & 127, +S.xyCcY & 127] : [p.x, p.y];
+};
+const glideText = (ms) => (+ms === 0 ? 'instant' : `${(+ms / 1000).toFixed(+ms < 1000 ? 2 : 0).replace(/0$/, '')} s`);
+
+// The pad position (0..1, y up) under the pointer, or null when the pointer is off the pad.
+function xyAt(t, px = state.px, py = state.py) {
+  const r = t.getBoundingClientRect();
+  if (px < r.left || px > r.right || py < r.top || py > r.bottom) return null;
+  return [clamp((px - r.left) / r.width, 0, 1), clamp(1 - (py - r.top) / r.height, 0, 1)];
+}
+function showAim(at) {
+  const a = $('xyAim'); a.classList.toggle('show', !!at);
+  if (at) { a.style.left = at[0] * 100 + '%'; a.style.top = (1 - at[1]) * 100 + '%'; }
+}
+function leaveXY(t) {
+  showAim(null); t.classList.remove('following'); state.xyAnchor = null;
+}
+
+// Runs every frame while the pointer is on the pad. true when it handled selection itself.
+function xyPointer(t, now) {
+  const at = xyAt(t);
+  showAim(at);
+  if (S.xyFollow) {
+    setProgress(t, 0);
+    const steer = at && (S.select === 'switch' ? switchDown : now - state.enteredAt >= 300);
+    t.classList.toggle('following', !!steer);
+    if (steer) motion.chaseTo(at[0], at[1], 90);
+    return true;
+  }
+  // Placing means "hold still here": moving to a new spot restarts the dwell ring and re-arms
+  // a long blink, so the point can be placed again without leaving the pad.
+  const a = state.xyAnchor;
+  if (!a || Math.hypot(state.px - a.x, state.py - a.y) > XY_STILL_PX) {
+    state.xyAnchor = { x: state.px, y: state.py }; state.enteredAt = now; state.fired = false;
+  }
+  if (S.select !== 'dwell') return false;   // switch, sound and blink go through press()
+  if (!at || state.fired) { setProgress(t, 0); return true; }
+  const p = (now - state.enteredAt) / Math.max(400, +S.dwell * 0.7);
+  setProgress(t, p);
+  if (p >= 1) { placeXY(at[0], at[1]); state.fired = true; setProgress(t, 0); }
+  return true;
+}
+
+function placeXY(x, y, ms = +S.xyGlide) { motion.glideTo(x, y, ms, performance.now()); }
+function nudgeXY([dx, dy], step) {
+  const x = motion.glide ? motion.glide.x : motion.x, y = motion.glide ? motion.glide.y : motion.y;
+  motion.glideTo(clamp(x + dx * step, 0, 1), clamp(y + dy * step, 0, 1), 120, performance.now());
+}
+function snapXY(k) {
+  if (state.xyStore) {
+    S.xySnaps = { ...S.xySnaps, [k]: [motion.x, motion.y] }; save();
+    state.xyStore = false; clearTimeout(state.xyStoreTimer);
+    renderTone(); toast(`Saved this tone to ${k}`);
+    return `Saved to ${k}`;
+  }
+  const p = S.xySnaps[k]; if (!p) return;
+  placeXY(p[0], p[1]);
+  const b = document.querySelector(`[data-snap="${k}"]`); if (b && state.page === 'tone') feedback(b);
+  return `Tone ${k}`;
+}
+// Mouse, touch or a helper: press and drag on the pad.
+function dragXY(t, e) {
+  if (state.paused) return;
+  if (state.current === t) state.fired = true;
+  const go = (ev, instant) => {
+    const r = t.getBoundingClientRect();
+    const x = clamp((ev.clientX - r.left) / r.width, 0, 1), y = clamp(1 - (ev.clientY - r.top) / r.height, 0, 1);
+    if (instant) placeXY(x, y, Math.min(+S.xyGlide, 150)); else motion.chaseTo(x, y, 40);
+  };
+  go(e, true);
+  try { t.setPointerCapture(e.pointerId); } catch {}
+  const move = (ev) => go(ev, false);
+  const up = () => { t.removeEventListener('pointermove', move); t.removeEventListener('pointerup', up); t.removeEventListener('pointercancel', up); };
+  t.addEventListener('pointermove', move); t.addEventListener('pointerup', up); t.addEventListener('pointercancel', up);
+}
+$('xy').addEventListener('keydown', (e) => {
+  const dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[e.key];
+  if (!dir) return;
+  e.preventDefault(); e.stopPropagation();
+  nudgeXY(NUDGE[dir], e.shiftKey ? 0.01 : 0.05);
+});
+
+// Every frame: move the point, draw it, and send whatever changed.
+let lastDrawn = '', xySaveDue = false;
+function toneTick(now) {
+  const n = state.nudging;
+  if (n && now - n.since > 350 && !state.paused) {
+    // Held arrow: keep moving, the full width in about three seconds.
+    const dt = Math.min(50, now - (n.last || now)); n.last = now;
+    motion.stop();
+    motion.x = clamp(motion.x + n.dir[0] * dt / 3000, 0, 1); motion.y = clamp(motion.y + n.dir[1] * dt / 3000, 0, 1);
+  }
+  const [x, y] = motion.step(now);
+  const [ccX, ccY] = xyCC();
+  if (state.teaching) {
+    // MIDI learn helper: sweep only one controller down, up and back.
+    const k = state.teaching, p = (now - k.t0) / 1500, cur = k.axis === 'x' ? x : y;
+    const v = p >= 1 ? cur : p < 0.33 ? cur * (1 - p / 0.33) : p < 0.66 ? (p - 0.33) / 0.33 : 1 - (1 - cur) * (p - 0.66) / 0.34;
+    midi.sendTone([0xb0 | ((+S.xyChannel - 1) & 15), k.axis === 'x' ? ccX : ccY, toCC(v)]);
+    if (p >= 1) { state.teaching = null; state.xySent = { ...state.xySent, [k.axis]: toCC(cur) }; }
+    return;
+  }
+  const r = xyMessages(+S.xyChannel, ccX, ccY, x, y, state.xySent);
+  if (r.bytes.length) {
+    midi.sendTone(r.bytes); state.xySent = r.sent;
+    if (S.xyShape && synth.ctx) synth.shape(x, y);
+    xySaveDue = true;
+  }
+  if (xySaveDue && !motion.moving && !state.nudging) { S.xyX = x; S.xyY = y; save(); xySaveDue = false; }
+  const key = `${x.toFixed(4)},${y.toFixed(4)},${r.sent.x},${r.sent.y}`;
+  if (key === lastDrawn) return;
+  lastDrawn = key;
+  const puck = $('xyPuck'); puck.style.left = x * 100 + '%'; puck.style.top = (1 - y) * 100 + '%';
+  const text = `${S.xyNameX} ${r.sent.x} · ${S.xyNameY} ${r.sent.y}`;
+  $('xyReadout').textContent = text; $('xy').setAttribute('aria-valuetext', text);
+  for (const b of document.querySelectorAll('[data-snap]')) {
+    const p = S.xySnaps[b.dataset.snap];
+    b.classList.toggle('lit', !!p && Math.abs(p[0] - x) < 0.02 && Math.abs(p[1] - y) < 0.02);
+  }
+}
+
+function renderTone() {
+  $('xyNameX').textContent = S.xyNameX; $('xyNameY').textContent = S.xyNameY;
+  for (const m of document.querySelectorAll('.snapmark')) {
+    const p = S.xySnaps[m.dataset.mark];
+    m.style.display = p ? '' : 'none';
+    if (p) { m.style.left = p[0] * 100 + '%'; m.style.top = (1 - p[1]) * 100 + '%'; }
+  }
+  const store = document.querySelector('[data-action=xyStore]');
+  store.setAttribute('aria-pressed', state.xyStore);
+  $('xyStoreLabel').textContent = state.xyStore ? 'now pick A, B, C or D' : 'then pick A–D';
+  document.querySelectorAll('[data-snap]').forEach(b => b.classList.toggle('armed', state.xyStore));
+  document.querySelector('[data-action=xyFollow]').setAttribute('aria-pressed', S.xyFollow);
+  $('xyFollowLabel').textContent = S.xyFollow
+    ? (S.select === 'switch' ? 'on: hold the switch to steer' : 'on: the point follows you')
+    : 'off: look and hold to place';
+  $('xyGlideLabel').textContent = glideText(S.xyGlide);
+  document.querySelector('[data-action=xyListen]').setAttribute('aria-pressed', !!state.listen);
+  const [ccX, ccY] = xyCC();
+  const to = midi.toneName ? `<b>${esc(midi.toneName)}</b>` : 'nothing yet (choose an output in Settings)';
+  $('xyHint').innerHTML = `${esc(S.xyNameX)} sends CC ${ccX} and ${esc(S.xyNameY)} sends CC ${ccY} on channel ${S.xyChannel}, to ${to}. `
+    + (midi.toneMissing ? `<b>${esc(midi.toneMissing)}</b> isn't connected. ` : '')
+    + (S.xyProfile === 'helix' ? 'On the Helix, assign the controls you want to EXP 1 and EXP 2. ' : 'Use MIDI learn on the controls you want, with Settings › Tone pad › Teach. ')
+    + '<button class="linkish" data-cmd="settings">Tone pad settings</button>';
+}
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Listen: hold a chord on the built-in sound (not sent over MIDI) to hear the pad shape it.
+function listen(on) {
+  if (!on === !state.listen) return;
+  if (on) {
+    if (!S.xyShape) { S.xyShape = true; save(); syncSettingsForm(); }
+    synth.ensure(); synth.shape(motion.x, motion.y);
+    state.listen = buildPads({ key: +S.key, octave: 3, scale: S.scale, count: 1, chords: true })[0].notes;
+    state.listen.forEach(n => synth.noteOn(n, 90));
+  } else {
+    state.listen.forEach(n => synth.noteOff(n)); state.listen = null;
+  }
+  renderTone();
+}
+
+// Which output the pad sends to; checked again as devices come and go.
+let toneFound = null;
+async function refreshToneOut() {
+  if (midi.mode === 'none') return;
+  const before = midi.toneName;
+  await midi.resolveTone(S.xyOut);
+  if (S.xyOut === 'auto' && midi.toneName !== before && midi.toneName !== midi.nativePorts?.notes && midi.toneName && midi.toneName !== toneFound) {
+    toneFound = midi.toneName; toast(`Found ${midi.toneName}. The tone pad sends to it.`, 4000);
+  }
+  renderTone();
+  if (state.settingsOpen) renderToneSettings();
+}
+setInterval(refreshToneOut, 4000);
+
+async function renderToneSettings() {
+  const sel = $('sToneOut'), list = await midi.toneOutputs();
+  const notes = midi.mode === 'native' ? 'GazeStage Notes (Pro Tools tracks and plugins)' : 'The instrument output';
+  sel.innerHTML = '';
+  sel.add(new Option('Automatic', 'auto'));
+  sel.add(new Option(notes, 'notes'));
+  list.forEach(p => sel.add(new Option(p.name, p.id)));
+  if (![...sel.options].some(o => o.value === S.xyOut)) sel.add(new Option(`${S.xyOut} (not connected)`, S.xyOut));
+  sel.value = S.xyOut;
+  $('sToneOutHelp').textContent = (S.xyOut === 'auto' ? 'Automatic sends to a Line 6 Helix, HX or POD Go when one is plugged in over USB, and otherwise to GazeStage Notes. ' : '')
+    + (midi.toneName ? `Sending to ${midi.toneName} now.` : 'Nothing to send to yet.');
+  $('xyCustomRow').style.display = S.xyProfile === 'custom' ? '' : 'none';
+}
+for (const [k, v] of Object.entries(XY_PROFILES)) $('sXyProfile').add(new Option(v.x != null ? `${v.name} (CC ${v.x} and ${v.y})` : v.name, k));
+for (let c = 1; c <= 16; c++) $('sXyChannel').add(new Option(String(c), c));
+$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
+$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
+
 // ---------- Pro Tools LEDs ----------
 midi.addEventListener('led', (e) => {
   const { zone, port, on } = e.detail;
@@ -576,11 +833,11 @@ midi.addEventListener('led', (e) => {
   if (port === HUI.PORT.play) { $('tPlay').classList.toggle('lit', on); $('tPlayState').textContent = on ? 'playing' : 'Pro Tools play'; }
   if (port === HUI.PORT.record) { $('tRec').classList.toggle('lit', on); $('tRecState').textContent = on ? 'record armed' : 'record arm the transport'; }
 });
-midi.addEventListener('change', () => { refreshChips(); renderMidiSettings(); });
+midi.addEventListener('change', () => { refreshChips(); renderMidiSettings(); refreshToneOut(); });
 
 // ---------- settings drawer ----------
 function openSettings() {
-  state.settingsOpen = true; syncSettingsForm(); renderMidiSettings(); refreshCalInfo();
+  state.settingsOpen = true; syncSettingsForm(); renderMidiSettings(); renderToneSettings(); refreshCalInfo();
   $('settings').classList.add('open'); $('settings').setAttribute('aria-hidden', 'false');
   $('closeSettings').focus();
   if (S.select === 'sound') startMic();
@@ -597,6 +854,8 @@ const FORM = {
   sSelect: 'select', sDwell: 'dwell', sPadDwell: 'padDwell', sBlink: 'blink', sMic: 'mic', sTick: 'tick',
   sBuiltIn: 'builtIn', sPreset: 'preset', sVolume: 'volume', sKey: 'key', sScale: 'scale', sPads: 'pads', sVelocity: 'velocity',
   sTheme: 'theme', sContrast: 'contrast', sSize: 'size', sSpacing: 'spacing', sOnTop: 'onTop',
+  sToneOut: 'xyOut', sXyProfile: 'xyProfile', sXyCcX: 'xyCcX', sXyCcY: 'xyCcY', sXyChannel: 'xyChannel',
+  sXyNameX: 'xyNameX', sXyNameY: 'xyNameY', sXyShape: 'xyShape',
 };
 for (const [k, v] of Object.entries(SYNTH_PRESETS)) $('sPreset').add(new Option(v, k));
 NOTE_NAMES.forEach((n, i) => $('sKey').add(new Option(n, i)));
@@ -617,7 +876,9 @@ function syncSettingsForm() {
 for (const [id, key] of Object.entries(FORM)) {
   const el = $(id);
   const handler = () => {
-    const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    let v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    if (el.type === 'number') v = clamp(Math.round(+v) || 0, +el.min, +el.max);
+    if (el.type === 'text') v = v.trim() || DEFAULTS[key];
     S[key] = v; save(); onSettingChanged(key);
     syncSettingsForm();
   };
@@ -633,6 +894,11 @@ async function onSettingChanged(key) {
     case 'preset': synth.setPreset(S.preset); renderInstrument(); break;
     case 'volume': synth.setVolume(+S.volume); break;
     case 'key': case 'scale': case 'pads': allNotesOff(); renderInstrument(); break;
+    case 'xyOut': await refreshToneOut(); break;
+    case 'xyProfile': case 'xyCcX': case 'xyCcY': case 'xyChannel':
+      state.xySent = {}; renderTone(); renderToneSettings(); break;   // resend on the new controllers
+    case 'xyNameX': case 'xyNameY': lastDrawn = ''; renderTone(); break;
+    case 'xyShape': if (S.xyShape) synth.shape(motion.x, motion.y); else { synth.shape(null); listen(false); } break;
   }
   applyDisplay(); refreshChips();
 }
@@ -673,6 +939,7 @@ function command(cmd) {
     case 'pause': return setPaused(!state.paused);
     case 'page:transport': return showPage('transport');
     case 'page:play': return showPage('play');
+    case 'page:tone': return showPage('tone');
     case 'panic': return allNotesOff();
     case 'onboarding': closeSettings(); return startOnboarding();
     case 'toggle-on-top': S.onTop = !S.onTop; save(); applyDisplay(); return toast(S.onTop ? 'GazeStage stays on top' : 'GazeStage no longer stays on top');
@@ -822,9 +1089,10 @@ async function onboardAction(ob, t) {
 }
 
 // ---------- start ----------
-applyDisplay(); syncSettingsForm(); renderInstrument(); addProgressBars(); refreshChips(); refreshCalInfo();
-$('aboutLine').textContent = 'GazeStage 0.3 · Limitless Sound · runs entirely on this computer.';
+applyDisplay(); syncSettingsForm(); renderInstrument(); renderTone(); addProgressBars(); refreshChips(); refreshCalInfo();
+$('aboutLine').textContent = 'GazeStage 0.4 · Limitless Sound · runs entirely on this computer.';
 synth.setVolume(+S.volume);
+if (S.xyShape) synth.shape(S.xyX, S.xyY);
 midi.init();
 requestAnimationFrame(frame);
 (async () => {
