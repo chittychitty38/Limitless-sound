@@ -265,3 +265,15 @@ def test_answers_are_never_dropped_behind_a_burst_of_events():
     assert len([x for x in lines if x.startswith("result")]) == 20
     assert len([x for x in lines if x.startswith("event")]) == Outbox.MAX_EVENTS
     assert lines[-1] == "event 2999"
+
+
+def test_opening_settings_answers_without_waiting_for_the_browser(monkeypatch):
+    """The hub must answer hub.settings within 3 s even when the browser takes half a minute."""
+    import webbrowser
+    from limitless_hub import launcher
+
+    monkeypatch.setattr(launcher.sys, "platform", "linux")
+    monkeypatch.setattr(webbrowser, "open", lambda url: time.sleep(5))
+    started = time.monotonic()
+    r = launcher.Launcher({}, settings_url=lambda: "http://127.0.0.1:1/").open_settings()
+    assert r["ok"] and time.monotonic() - started < 0.5
