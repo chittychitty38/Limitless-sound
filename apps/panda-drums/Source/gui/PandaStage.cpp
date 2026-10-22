@@ -325,6 +325,18 @@ void PandaStage::layoutPieces()
             }
         }
 
+        // A piece in the same place, the same size and the same picture as one before it shares
+        // that one's drum (the art has one where the kit has two): only the first is drawn.
+        v.sharesWith = -1;
+        if (skin.isLoaded())
+            for (size_t q = 0; q < p; ++q)
+                if (auto& o = views[q]; o.sharesWith < 0 && skinKind (o) == skinKind (v)
+                    && o.pos.getDistanceFrom (v.pos) < 1.0f && std::abs (o.radius - v.radius) < 1.0f)
+                {
+                    v.sharesWith = (int) q;
+                    break;
+                }
+
         // Where a click counts as hitting it.
         if (piece.type == PieceType::Kick)
             v.hitArea = juce::Rectangle<float> (v.radius * 2.0f, v.radius * 2.0f).withCentre (v.pos);
@@ -334,7 +346,7 @@ void PandaStage::layoutPieces()
             v.hitArea = { v.pos.x - v.radius, v.pos.y - v.radius * v.squash, v.radius * 2.0f, v.shell + v.radius * v.squash * 2.0f };
 
         if (v.gap.x <= 0.0f && piece.type == PieceType::HiHat)
-            v.gap.x = v.gap.target = 3.0f;
+            v.gap.x = v.gap.target = rig ? 1.5f : 3.0f;     // the picture's hi-hat is shut
     }
 
     // Hands start over the snare and the hi-hat.
@@ -589,8 +601,12 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
     // Two hands, and both already have something else to hit right then: this one goes unplayed
     // by a stick (it still rings and lights up).
     if (rig && s.hand >= 0)
-        if (auto& nx = hands[(size_t) s.hand].next; nx.piece >= 0 && nx.piece != s.piece && std::abs (nx.time - strikeTime) < 0.03)
-            s.hand = -3;
+        for (auto& p : pending)
+            if (p.hand == s.hand && p.piece != s.piece && std::abs (p.time - strikeTime) < 0.03)
+            {
+                s.hand = -3;
+                break;
+            }
 
     if (s.hand >= 0)
     {
@@ -722,6 +738,16 @@ void PandaStage::advanceTo (double t)
         v->rippleAt = now;
         v->rippleAmt = vel;
         v->pulse.v += 9.0f * vel;
+        if (auto* shared = viewFor (v->sharesWith))
+        {
+            shared->flashAt = now;
+            shared->flashAmt = std::max (shared->flashAmt * 0.5f, vel);
+            shared->rippleAt = now;
+            shared->rippleAmt = vel;
+            shared->pulse.v += 9.0f * vel;
+            if (isCymbal (v->type))
+                shared->wobble.v += vel * 5.5f * (v->pos.x < centreX ? -1.0f : 1.0f);
+        }
 
         juce::String articId;
         if (auto snap = proc.getSnapshot(); snap != nullptr && juce::isPositiveAndBelow (s.piece, (int) snap->pieces.size()))
@@ -1317,8 +1343,11 @@ void PandaStage::paintSkin (juce::Graphics& g)
         return v.type == PieceType::Crash ? "crash" : v.type == PieceType::Ride ? "ride" : v.type == PieceType::China ? "china" : "splash";
     };
 
+    // PD_PLAIN=1 (the render tool's check against the picture): no lights or specks over the room.
+    static const bool plain = juce::SystemStats::getEnvironmentVariable ("PD_PLAIN", {}).isNotEmpty();
+
     // ---- the heart lights glow, twinkle, and flare with the kick
-    if (auto* bulbs = skin.at ("stage/bulbs").getArray())
+    if (auto* bulbs = skin.at ("stage/bulbs").getArray(); bulbs != nullptr && ! plain)
     {
         float kickFlash = 0.0f;
         for (auto& v : views)
@@ -1343,6 +1372,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
 
     // ---- the spotlights' beams sway over the room and flare with the cymbals; the rug's ring
     // lights up with the kick; specks of light drift up through the beams.
+    if (! plain)
     {
         float crashFlash = 0.0f, kickGlow = 0.0f;
         for (auto& v : views)
@@ -1442,7 +1472,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
     {
         // ---- cymbals: stands, then the discs swinging on them
         for (auto& v : views)
-            if (isCymbal (v.type) && v.type != PieceType::HiHat
+            if (isCymbal (v.type) && v.type != PieceType::HiHat && v.sharesWith < 0
                 && (which == 0 || (which == 2) == (bool) skin.at ("kit/" + skinKind (v) + "/front")))
             {
                 auto kind = skinKind (v);
@@ -1489,7 +1519,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
         auto kick = std::find_if (views.begin(), views.end(), [] (auto& v) { return v.type == PieceType::Kick; });
         std::vector<const PieceView*> drums;
         for (auto& v : views)
-            if (! isCymbal (v.type) && v.type != PieceType::Kick)
+            if (! isCymbal (v.type) && v.type != PieceType::Kick && v.sharesWith < 0)
                 drums.push_back (&v);
         std::sort (drums.begin(), drums.end(), [] (auto* a, auto* b) { return a->pos.y < b->pos.y; });
 
@@ -1530,8 +1560,10 @@ void PandaStage::paintSkin (juce::Graphics& g)
             }
         };
 
+        // The rig's picture has the kick in front of every drum (the rack tom sits on it): the
+        // drums go first, back to front, then the kick.
         for (auto* d : drums)
-            if (d->type == PieceType::Tom && ! d->isFloor)
+            if (rig || (d->type == PieceType::Tom && ! d->isFloor))
                 drawDrumLayer (*d);
         if (kick != views.end())
         {
@@ -1559,7 +1591,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
             }
         }
         for (auto* d : drums)
-            if (! (d->type == PieceType::Tom && ! d->isFloor) && d->type != PieceType::HiHat)
+            if (! rig && ! (d->type == PieceType::Tom && ! d->isFloor) && d->type != PieceType::HiHat)
                 drawDrumLayer (*d);
 
     };
@@ -1988,8 +2020,18 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
 
     auto ps = pandaScale;
     auto L3 = Skin::number (skin.at ("panda/stick/real"), 150.0f) * ps;   // the stick's real length, fulcrum to tip
-    // The hand rises with the stroke: the wrist for a tap, the forearm and shoulder for the loud ones.
-    auto lift = [ps] (float H) { return ps * (9.0f * H + 30.0f * H * H); };
+    // The hand rises with the stroke: the wrist for a tap, the forearm and shoulder for the loud
+    // ones, the elbow swinging out as it goes. On a cymbal it's mostly the wrist.
+    auto onCymbalNow = juce::isPositiveAndBelow (h.piece, (int) views.size()) && isCymbal (views[(size_t) h.piece].type);
+    auto liftScale = onCymbalNow ? 0.55f : 1.0f;
+    auto liftOf = [ps, liftScale] (float H) { return ps * liftScale * (9.0f * H + 30.0f * H * H); };
+    auto lift = liftOf;
+    auto outward = h.side == 0 ? -1.0f : 1.0f;
+    auto headEllipse = skin.at ("panda/head/ellipse");
+    auto headCentre = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
+                          .transformedBy (headTransform());
+    auto headRadii = headEllipse.size() == 4 ? P ((float) (double) headEllipse[2], (float) (double) headEllipse[3]) * ps : P (150.0f, 115.0f);
+    auto fistRadius = 36.0f * ps;
     // Going up, the forearm turns the stick out (the sticks open into a V), away from his face.
     constexpr float rise = 22.0f * degrees;
 
@@ -2019,6 +2061,20 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
             hd = (std::abs (hd) < 1.0e-4f ? inward : (hd > 0.0f ? 1.0f : -1.0f)) * 12.0f * degrees;    // never straight at us
         hp = hitPitch * degrees;
         hitPivot = S - onScreen (hd, hp) * (contact * L3);
+        // His fist never goes up in front of his face: at the top of its stroke it must clear his
+        // head, so for a piece out to his side the stick comes round to point more at us (the hand
+        // stays out by the piece, the way a drummer's does over the hi-hat).
+        auto clearsHead = [&] (P pivotAt)
+        {
+            auto top = pivotAt - P (outward * 0.5f * liftOf (1.0f), liftOf (1.0f));
+            auto d = top - headCentre;
+            return juce::square (d.x / (headRadii.x + fistRadius)) + juce::square (d.y / (headRadii.y + fistRadius)) >= 1.0f;
+        };
+        for (int i = 0; i < 12 && ! clearsHead (hitPivot) && std::abs (hd) > 14.0f * degrees; ++i)
+        {
+            hd -= (hd > 0.0f ? 1.0f : -1.0f) * 5.0f * degrees;
+            hitPivot = S - onScreen (hd, hp) * (contact * L3);
+        }
         // On the way from the last thing played: an arc, the stick turning as it goes.
         if (t < h.moveEnd && h.moveEnd > h.moveStart)
         {
@@ -2038,7 +2094,8 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     a.height = H;
     auto pitchNow = hp + (topPitch - hp) * std::min (H, 1.15f);
     auto headingNow = juce::jlimit (-80.0f * degrees, 80.0f * degrees, hd - inward * rise * std::min (H, 1.0f));
-    auto pivotNow = hitPivot - P (0.0f, lift (std::min (handH, 1.15f)));
+    auto up = lift (std::min (handH, 1.15f));
+    auto pivotNow = hitPivot - P (outward * 0.5f * up, up);
 
     // A stroke that would sweep the stick across his glasses stops just under them.
     if (auto* g = skin.at ("panda/glasses").getArray(); g != nullptr && g->size() == 4)
@@ -2071,8 +2128,8 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     {
         auto wave = std::sin ((float) t * 13.0f + (float) h.side * 1.6f);
         auto k = easeOutCubic ((float) (1.6 - (cheerUntil - t)) / 0.2f) * std::min (1.0f, (float) (cheerUntil - t) / 0.2f);
-        auto up = a.shoulder + P (-inward * (72.0f + 10.0f * wave), -125.0f) * ps;
-        pivotNow += (up - pivotNow) * k;
+        auto raised = a.shoulder + P (-inward * (72.0f + 10.0f * wave), -125.0f) * ps;
+        pivotNow += (raised - pivotNow) * k;
         headingNow += (-inward * (25.0f + 12.0f * wave) * degrees - headingNow) * k;
         pitchNow += (80.0f * degrees - pitchNow) * k;
     }
@@ -2169,13 +2226,13 @@ void PandaStage::drawStickBlur (juce::Graphics& g, const Hand& h, const Arm& a)
         return;
     auto pivotY = Skin::number (skin.at ("panda/stick/pivot_y"), 142.0f);
     auto picLen = Skin::number (skin.at ("panda/stick/length"), 138.0f);
-    for (int k = 4; k >= 1; --k)
+    for (int k = 8; k >= 1; --k)
     {
-        auto was = armPose (h, now - 0.007 * k);
+        auto was = armPose (h, now - 0.0035 * k);
         auto moved = was.tip.getDistanceFrom (a.tip);
-        if (moved < 9.0f || was.atRest)
+        if (moved < 6.0f || was.atRest)
             continue;
-        auto alpha = juce::jlimit (0.0f, 0.42f, (moved - 9.0f) / 60.0f) * (1.0f - (float) k / 5.0f);
+        auto alpha = juce::jlimit (0.0f, 0.24f, (moved - 6.0f) / 70.0f) * (1.0f - (float) k / 9.0f);
         skin.draw (g, stick, juce::AffineTransform::translation (-stick.bounds.getWidth() * 0.5f, -pivotY)
                                  .scaled (was.scale, was.tip.getDistanceFrom (was.pivot) / picLen)
                                  .rotated (was.angle + juce::MathConstants<float>::halfPi)

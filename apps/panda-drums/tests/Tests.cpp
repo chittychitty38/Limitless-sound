@@ -447,6 +447,17 @@ public:
         expect (Skin::number (skin.at ("panda/fur/radius")) > 10.0f);
         expect (Skin::point (skin.at ("panda/neck")).y > Skin::point (skin.at ("panda/head/anchor")).y);
 
+        beginTest ("the factory kit is the picture's kit, nothing added");
+        // The picture has one rack tom and four cymbals besides the hi-hat: the second rack tom and
+        // the splash share the first ones' drums, so the stage at rest is the picture.
+        auto same = [] (const juce::var& a, const juce::var& b)
+        {
+            return Skin::point (a.getProperty ("at", {})).getDistanceFrom (Skin::point (b.getProperty ("at", {}))) < 0.5f;
+        };
+        expect (same (skin.at ("slots/rack2")[0], skin.at ("slots/rack2")[1]));
+        expect (same (skin.at ("slots/splash")[0], skin.at ("slots/crash")[0]));
+        expect (std::abs (Skin::number (skin.at ("panda/scale"), 1.0f) - 1.0f) < 1.0e-4f);
+
         beginTest ("slots and anchors for every kind of drum");
         for (auto* kind : { "kick", "rack1", "rack2", "rack3", "rack4", "floor", "snare", "hihat", "crash", "ride", "china", "splash", "perc" })
         {

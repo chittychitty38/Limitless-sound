@@ -75,6 +75,7 @@ private:
         float squash = 0.36f;      // drum head / cymbal: height of its ellipse over its width
         bool flip = false;         // the 3D layer is drawn mirrored (rendered on the other side)
         float stretch = 1.0f;      // deeper or shallower shell than the rendered one
+        int sharesWith = -1;       // drawn by another piece: the picture has one drum for both
 
         // Animation.
         double flashAt = -10.0, rippleAt = -10.0;

@@ -49,9 +49,9 @@ def E(cx, cy, a, b):
 # The kit in the picture, in hero pixels: head ellipse (centre, radii), bottom of the shell, size.
 DRUMS = {
     "kick": dict(layer="kick", head=(690, 518, 158, 132), size=22),
-    "snare": dict(layer="drum_center", head=(650, 329, 88, 9), bottom=392, size=14, depth=6.5),
+    "snare": dict(layer="drum_center", head=(650, 329, 88, 9), bottom=392, size=14, depth=5.5),
     "tom": dict(layer="drum_right", head=(850, 359, 96, 10), bottom=440, size=10, depth=8),
-    "floor": dict(layer="floor", head=(412, 369, 112, 12), bottom=560, size=16, depth=15),
+    "floor": dict(layer="floor", head=(412, 369, 112, 12), bottom=560, size=16, depth=16),
 }
 CYMBALS = {
     "crash": dict(layer="crash", disc=(1050, 127, 139, 32), size=18),
@@ -62,11 +62,15 @@ CYMBALS = {
 }
 HIHAT = dict(top="hat_top", bottom="hat_bottom", centre=(997, 265), top_at=(997, 257), bottom_at=(998, 273), radius=108, ry=12, size=14)
 
-# Slots: where each kind of piece goes in the picture (hero pixels) and its radius there.
+# Slots: where each kind of piece goes in the picture (hero pixels) and its radius there, sized so
+# the factory kit's own drums come out exactly as the picture has them. The picture has one rack
+# tom and four cymbals besides the hi-hat: a second rack tom shares the first one's drum and a
+# splash shares the first crash (the plugin draws a shared drum once), so the stage is the
+# picture and nothing else.
 SLOTS = {
     "kick": [((690, 518), 158)],
     "rack1": [((850, 359), 96)],
-    "rack2": [((850, 359), 96), ((528, 343), 82)],
+    "rack2": [((850, 359), 96), ((850, 359), 96)],
     "rack3": [((850, 359), 96), ((745, 318), 74), ((528, 343), 82)],
     "rack4": [((880, 368), 88), ((775, 318), 72), ((640, 300), 70), ((528, 343), 82)],
     "floor": [((412, 369), 112), ((290, 470), 104)],
@@ -75,22 +79,22 @@ SLOTS = {
     "crash": [((1050, 127), 139), ((200, 218), 140), ((1130, 300), 118), ((120, 330), 118)],
     "ride": [((352, 178), 140), ((1120, 330), 128)],
     "china": [((452, 325), 146), ((1150, 60), 104)],
-    "splash": [((1125, 394), 60), ((560, 168), 52)],     # the first on the right crash stand's lower clamp, by the hi-hat
+    "splash": [((1050, 127), 139), ((352, 178), 140)],
     "perc": [((1100, 520), 62), ((230, 520), 62)],
 }
-DEFAULT_SIZE = {"kick": [22], "rack1": [10], "rack2": [10, 12], "rack3": [10, 12, 13], "rack4": [10, 12, 13, 14],
+DEFAULT_SIZE = {"kick": [22], "rack1": [10], "rack2": [10, 13], "rack3": [10, 12, 13], "rack4": [10, 12, 13, 14],
                 "floor": [16, 14], "snare": [14, 13], "hihat": [14], "crash": [18, 19, 18, 18], "ride": [21, 21],
-                "china": [18, 16], "splash": [10, 10], "perc": [8, 8]}
+                "china": [16, 18], "splash": [10, 10], "perc": [8, 8]}
 
 # The rig, hero pixels.
 RIG = dict(grip=(526, 200), tip=(549, 100),
            neck=(720, 262), head=(720, 160, 137, 105), seat=(712, 430))
 FACES = ["neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh", "surprised", "tongue_out",
          "angry", "sad"]
-# A rock kit, big around him: every drum and cymbal a size up on the picture's, and the panda a
-# little smaller on his throne, so he sits behind the kit the way a drummer does.
-KIT_GROW = 1.12
-PANDA_SCALE = 0.86
+# The kit and the panda exactly as big as the picture has them (other kits' drums are sized from
+# here by their inches; the panda's scale is there for a different picture).
+KIT_GROW = 1.0
+PANDA_SCALE = 1.0
 OWN_FACES = ("excited", "happy", "open_mouth", "neutral", "smile", "surprised", "tongue_out")
 EYES = [(658, 146), (789, 166)]        # a point on the white of each eye (his right, his left), hero px
 SCALES = (1, 2)

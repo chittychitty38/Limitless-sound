@@ -28,13 +28,23 @@ cp ui/* ../Resources/ui/
 - `sheet_cut.py` cuts each piece of the sheet out by its box, bleeds its colours under the
   transparent edge (so it never gets a dark fringe when scaled) and upscales it 4x with
   Real-ESRGAN, colour and alpha separately.
-- `hero_layers.py` upscales the hero picture 4x and takes it apart. Every piece is traced in the
-  picture's own pixels: each cymbal's disc, each drum, the panda's head, torso, sleeves and arms,
-  and the china's stand in front of the floor tom. Inside its outline a piece takes everything
-  that isn't the pink wall. A guided filter softens each edge (fur, cymbal rims) and the wall's
-  pink is unmixed out of it. LaMa paints in what one piece hid of another (the crash behind the
-  ride, the bottom hi-hat under the top one, the shirt under the arms and chin). The wall is
-  spread back in behind everything that moves; the room keeps its stands and the panda's legs.
+- `hero_layers.py` upscales the hero picture 4x and takes it apart, so that at rest the stage
+  is the picture to the pixel (checked against it: a mean difference of under 3 out of 255,
+  the rest being his breathing). Every piece is traced in the picture's own pixels: each
+  cymbal's disc, the hi-hat's two lens-shaped plates split where they meet, each drum, the
+  panda's head, torso, sleeves and arms, and the china's stand in front of the floor tom.
+  Inside its outline a piece takes everything that isn't the pink wall; an arm gives back
+  anything not joined to it.
+  - Only what moves is painted out of the room: the cymbals (they swing), his head, torso and
+    arms. Behind those the wall is carried in smoothly from round them (an inpainted membrane,
+    with the wall's grain), easing into the picture's own wall across a ring, and the heart
+    lights' string is drawn on behind his ear. The drums and stands never move, so the room
+    keeps the picture's pixels behind them.
+  - Each piece's soft edge (a guided filter; for his fur, a band where his last tufts are told
+    from the wall by colour) has its colour unmixed from exactly what's drawn behind it, so
+    composited at rest it gives back the picture.
+  - LaMa paints in what one piece hid of another, and only that (the crash behind the ride,
+    the bottom hi-hat under the top one, the shirt under his arms, chin and the drums).
   For the rig it cuts:
   - both fists, each with its stick painted out of it in fur (the left one is its own shape,
     holding its stick level);
@@ -49,9 +59,8 @@ cp ui/* ../Resources/ui/
   - how each hand holds its stick in the picture, in 3D (the stick's heading and pitch, solved
     from how it shows on screen), so his rest pose is exactly the picture's.
 
-  It's a rock kit, big around him: every drum and cymbal a size up on the picture's
-  (`KIT_GROW`), the panda a little smaller on his throne (`PANDA_SCALE`), so he sits behind it the
-  way a drummer does.
+  The factory kit comes out exactly as the picture has it: its second rack tom and its splash
+  share the picture's rack tom and first crash (drawn once), so nothing is added.
 
   The kit is laid out the way a real one is around the drummer:
   - on his left (the picture's right): the hi-hat, rack tom 1 and the first crash;

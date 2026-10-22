@@ -51,6 +51,12 @@ def rect(x0, y0, x1, y1):
     return poly((x0, y0), (x1, y0), (x1, y1), (x0, y1))
 
 
+# Where the heart lights' string passes behind something that moves (hero x, from and to).
+STRING_GAPS = [(596, 704)]
+
+# Where the hi-hat's top plate meets the bottom one, tip to tip (hero pixels).
+HAT_SPLIT = [(878, 267.5), (935, 266.5), (997, 262.5), (1065, 262.5), (1112, 265.5)]
+
 # The pieces, back to front, in hero pixels. Options: "all" takes every pixel inside a shape (a
 # drum head, whatever its colour); "complete" is the piece's whole shape, for painting in what
 # was hidden; "cream" keeps only fur and face low on the head (not the collar).
@@ -58,12 +64,14 @@ PIECES = [
     ("ride", [ellipse(200, 218, 144, 34, 9), rect(180, 172, 212, 200)], {"complete": [ellipse(200, 218, 140, 31, 9)], "all": [ellipse(200, 218, 140, 31, 9)]}),
     ("crash_alt", [ellipse(352, 178, 144, 42, 11), rect(312, 126, 344, 164)], {"complete": [ellipse(352, 178, 140, 39, 11)], "all": [ellipse(352, 178, 140, 39, 11)]}),
     ("crash", [ellipse(1050, 127, 143, 35, -11), rect(1036, 76, 1068, 112)], {"complete": [ellipse(1050, 127, 139, 32, -11)], "all": [ellipse(1050, 127, 139, 32, -11)]}),
-    ("hat_bottom", [ellipse(998, 273, 110, 11, 1)], {"complete": [ellipse(998, 272, 106, 9, 1)], "all": [ellipse(998, 272, 106, 9, 1)]}),
-    ("hat_top", [ellipse(997, 257, 112, 13, 2), rect(989, 210, 1013, 250)], {"all": [ellipse(997, 257, 106, 9, 2)]}),
+    # The hi-hat's plates are lenses, not ellipses: split along the line where they meet, tip to tip.
+    ("hat_bottom", [poly(*HAT_SPLIT, (1112, 278), (1060, 281), (1025, 287), (975, 287), (935, 282), (878, 279))],
+     {"complete": [ellipse(998, 272, 106, 9, 1)]}),
+    ("hat_top", [poly((878, 250), *HAT_SPLIT, (1112, 250), (1060, 243), (1013, 238), (1013, 208), (989, 208), (989, 238), (935, 243))], {}),
     ("torso", [poly((560, 220), (612, 226), (700, 236), (790, 238), (842, 262), (862, 300), (860, 338), (556, 338), (560, 300))], {}),
     ("sleeve_r", [poly((568, 220), (604, 226), (610, 262), (604, 308), (566, 310))], {"purple": True}),
     ("sleeve_l", [poly((798, 262), (846, 264), (858, 290), (852, 312), (800, 306))], {"purple": True}),
-    ("head", [ellipse(720, 162, 142, 114), ellipse(650, 52, 50, 46), ellipse(856, 102, 50, 50),
+    ("head", [ellipse(720, 162, 146, 118), ellipse(650, 51, 52, 49), ellipse(856, 101, 53, 53),
               ellipse(636, 228, 46, 24), ellipse(806, 242, 46, 22)],
      {"all": [ellipse(720, 161, 132, 104)], "no_collar_below": 228}),
     ("floor", [poly((295, 370), (306, 360), (522, 360), (530, 372), (530, 552), (520, 568), (305, 568), (295, 552))], {}),
@@ -71,14 +79,17 @@ PIECES = [
      {"complete": [poly((556, 318), (742, 318), (742, 392), (556, 392))]}),
     ("drum_right", [poly((748, 354), (756, 348), (946, 348), (952, 356), (952, 444), (748, 444))], {}),
     ("kick", [ellipse(689, 520, 176, 150), poly((518, 400), (560, 392), (560, 640), (518, 620))], {"all": [ellipse(690, 520, 150, 124)]}),
-    ("arm_r", [poly((466, 186), (568, 186), (580, 222), (576, 314), (520, 318), (466, 284)), line(551, 96, 510, 264, 18)], {"not_purple": True}),
+    ("arm_r", [poly((481, 188), (568, 186), (580, 222), (576, 314), (520, 318), (462, 284), (465, 214), (473, 199)), line(551, 96, 510, 264, 18)], {"not_purple": True}),
     ("arm_l", [poly((812, 274), (872, 272), (898, 300), (898, 349), (812, 354), (802, 300)), line(848, 336, 963, 299, 18)], {"not_purple": True}),
     ("front_stand", [rect(438, 345, 468, 560), poly((452, 505), (580, 667), (325, 667))], {}),
-    ("china", [ellipse(452, 325, 148, 27, 5), rect(441, 281, 472, 312)], {"no_fur": True, "all": [ellipse(452, 326, 140, 21, 5)]}),
+    ("china", [ellipse(452, 325, 148, 27, 5), rect(441, 281, 472, 312)], {"no_fur": True, "all": [ellipse(452, 326, 140, 21, 5), rect(440, 283, 475, 312)]}),
 ]
 
 # Pieces that are completed with LaMa where others hid them, and what they're painted against.
 COMPLETE = ["ride", "crash_alt", "crash", "hat_bottom", "drum_center"]
+# Pieces that move (cymbals swing, the panda plays): the room behind them is painted in. The drums
+# and the china's stand never move, so the room keeps the picture's pixels behind them.
+MOVING = ["ride", "crash_alt", "crash", "hat_bottom", "hat_top", "torso", "head", "arm_r", "arm_l", "china"]
 
 # The torso's whole outline: under the arms, under the chin and down behind the drums.
 TORSO_SHAPE = poly((562, 224), (606, 228), (650, 236), (720, 240), (790, 236), (846, 262), (866, 300), (866, 410),
@@ -151,11 +162,13 @@ def fill_holes(mask):
     return mask | (m[1:-1, 1:-1] == 0)
 
 
-def wall_fill(rgb, hole, wall):
+def wall_fill(rgb, hole, wall, feather=True, clear=31, ramp=None):
     """The room behind the kit and the panda: the wall's own colours spread smoothly into the hole
-    from all round it (normalised convolution, finest scale that reaches), with its grain."""
-    # Only wall well clear of the pieces: their shaded rims can pass for pink.
-    near = cv2.dilate(hole.astype(np.uint8), np.ones((31, 31), np.uint8)) > 0
+    from all round it (normalised convolution, finest scale that reaches), with its grain. Outside
+    the hole the picture stays as it is (feather=False: not a pixel of it changes). ramp: where in
+    the hole the fill eases into the picture's own wall (its weight, 0..1)."""
+    # Only wall clear of the pieces: their shaded rims can pass for pink.
+    near = cv2.dilate(hole.astype(np.uint8), np.ones((clear, clear), np.uint8)) > 0
     known = (wall & ~near).astype(np.float32)
     out = rgb.astype(np.float32).copy()
     img = rgb.astype(np.float32) * known[..., None]
@@ -174,9 +187,52 @@ def wall_fill(rgb, hole, wall):
     rng = np.random.default_rng(7)
     grain = cv2.GaussianBlur(rng.normal(0, 2.2, hole.shape).astype(np.float32), (0, 0), 1.2)
     out[hole] += grain[hole, None]
-    edge = cv2.GaussianBlur(hole.astype(np.float32), (0, 0), 3)
+    edge = cv2.GaussianBlur(hole.astype(np.float32), (0, 0), 3) if feather else hole.astype(np.float32)
+    if ramp is not None:
+        edge = ramp
     out = rgb * (1 - edge[..., None]) + out * edge[..., None]
     return out.clip(0, 255).astype(np.uint8)
+
+
+def smooth_fill(rgb, hole, known):
+    """The wall carried smoothly into a hole from the known wall round it: a membrane (Navier-Stokes
+    inpainting) at an eighth of the size, where the wall is nothing but a gradient, brought back up
+    smooth. No seams, no scales stepping."""
+    f = 8
+    h, w = hole.shape
+    small = cv2.resize(rgb, (w // f, h // f), interpolation=cv2.INTER_AREA)
+    ks = cv2.resize(known.astype(np.float32), (w // f, h // f), interpolation=cv2.INTER_AREA)
+    unknown = (ks < 0.6).astype(np.uint8)
+    # what's known there: the known pixels' own average, not the pieces' colours mixed in
+    num = cv2.resize(rgb.astype(np.float32) * known[..., None], (w // f, h // f), interpolation=cv2.INTER_AREA)
+    small = np.where(unknown[..., None] > 0, small, num / np.maximum(ks, 1e-3)[..., None]).clip(0, 255).astype(np.uint8)
+    filled = cv2.inpaint(small, unknown, 6, cv2.INPAINT_NS)
+    big = cv2.resize(filled.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+    return cv2.GaussianBlur(big, (0, 0), f * 0.6)
+
+
+def light_string(out, rgb, gone):
+    """The heart lights' string, carried on behind what was painted out (it sags between the pins:
+    a curve through where it shows on either side)."""
+    s = SCALE
+    grey = rgb.astype(np.float32).mean(2)
+    for x0, x1 in STRING_GAPS:
+        pts = []
+        for x in list(range(x0 - 40, x0, 2)) + list(range(x1, x1 + 40, 2)):
+            col = grey[int(24 * s):int(52 * s), int(x * s)]
+            y = int(np.argmin(col)) + int(24 * s)
+            if col.min() < 140 and not gone[y, int(x * s)]:
+                pts.append((x * s, y))
+        if len(pts) < 8:
+            continue
+        xs, ys = np.array(pts, np.float32).T
+        c = np.polyfit(xs, ys, 2)
+        colour = np.median([rgb[int(y), int(x)] for x, y in pts], axis=0)
+        canvas = np.zeros(gone.shape, np.float32)
+        line = np.array([[x, np.polyval(c, x)] for x in np.arange(x0 * s - 20, x1 * s + 20, 2)], np.float32)
+        cv2.polylines(canvas, [np.round(line * 16).astype(np.int32)], False, 1.0, max(1, int(2.4 * s)), cv2.LINE_AA, shift=4)
+        canvas = cv2.GaussianBlur(canvas, (0, 0), 0.7) * gone
+        out[:] = out * (1 - canvas[..., None]) + colour * canvas[..., None]
 
 
 def guided(I, p, r, eps):
@@ -236,13 +292,20 @@ def complete_over_green(rgb, alpha, shape_mask):
     return rgb, alpha
 
 
-def soften(rgb, mask, room):
-    """A soft alpha for a hard mask (edge-aware), and the edge's colour with the room's taken out."""
+def soften(rgb, mask, room, fur=None):
+    """A soft alpha for a hard mask (edge-aware), and the edge's colour with what's behind it taken
+    out (room: the picture as everything behind this piece draws it). fur: a band round the piece
+    where its last tufts are told from the wall by how far they are from it in colour."""
     grey = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
     a = guided(grey, mask.astype(np.float32), 3, 1e-3)
     inner = cv2.erode(mask.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     outer = cv2.dilate(mask.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     a = np.where(inner, 1.0, np.where(outer, np.clip(a, 0, 1), 0.0)).astype(np.float32)
+    if fur is not None:
+        d = np.linalg.norm(rgb.astype(np.float32) - room.astype(np.float32), axis=2)
+        tuft = np.clip((d - 8) / 45, 0, 1)
+        a = np.where(fur & ~inner, np.maximum(a, tuft), a).astype(np.float32)
+        outer = outer | (fur & (tuft > 0))
     # Unmix: I = a F + (1 - a) B  ->  F = (I - (1 - a) B) / a, at the edge only.
     F = rgb.astype(np.float32)
     edge = outer & ~inner & (a > 0.05)
@@ -296,7 +359,8 @@ def main(src, outdir):
         if opts.get("not_purple"):
             m &= ~purple
             # Not a cymbal's rim showing beside the fur, only the stick's wood.
-            gold = (hsv_h >= 6) & (hsv_h <= 30) & (hsv_s > 70) & (hsv_v > 70)
+            # (bright bronze: lit fur is brownish too, but darker)
+            gold = (hsv_h >= 6) & (hsv_h <= 30) & (hsv_s > 70) & (hsv_v > 135)
             m &= ~gold | region([sh for sh in shapes if sh[0] == "line"], hw)
         if "no_collar_below" in opts:
             m &= ~((yy > opts["no_collar_below"] * SCALE) & purple)
@@ -308,43 +372,97 @@ def main(src, outdir):
         m &= reg
         if name not in ("sleeve_r", "sleeve_l"):
             m &= ~taken
+            if name in ("arm_r", "arm_l"):
+                m = largest(m)      # what isn't joined to the arm (a cymbal's dark rim) goes to the piece behind
             taken |= m
         masks[name] = m
     # The sleeves are copies of the torso's own pixels, drawn again over the arms.
     masks["sleeve_r"] &= masks["torso"]
     masks["sleeve_l"] &= masks["torso"]
 
-    # ---- the room: everything but the stands and the legs painted out
-    gone = np.zeros(hw, bool)
-    for name, shapes, opts in PIECES:
-        if name not in ("front_stand", "sleeve_r", "sleeve_l"):
-            gone |= region(shapes, hw)
-    gone |= region([TORSO_SHAPE], hw) & ~region([rect(0, 400, HERO_W, HERO_H)], hw)
-    gone = cv2.dilate(gone.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+    # ---- the room: what moves is painted out of it (the cymbals swing, the panda leans and plays);
+    # everything else, the drums and stands that never move included, stays the picture's own,
+    # so at rest the stage is the picture to the pixel.
+    moving = [n for n in MOVING if n in masks]
+    own = np.zeros(hw, bool)
+    for name in moving:
+        own |= masks[name]
+    # Round them a ring goes too: their fur's last tufts, their shadow on the wall, and the wall
+    # itself (easing from the fill into the picture's own across it, so no edge shows when they
+    # move). Not the drums, which don't move, nor a stand beside a cymbal.
+    static = np.zeros(hw, bool)
+    owned = np.zeros(hw, bool)
+    for name in ("floor", "drum_center", "drum_right", "kick", "front_stand"):
+        static |= masks[name]
+    for name, _, _ in PIECES:
+        owned |= masks[name]
+    panda = masks["head"] | masks["torso"] | masks["arm_r"] | masks["arm_l"]
+    ring_px = int(6 * SCALE) | 1
+    # The panda's ring takes his tufts and his shadow (his layers take the tufts back, matted);
+    # a cymbal's only the wall round it (never a stand).
+    # (no stand comes this close to him; his white fur's tips look like chrome, so they're kept)
+    fur_ring = (cv2.dilate(panda.astype(np.uint8), np.ones((ring_px, ring_px), np.uint8)) > 0) & ~owned & ~static
+    cym_px = int(3 * SCALE) | 1
+    near_cym = cv2.dilate((own & ~panda).astype(np.uint8), np.ones((cym_px * 2 + 1, cym_px * 2 + 1), np.uint8)) > 0
+    fur_ring &= ~near_cym          # a cymbal's own pink-lit rim isn't his fur
+    cym_ring = (cv2.dilate((own & ~panda).astype(np.uint8), np.ones((cym_px, cym_px), np.uint8)) > 0) & wall & ~owned
+    ring = fur_ring | cym_ring
+    gone = own | ring
+    dist = cv2.distanceTransform((~own).astype(np.uint8), cv2.DIST_L2, 5)
+    ease = np.clip(1.5 - 1.5 * dist / (ring_px / 2 + 1), 0, 1)
+    ramp = np.where(own | (fur_ring & ~wall), 1.0, np.where(ring, ease, 0.0)).astype(np.float32)
     print("room: painting out", int(gone.sum()), "px", flush=True)
-    room = wall_fill(rgb, gone, wall)
+    known = wall & ~(cv2.dilate(gone.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0)
+    fill = smooth_fill(rgb, gone, known)
+    rng = np.random.default_rng(7)
+    fill += cv2.GaussianBlur(rng.normal(0, 2.2, hw).astype(np.float32), (0, 0), 1.2)[..., None]
+    light_string(fill, rgb, gone)
+    room = (rgb * (1 - ramp[..., None]) + fill * ramp[..., None]).clip(0, 255).astype(np.uint8)
     Image.fromarray(room).save(os.path.join(outdir, "room.png"))
 
-    # ---- each piece: soft edge, completed where hidden
+    # ---- each piece, back to front: soft edge, its colour unmixed from exactly what's drawn
+    # behind it, and completed only where a piece in front hides it.
     info = {}
+    behind = room.astype(np.float32)
+    order = [p for p in PIECES if p[0] not in ("sleeve_r", "sleeve_l")]
+    in_front = {}
+    for i, (name, _, _) in enumerate(order):
+        cover = np.zeros(hw, bool)
+        for later, _, _ in order[i + 1:]:
+            cover |= masks[later]
+        in_front[name] = cv2.dilate(cover.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     for name, shapes, opts in PIECES:
         m = masks[name]
         if not m.any():
             continue
-        F, a = soften(rgb, m, room)
+        if name in ("arm_r", "arm_l"):
+            m = largest(m)
+        if name in ("sleeve_r", "sleeve_l"):
+            # Drawn over a playing arm, never at rest: its edge comes off the shirt it's cut from.
+            F, a = soften(rgb, m, behind)
+            save_layer(np.dstack([F, (a * 255 + 0.5).clip(0, 255).astype(np.uint8)]), name, outdir, info)
+            continue
+        fur = None
+        if name in ("head", "torso", "arm_r", "arm_l"):
+            fur = (cv2.dilate(m.astype(np.uint8), np.ones((ring_px, ring_px), np.uint8)) > 0) & fur_ring
+        F, a = soften(rgb, m, behind, fur)
+        hidden = in_front[name]
         if name in COMPLETE:
-            F, a = complete_over_green(F, a, region(opts["complete"], hw))
+            F, a = complete_over_green(F, a, region(opts["complete"], hw) & (hidden | m))
         if name == "floor":
-            F, a = complete_over_green(F, a, region([FLOOR_HIDDEN], hw) & region(shapes, hw))
+            F, a = complete_over_green(F, a, region([FLOOR_HIDDEN], hw) & region(shapes, hw) & hidden)
         if name == "torso":
-            # Under the arms, the chin and the drums: the shirt goes on.
-            shape = region([TORSO_SHAPE], hw)
+            # Under the arms, the chin and the drums: the shirt goes on (only where they hide it).
+            shape = region([TORSO_SHAPE], hw) & (hidden | m)
             for other in ("arm_r", "arm_l", "head", "drum_center", "drum_right", "kick", "china", "floor"):
                 near = cv2.dilate(masks[other].astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
-                a = np.where(near & shape, 0.0, a)
+                a = np.where(near & shape & ~cv2.erode(m.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(bool), 0.0, a)
             F, a = complete_over_green(F, a, shape)
         out = np.dstack([F, (a * 255 + 0.5).clip(0, 255).astype(np.uint8)])
-        save_layer(out, name, outdir, info)
+        # The arms as the picture has them are what he looks like at rest.
+        save_layer(out, {"arm_r": "rest_r", "arm_l": "rest_l"}.get(name, name), outdir, info)
+        af = a[..., None]
+        behind = af * F.astype(np.float32) + (1 - af) * behind
 
     # ---- the rig: the right fist (with the stick where it crosses the fingers), the stick on
     # its own (straight, upright, from the grip to the tip), and the arm
@@ -353,10 +471,6 @@ def main(src, outdir):
     save_layer(clean_fist(rgb, masks["arm_l"], room, hsv, FIST_L, [STICK_L], [], [line(848, 336, 963, 299, 18)]), "fist_l", outdir, info)
     save_layer(clean_stick(rgb, masks["arm_r"], room), "stick", outdir, info, keep_box=True)
     save_layer(fur_ball(rgb), "fur", outdir, info, keep_box=True)
-    # The picture's arms as they are (fist, fur and stick), for him at rest.
-    for name in ("arm_r", "arm_l"):
-        F, a = soften(rgb, largest(masks[name]), room)
-        save_layer(np.dstack([F, (a * 255 + 0.5).astype(np.uint8)]), "rest_" + name[-1], outdir, info)
 
     rig = {k: list(v) for k, v in RIG.items()}
     rig.update(grip=list(GRIP), tip=list(TIP), pivot_in=PIVOT_IN, butt_in=BUTT_IN, pivot_l=list(PIVOT_L), tip_l=list(TIP_L),

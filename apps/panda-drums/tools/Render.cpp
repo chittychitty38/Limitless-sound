@@ -224,6 +224,7 @@ int video (const juce::File& dir, double seconds)
     if (stageOnly)
     {
         s.proc.setShowHitInfo (false);
+        s.proc.setComicFx (false);
         s.editor->refreshAll();
     }
     juce::AudioBuffer<float> audio (2, 0);
