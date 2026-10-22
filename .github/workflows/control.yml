@@ -9,6 +9,11 @@ on:
     paths: ["apps/control/**", ".github/workflows/control.yml"]
   workflow_dispatch:
 
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: control-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: write
 

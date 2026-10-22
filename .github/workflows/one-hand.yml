@@ -14,6 +14,11 @@ on:
         required: false
         default: ""
 
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: one-hand-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: write
 
