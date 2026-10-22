@@ -528,10 +528,11 @@ def send_remote(action, timeout_ms=1000):
     return True
 
 
-def single_instance(folder=None):
+def single_instance(folder=None, take_over=False):
     """A lock that only one running Limitless Zoom holds, or None while another copy has it.
     Two copies opened at the same moment (at login, say) could otherwise both find nobody
-    listening yet, and both run: twice the CPU, and every zoom key pressed twice."""
+    listening yet, and both run: twice the CPU, and every zoom key pressed twice.
+    take_over: the copy holding it never answered, so it's gone; take the lock anyway."""
     folder = Path(folder or config_dir())
     try:
         folder.mkdir(parents=True, exist_ok=True)
@@ -539,6 +540,8 @@ def single_instance(folder=None):
         pass
     lock = QLockFile(str(folder / "running.lock"))
     lock.setStaleLockTime(0)   # a copy that crashed leaves a lock; it's stale once that process is gone
+    if take_over:
+        lock.removeStaleLockFile()
     if lock.tryLock(0) or lock.error() != QLockFile.LockError.LockFailedError:
         return lock   # ours, or no lock can be made there at all: run as before
     return None
@@ -604,10 +607,14 @@ def main(argv=None):
             # Another copy is opening right now: show its panel once it's ready, and leave it be.
             for _ in range(60):
                 if send_remote(SHOW, 250):
-                    break
+                    log.info("Another copy was opening at the same moment; left it running")
+                    return 0
                 time.sleep(0.25)
-            log.info("Another copy was opening at the same moment; left it running")
-            return 0
+            # Nobody answered for half a minute, so the copy that left the lock is gone. Qt can't
+            # tell when it was left under another computer name (a Mac's name can change with its
+            # network): take the lock over rather than never open again.
+            log.info("The last copy left its lock behind; taking it over")
+            lock = single_instance(take_over=True)
 
     from .platforms import get_backend
 

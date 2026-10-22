@@ -310,3 +310,12 @@ def test_only_one_copy_runs(tmp_path):
     assert single_instance(tmp_path) is None   # a second copy opening at the same moment steps aside
     first.unlock()
     assert single_instance(tmp_path) is not None
+
+
+def test_a_lock_left_under_another_computer_name_is_taken_over(tmp_path):
+    # Killed (power cut, force quit), then the Mac's name changed: Qt can't tell the owner is gone.
+    (tmp_path / "running.lock").write_text("2147483000\nLimitless Zoom\nanother-name-for-this-mac\n")
+    assert single_instance(tmp_path) is None
+    taken = single_instance(tmp_path, take_over=True)
+    assert taken is not None and taken.isLocked()
+    taken.unlock()
