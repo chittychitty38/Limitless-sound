@@ -2596,34 +2596,19 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     }
     a.pivot = pivotNow;
 
-    // Nor does the stick's tip go up into his face: a stick waiting up under his face goes up and
-    // out beside his head, turning out and leaning back from upright as little as it takes (found
-    // smoothly, so it slides round his face as it rises rather than jumping).
-    if (w < 0.999f && t >= cheerUntil)       // (at rest it's the picture's own pose: it fades out going there)
+    // Nor does the stick's tip go up into his face: a stick waiting up under his face leans out
+    // toward us instead of standing upright (as far as the fist is under his face, smoothly, so it
+    // can never jump), and its tip stays below his chin. Out to the side it stands as it likes.
+    // It fades out as he settles into the picture's own pose.
     {
         auto c = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
                      .transformedBy (headTransform());
-        auto margin = 8.0f * ps;
-        auto inFace = [&] (float hh, float pp)
-        {
-            auto tip = pivotNow + onScreen (hh, pp) * L3;
-            return juce::square ((tip.x - c.x) / (headRadii.x + margin)) + juce::square ((tip.y - c.y) / (headRadii.y + margin)) < 1.0f;
-        };
-        auto outHeading = outward * 75.0f * degrees, outPitch = std::min (pitchNow, 35.0f * degrees);
-        auto turned = [&] (float k) { return std::pair<float, float> (headingNow + (outHeading - headingNow) * k, pitchNow + (outPitch - pitchNow) * k); };
-        if (inFace (headingNow, pitchNow) && ! inFace (outHeading, outPitch))
-        {
-            float lo = 0.0f, hi = 1.0f;          // lo: in his face ... hi: clear
-            for (int i = 0; i < 16; ++i)
-            {
-                auto mid = 0.5f * (lo + hi);
-                auto [hh, pp] = turned (mid);
-                (inFace (hh, pp) ? lo : hi) = mid;
-            }
-            auto [hh, pp] = turned (hi);
-            headingNow += (hh - headingNow) * (1.0f - w);
-            pitchNow += (pp - pitchNow) * (1.0f - w);
-        }
+        auto across = std::abs (pivotNow.x - c.x) / (headRadii.x + fistRadius);
+        auto under = 1.0f - smooth ((across - 0.55f) / 0.45f);            // 1 right under his face ... 0 out by his cheek
+        auto cap = topPitch - (topPitch - 25.0f * degrees) * under * (1.0f - w);
+        constexpr float soft = 6.0f * degrees;
+        auto z = (pitchNow - cap) / soft;
+        pitchNow -= soft * (z > 20.0f ? z : std::log1p (std::exp (z)));     // a soft min (no corner)
     }
 
     auto dir = onScreen (headingNow, pitchNow);
