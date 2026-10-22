@@ -12,6 +12,9 @@ It is built on the open [Limitless Link protocol](../shared/PROTOCOL.md), which 
 Limitless Sound apps already speak. Anyone can implement it, free. The mark is how a
 musician can tell, at a glance in a store, that a product will work for them.
 
+Plug-in, instrument and amp modeler makers can add it with one header: the
+[C++ client](../shared/clients/cpp/) (C++17, no dependencies, ready for JUCE).
+
 > This is a voluntary, compassionate standard written with disabled musicians. It is not a
 > legal accessibility certification and does not claim compliance with the ADA, Section 508,
 > the European Accessibility Act or any other law.
