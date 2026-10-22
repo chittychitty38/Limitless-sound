@@ -111,6 +111,8 @@ struct Inner {
     connected: AtomicBool,
     stopped: AtomicBool,
     one_voice: AtomicBool,
+    /// The last value of each state, sent again whenever the link (re)connects.
+    states: Mutex<Map<String, Value>>,
     depth: AtomicU64,
     ids: AtomicU64,
     retry: Duration,
@@ -133,6 +135,7 @@ impl Link {
                 connected: AtomicBool::new(false),
                 stopped: AtomicBool::new(false),
                 one_voice: AtomicBool::new(true),
+                states: Mutex::new(Map::new()),
                 depth: AtomicU64::new(0),
                 ids: AtomicU64::new(1),
                 retry: Duration::from_secs(2),
@@ -190,7 +193,9 @@ impl Link {
     }
 
     /// Report a state change, e.g. `state("filter", true.into())`.
+    /// Report a state ("on", true). Remembered, so the hub hears it again after reconnecting.
     pub fn state(&self, key: &str, value: Value) -> bool {
+        self.inner.states.lock().unwrap().insert(key.to_string(), value.clone());
         send(&self.inner, &json!({"op": "state", "key": key, "value": value,
                                   "depth": self.inner.depth.load(Ordering::SeqCst)}))
     }
@@ -247,9 +252,15 @@ fn session(inner: &Inner, port: u16, token: &str, on_invoke: &InvokeFn, on_event
         let op = msg.get("op").and_then(Value::as_str).unwrap_or("");
         match op {
             "welcome" | "prefs" => {
-                inner.connected.store(true, Ordering::SeqCst);
+                let fresh = !inner.connected.swap(true, Ordering::SeqCst);
                 let one = msg.pointer("/prefs/oneVoice").and_then(Value::as_bool).unwrap_or(true);
                 inner.one_voice.store(one, Ordering::SeqCst);
+                if fresh {
+                    let states = inner.states.lock().unwrap().clone();
+                    for (key, value) in states {
+                        send(inner, &json!({"op": "state", "key": key, "value": value, "depth": 0}));
+                    }
+                }
             }
             "invoke" => {
                 let action = msg.get("action").and_then(Value::as_str).unwrap_or("");

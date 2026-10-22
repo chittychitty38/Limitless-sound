@@ -6,6 +6,7 @@ fn main() {
     let link = Link::new("color", "Limitless Color", "test",
         vec![Action::new("on", "Screen colors on"), Action::new("off", "Screen colors off")]);
     let l2 = link.clone();
+    link.state("ready", true.into()); // before connecting: the hub still hears it
     link.start(
         move |action, _args, _src| {
             l2.state("filter", (action == "on").into());
