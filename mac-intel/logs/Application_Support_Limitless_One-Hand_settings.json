@@ -1,0 +1,14 @@
+{
+  "hand": "right",
+  "mirror_typing": true,
+  "double_shift": true,
+  "caps_lock_toggle": false,
+  "play_sounds": true,
+  "speak": false,
+  "keep_on_top": false,
+  "show_badge": true,
+  "open_at_login": false,
+  "larger_text": false,
+  "start_on": false,
+  "seen_menu_tip": false
+}

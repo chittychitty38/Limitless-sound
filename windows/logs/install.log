@@ -1,0 +1,99 @@
+﻿2026-10-22 18:03:26.361   Log opened. (Time zone: UTC+00:00)
+2026-10-22 18:03:26.361   Setup version: Inno Setup version 6.7.1
+2026-10-22 18:03:26.361   Original Setup EXE: D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe
+2026-10-22 18:03:26.361   Setup command line: /SL5="$301DA,327585500,867840,D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log
+2026-10-22 18:03:26.361   Windows version: 10.0.26100
+2026-10-22 18:03:26.361   Windows architecture: x64 (64-bit)
+2026-10-22 18:03:26.361   Machine types supported by system: x86 x64
+2026-10-22 18:03:26.361   User privileges: Administrative
+2026-10-22 18:03:26.365   Administrative install mode: No
+2026-10-22 18:03:26.365   Install mode root key: HKEY_CURRENT_USER
+2026-10-22 18:03:26.365   64-bit install mode: No
+2026-10-22 18:03:26.365   RedirectionGuard status for current process: Enabled in enforcing mode
+2026-10-22 18:03:26.367   Created protected temporary directory: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp
+2026-10-22 18:03:26.941   Found 7 files to register with RestartManager.
+2026-10-22 18:03:26.941   Calling RestartManager's RmGetList.
+2026-10-22 18:03:26.945   RmGetList finished successfully.
+2026-10-22 18:03:26.945   RestartManager found no applications using one of our files.
+2026-10-22 18:03:26.960   Starting the installation process.
+2026-10-22 18:03:26.962   -- File entry --
+2026-10-22 18:03:26.962   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app0.exe
+2026-10-22 18:03:27.124   Time stamp of our file: 2026-10-22 17:55:36.000
+2026-10-22 18:03:27.124   Installing the file.
+2026-10-22 18:03:27.340   Successfully installed the file.
+2026-10-22 18:03:27.340   -- File entry --
+2026-10-22 18:03:27.340   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app1.exe
+2026-10-22 18:03:27.340   Time stamp of our file: 2026-10-22 17:55:42.000
+2026-10-22 18:03:27.340   Installing the file.
+2026-10-22 18:03:28.070   Successfully installed the file.
+2026-10-22 18:03:28.070   -- File entry --
+2026-10-22 18:03:28.070   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app2.exe
+2026-10-22 18:03:28.072   Time stamp of our file: 2026-10-22 17:55:48.000
+2026-10-22 18:03:28.072   Installing the file.
+2026-10-22 18:03:29.098   Successfully installed the file.
+2026-10-22 18:03:29.098   -- File entry --
+2026-10-22 18:03:29.099   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app3.exe
+2026-10-22 18:03:29.099   Time stamp of our file: 2026-10-22 17:55:52.000
+2026-10-22 18:03:29.099   Installing the file.
+2026-10-22 18:03:31.031   Successfully installed the file.
+2026-10-22 18:03:31.031   -- File entry --
+2026-10-22 18:03:31.031   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app4.exe
+2026-10-22 18:03:31.031   Time stamp of our file: 2026-10-22 17:55:56.000
+2026-10-22 18:03:31.031   Installing the file.
+2026-10-22 18:03:31.066   Successfully installed the file.
+2026-10-22 18:03:31.066   -- File entry --
+2026-10-22 18:03:31.066   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app5.exe
+2026-10-22 18:03:31.066   Time stamp of our file: 2026-10-22 17:56:00.000
+2026-10-22 18:03:31.066   Installing the file.
+2026-10-22 18:03:31.474   Successfully installed the file.
+2026-10-22 18:03:31.474   -- File entry --
+2026-10-22 18:03:31.474   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app6.exe
+2026-10-22 18:03:31.474   Time stamp of our file: 2026-10-22 17:56:06.000
+2026-10-22 18:03:31.474   Installing the file.
+2026-10-22 18:03:32.450   Successfully installed the file.
+2026-10-22 18:03:32.450   Installation process succeeded.
+2026-10-22 18:03:32.452   -- Run entry --
+2026-10-22 18:03:32.452   Run as: Current user
+2026-10-22 18:03:32.452   Type: Exec
+2026-10-22 18:03:32.452   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app0.exe
+2026-10-22 18:03:32.452   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /TASKS=startup
+2026-10-22 18:03:35.804   Process exit code: 0
+2026-10-22 18:03:35.804   -- Run entry --
+2026-10-22 18:03:35.804   Run as: Current user
+2026-10-22 18:03:35.804   Type: Exec
+2026-10-22 18:03:35.804   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app1.exe
+2026-10-22 18:03:35.804   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-22 18:03:45.003   Process exit code: 0
+2026-10-22 18:03:45.003   -- Run entry --
+2026-10-22 18:03:45.003   Run as: Current user
+2026-10-22 18:03:45.003   Type: Exec
+2026-10-22 18:03:45.003   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app2.exe
+2026-10-22 18:03:45.003   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-22 18:03:47.004   Process exit code: 0
+2026-10-22 18:03:47.004   -- Run entry --
+2026-10-22 18:03:47.004   Run as: Current user
+2026-10-22 18:03:47.004   Type: Exec
+2026-10-22 18:03:47.004   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app3.exe
+2026-10-22 18:03:47.004   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-22 18:03:58.954   Process exit code: 0
+2026-10-22 18:03:58.954   -- Run entry --
+2026-10-22 18:03:58.954   Run as: Current user
+2026-10-22 18:03:58.954   Type: Exec
+2026-10-22 18:03:58.954   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app4.exe
+2026-10-22 18:03:58.954   Parameters: /S
+2026-10-22 18:04:00.584   Process exit code: 0
+2026-10-22 18:04:00.584   -- Run entry --
+2026-10-22 18:04:00.584   Run as: Current user
+2026-10-22 18:04:00.584   Type: Exec
+2026-10-22 18:04:00.584   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app5.exe
+2026-10-22 18:04:00.584   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-22 18:04:02.913   Process exit code: 0
+2026-10-22 18:04:02.913   -- Run entry --
+2026-10-22 18:04:02.913   Run as: Current user
+2026-10-22 18:04:02.913   Type: Exec
+2026-10-22 18:04:02.913   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-PLFS09U6RQ.tmp\app6.exe
+2026-10-22 18:04:02.913   Parameters: /S
+2026-10-22 18:04:30.030   Process exit code: 0
+2026-10-22 18:04:30.032   Need to restart Windows? No
+2026-10-22 18:04:30.034   Deinitializing Setup.
+2026-10-22 18:04:30.068   Log closed.

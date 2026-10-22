@@ -1,0 +1,680 @@
+{
+  "when": "2026-10-22T18:04:35Z",
+  "standard": "0.1",
+  "suiteVersion": "v0.2.1",
+  "installSeconds": 64.0,
+  "computer": {
+    "os": "Windows 10.0.26100",
+    "arch": "AMD64",
+    "python": "3.12.10",
+    "chip": "Intel64 Family 6 Model 207 Stepping 2, GenuineIntel"
+  },
+  "apps": [
+    {
+      "tool": "onehand",
+      "name": "Limitless One-Hand",
+      "openedBy": "hub",
+      "hubAnswer": "Opening Limitless One-Hand",
+      "joinedSeconds": 8.3,
+      "screenshot": "shots/onehand.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "17 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (17 tried)",
+          "detail": "refused (fine, with a reason): ['onehand.record: No app One-Hand knows is in front.', 'onehand.undo: No app One-Hand knows is in front.', 'onehand.redo: No app One-Hand knows is in front.', 'onehand.start: No app One-Hand knows is in front.', 'onehand.save: No app One-Hand knows is in front.', 'onehand.mute: No app One-Hand knows is in front.', 'onehand.solo: No app One-Hand knows is in front.', 'onehand.metronome: No app One-Hand knows is in front.', 'onehand.zoomIn: No app One-Hand knows is in front.', 'onehand.zoomOut: No app One-Hand knows is in front.', 'onehand.zoomFit: No app One-Hand knows is in front.', 'onehand.mixer: No app One-Hand knows is in front.']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['highContrast', 'reduceMotion', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "8.3 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "0.1%"
+        }
+      ],
+      "actionsTried": 17,
+      "version": "0.2.2",
+      "idle": {
+        "cpuPercent": 0.1,
+        "memoryMB": 128
+      }
+    },
+    {
+      "tool": "voice",
+      "name": "Limitless Voice",
+      "openedBy": "hub",
+      "hubAnswer": "Opening Limitless Voice",
+      "joinedSeconds": 1.5,
+      "screenshot": "shots/voice.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "23 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (23 tried)",
+          "detail": "refused (fine, with a reason): ['voice.do: Which command? Send the words to run, like \"solo track\".', 'voice.playStop: Play stop works when Logic Pro or Pro Tools is in front.', 'voice.play: Play works when Logic Pro or Pro Tools is in front.', 'voice.stop: Stop works when Logic Pro or Pro Tools is in front.', 'voice.nextTrack: Next track works when Logic Pro or Pro Tools is in front.', 'voice.prevTrack: Previous track works when Logic Pro or Pro Tools is in front.', 'voice.metronome: Metronome works when Logic Pro or Pro Tools is in front.']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['highContrast', 'reduceMotion', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "1.5 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "0.0%"
+        }
+      ],
+      "actionsTried": 23,
+      "version": "0.3.4",
+      "idle": {
+        "cpuPercent": 0.0,
+        "memoryMB": 137
+      }
+    },
+    {
+      "tool": "zoom",
+      "name": "Limitless Zoom",
+      "openedBy": "hub",
+      "hubAnswer": "Opening Limitless Zoom",
+      "joinedSeconds": 1.0,
+      "screenshot": "shots/zoom.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "22 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (22 tried)",
+          "detail": ""
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['dwellMs', 'highContrast', 'reduceMotion', 'scanMs', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "1.0 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "0.0%"
+        }
+      ],
+      "actionsTried": 22,
+      "version": "0.1.2",
+      "idle": {
+        "cpuPercent": 0.0,
+        "memoryMB": 242
+      }
+    },
+    {
+      "tool": "color",
+      "name": "Limitless Color",
+      "openedBy": "hub",
+      "hubAnswer": "Opening Limitless Color",
+      "joinedSeconds": 4.2,
+      "screenshot": "shots/color.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "4 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (4 tried)",
+          "detail": ""
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['highContrast', 'reduceMotion', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "4.2 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "0.0%"
+        }
+      ],
+      "actionsTried": 4,
+      "version": "0.1.3",
+      "idle": {
+        "cpuPercent": 0.0,
+        "memoryMB": 34
+      }
+    },
+    {
+      "tool": "control",
+      "name": "Limitless Control",
+      "openedBy": "hub",
+      "hubAnswer": "Opening Limitless Control",
+      "joinedSeconds": 2.6,
+      "screenshot": "shots/control.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "20 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (20 tried)",
+          "detail": "refused (fine, with a reason): ['control.metronome: No metronome key command for Everyday.', 'control.mixer: No mixer key command for Everyday.', 'control.mute: No mute key command for Everyday.', 'control.nextTrack: No nextTrack key command for Everyday.', 'control.playStop: No playStop key command for Everyday.', 'control.prevTrack: No prevTrack key command for Everyday.', 'control.record: No record key command for Everyday.', 'control.redo: No redo key command for Everyday.', 'control.solo: No solo key command for Everyday.', 'control.start: No start key command for Everyday.', 'control.zoomFit: No zoomFit key command for Everyday.']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['highContrast', 'reduceMotion', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "2.6 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "0.1%"
+        }
+      ],
+      "actionsTried": 20,
+      "version": "0.2.3",
+      "idle": {
+        "cpuPercent": 0.1,
+        "memoryMB": 83
+      }
+    },
+    {
+      "tool": "gaze",
+      "name": "GazeStage",
+      "openedBy": "hub",
+      "hubAnswer": "Opening GazeStage",
+      "joinedSeconds": 1.6,
+      "screenshot": "shots/gaze.png",
+      "level": "adaptive",
+      "checks": [
+        {
+          "level": "connected",
+          "id": "C1",
+          "ok": true,
+          "check": "Connects and says hello",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C2",
+          "ok": true,
+          "check": "Announces its actions",
+          "detail": "10 actions"
+        },
+        {
+          "level": "connected",
+          "id": "C3",
+          "ok": true,
+          "check": "Every action has a short id, a plain label (60 characters at most) and only shared intents",
+          "detail": ""
+        },
+        {
+          "level": "connected",
+          "id": "C4",
+          "ok": true,
+          "check": "Answers every action within 3 seconds (10 tried)",
+          "detail": "refused (fine, with a reason): ['gaze.play: GazeStage isn\u2019t linked to Pro Tools.', 'gaze.stop: GazeStage isn\u2019t linked to Pro Tools.', 'gaze.record: GazeStage isn\u2019t linked to Pro Tools.']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A1",
+          "ok": true,
+          "check": "Applies a settings change within 3 seconds and says so (state prefs.applied)",
+          "detail": "honors: ['highContrast', 'reduceMotion', 'textScale']"
+        },
+        {
+          "level": "adaptive",
+          "id": "A2",
+          "ok": true,
+          "check": "Honors text size, high contrast and reduced motion",
+          "detail": ""
+        },
+        {
+          "level": "hands-free",
+          "id": "H1",
+          "ok": false,
+          "check": "Core job done start to finish with no hands (eyes, voice or one switch), attested",
+          "detail": "Attest with --attest hands-free --evidence <video or notes link>."
+        },
+        {
+          "level": "hands-free",
+          "id": "H2",
+          "ok": true,
+          "check": "Evidence linked",
+          "detail": ""
+        },
+        {
+          "level": "co-designed",
+          "id": "D1",
+          "ok": false,
+          "check": "Tested on camera with disabled musicians, with their consent, attested",
+          "detail": "Attest with --attest co-designed --evidence <session link>."
+        }
+      ],
+      "proof": [
+        {
+          "id": "P1",
+          "ok": true,
+          "check": "Ready within 15 seconds of opening",
+          "detail": "1.6 s"
+        },
+        {
+          "id": "P2",
+          "ok": true,
+          "check": "Still running after every one of its actions was pressed",
+          "detail": ""
+        },
+        {
+          "id": "P4",
+          "ok": true,
+          "check": "Every action ran, or was refused for a reason, never timed out",
+          "detail": ""
+        },
+        {
+          "id": "P3",
+          "ok": true,
+          "warn": true,
+          "check": "Uses under 3% CPU sitting idle",
+          "detail": "1.7%"
+        }
+      ],
+      "actionsTried": 10,
+      "version": "0.3.4",
+      "idle": {
+        "cpuPercent": 1.7,
+        "memoryMB": 399
+      }
+    }
+  ],
+  "suite": [
+    {
+      "id": "S1",
+      "ok": true,
+      "check": "Every app connected to the suite at the same time",
+      "detail": "6 connected"
+    },
+    {
+      "id": "S2",
+      "ok": true,
+      "check": "A shared DAW command (zoom in) reaches an app and is answered within 3 seconds",
+      "detail": "Zoom in (0.02 s)"
+    },
+    {
+      "id": "S3",
+      "ok": true,
+      "check": "The hub can say which apps are open",
+      "detail": "Open: Limitless One-Hand, Limitless Voice, Limitless Zoom, Limitless Color, Limitless Control, GazeStage"
+    }
+  ],
+  "hubIdle": {
+    "cpuPercent": 0.0,
+    "memoryMB": 33
+  }
+}

@@ -1,0 +1,18 @@
+Windows fatal exception: code 0x8001010d
+
+Thread 0x00001d44 (most recent call first):
+  File "onehand\platform_win.py", line 113 in _run
+  File "threading.py", line 1012 in run
+  File "threading.py", line 1075 in _bootstrap_inner
+  File "threading.py", line 1032 in _bootstrap
+
+Thread 0x00001d50 (most recent call first):
+  File "onehand\limitless_link.py", line 225 in _session
+  File "onehand\limitless_link.py", line 201 in _run
+  File "threading.py", line 1012 in run
+  File "threading.py", line 1075 in _bootstrap_inner
+  File "threading.py", line 1032 in _bootstrap
+
+Current thread 0x00000a54 (most recent call first):
+  File "onehand\app.py", line 705 in main
+  File "main.py", line 74 in <module>
