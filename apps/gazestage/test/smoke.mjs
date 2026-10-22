@@ -106,6 +106,11 @@ try {
   const bare = await app.firstWindow();
   for (let t = 0; t < 300 && !hub.hello; t++) await sleep(100);
   assert.ok(hub.hello, 'joins Limitless Sound on first launch');
+  // The Access Standard's rule for actions (C3 in standard/conformance/las_check.py): a short id of
+  // letters, digits and _, and a plain label. The tone pad's first ids (xy.set) broke it, and only
+  // the proof noticed: GazeStage 0.4.1 lost its level.
+  const badActions = hub.hello.actions.filter((a) => !/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(a.id) || !a.label?.trim() || a.label.length > 60);
+  assert.deepEqual(badActions.map((a) => a.id), [], 'every action has a short id and a plain label');
   assert.equal(await bare.evaluate(() => window.__gs.S.onboarded), false, 'first launch: the guided setup is showing');
   const watch = freezeWatch(bare);
   let audio = null;
@@ -345,12 +350,12 @@ try {
   await win.mouse.move(5, 5);
 
   step('tone pad: other Limitless Sound apps can move it');
-  assert.ok(hub.hello.actions.some((a) => a.id === 'xy.set'));
-  const set = await hubInvoke(5, 'xy.set', { x: 0, y: 127, glide: 0 });
+  assert.ok(hub.hello.actions.some((a) => a.id === 'xySet'));
+  const set = await hubInvoke(5, 'xySet', { x: 0, y: 127, glide: 0 });
   assert.equal(set?.ok, true, JSON.stringify(set));
   await win.waitForTimeout(100);
   assert.deepEqual([await lastCC(16), await lastCC(17)], [0, 127]);
-  assert.equal((await hubInvoke(6, 'xy.snapC'))?.ok, true);
+  assert.equal((await hubInvoke(6, 'xySnapC'))?.ok, true);
   if (listener) {
     await win.waitForTimeout(300);
     listener.closePort();

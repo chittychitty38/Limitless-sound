@@ -116,17 +116,17 @@ const SUITE_ACTIONS = [
   { id: 'panic', label: 'All notes off' },
   // The XY tone pad: two MIDI controllers from one point, for a Helix or any plugin.
   { id: 'tone', label: 'Show the tone pad', phrases: ['tone pad', 'show tone'] },
-  { id: 'xy.set', label: 'Move the tone pad to a point', args: { x: 'number', y: 'number', glide: 'number' } },
-  { id: 'xy.snapA', label: 'Tone pad: go to A', phrases: ['tone A', 'snapshot A'] },
-  { id: 'xy.snapB', label: 'Tone pad: go to B', phrases: ['tone B', 'snapshot B'] },
-  { id: 'xy.snapC', label: 'Tone pad: go to C', phrases: ['tone C', 'snapshot C'] },
-  { id: 'xy.snapD', label: 'Tone pad: go to D', phrases: ['tone D', 'snapshot D'] },
-  { id: 'xy.center', label: 'Tone pad: back to the middle', phrases: ['tone center', 'tone middle'] },
-  { id: 'xy.left', label: 'Tone pad: step left' },
-  { id: 'xy.right', label: 'Tone pad: step right' },
-  { id: 'xy.up', label: 'Tone pad: step up' },
-  { id: 'xy.down', label: 'Tone pad: step down' },
-  { id: 'xy.follow', label: 'Tone pad: follow the pointer on or off' },
+  { id: 'xySet', label: 'Move the tone pad to a point', args: { x: 'number', y: 'number', glide: 'number' } },
+  { id: 'xySnapA', label: 'Tone pad: go to A', phrases: ['tone A', 'snapshot A'] },
+  { id: 'xySnapB', label: 'Tone pad: go to B', phrases: ['tone B', 'snapshot B'] },
+  { id: 'xySnapC', label: 'Tone pad: go to C', phrases: ['tone C', 'snapshot C'] },
+  { id: 'xySnapD', label: 'Tone pad: go to D', phrases: ['tone D', 'snapshot D'] },
+  { id: 'xyCenter', label: 'Tone pad: back to the middle', phrases: ['tone center', 'tone middle'] },
+  { id: 'xyLeft', label: 'Tone pad: step left' },
+  { id: 'xyRight', label: 'Tone pad: step right' },
+  { id: 'xyUp', label: 'Tone pad: step up' },
+  { id: 'xyDown', label: 'Tone pad: step down' },
+  { id: 'xyFollow', label: 'Tone pad: follow the pointer on or off' },
 ];
 const TRANSPORT = new Set(['play', 'stop', 'record']);
 const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [], tracking: '' };

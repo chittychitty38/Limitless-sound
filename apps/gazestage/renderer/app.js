@@ -579,17 +579,17 @@ const SUITE_DO = {
   octaveUp: () => action('octup'), octaveDown: () => action('octdown'), scale: () => action('scale'),
   latch: () => action('hold'), panic: () => action('panic'),
   tone: () => showPage('tone'),
-  'xy.set': (a) => {
+  'xySet': (a) => {
     // x and y are 0..1, or 0..127 like a MIDI value. A missing axis stays where it is.
     const v = (n, cur) => (n == null || n === '' || !Number.isFinite(+n) ? cur : +n > 1 ? +n / 127 : +n);
     placeXY(v(a.x, motion.x), v(a.y, motion.y), a.glide != null && Number.isFinite(+a.glide) ? +a.glide : undefined);
     return `${S.xyNameX} ${toCC(motion.glide?.x ?? motion.x)}, ${S.xyNameY} ${toCC(motion.glide?.y ?? motion.y)}`;
   },
-  'xy.snapA': () => snapXY('A'), 'xy.snapB': () => snapXY('B'), 'xy.snapC': () => snapXY('C'), 'xy.snapD': () => snapXY('D'),
-  'xy.center': () => action('xyCenter'),
-  'xy.left': () => nudgeXY(NUDGE.left, 0.1), 'xy.right': () => nudgeXY(NUDGE.right, 0.1),
-  'xy.up': () => nudgeXY(NUDGE.up, 0.1), 'xy.down': () => nudgeXY(NUDGE.down, 0.1),
-  'xy.follow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
+  'xySnapA': () => snapXY('A'), 'xySnapB': () => snapXY('B'), 'xySnapC': () => snapXY('C'), 'xySnapD': () => snapXY('D'),
+  'xyCenter': () => action('xyCenter'),
+  'xyLeft': () => nudgeXY(NUDGE.left, 0.1), 'xyRight': () => nudgeXY(NUDGE.right, 0.1),
+  'xyUp': () => nudgeXY(NUDGE.up, 0.1), 'xyDown': () => nudgeXY(NUDGE.down, 0.1),
+  'xyFollow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
 };
 let suiteOn = false;
 
