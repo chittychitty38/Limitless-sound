@@ -190,8 +190,12 @@ jobs:
           $start = Get-Date
           # A browser marks a download as coming from the internet; so does this.
           Set-Content -Path dl\Limitless-Sound-Suite-windows.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
-          $p = Start-Process dl\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log" -Wait -PassThru
+          $p = Start-Process dl\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log" -PassThru
+          $null = $p.Handle  # keeps the exit code readable after it exits
+          # Wait for the installer itself: -Wait would also wait for any app an installer opens.
+          $done = $p.WaitForExit(900000)
           Get-Content install.log -Tail 30
+          if (-not $done) { $p.Kill(); throw "The suite installer was still running after 15 minutes" }
           if ($p.ExitCode -ne 0) { throw "The suite installer failed with code $($p.ExitCode)" }
           "seconds=$([int]((Get-Date) - $start).TotalSeconds)" >> $env:GITHUB_OUTPUT
           # Limitless Sound starts by itself at the next sign-in; start it the same way now.
