@@ -207,6 +207,8 @@ app, or open an issue.
       0.2.1; confirm.) Try the "Some tremor" and "Strong tremor" timing presets too.
 - [ ] Pull the cable mid-press: nothing keeps repeating. Plug back in: it reconnects.
 - [ ] The settings page opens and works with VoiceOver (⌘F5).
+- [ ] With the settings page open, a button press shows on the page at once. (Since 0.2.4 the
+      page waits for news instead of asking six times a second.)
 
 #### GazeStage (webcam; Pro Tools for the transport)
 - [ ] First launch asks for **Camera** (and Microphone for sound selection). Guided setup runs.
@@ -218,8 +220,18 @@ app, or open an issue.
       works afterwards. (Bug fixed in 0.3; confirm.)
 - [ ] Pro Tools: add GazeStage as a HUI controller (README steps). Play and Record work. **Check
       rewind, fast forward and stop**: their codes are unconfirmed.
+- [ ] Leave GazeStage alone for 30 seconds, then play a pad: the **first note after the rest**
+      sounds on time. (Since 0.3.5 the built-in sound rests 10 s after the last note and wakes as
+      the pointer settles on a pad. Listen for a late or clipped first note.)
 - [ ] Ten minutes of use: Activity Monitor memory stays roughly level, the fan stays reasonable.
 - [ ] Frame rate feels smooth (the stress test printed it).
+- [ ] **Tone pad** (⌘3, new in 0.4): look and hold still on the pad, and the point glides there.
+      Follow, the arrows, Save here and the saved tones A–D, and Glide all work by gaze or head.
+      **Listen** makes the built-in chord brighter left to right and roomier bottom to top.
+- [ ] **With a Line 6 Helix** (or HX Stomp, HX Effects, POD Go) on USB: GazeStage says it found it.
+      On the Helix, assign two parameters (say wah and reverb mix) to EXP 1 and EXP 2: the pad
+      moves them. If nothing moves, try Settings › Tone pad › Teach and note what the Helix shows.
+      (The CC 1 and 2 = EXP 1 and 2 mapping comes from Line 6's MIDI table and is untested.)
 
 #### The whole suite together (hub)
 - [ ] Open Limitless Sound: its page opens in the browser and lists the installed apps.

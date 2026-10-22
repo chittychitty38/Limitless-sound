@@ -13,6 +13,15 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.3
+- **GazeStage's tone pad.** A new Tone page (⌘3) shapes your sound the way the pads play it: with your eyes, your head, dwell or a switch. One point sends two MIDI controllers, left–right and down–up.
+  - It drives a Line 6 Helix, HX or POD Go's expression pedals when one is plugged in by USB, or any plugin through MIDI learn.
+  - Look and hold still to place the point, or let it follow you for live sweeps. Save four tones and come back to them.
+  - Voice and the other apps can move it too ("tone A").
+  - Without a Helix it's still audible: **Listen** holds a chord on the built-in sound and the pad shapes it.
+- **Limitless Control rests while its settings page is open.** The page used to ask Control for news six times a second, about 3% of an older Mac's processor. Now Control tells the page the moment something changes (a press shows at once) and otherwise checks in every 2 seconds.
+- **The website meets the WCAG 2.2 AA accessibility standard**, checked automatically on every change. The small text on its red buttons is now easier to read.
+
 ### New in 0.2.2
 - **GazeStage sits quietly while it waits.** Sitting idle it now uses under 1% of the processor in our tests on Apple silicon and Intel Macs. It used to use about 6%, which runs a laptop's battery down through a session. Three things kept it busy:
   - Its built-in instrument kept the computer's audio running for a minute after any sound, a selection click included. Now the audio rests 10 seconds after the last sound has died away. It wakes again as soon as you look or point at something that will sound, so the first note after a rest still plays on time.
