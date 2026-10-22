@@ -20,7 +20,7 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 - **Fixes:**
   - Zoom no longer crashes on its first zoom on Apple silicon.
   - Control opens straight away (it could wait 37 s for the browser).
-  - A refusal from any app always says why.
+  - A refusal from any app always says why. Saying "play" with no DAW in front, Voice says to bring Logic Pro or Pro Tools forward instead of "didn't catch".
 - **Log files**, so a problem can be found after the fact and sent along when you ask for help. Limitless Sound and every app keep one; **Activity › Open the log folder** on the settings page shows them.
 
 ### What's inside
