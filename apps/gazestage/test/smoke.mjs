@@ -23,7 +23,7 @@ const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
 
 // A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
 const hubHome = mkdtempSync(join(tmpdir(), 'gazestage-hub-'));
-const hub = { hello: null, sock: null, results: new Map(), dids: [] };
+const hub = { hello: null, sock: null, results: new Map(), dids: [], states: {} };
 const hubServer = createServer((sock) => {
   let buf = '';
   sock.on('data', (d) => {
@@ -33,6 +33,7 @@ const hubServer = createServer((sock) => {
       if (msg.op === 'hello') { hub.hello = msg; hub.sock = sock; sock.write(JSON.stringify({ op: 'welcome', protocol: 1, prefs: {}, actions: [], states: {} }) + '\n'); }
       if (msg.op === 'result') hub.results.set(msg.id, msg);
       if (msg.op === 'did') hub.dids.push(msg.action);
+      if (msg.op === 'state') hub.states[msg.key] = msg.value;
     }
   });
   sock.on('error', () => {});
@@ -144,6 +145,76 @@ try {
   step('transport page');
   await win.click('[data-goto=transport]');
   assert.equal(await win.locator('#transport .target').count(), 5);
+
+  step('shared settings: text size, contrast and motion are applied and reported');
+  const until = async (cond, ms = 3000) => { const end = Date.now() + ms; while (!cond() && Date.now() < end) await new Promise((r) => setTimeout(r, 25)); return cond(); };
+  const sendPrefs = (prefs) => hub.sock.write(JSON.stringify({ op: 'prefs', prefs }) + '\n');
+  const applied = (want, ms) => until(() => JSON.stringify(hub.states['prefs.applied']) === JSON.stringify(want), ms);
+  const view = () => win.evaluate(() => {
+    const r = document.documentElement, clipped = [];
+    for (const t of document.querySelectorAll('.target'))
+      if (t.offsetParent && (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1)) clipped.push(t.textContent.trim());
+    return { contrast: r.dataset.contrast, motion: r.dataset.motion, text: getComputedStyle(document.body).fontSize,
+      transition: getComputedStyle(document.querySelector('.target')).transitionDuration, clipped };
+  });
+  const systemReduce = await win.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  assert.deepEqual(hub.states['prefs.applied'], { textScale: 1, highContrast: false, reduceMotion: systemReduce }, 'reported after the welcome');
+  const sentAt = Date.now();
+  sendPrefs({ speak: true, oneVoice: true, textScale: 1.5, highContrast: true, reduceMotion: true, dwellMs: 1500, scanMs: 2000 });
+  assert.ok(await applied({ textScale: 1.5, highContrast: true, reduceMotion: true }), JSON.stringify(hub.states['prefs.applied']));
+  assert.ok(Date.now() - sentAt < 3000, 'within 3 seconds');
+  assert.deepEqual(await view(), { contrast: 'high', motion: 'reduce', text: '25.5px', transition: '0s', clipped: [] });
+  assert.equal(await win.evaluate(() => window.__gs.S.dwell), 900, 'GazeStage keeps its own dwell time');
+  sendPrefs({ textScale: 2, highContrast: true, reduceMotion: true });
+  assert.ok(await applied({ textScale: 2, highContrast: true, reduceMotion: true }));
+  assert.deepEqual((await view()).clipped, [], 'nothing clips at double size');
+  await win.click('[data-goto=play]');
+  assert.deepEqual((await view()).clipped, [], 'nothing clips at double size');
+
+  step('shared settings: the more accessible setting wins');
+  const own = (id, value) => win.evaluate(([i, v]) => { const el = document.getElementById(i); if (el.type === 'checkbox') el.checked = v; else el.value = v; el.dispatchEvent(new Event('change')); }, [id, value]);
+  await own('sSize', 'xlarge'); await own('sContrast', true);
+  sendPrefs({ textScale: 1, highContrast: false, reduceMotion: false });
+  assert.ok(await applied({ textScale: 1.41, highContrast: true, reduceMotion: systemReduce }), JSON.stringify(hub.states['prefs.applied']));
+  assert.equal((await view()).text, '24px');
+  await own('sSize', 'normal'); await own('sContrast', false);
+  assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: systemReduce }));
+  assert.deepEqual(await view(), { contrast: 'normal', motion: systemReduce ? 'reduce' : 'normal', text: '17px', transition: systemReduce ? '0s' : '0.12s, 0.12s, 0.12s', clipped: [] });
+
+  step('shared settings: reduced motion draws dwell in steps and still waits the full dwell');
+  sendPrefs({ reduceMotion: true });
+  assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: true }));
+  // A long dwell, so firing a step early would show even at the test machine's slow frame rate.
+  await win.evaluate(() => { Object.assign(window.__gs.state, { px: 5, py: 5 }); Object.assign(window.__gs.S, { mode: 'mouse', select: 'dwell', dwell: 2400 }); });
+  const dwelled = win.evaluate(() => new Promise((done) => {
+    const t = document.querySelector('[data-action=chords]'), bar = t.querySelector('.progress'), was = t.getAttribute('aria-pressed'), drawn = new Set();
+    const g = window.__gs, quit = setTimeout(() => done({ drawn: [...drawn], fired: false }), 5000);
+    const look = () => { drawn.add(bar.style.width); if (t.getAttribute('aria-pressed') === was) requestAnimationFrame(look); };
+    new MutationObserver((_m, obs) => {
+      obs.disconnect(); clearTimeout(quit);
+      done({ drawn: [...drawn], fired: true, after: performance.now() - g.state.enteredAt, dwell: g.S.dwell });
+    }).observe(t, { attributes: true, attributeFilter: ['aria-pressed'] });
+    look();
+  }));
+  const chords = await win.locator('[data-action=chords]').boundingBox();
+  await win.mouse.move(chords.x + chords.width / 2, chords.y + chords.height / 2);
+  const d = await dwelled;
+  assert.ok(d.fired, 'dwell still selects');
+  assert.ok(d.drawn.every((w) => ['', '0%', '25%', '50%', '75%', '100%'].includes(w)) && d.drawn.some((w) => /^(25|50|75)%$/.test(w)), `stepped: ${d.drawn}`);
+  // The steps are drawing only: a full step shows early, but the target never fires early.
+  assert.ok(d.after >= d.dwell, `fired after ${d.after} ms of ${d.dwell}`);
+  await win.evaluate(() => Object.assign(window.__gs.S, { mode: 'head', dwell: 900 }));
+  await win.mouse.move(5, 5);
+
+  step('shared settings: let go when Limitless Sound goes away, and report again when it is back');
+  delete hub.states['prefs.applied'];
+  sendPrefs({ textScale: 1.5, highContrast: true });
+  await until(() => hub.states['prefs.applied']?.highContrast);
+  delete hub.states['prefs.applied'];
+  hub.sock.destroy();
+  await win.waitForFunction(() => document.documentElement.dataset.contrast === 'normal', null, { timeout: 3000 });
+  assert.equal((await view()).text, '17px');
+  assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: systemReduce }, 8000), 'reported again after reconnecting');
 
   const midi = await win.evaluate(() => ({ mode: window.__gs.midi.mode, error: window.__gs.midi.error || null, native: window.__gs.midi.nativeError || null }));
   step(`MIDI mode: ${midi.mode}${midi.error ? ` (${midi.error})` : ''}${midi.native ? `; virtual ports: ${midi.native}` : ''}`);

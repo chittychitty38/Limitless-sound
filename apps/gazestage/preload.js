@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('gazestage', {
     onInvoke: (cb) => ipcRenderer.on('suite:invoke', (_e, req) => cb(req)),
     reply: (id, result) => ipcRenderer.send('suite:result', id, result),
     onConnected: (cb) => ipcRenderer.on('suite:connected', (_e, on) => cb(on)),
+    onPrefs: (cb) => ipcRenderer.on('suite:prefs', (_e, prefs) => cb(prefs)),
+    applied: (values) => ipcRenderer.send('suite:applied', values),
   },
   midi: {
     status: () => ipcRenderer.invoke('midi:status'),

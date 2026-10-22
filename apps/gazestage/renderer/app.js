@@ -1,5 +1,6 @@
 // GazeStage app: pointer, targeting, selection, pages, guided setup and settings.
 import {
+  displayInUse, shownProgress, TEXT_SCALE,
   OneEuro, fitCalibration, calibrationGrade, dot, headToScreen, buildPads, SCALES, NOTE_NAMES, HUI, OnsetDetector,
 } from './lib.js';
 import { Tracker } from './tracker.js';
@@ -41,13 +42,22 @@ const onset = new OnsetDetector();
 window.__gs = { state, S, synth, midi, suite: () => suiteOn };   // for the smoke test
 
 // ---------- display ----------
+// Text size, contrast and motion come from GazeStage's own settings (and the system's reduced
+// motion), and while Limitless Sound is connected, from the musician's shared settings too.
+const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let shared = null, display = null, reported = '';
 function applyDisplay() {
   const r = document.documentElement;
-  r.dataset.theme = S.theme; r.dataset.contrast = S.contrast ? 'high' : 'normal';
-  r.dataset.size = S.size; r.dataset.spacing = S.spacing;
+  display = displayInUse({ size: S.size, contrast: S.contrast, reduceMotion: systemMotion.matches }, shared);
+  r.dataset.theme = S.theme; r.dataset.contrast = display.highContrast ? 'high' : 'normal';
+  r.dataset.motion = display.reduceMotion ? 'reduce' : 'normal';
+  r.style.setProperty('--scale', display.textScale); r.dataset.spacing = S.spacing;
+  r.dataset.size = display.textScale > TEXT_SCALE.xlarge ? 'huge' : S.size;   // huge: the shared size, past Extra large
   $('preview').classList.toggle('hidden', !S.preview || !state.cameraOn);
   bridge?.setAlwaysOnTop(S.onTop);
+  reportDisplay();
 }
+systemMotion.addEventListener('change', applyDisplay);
 
 let toastTimer = 0;
 function toast(msg, ms = 2600) {
@@ -291,9 +301,10 @@ function setCurrent(t, now) {
   if (t) t.classList.add('gazed');
 }
 function setProgress(t, p) {
+  const shown = shownProgress(p, display.reduceMotion);
   const bar = t.querySelector(':scope > .progress');
-  if (bar) bar.style.width = clamp(p, 0, 1) * 100 + '%';
-  $('cursorFill').setAttribute('stroke-dasharray', `${clamp(p, 0, 1) * 126} 126`);
+  if (bar) bar.style.width = shown * 100 + '%';
+  $('cursorFill').setAttribute('stroke-dasharray', `${shown * 126} 126`);
 }
 
 function frame(now) {
@@ -508,8 +519,19 @@ bridge?.suite?.onInvoke(({ id, action: name }) => {
   try { result = suiteInvoke(String(name)); } catch (e) { result = { ok: false, message: String(e?.message || e) }; }
   bridge.suite.reply(id, result);
 });
-bridge?.suite?.onConnected((on) => { suiteOn = !!on; });
-bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; });
+bridge?.suite?.onConnected((on) => { suiteOn = !!on; if (!on && shared) { shared = null; applyDisplay(); } });
+bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; if (s?.prefs) useShared(s.prefs); });
+
+// The musician's shared settings, from the hub's welcome and every change after it.
+function useShared(prefs) { shared = prefs || {}; reported = ''; applyDisplay(); }
+bridge?.suite?.onPrefs(useShared);
+// Once they're on screen, tell the hub what's in use: only the settings GazeStage honors.
+function reportDisplay() {
+  if (!shared) return;
+  const applied = { textScale: Math.round(display.textScale * 100) / 100, highContrast: display.highContrast, reduceMotion: display.reduceMotion };
+  if (JSON.stringify(applied) === reported) return;
+  reported = JSON.stringify(applied); bridge.suite.applied(applied);
+}
 
 function action(a) {
   switch (a) {
