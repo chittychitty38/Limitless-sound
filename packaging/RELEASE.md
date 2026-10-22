@@ -13,6 +13,12 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.2
+- **GazeStage sits quietly while it waits.** Sitting idle it now uses under 1% of the processor in our tests on Apple silicon and Intel Macs. It used to use about 6%, which runs a laptop's battery down through a session. Three things kept it busy:
+  - Its built-in instrument kept the computer's audio running for a minute after any sound, a selection click included. Now the audio rests 10 seconds after the last sound has died away. It wakes again as soon as you look or point at something that will sound, so the first note after a rest still plays on time.
+  - It redrew the status bar every second, even when nothing on it had changed.
+  - It woke the window's drawing four times a second to check for changes.
+
 ### New in 0.2.1
 Every change here was found by installing 0.2.0 from this page on fresh Apple silicon and Intel Macs and a fresh Windows PC, opening every app and pressing every button it offers to the rest of the suite.
 
