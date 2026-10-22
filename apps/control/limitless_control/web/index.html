@@ -595,9 +595,13 @@ async function loadSettings(keepProfile) {
   renderTiming();
 }
 
+// The app answers when something changes (a press shows at once), or after 2 s with nothing new.
+let version = -1;
 async function poll() {
+  let wait = 100;   // never closer than this, whatever happens
   try {
-    const st = await api("/api/state");
+    const st = await api("/api/state?since=" + version);
+    version = st.version;
     $("conn-lost").hidden = true;
     applyLook(st.look);
     const power = $("power");
@@ -633,8 +637,9 @@ async function poll() {
     }
   } catch (e) {
     $("conn-lost").hidden = false;
+    wait = 1000;
   }
-  setTimeout(poll, 150);
+  setTimeout(poll, wait);
 }
 
 $("power").addEventListener("click", async () => {

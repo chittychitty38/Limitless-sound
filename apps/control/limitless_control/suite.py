@@ -161,6 +161,7 @@ class Suite:
         with self.app.lock:
             look = combine(OWN_LOOK, prefs)
             self.app.look = look
+            self.app.changed()
             if self._sent_state.get("prefs.applied") != look:
                 self._sent_state["prefs.applied"] = look
                 self.link.state("prefs.applied", look)
