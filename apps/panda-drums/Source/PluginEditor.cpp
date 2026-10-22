@@ -90,6 +90,9 @@ void PandaDrumsEditor::pumpEvents (double now, std::function<double (const HitEv
     auto latency = proc.getShowtimeLatency() + proc.getBlockSize();
     auto blockWall = proc.getClockWallMs() * 0.001;
     auto blockClock = proc.getClock();
+    // Hits heard together are handed to the panda cymbals first: a crash takes the hand on its own
+    // side, so the drum with it goes to the other hand and his arms never cross.
+    std::vector<std::pair<HitEvent, double>> heard;
     HitEvent e;
     while (proc.hitEvents.pop (e))
     {
@@ -97,9 +100,27 @@ void PandaDrumsEditor::pumpEvents (double now, std::function<double (const HitEv
         auto strike = strikeTime ? strikeTime (e) : blockWall + (double) (e.time - blockClock + latency) / sr;
         if (strike < now - 0.5)
             continue;   // played while the window was closed: don't replay it now
-        kitPage->stage.hit (e, std::max (now, strike));
-        kitPage->onHit (e);
-        labPage->onHit (e);
+        heard.push_back ({ e, strike });
+    }
+    auto snap = proc.getSnapshot();
+    auto cymbal = [&snap] (const HitEvent& h)
+    {
+        if (snap == nullptr || ! juce::isPositiveAndBelow ((int) h.piece, (int) snap->pieces.size()))
+            return false;
+        auto type = snap->pieces[(size_t) h.piece].type;
+        return type == PieceType::Crash || type == PieceType::Ride || type == PieceType::China || type == PieceType::Splash;
+    };
+    std::stable_sort (heard.begin(), heard.end(), [&] (auto& a, auto& b)
+    {
+        if (std::abs (a.second - b.second) > 1.0e-4)
+            return a.second < b.second;
+        return cymbal (a.first) && ! cymbal (b.first);
+    });
+    for (auto& [hit, strike] : heard)
+    {
+        kitPage->stage.hit (hit, std::max (now, strike));
+        kitPage->onHit (hit);
+        labPage->onHit (hit);
     }
 }
 

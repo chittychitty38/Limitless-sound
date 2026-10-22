@@ -261,6 +261,214 @@ int video (const juce::File& dir, double seconds)
 // Writes JPEG frames of the whole window at 2x (so the compositor can zoom in), the drums, and
 // timeline.json saying when each key and page starts, what every drum is tuned to, and where
 // the kicks land (the compositor ducks its pad on them).
+// A drummer's part for a song (a note list: {"bpm", "start", "notes": [[seconds, note, velocity]]}),
+// played through the plugin with Showtime on: the stage from one second to another, frame by
+// frame, and the kit's own audio of it (drums.wav). The song's own audio goes on with ffmpeg.
+int song (const juce::File& notesFile, const juce::File& dir, double from, double to)
+{
+    auto json = juce::JSON::parse (notesFile);
+    auto* list = json.getProperty ("notes", {}).getArray();
+    if (list == nullptr)
+    {
+        std::printf ("no notes in %s\n", notesFile.getFullPathName().toRawUTF8());
+        return 1;
+    }
+    auto bpm = (double) json.getProperty ("bpm", 120.0);
+    auto start = (double) json.getProperty ("start", 0.0) + (double) json.getProperty ("bar0", 0) * (double) json.getProperty ("slot", 0.0);
+    auto last = 0.0;
+    for (auto& n : *list)
+        last = std::max (last, (double) n[0]);
+    to = std::min (to, last + 3.0);
+
+    Session s;
+    s.proc.setShowtime (true);
+    auto stageOnly = juce::SystemStats::getEnvironmentVariable ("PD_STAGE", {}).isNotEmpty();
+    if (stageOnly)
+    {
+        s.proc.setShowHitInfo (false);
+        s.proc.setComicFx (false);
+    }
+    s.editor->refreshAll();
+    // The notes go in early by the latency Showtime reports, as a host's delay compensation sends
+    // them, so the panda's strokes and the kit's sound land on the song's own drums.
+    auto latency = (juce::int64) s.proc.getShowtimeLatency();
+    std::vector<std::pair<juce::int64, juce::MidiMessage>> notes;
+    for (auto& n : *list)
+        notes.push_back ({ std::max ((juce::int64) 0, (juce::int64) ((double) n[0] * sampleRate) - latency), on ((int) n[1], (int) n[2]) });
+    std::stable_sort (notes.begin(), notes.end(), [] (auto& a, auto& b) { return a.first < b.first; });
+    // PD_TRACE=1: no frames; trace.csv has his fists, stick tips, head and shoulders every frame
+    // (run at PD_FPS=240 to see each stroke's shape).
+    auto tracing = juce::SystemStats::getEnvironmentVariable ("PD_TRACE", {}).isNotEmpty();
+    auto framesDir = dir.getChildFile ("frames");
+    framesDir.deleteRecursively();
+    framesDir.createDirectory();
+    juce::String trace ("t,rfx,rfy,lfx,lfy,rtx,rty,ltx,lty,crx,cry,chx,chy,rsx,rsy,lsx,lsy\n");
+    juce::AudioBuffer<float> audio (2, 0);
+    int written = 0;
+    auto total = (int) (to * fps);
+    for (int f = 0; f < total; ++f)
+    {
+        s.run ((int) (sampleRate / fps), notes, &audio);
+        auto t = (double) s.clock / sampleRate;
+        s.pump (t);
+        auto& stage = s.editor->getKitPage().stage;
+        stage.setTransport (bpm, std::max (0.0, (t - start) / 60.0 * bpm), t > start - 0.5 && t < last + 1.0);
+        stage.advanceTo (t);
+        if (t >= from && tracing)
+        {
+            trace << juce::String (t, 5);
+            auto hands = stage.handPoints();
+            auto body = stage.bodyPoints();
+            for (auto& p : hands)
+                trace << "," << juce::String (p.x, 2) << "," << juce::String (p.y, 2);
+            for (auto& p : body)
+                trace << "," << juce::String (p.x, 2) << "," << juce::String (p.y, 2);
+            trace << "\n";
+            ++written;
+        }
+        else if (t >= from)
+            writePng (stageOnly ? snapshot (stage, frameScale) : snapshot (*s.editor, frameScale),
+                      framesDir.getChildFile (juce::String (++written).paddedLeft ('0', 5) + ".png"));
+    }
+    if (tracing)
+        dir.getChildFile ("trace.csv").replaceWithText (trace);
+    juce::WavAudioFormat wav;
+    auto out = dir.getChildFile ("drums.wav");
+    out.deleteFile();
+    if (std::unique_ptr<juce::OutputStream> stream = out.createOutputStream())
+    {
+        auto opts = juce::AudioFormatWriterOptions().withSampleRate (sampleRate).withNumChannels (2).withBitsPerSample (24);
+        if (auto writer = wav.createWriterFor (stream, opts))
+            writer->writeFromAudioSampleBuffer (audio, 0, audio.getNumSamples());
+    }
+    std::printf ("%d frames (from %.3f s) and drums.wav in %s\n", written, (double) (total - written) / fps, dir.getFullPathName().toRawUTF8());
+    return 0;
+}
+
+// The plugin window playing a song's part, for a promo cut to the song itself: a script says the
+// song's key, when the key panel opens and picks it, when each page shows, and where to stop:
+//   {"key": [root, scale], "keyPanel": [open, pick, close], "pages": [[seconds, page], ...],
+//    "from": seconds, "end": seconds}
+// Frames (2x, JPEG) from "from" to "end", the kit's audio of the part, and timeline.json.
+int songPromo (const juce::File& notesFile, const juce::File& scriptFile, const juce::File& dir)
+{
+    auto json = juce::JSON::parse (notesFile);
+    auto script = juce::JSON::parse (scriptFile);
+    auto* list = json.getProperty ("notes", {}).getArray();
+    if (list == nullptr || ! script.isObject())
+    {
+        std::printf ("need a note list and a script\n");
+        return 1;
+    }
+    auto bpm = (double) json.getProperty ("bpm", 120.0);
+    auto start = (double) json.getProperty ("start", 0.0) + (double) json.getProperty ("bar0", 0) * (double) json.getProperty ("slot", 0.0);
+    auto from = (double) script.getProperty ("from", 0.0), end = (double) script.getProperty ("end", 60.0);
+    auto keyVar = script.getProperty ("key", {});
+    pd::Key key { keyVar.size() > 0 ? (int) keyVar[0] : 0, keyVar.size() > 1 ? (int) keyVar[1] : 1 };
+    auto panel = script.getProperty ("keyPanel", {});
+    auto* pages = script.getProperty ("pages", {}).getArray();
+
+    Session s;
+    s.proc.setComicFx (false);
+    s.proc.setShowtime (true);
+    s.editor->refreshAll();
+    auto latency = (juce::int64) s.proc.getShowtimeLatency();
+    std::vector<std::pair<juce::int64, juce::MidiMessage>> notes;
+    std::vector<double> kicks;
+    for (auto& n : *list)
+    {
+        notes.push_back ({ std::max ((juce::int64) 0, (juce::int64) ((double) n[0] * sampleRate) - latency), on ((int) n[1], (int) n[2]) });
+        if ((int) n[1] == 36)
+            kicks.push_back ((double) n[0]);
+    }
+    std::stable_sort (notes.begin(), notes.end(), [] (auto& a, auto& b) { return a.first < b.first; });
+
+    juce::AudioBuffer<float> audio (2, 0);
+    auto framesDir = dir.getChildFile ("frames");
+    framesDir.deleteRecursively();
+    framesDir.createDirectory();
+    auto& stage = s.editor->getKitPage().stage;
+    auto& topBar = s.editor->getTopBar();
+    juce::JPEGImageFormat jpeg;
+    jpeg.setQuality (0.93f);
+    bool panelOpen = false, keySet = false;
+    int page = 0;
+    auto frames = (int) (end * fps);
+    for (int f = 0; f < frames; ++f)
+    {
+        auto t0 = (double) s.clock / sampleRate;
+        if (panel.size() == 3)
+        {
+            auto want = t0 >= (double) panel[0] && t0 < (double) panel[2];
+            if (want != panelOpen)
+            {
+                if (want) topBar.showKeyPanel();
+                else      topBar.closeKeyPanel();
+                panelOpen = want;
+            }
+            if (! keySet && t0 >= (double) panel[1])
+            {
+                s.proc.setKey (key);
+                s.editor->refreshAll();
+                keySet = true;
+            }
+        }
+        if (pages != nullptr)
+        {
+            auto want = 0;
+            for (auto& pg : *pages)
+                if (t0 >= (double) pg[0])
+                    want = (int) pg[1];
+            if (want != page)
+            {
+                s.editor->showPage (want);
+                page = want;
+            }
+        }
+        s.run ((int) (sampleRate / fps), notes, &audio);
+        auto t = (double) s.clock / sampleRate;
+        stage.setTransport (bpm, std::max (0.0, (t - start) / 60.0 * bpm), true);
+        s.pump (t);
+        stage.advanceTo (t);
+        if (t < from)
+            continue;
+        auto img = snapshot (*s.editor, 2.0f);
+        juce::FileOutputStream os (framesDir.getChildFile (juce::String (f + 1).paddedLeft ('0', 5) + ".jpg"));
+        if (os.openedOk())
+            jpeg.writeImageToStream (img, os);
+    }
+    juce::WavAudioFormat wav;
+    auto out = dir.getChildFile ("drums.wav");
+    out.deleteFile();
+    if (std::unique_ptr<juce::OutputStream> stream = out.createOutputStream())
+    {
+        auto opts = juce::AudioFormatWriterOptions().withSampleRate (sampleRate).withNumChannels (2).withBitsPerSample (24);
+        if (auto writer = wav.createWriterFor (stream, opts))
+            writer->writeFromAudioSampleBuffer (audio, 0, audio.getNumSamples());
+    }
+    auto timeline = std::make_unique<juce::DynamicObject>();
+    juce::Array<juce::var> kickList;
+    for (auto k : kicks)
+        kickList.add (k);
+    timeline->setProperty ("fps", fps);
+    timeline->setProperty ("bpm", bpm);
+    timeline->setProperty ("start", start);
+    timeline->setProperty ("from", from);
+    timeline->setProperty ("end", end);
+    timeline->setProperty ("frames", frames);
+    timeline->setProperty ("key", key.name());
+    timeline->setProperty ("kicks", kickList);
+    auto pitches = std::make_unique<juce::DynamicObject>();
+    if (auto kit = s.proc.getKit())
+        for (size_t p = 0; p < kit->pieces.size(); ++p)
+            if (isTunable (kit->pieces[p].type))
+                pitches->setProperty (kit->pieces[p].name, pd::pitchName (s.proc.getPitch ((int) p)).upToFirstOccurrenceOf (" ", false, false));
+    timeline->setProperty ("pitches", juce::var (pitches.release()));
+    dir.getChildFile ("timeline.json").replaceWithText (juce::JSON::toString (juce::var (timeline.release())));
+    std::printf ("%d frames (from %.2f s), drums.wav and timeline.json in %s\n", frames, from, dir.getFullPathName().toRawUTF8());
+    return 0;
+}
+
 int promo (const juce::File& dir)
 {
     Session s;
@@ -566,6 +774,7 @@ int motion (bool showtime)
         s.run ((int) (sampleRate / rate), notes, nullptr);
         auto t = (double) s.clock / sampleRate;
         s.pump (t);
+        stage.setTransport (128.0, std::max (0.0, (t - 0.3) / 60.0 * 128.0), true);     // the host playing: his head-bang
         stage.advanceTo (t);
         auto hands = stage.handPoints();
         auto body = stage.bodyPoints();
@@ -612,6 +821,12 @@ int main (int argc, char** argv)
         return bench();
     if (mode == "motion")
         return motion (argc <= 2 || juce::String (argv[2]) != "live");
+    if (mode == "songpromo" && argc > 4)
+        return songPromo (juce::File::getCurrentWorkingDirectory().getChildFile (argv[2]), juce::File::getCurrentWorkingDirectory().getChildFile (argv[3]),
+                          juce::File::getCurrentWorkingDirectory().getChildFile (argv[4]));
+    if (mode == "song" && argc > 3)
+        return song (juce::File::getCurrentWorkingDirectory().getChildFile (argv[2]), juce::File::getCurrentWorkingDirectory().getChildFile (argv[3]),
+                     argc > 4 ? juce::String (argv[4]).getDoubleValue() : 0.0, argc > 5 ? juce::String (argv[5]).getDoubleValue() : 1.0e9);
     if (mode == "video")
         return video (target, argc > 3 ? juce::String (argv[3]).getDoubleValue() : 12.0);
     if (mode == "levels")
@@ -623,6 +838,8 @@ int main (int argc, char** argv)
         writeIcon (target, 1024);
         return 0;
     }
-    std::printf ("usage: PandaDrumsRender screenshots|video|promo|icon <path> [seconds]\n");
+    std::printf ("usage: PandaDrumsRender screenshots|video|promo|icon <path> [seconds]\n"
+                 "       PandaDrumsRender song <notes.json> <dir> [from s] [to s]\n"
+                 "       PandaDrumsRender songpromo <notes.json> <script.json> <dir>\n");
     return 1;
 }

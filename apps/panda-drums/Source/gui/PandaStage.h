@@ -130,6 +130,8 @@ private:
         float ready = 0.45f;        // the stroke height it has been playing at
         double nextFromT = -10.0;   // when the next stroke was known, and how high the stick was then
         float nextFromH = 0.0f;
+        float nextFromV = 0.0f;     // and how fast it was going (heights a second, + up)
+        float ioi = 0.4f;           // the time between its strokes lately
         Spring elbowX, elbowY;      // the elbow trailing the hand (overlapping action)
         Spring shoulderLift;        // the shoulder rising with a big stroke
         float home = 1.0f;          // 1: resting in the picture's pose
@@ -248,6 +250,7 @@ private:
     Spring bounce, nod, earL, earR, lookX, lookY, shake;
     Spring headLean, headDip;       // the head on its own: leaning toward a hit (radians), dipping with it (stage units)
     Spring bodyLean;                // the rigged panda leaning toward a far reach (stage units)
+    float grooving = 0.25f;         // how much he's into the song: 1 playing, less while it goes on without him
     std::array<Arm, 2> shownArms;   // the arms as this frame draws them
     std::array<Arm, 2> lastArms;    // and as the frame before showed them (the motion blur runs between)
     std::array<bool, 2> haveLastArms { false, false };

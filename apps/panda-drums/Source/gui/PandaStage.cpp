@@ -9,6 +9,10 @@ namespace
 {
 constexpr float floorY = 690.0f;
 constexpr double liveStroke = 0.035;    // how long a stick takes to land a hit played live (s)
+constexpr float strokeDwell = 0.016f;   // how long a stick sits on the head (a frame: the eye needs to see it land)
+constexpr float whipPower = 2.4f;       // a stroke's fall: height (1 - u^p), slow at the top, fastest as it lands
+// How fast a stick comes off the head (heights a second): a loud one bounces back hard.
+float reboundSpeed (float vel) { return 0.6f + 3.0f * (0.12f + 0.98f * std::pow (juce::jlimit (0.0f, 1.0f, vel / 127.0f), 1.8f)); }
 // The art's sticks are longer than the drawn ones were; the rig's says how long its is.
 float stickLength()
 {
@@ -534,7 +538,8 @@ int PandaStage::chooseHand (const PieceView& v, double time)
             auto check = [&] (const Strike& s) { return s.piece >= 0 && views[(size_t) s.piece].type == type && std::abs (time - s.time) < 0.6; };
             return check (H.last) || check (H.next);
         };
-        pref = recentOn (1, PieceType::HiHat) ? 0 : recentOn (0, PieceType::Ride) ? 1 : 1;
+        // (with nothing to go by, the right: his left hand is the hi-hat's, so it's never crossed)
+        pref = recentOn (1, PieceType::HiHat) ? 0 : recentOn (0, PieceType::Ride) ? 1 : 0;
     }
     auto busy = [&] (int h)
     {
@@ -573,8 +578,24 @@ int PandaStage::chooseHand (const PieceView& v, double time)
                 shoulder = Skin::point ((*arr)[h]);
             return std::abs (v.pos.x - shoulder.x) < 250.0f;
         };
+        // (not a hand keeping time on the hi-hat or ride: in a groove it stays there)
+        auto keepingTime = [&] (int h)
+        {
+            auto& H = hands[(size_t) h];
+            auto check = [&] (const Strike& s)
+            {
+                return s.piece >= 0 && (views[(size_t) s.piece].type == PieceType::HiHat || views[(size_t) s.piece].type == PieceType::Ride)
+                    && std::abs (time - s.time) < 0.3;
+            };
+            if (check (H.last) || check (H.next))
+                return true;
+            for (auto& s : pending)
+                if (s.hand == h && check (s))
+                    return true;
+            return false;
+        };
         auto lastHand = latest (0) > latest (1) ? 0 : 1;
-        if (time - std::max (latest (0), latest (1)) < 0.2 && ! busy (1 - lastHand) && reaches (1 - lastHand))
+        if (time - std::max (latest (0), latest (1)) < 0.2 && ! busy (1 - lastHand) && reaches (1 - lastHand) && ! keepingTime (1 - lastHand))
             return 1 - lastHand;
     }
     return pref;
@@ -643,8 +664,10 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
         auto queued = rig && h.next.piece >= 0 && h.next.time < strikeTime - 1.0e-6;
         if (rig && ! queued)
         {
+            // From where the stick is, at the speed it's going: the stroke carries on from it.
             h.nextFromT = now;
-            h.nextFromH = armPose (h, now).height;
+            h.nextFromH = strokeAt (h, now);
+            h.nextFromV = (h.nextFromH - strokeAt (h, now - 1.0 / 480.0)) * 480.0f;
         }
         auto atHome = rig ? homeWeight (h, now) : 0.0f;
         if (! queued && (h.piece != s.piece || atHome > 0.001f))
@@ -684,6 +707,8 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
 
 void PandaStage::land (Hand& h, const Strike& s)
 {
+    if (h.last.piece >= 0 && s.time - h.last.time > 0.04 && s.time - h.last.time < 1.2)
+        h.ioi = h.ioi * 0.7f + (float) (s.time - h.last.time) * 0.3f;
     h.last = s;
     h.ready = h.ready * 0.6f + strokeHeightFor (s.vel) * 0.4f;
     if (h.next.piece >= 0 && std::abs (h.next.time - s.time) < 1.0e-6)
@@ -693,8 +718,9 @@ void PandaStage::land (Hand& h, const Strike& s)
         if (p.hand == h.side && p.time > s.time + 1.0e-6 && (h.next.piece < 0 || p.time < h.next.time))
         {
             h.next = p;
-            h.nextFromT = s.time;
+            h.nextFromT = s.time + strokeDwell;
             h.nextFromH = 0.0f;
+            h.nextFromV = reboundSpeed (s.vel);
         }
     // The rigged hand sets off for its next drum now that this stroke is in.
     if (rig && h.next.piece >= 0 && h.next.piece != h.piece)
@@ -910,6 +936,18 @@ void PandaStage::advanceTo (double t)
         auto zeta = v.type == PieceType::Crash || v.type == PieceType::Splash || v.type == PieceType::China ? 0.08f
                   : v.type == PieceType::Ride ? 0.14f : 0.3f;
         v.wobble.step (dt, juce::MathConstants<float>::twoPi * 3.2f, zeta);
+        // With his hands elsewhere (on the ride, round the toms) his left foot keeps time on the
+        // hi-hat pedal, with his head: the top cymbal lifts a little through the beat and chicks
+        // shut on it.
+        if (rig && v.type == PieceType::HiHat && tPlaying && now - v.lastAt > 0.8)
+        {
+            auto beats = tBpm > 130.0 ? tPpq * 0.5 : tPpq;
+            auto frac = (float) (beats - std::floor (beats));
+            auto up = frac < 0.7f ? std::sin (frac / 0.7f * juce::MathConstants<float>::halfPi)
+                                  : std::cos ((frac - 0.7f) / 0.3f * juce::MathConstants<float>::halfPi);
+            v.gap.target = 1.5f + 4.0f * up * up;
+            v.press.target = 1.0f - 0.4f * up;
+        }
         v.gap.step (dt, 70.0f, 0.85f);
         v.press.step (dt, 45.0f, 0.8f);
         if (v.type == PieceType::HiHat && v.press.target > 0.9f && now - v.lastAt > 0.25)
@@ -959,17 +997,24 @@ void PandaStage::advanceTo (double t)
                 h.twirlAt = now;
 
     // Face and body.
+    // A rocker's head-bang: down hard into the beat (the last quarter of it), lowest on the beat,
+    // then up slower; a smooth curve, still at the top and the bottom. Fast songs bang on every
+    // other beat (the way a drummer's head goes at 165).
     float beat = 0.0f;
     if (tPlaying)
     {
-        auto frac = (float) (tPpq - std::floor (tPpq));
-        beat = std::exp (-frac * 5.0f);
+        auto beats = tBpm > 130.0 ? tPpq * 0.5 : tPpq;
+        auto frac = (float) (beats - std::floor (beats));
+        auto warped = frac < 0.75f ? frac / 0.75f * 0.5f : 0.5f + (frac - 0.75f) / 0.25f * 0.5f;
+        beat = 0.5f * (1.0f + std::cos (juce::MathConstants<float>::twoPi * warped));
     }
     pose.torso = headBase;
-    // A rocker's head goes down with every beat, hard, and comes back up slower.
-    pose.head = headBase.translated (0.0f, beat * (rig ? 11.0f : 5.0f) + nod.x * (rig ? 4.0f : 3.0f));
+    // How much he's into it: all the way while he's playing, a gentle nod while the song goes on
+    // without him (an intro), eased so it never jumps.
+    grooving += ((now - lastAnyHit < 1.5 ? 1.0f : 0.25f) - grooving) * (1.0f - std::exp (-dt / 0.6f));
+    pose.head = headBase.translated (0.0f, beat * (rig ? 11.0f * grooving : 5.0f) + nod.x * (rig ? 4.0f : 3.0f));
     pose.bodyBounce = bounce.x * 0.08f;
-    pose.tilt = 0.03f * std::sin ((float) now * 1.3f) * (tPlaying ? 0.4f : 1.0f) + nod.x * 0.012f + beat * 0.025f;
+    pose.tilt = 0.03f * std::sin ((float) now * 1.3f) * (tPlaying ? 0.4f : 1.0f) + nod.x * 0.012f + beat * 0.025f * grooving;
     pose.squash = 1.0f - juce::jlimit (-0.05f, 0.06f, bounce.x * 0.0035f);
     pose.mouthOpen = 0.3f + 0.62f * std::min (1.0f, energy);
     pose.mouthRound = juce::jlimit (0.0f, 1.0f, (energy - 0.85f) / 0.5f);
@@ -2297,54 +2342,62 @@ PandaStage::P PandaStage::rigStrikePoint (const PieceView& v, int hand) const
 
 float PandaStage::strokeAt (const Hand& h, double t) const
 {
-    // Between strokes the stick comes straight back up off the head (a full stroke: what goes up
-    // comes back up) to the height this hand has been playing at, ready for the next one: a hand
-    // playing backbeats stays up, a hand playing quiet notes stays low. When the next note is
-    // known the stroke goes from wherever the stick is.
+    // A stick's height (0 on the head ... 1 straight up) moves like a drummer's: every stroke is
+    // one smooth curve from wherever the stick is, at the speed it's going (cubic Hermite pieces,
+    // so it never changes speed in a jump), and only the head stops it.
+    // Between strokes it waits at the height this hand has been playing at (a hand playing
+    // backbeats stays up, a hand playing quiet notes stays low), bobbing a little with the groove.
     auto hover = juce::jlimit (0.16f, 0.85f, h.ready) + 0.015f * std::sin ((float) t * 5.3f + (float) h.side * 2.0f);
     constexpr float maxRise = 5.5f;      // a wrist lifts the stick no faster than this (heights a second)
+    auto hermite = [] (float u, float span, float h0, float v0, float h1, float v1)
+    {
+        auto u2 = u * u, u3 = u2 * u;
+        return (2.0f * u3 - 3.0f * u2 + 1.0f) * h0 + (u3 - 2.0f * u2 + u) * span * v0
+             + (3.0f * u2 - 2.0f * u3) * h1 + (u3 - u2) * span * v1;
+    };
+    // Off the head: it sits there a frame (the eye needs to see it land), leaves at the speed it
+    // bounces at, and eases up to where the hand waits, in about 40% of the time between its strokes.
     auto after = [&] (const Strike& s, double at)
     {
-        // It sits on the head for a moment (a frame or so: the eye needs to see it land), then bounces off.
-        auto d = std::max (0.0f, (float) (at - s.time) - 0.02f);
-        auto bump = 0.22f * strokeHeightFor (s.vel) * (d / 0.06f) * std::exp (1.0f - d / 0.06f);   // a loud one bounces higher first
-        return hover * (1.0f - std::exp (-d / 0.05f)) + bump;
+        auto d = (float) (at - s.time) - strokeDwell;
+        if (d <= 0.0f)
+            return 0.0f;
+        auto span = juce::jlimit (0.09f, 0.28f, 0.4f * h.ioi);
+        auto v0 = std::min (reboundSpeed (s.vel), 2.5f * hover / span);
+        return d < span ? std::max (0.0f, hermite (d / span, span, 0.0f, v0, hover, 0.0f)) : hover;
     };
     if (h.next.piece >= 0 && t < h.next.time)
     {
-        // The next stroke: from wherever the stick was when it was known, up to the height this
-        // stroke needs if there's room (an accent's upstroke), then down, accelerating, onto the head.
+        // The next stroke: from where the stick was when it was known, up to the height this stroke
+        // needs if there's room (an accent's upstroke), then down onto the head like a whip, slow
+        // at the top and fastest as it lands.
         auto target = strokeHeightFor (h.next.vel);
         auto t0 = std::min (h.nextFromT, t);
-        auto h0 = h.nextFromH;
+        auto h0 = h.nextFromH, v0 = h.nextFromV;
         auto window = (float) std::max (1.0e-3, h.next.time - t0);
         auto fall = 0.035f + 0.075f * std::max (target, h0);       // a full stroke falls in ~110 ms
         auto x = (float) (t - t0);
         if (window <= fall * 1.1f)
         {
-            if (target > h0 + 0.08f)
-            {
-                auto up = window * 0.42f;
-                auto peak = std::min (target, h0 + maxRise / 1.875f * up);     // no time for more: a smaller stroke
-                if (x < up)
-                    return h0 + (peak - h0) * minimumJerk (x / up);
-                auto u = (x - up) / (window - up);
-                return peak * (1.0f - u * u);
-            }
-            auto u = x / window;
-            return h0 * (1.0f - u * u);
+            // No time for a whole stroke: one curve from the stick as it is onto the head, as high
+            // as there's time for on the way.
+            auto top = std::max (h0, std::min (target, h0 + maxRise * window * 0.25f));
+            auto vIn = whipPower * std::max (top, 0.08f) / std::max (0.03f, window);
+            return std::max (0.0f, hermite (x / window, window, h0, v0, 0.0f, -vIn));
         }
-        // Room to spare: rise to the height (the rebound), hold it, then the stroke.
-        // (each move from rest to rest, so the stick and the hand leading it never jerk)
+        // Room to spare: up to the height (the rebound carrying into it), wait there if there's
+        // time, then the stroke.
         auto drop = window - fall;
         auto peak = std::max (target, 0.12f);
-        auto rise = std::min (drop, 0.09f + 0.08f * peak + 0.12f * std::abs (peak - h0));
+        auto rise = std::min (drop, 0.1f + 0.08f * peak + 0.25f * std::abs (peak - h0));
         if (peak > h0)
             peak = std::min (peak, h0 + maxRise / 1.875f * rise);
+        if (x < rise)
+            return std::max (0.0f, hermite (x / rise, rise, h0, v0, peak, 0.0f));
         if (x < drop)
-            return h0 + (peak - h0) * minimumJerk (x / rise);
+            return peak;
         auto u = (x - drop) / fall;
-        return peak * (1.0f - u * u);
+        return peak * (1.0f - std::pow (u, whipPower));
     }
     if (h.next.piece >= 0)
         return after (h.next, t);
@@ -2411,45 +2464,66 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
         // drum's stick comes in at no more than 50 degrees across (the hand stays over the drum's
         // near side); cymbals can be played from further round; never straight at us.
         auto most = (isCymbal (v.type) ? 72.0f : 50.0f) * degrees;
+        P restShoulder;
+        if (auto* arr = skin.at ("panda/shoulders").getArray(); arr != nullptr && arr->size() > h.side)
+            restShoulder = Skin::point ((*arr)[h.side]);
+        auto rawFrom = [&] (P shoulder)
+        {
+            return juce::jlimit (-most, most, std::atan2 (S.x - shoulder.x, reach) + inward * (isCymbal (v.type) ? 0.0f : 10.0f * degrees));
+        };
+        // Never straight at us: at least 12 degrees round, to the side it comes in from when he
+        // sits still (decided once for the piece, so it can't flip over as he sways), a soft limit.
+        auto restRaw = rawFrom (restShoulder);
+        auto side = std::abs (restRaw) < 1.0e-4f ? inward : (restRaw > 0.0f ? 1.0f : -1.0f);
         auto headingFrom = [&] (P shoulder)
         {
-            auto heading = juce::jlimit (-most, most, std::atan2 (S.x - shoulder.x, reach) + inward * (isCymbal (v.type) ? 0.0f : 10.0f * degrees));
-            if (std::abs (heading) < 12.0f * degrees)
-                heading = (std::abs (heading) < 1.0e-4f ? inward : (heading > 0.0f ? 1.0f : -1.0f)) * 12.0f * degrees;
-            return heading;
+            constexpr float least = 12.0f * degrees, soft = 3.0f * degrees;
+            auto z = (rawFrom (shoulder) * side - least) / soft;
+            return side * (least + soft * (z > 20.0f ? z : std::log1p (std::exp (z))));
         };
         hd = headingFrom (a.shoulder);
         hp = hitPitch * degrees;
-        // His fist never goes up in front of his face: at the top of its stroke it must clear his
-        // head, so for a piece out to his side the stick comes round to point more at us (the hand
-        // stays out by the piece, the way a drummer's does over the hi-hat). That turn is planned
-        // once for the piece, from him sitting still, so it never flickers as he moves.
+        // His fist never goes up in front of his face. Where it meets the head, the fist must be
+        // below his chin (with room for his head dipping into the hit): the stick comes in from
+        // further round (a left stick on the snare angles in from the hi-hat side, under his
+        // face) or, for a piece out to his side, points more at us (the hand stays out by the
+        // piece, the way a drummer's does over the hi-hat). It's the nearest heading that clears,
+        // planned once for the piece from him sitting still, so it never flickers as he moves.
         {
             auto plan = S;
             if (v.type == PieceType::HiHat)
                 plan.y += juce::jlimit (0.0f, 18.0f, (v.gap.x - 1.5f) * 0.9f);       // (the hi-hat shut)
-            P restShoulder;
-            if (auto* arr = skin.at ("panda/shoulders").getArray(); arr != nullptr && arr->size() > h.side)
-                restShoulder = Skin::point ((*arr)[h.side]);
             auto planLift = ps * (onCymbalNow ? 0.55f : 1.0f) * 39.0f;        // (a full stroke's lift)
             auto restHead = headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f);
+            auto clearOf = [&] (P fist, float room)        // how far below his chin a fist is (< 0: on his face)
+            {
+                auto dx = (fist.x - restHead.x) / (headRadii.x + fistRadius);
+                if (std::abs (dx) >= 1.0f)
+                    return 1000.0f;
+                return fist.y - (restHead.y + (headRadii.y + fistRadius) * std::sqrt (1.0f - dx * dx) + room);
+            };
+            auto fistAt = [&] (float heading) { return plan - onScreen (heading, hp) * (contact * L3); };
+            // At the top of a full stroke (if it could rise that far) and on the head.
             auto clears = [&] (float heading)
             {
-                auto top = plan - onScreen (heading, hp) * (contact * L3) - P (outward * 0.5f * planLift, planLift);
-                auto d = top - restHead;
-                return juce::square (d.x / (headRadii.x + fistRadius)) + juce::square (d.y / (headRadii.y + fistRadius)) >= 1.0f;
+                return clearOf (fistAt (heading), 14.0f * ps) >= 0.0f
+                    && (isCymbal (v.type) ? clearOf (fistAt (heading) - P (outward * 0.5f * planLift, planLift), 0.0f) >= 0.0f : true);
             };
             auto natural = headingFrom (restShoulder);
-            auto limit = (natural > 0.0f ? 1.0f : -1.0f) * 14.0f * degrees;
-            if (! clears (natural) && std::abs (natural) > 14.0f * degrees && clears (limit))
+            if (! clears (natural))
             {
-                auto lo = natural, hi = limit;          // lo: in his face ... hi: clear
-                for (int i = 0; i < 14; ++i)
+                auto best = natural;
+                for (int step = 1; step <= 140; ++step)
                 {
-                    auto mid = 0.5f * (lo + hi);
-                    (clears (mid) ? hi : lo) = mid;
+                    auto d = (float) step * 0.5f * degrees;
+                    auto wider = juce::jlimit (-80.0f * degrees, 80.0f * degrees, natural + d);
+                    auto narrower = juce::jlimit (-80.0f * degrees, 80.0f * degrees, natural - d);
+                    // (the stick never points at his body: a fist out past the piece, on its own side)
+                    auto ok = [&] (float hh) { return std::abs (hh) >= 12.0f * degrees && clears (hh); };
+                    if (ok (wider)) { best = wider; break; }
+                    if (ok (narrower)) { best = narrower; break; }
                 }
-                hd += hi - natural;
+                hd += best - natural;
             }
         }
         hitPivot = S - onScreen (hd, hp) * (contact * L3);
@@ -2458,8 +2532,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
         {
             // A minimum-jerk reach (how a hand really moves from one place to another): it
             // eases out and in with no kick in its acceleration at either end.
-            auto x = juce::jlimit (0.0f, 1.0f, (float) ((t - h.moveStart) / (h.moveEnd - h.moveStart)));
-            auto u = x * x * x * (10.0f - 15.0f * x + 6.0f * x * x);
+            auto u = minimumJerk ((float) ((t - h.moveStart) / (h.moveEnd - h.moveStart)));
             auto arc = std::min (34.0f, h.from.getDistanceFrom (hitPivot) * 0.22f) * std::sin (u * juce::MathConstants<float>::pi);
             hitPivot = h.from + (hitPivot - h.from) * u - P (0.0f, arc);
             hd = h.fromHeading + (hd - h.fromHeading) * u;
@@ -2477,6 +2550,23 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     auto headingNow = juce::jlimit (-80.0f * degrees, 80.0f * degrees, hd - inward * rise * std::min (H, 1.0f));
     auto up = lift (std::min (handH, 1.15f));
     auto pivotNow = hitPivot - P (outward * 0.5f * up, up);
+    // Going up, the fist stops under his chin (wherever his head is now): the stick goes on up
+    // from the wrist, past his face, but the hand doesn't. A soft stop (a smooth max), never a kink,
+    // and never lower than where it meets the head.
+    if (up > 0.0f)
+    {
+        auto c = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
+                     .transformedBy (headTransform());
+        auto dx = (pivotNow.x - c.x) / (headRadii.x + fistRadius);
+        if (std::abs (dx) < 1.0f)
+        {
+            auto chin = c.y + (headRadii.y + fistRadius) * std::sqrt (1.0f - dx * dx);
+            constexpr float soft = 6.0f;
+            auto z = (pivotNow.y - chin) / soft;
+            auto pushed = chin + soft * (z > 20.0f ? z : std::log1p (std::exp (z)));
+            pivotNow.y = std::min (hitPivot.y, pushed);
+        }
+    }
 
     // Into and out of the picture's pose.
     auto w = homeWeight (h, t);

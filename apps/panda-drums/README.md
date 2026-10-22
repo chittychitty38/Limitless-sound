@@ -120,6 +120,9 @@ cmake --build build --target PandaDrumsTests && build/PandaDrumsTests_artefacts/
 `PandaDrumsRender screenshots <dir>` draws every page; `PandaDrumsRender video <dir> 18` films
 the panda playing a groove frame by frame with the matching audio (join with ffmpeg, as the
 workflow does); `PandaDrumsRender levels` prints each drum's level through the mix.
+`tools/song` turns a finished song into the drum part the panda plays (the drums separated,
+transcribed and put on the song's click) and films him playing it, or cuts the promo to it; see
+[tools/song](tools/song/README.md).
 `PandaDrumsRender bench` times the stage's paint (whole, and only what changed) and checks that
 the part redraw is pixel for pixel the whole one; `PandaDrumsRender motion` (or `motion live`,
 Showtime off) traces his fists and stick tips at 240 Hz and reports any jump.
