@@ -99,7 +99,7 @@ jobs:
         run: |
           DMG="dist/LimitlessVoice-${{ steps.v.outputs.version }}-${{ matrix.label }}.dmg"
           mkdir dmg && cp -R "dist/Limitless Voice.app" dmg/ && ln -s /Applications dmg/Applications
-          hdiutil create -volname "Limitless Voice" -srcfolder dmg -ov -format UDZO "$DMG"
+          "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Voice" -srcfolder dmg -ov -format UDZO "$DMG"
           if [ "${signed:-}" = "1" ]; then
             codesign --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" --timestamp "$DMG"
             xcrun notarytool submit "$DMG" --apple-id "${{ secrets.APPLE_ID }}" \

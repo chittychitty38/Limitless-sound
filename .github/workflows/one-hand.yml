@@ -67,7 +67,7 @@ jobs:
           cp -R "dist/Limitless One-Hand.app" dmg/
           cp "assets/How to open One-Hand.txt" dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname "Limitless One-Hand" -srcfolder dmg -ov -format UDZO "dist/${{ matrix.artifact }}.dmg"
+          "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless One-Hand" -srcfolder dmg -ov -format UDZO "dist/${{ matrix.artifact }}.dmg"
 
       - name: Smoke test and installer (Windows)
         if: runner.os == 'Windows'

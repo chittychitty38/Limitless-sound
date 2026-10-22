@@ -91,7 +91,7 @@ jobs:
             mkdir -p dmg
             cp -R "dist/Limitless Control.app" dmg/
             ln -s /Applications dmg/Applications
-            hdiutil create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO "$OUT"
+            "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO "$OUT"
           fi
           hdiutil verify "$OUT"
 

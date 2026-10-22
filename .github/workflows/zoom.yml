@@ -91,7 +91,7 @@ jobs:
           cp -R "dist/Limitless Zoom.app" dmg/
           ln -s /Applications dmg/Applications
           cp "packaging/How to open on a Mac.txt" dmg/
-          hdiutil create -volname "Limitless Zoom" -srcfolder dmg \
+          "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Zoom" -srcfolder dmg \
             -ov -format UDZO "dist/Limitless-Zoom-${{ matrix.name }}.dmg"
       - name: Self test and package (Windows)
         if: runner.os == 'Windows'

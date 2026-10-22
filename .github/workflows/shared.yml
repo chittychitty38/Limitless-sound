@@ -76,7 +76,7 @@ jobs:
         working-directory: shared/hub/dist
         run: |
           mkdir dmg && cp -R "Limitless Sound.app" dmg/ && ln -s /Applications dmg/Applications
-          hdiutil create -volname "Limitless Sound" -srcfolder dmg -ov -format UDZO "Limitless-Sound-${{ matrix.name }}.dmg"
+          "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Sound" -srcfolder dmg -ov -format UDZO "Limitless-Sound-${{ matrix.name }}.dmg"
 
       - name: Make the Windows installer
         if: runner.os == 'Windows'
