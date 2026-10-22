@@ -51,7 +51,7 @@ jobs:
           changed="$(git diff --name-only HEAD^1 HEAD)"
           echo "$changed"
           for app in voice gazestage color; do
-            if echo "$changed" | grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)"; then
+            if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
               echo "$app=true" >> "$GITHUB_OUTPUT"
             else
               echo "$app=false" >> "$GITHUB_OUTPUT"

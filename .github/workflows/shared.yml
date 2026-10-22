@@ -67,7 +67,8 @@ jobs:
           for i in $(seq 1 40); do [ -f "$LIMITLESS_SOUND_HOME/link.json" ] && break; sleep 0.5; done
           TOKEN=$(python -c "import json,os;print(json.load(open(os.path.join(os.environ['LIMITLESS_SOUND_HOME'],'link.json')))['token'])")
           curl -sf -H "X-Limitless-Token: $TOKEN" http://127.0.0.1:48901/api/state | python -c "import json,sys; s=json.load(sys.stdin); assert len(s['tools'])>=6; print('hub ok,', len(s['actions']), 'actions')"
-          curl -sf "http://127.0.0.1:48901/?t=$TOKEN" | grep -q "Limitless Sound"
+          # Reads the whole page: grep -q would stop at the title and fail curl (pipefail) mid-send.
+          curl -sf "http://127.0.0.1:48901/?t=$TOKEN" | grep "Limitless Sound" > /dev/null
           curl -sf -X POST -H "X-Limitless-Token: $TOKEN" -H "Content-Type: application/json" -d '{}' http://127.0.0.1:48901/api/quit
           sleep 2
 
