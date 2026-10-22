@@ -20,6 +20,10 @@ Linux works too, for testing.
 
 Every action is shown in large text and spoken aloud (turn speech off in the menu).
 
+Waiting costs almost nothing: the speech recognizer only runs while the microphone hears
+something, from a second before a sound to a second and a half after it, and nothing on
+screen redraws while nothing changes.
+
 ## What gets zoomed
 
 The app looks at which program is in front and presses that program's own zoom keys:
