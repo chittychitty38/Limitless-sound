@@ -2566,9 +2566,23 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
         {
             // A minimum-jerk reach (how a hand really moves from one place to another): it
             // eases out and in with no kick in its acceleration at either end.
-            auto u = minimumJerk ((float) ((t - h.moveStart) / (h.moveEnd - h.moveStart)));
-            auto arc = std::min (34.0f, h.from.getDistanceFrom (hitPivot) * 0.22f) * std::sin (u * juce::MathConstants<float>::pi);
-            hitPivot = h.from + (hitPivot - h.from) * u - P (0.0f, arc);
+            auto s = (float) ((t - h.moveStart) / (h.moveEnd - h.moveStart));
+            auto u = minimumJerk (s);
+            // A reach whose straight line would cross his face goes round it: down from a cymbal
+            // by his head to a drum, the hand drops first and comes in after (down beside his
+            // cheek, under his chin); up to one, it goes out first and rises after. No lift over
+            // the top near his face. Each part is still a minimum-jerk reach, so nothing kinks.
+            auto restHead = headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f);
+            auto mid = (h.from + hitPivot) * 0.5f;
+            auto qx = (mid.x - restHead.x) / (headRadii.x + fistRadius), qy = (mid.y - restHead.y) / (headRadii.y + fistRadius);
+            auto around = 1.0f - smooth ((qx * qx + qy * qy - 0.6f) / 0.6f);     // 1: right across his face
+            auto lead = 0.3f * around;
+            auto first = minimumJerk (juce::jlimit (0.0f, 1.0f, s / (1.0f - lead)));
+            auto after = minimumJerk (juce::jlimit (0.0f, 1.0f, (s - lead) / (1.0f - lead)));
+            auto down = hitPivot.y > h.from.y;
+            auto ux = down ? after : first, uy = down ? first : after;
+            auto arc = (1.0f - around) * std::min (34.0f, h.from.getDistanceFrom (hitPivot) * 0.22f) * std::sin (u * juce::MathConstants<float>::pi);
+            hitPivot = P (h.from.x + (hitPivot.x - h.from.x) * ux, h.from.y + (hitPivot.y - h.from.y) * uy - arc);
             hd = h.fromHeading + (hd - h.fromHeading) * u;
             hp = h.fromPitch + (hp - h.fromPitch) * u;
         }
@@ -2754,9 +2768,21 @@ void PandaStage::drawStickBlur (juce::Graphics& g, const Hand& h, const Arm& a)
 void PandaStage::paintRig (juce::Graphics& g, bool arms)
 {
     auto& skin = Skin::get();
-    // An arm reaching up (for a crash, or cheering) goes behind his big head; the rest are drawn
-    // after the drums, in front of everything of his.
-    auto high = [] (const Arm& a) { return ! a.atRest && a.shoulder.y - a.pivot.y > 95.0f * a.scale; };
+    // An arm reaching up (for a crash, or cheering) goes behind his big head, and so does one whose
+    // fist is in front of his face on its way somewhere (it shows again where fist and head only
+    // touch, so it can't pop); the rest are drawn after the drums, in front of everything of his.
+    auto headEllipse = skin.at ("panda/head/ellipse");
+    auto headAt = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
+                      .transformedBy (headTransform());
+    auto headRadii = headEllipse.size() == 4 ? P ((float) (double) headEllipse[2], (float) (double) headEllipse[3]) : P (150.0f, 115.0f);
+    auto high = [&] (const Arm& a)
+    {
+        if (a.atRest)
+            return false;
+        auto fistRadius = 36.0f * a.scale;
+        auto qx = (a.pivot.x - headAt.x) / (headRadii.x * a.scale + fistRadius), qy = (a.pivot.y - headAt.y) / (headRadii.y * a.scale + fistRadius);
+        return a.shoulder.y - a.pivot.y > 95.0f * a.scale || qx * qx + qy * qy < 1.0f;
+    };
     auto drawSide = [&] (int side)
     {
         // At rest, the picture's own arm; otherwise the rig's.
