@@ -290,6 +290,7 @@ class ZoomApp(QObject):
             self.tray.setToolTip(f"Limitless Zoom\n{text}" if text else "Limitless Zoom")
 
     def _voice_status(self, text):
+        log.info("Voice: %s", text)   # only when it changes: which microphone, or why there's none
         self.panel.voice_label.setText(f"Voice: {text}")
         if self.setup_window is not None:
             self.setup_window.set_voice_status(text)
