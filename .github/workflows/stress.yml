@@ -6,8 +6,10 @@ name: Stress tests
 
 on:
   pull_request:
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
   push:
     branches: [main]
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -15,6 +17,11 @@ on:
       seconds:
         description: "How long each soak runs, in seconds"
         default: "600"
+
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: stress-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   STRESS_SECONDS: ${{ github.event_name == 'pull_request' && '20' || github.event.inputs.seconds || '600' }}
