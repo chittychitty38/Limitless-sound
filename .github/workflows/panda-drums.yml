@@ -2,7 +2,7 @@ name: Panda Drums
 
 on:
   push:
-    branches: [main]
+    branches: [main, panda-drums]
     tags: ["panda-drums-v*"]
     paths: ["apps/panda-drums/**", ".github/workflows/panda-drums.yml"]
   pull_request:
@@ -24,12 +24,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ninja-build libasound2-dev libx11-dev libxrandr-dev \
             libxinerama-dev libxcursor-dev libxcomposite-dev libfreetype-dev libfontconfig1-dev libgl-dev xvfb ffmpeg
-      - name: Build tests and render tool
+      - name: Build tests, render tool and the Linux VST3
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPD_BUILD_PLUGIN=OFF
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target PandaDrumsTests PandaDrumsRender
+          cmake --build build --target PandaDrums_VST3 -j 2
       - name: Unit tests
         run: xvfb-run -a build/PandaDrumsTests_artefacts/Release/PandaDrumsTests
+      - name: Validate the VST3 with pluginval (strictest, with the editor)
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip
+          unzip -q pluginval.zip
+          xvfb-run -a ./pluginval --strictness-level 10 --validate "build/PandaDrums_artefacts/Release/VST3/Panda Drums.vst3"
       - name: Screenshots and demo video
         run: |
           xvfb-run -a build/PandaDrumsRender_artefacts/Release/PandaDrumsRender screenshots preview
@@ -68,7 +74,7 @@ jobs:
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
           unzip -q pluginval.zip
-          pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests \
+          pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --skip-gui-tests \
             --validate "build/PandaDrums_artefacts/Release/VST3/Panda Drums.vst3"
       - name: Package
         run: |

@@ -4,6 +4,8 @@ using namespace pd;
 
 PandaDrumsEditor::PandaDrumsEditor (PandaDrumsProcessor& p) : AudioProcessorEditor (p), proc (p)
 {
+    // Read the remembered size first: setting up the resize limits below already resizes the editor.
+    auto savedWidth = (int) proc.uiState.getProperty ("width", designW * 88 / 100);
     setLookAndFeel (&lookAndFeel);
 
     topBar = std::make_unique<TopBar> (p);
@@ -28,7 +30,7 @@ PandaDrumsEditor::PandaDrumsEditor (PandaDrumsProcessor& p) : AudioProcessorEdit
     setResizable (true, true);
     getConstrainer()->setFixedAspectRatio ((double) designW / (double) designH);
     setResizeLimits (designW * 55 / 100, designH * 55 / 100, designW * 3 / 2, designH * 3 / 2);
-    auto w = (int) proc.uiState.getProperty ("width", designW * 88 / 100);
+    auto w = juce::jlimit (designW * 55 / 100, designW * 3 / 2, savedWidth);
     setSize (w, w * designH / designW);
     startTimerHz (60);
 }
@@ -90,6 +92,8 @@ void PandaDrumsEditor::pumpEvents (double now, std::function<double (const HitEv
     {
         // When will this hit be heard? The engine's clock, mapped onto the wall clock.
         auto strike = strikeTime ? strikeTime (e) : blockWall + (double) (e.time - blockClock + latency) / sr;
+        if (strike < now - 0.5)
+            continue;   // played while the window was closed: don't replay it now
         kitPage->stage.hit (e, std::max (now, strike));
         kitPage->onHit (e);
         labPage->onHit (e);

@@ -11,6 +11,7 @@
 | Limitless Control | `apps/control/` | `.github/workflows/control.yml` | `control-v0.1.0` |
 | GazeStage | `apps/gazestage/` | `.github/workflows/gazestage.yml` | `gazestage-v0.2.0` |
 | Hub and clients | `shared/` | `.github/workflows/shared.yml` | `hub-v0.1.0` |
+| Panda Drums (plugin) | `apps/panda-drums/` | `.github/workflows/panda-drums.yml` | `panda-drums-v0.5.0` |
 
 Each app folder is self-contained: its own requirements / package.json / Cargo workspace,
 tests and packaging, exactly as when it was its own repository. There is no root Cargo

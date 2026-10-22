@@ -14,6 +14,7 @@ webcam, keyboard, switch or controller they already have.
 | **Limitless Control** | [`apps/control`](apps/control) | Xbox Adaptive Controller, switches and gamepads as DAW key commands. |
 | **GazeStage** | [`apps/gazestage`](apps/gazestage) | Play instruments and run the transport with your eyes, head, a sound or a switch. |
 | **Limitless Sound hub** | [`shared/hub`](shared/hub) | Joins them into one suite (below). |
+| **Panda Drums** | [`apps/panda-drums`](apps/panda-drums) | Drum plugin (AU / VST3) that plays in key with any song, drummed by a panda. Separate from the suite. |
 
 ## One suite: any input can do anything
 
