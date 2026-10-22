@@ -70,3 +70,65 @@ def test_rust_client_end_to_end(tmp_path, monkeypatch):
         zoom.stop()
     finally:
         hub.stop()
+
+
+CPP = Path(__file__).resolve().parents[2] / "clients" / "cpp"
+
+
+def _cxx():
+    """A C++17 compiler on PATH. On Windows only MinGW's g++: MSVC's cl needs the Visual Studio
+    developer environment (vcvarsall) set up before it can find its headers, which a plain pytest
+    run doesn't have, and LLVM's clang++ there targets MSVC with flags of its own."""
+    if sys.platform == "win32":
+        return shutil.which("g++")
+    return shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
+
+
+def _build_cpp(source, exe):
+    # Warnings are errors: makers build plug-ins with -Werror, so the header must stay clean.
+    libs = ["-static", "-lws2_32"] if sys.platform == "win32" else ["-pthread"]
+    build = subprocess.run([_cxx(), "-std=c++17", "-Wall", "-Wextra", "-Werror", "-o", str(exe), str(source), *libs],
+                           capture_output=True, text=True)
+    assert build.returncode == 0, build.stderr
+    return exe
+
+
+@pytest.mark.skipif(not _cxx(), reason="no C++ compiler")
+@pytest.mark.parametrize("name", ["json_test", "link_test"])
+def test_cpp_client_unit_tests(tmp_path, name):
+    exe = _build_cpp(CPP / "tests" / f"{name}.cpp", tmp_path / (name + (".exe" if sys.platform == "win32" else "")))
+    run = subprocess.run([str(exe), str(tmp_path)], capture_output=True, text=True, timeout=120)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert f"{name}: all passed" in run.stdout
+
+
+@pytest.mark.skipif(not _cxx(), reason="no C++ compiler")
+def test_cpp_client_end_to_end(tmp_path, monkeypatch):
+    monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))
+    exe = _build_cpp(CPP / "examples" / "check.cpp", tmp_path / ("check.exe" if sys.platform == "win32" else "check"))
+    hub = Hub({}, port=0, http_port=0, speaker=Speaker()).start()
+    try:
+        zoom, zseen = tool("zoom", [{"id": "in", "label": "Zoom in"}])
+        proc = subprocess.Popen([str(exe), "--stay", "4"], stdout=subprocess.PIPE, text=True)
+        assert wait_for(lambda: "color" in hub.bus.tools, 20)  # a cold start on a CI runner can be slow
+        assert wait_for(lambda: hub.bus.states.get("color.ready") is True)  # set before connecting, sent on connect
+        # Shared settings reach C++ on joining and on every change; it reports what it applied.
+        applied = lambda: hub.bus.states.get("color.prefs.applied") or {}  # noqa: E731
+        assert wait_for(lambda: applied() == {"textScale": 1.0, "highContrast": False, "reduceMotion": False})
+        hub.bus.set_prefs({"textScale": 1.5, "highContrast": True})
+        assert wait_for(lambda: applied() == {"textScale": 1.5, "highContrast": True, "reduceMotion": False})
+        assert wait_for(lambda: zseen["invokes"], 5)          # C++ asked Zoom to zoom in
+        assert zseen["invokes"][0][0] == "in" and zseen["invokes"][0][2] == "color"
+        results = []
+        zoom.invoke("color.on", on_result=results.append)     # Python asks C++ to switch colors on
+        assert wait_for(lambda: results)
+        assert results[0]["ok"] is True and results[0]["message"] == "cpp did on"
+        assert wait_for(lambda: hub.bus.states.get("color.filter") is True)
+        zoom.did("in")
+        out, _ = proc.communicate(timeout=30)
+        assert proc.returncode == 0
+        assert "CONNECTED true" in out and "EVENT zoom.in" in out
+        assert "RESULT ok did in" in out                      # Zoom's answer came back to C++
+        zoom.stop()
+    finally:
+        hub.stop()
