@@ -56,25 +56,35 @@ jobs:
             gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n "Limitless-Sound-Suite-${{ matrix.arch }}" -D dl
             echo "version=build ${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
           else
-            curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.dmg" \
-              "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-${{ matrix.arch }}.dmg"
+            # The website's Mac button: the installer package (from 0.2.0), or the disk image
+            # a release before it has.
+            base="https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-${{ matrix.arch }}"
+            curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.pkg" "$base.pkg" \
+              || { rm -f dl/*.pkg; curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.dmg" "$base.dmg"; }
             echo "version=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
           fi
           ls -l dl
           # A web browser marks a download as coming from the internet. Do the same, so macOS
           # treats this copy exactly like a musician's.
-          xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" dl/*.dmg
+          for f in dl/*; do xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$f"; done
 
       - name: Install it
         id: install
         run: |
+          set -o pipefail
           start=$(date +%s)
-          mnt="$RUNNER_TEMP/suite"
-          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dl/*.dmg
-          ls -1 "$mnt"
-          # What double-clicking "Install Limitless Sound" runs. (The one "Open Anyway" click
-          # before it is a person's job; this Mac can't click System Settings.)
-          TERM=dumb bash "$mnt/Install Limitless Sound.command" 2>&1 | tee install.log
+          pkg=$(ls dl/*.pkg 2>/dev/null | head -1)
+          if [ -n "$pkg" ]; then
+            # What the Mac installer does after Continue, Install and the password. (The one
+            # "Open Anyway" click before it is a person's job; this Mac can't click System Settings.)
+            sudo installer -pkg "$pkg" -target / -verboseR 2>&1 | tee install.log
+          else
+            # A release before 0.2.0: what double-clicking "Install Limitless Sound" ran.
+            mnt="$RUNNER_TEMP/suite"
+            hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dl/*.dmg
+            ls -1 "$mnt"
+            TERM=dumb bash "$mnt/Install Limitless Sound.command" 2>&1 | tee install.log
+          fi
           echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
           ls -1d /Applications/Limitless*.app /Applications/GazeStage.app 2>/dev/null || true
 
