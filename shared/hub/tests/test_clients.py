@@ -23,7 +23,8 @@ def test_js_client_end_to_end(tmp_path, monkeypatch):
         control, cseen = tool("control", [{"id": "record", "label": "Record", "intent": "daw.record"}, {"id": "ping", "label": "p"}])
         proc = subprocess.Popen(["node", str(JS), "3000"], stdout=subprocess.PIPE, text=True,
                                 env={**__import__("os").environ})
-        assert wait_for(lambda: "gaze" in hub.bus.tools, 5)
+        # A first Node start on a Windows runner can take several seconds (antivirus scan).
+        assert wait_for(lambda: "gaze" in hub.bus.tools, 20)
         # eyes asked for Record; the controller pressed it
         assert wait_for(lambda: cseen["invokes"], 5)
         assert cseen["invokes"][0][0] == "record" and cseen["invokes"][0][2] == "gaze"
@@ -55,7 +56,7 @@ def test_rust_client_end_to_end(tmp_path, monkeypatch):
         zoom, zseen = tool("zoom", [{"id": "in", "label": "Zoom in"}])
         exe = RUST / "target" / "debug" / "examples" / ("check.exe" if sys.platform == "win32" else "check")
         proc = subprocess.Popen([str(exe)], stdout=subprocess.PIPE, text=True)
-        assert wait_for(lambda: "color" in hub.bus.tools, 5)
+        assert wait_for(lambda: "color" in hub.bus.tools, 20)
         assert wait_for(lambda: hub.bus.states.get("color.ready") is True)  # sent on connect
         # Shared settings reach Rust on joining and on every change; it reports what it applied.
         assert wait_for(lambda: (hub.bus.states.get("color.prefs.applied") or {}).get("textScale") == 1.0)
