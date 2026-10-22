@@ -97,6 +97,8 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: GazeStage ${{ steps.version.outputs.version }}
+          # The repo's Latest release stays the whole-suite download.
+          make_latest: "false"
           files: apps/gazestage/release/*
           body: |
             Play music and run Pro Tools with your head, your eyes, a short sound or a switch.
