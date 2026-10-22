@@ -301,16 +301,16 @@ def test_real_people_saying_command_words():
               + ", ".join(f"{w} {tally[w]['hits']}→{t2[w]['hits']}" for w in words if t2[w]["hits"] != tally[w]["hits"]))
 
     # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin:
-    # results move a little from one runner's CPU to another's. Measured: 91.2% and 91.6% right;
-    # "stop" 96%; the weakest word, "eight", 82% (people's "eight" often comes back as "a").
+    # results move a little from one runner's CPU to another's. Measured over three runs: 91.2% to
+    # 91.6% right; "stop" 96%; the weakest word, "eight", 82% (people's "eight" can come back as "a").
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in words}
     assert hits / tries >= 0.87, f"only {hits / tries:.1%} of the words Voice listens for were right"
     if "stop" in rate:
         assert rate["stop"] >= 0.90, f"“stop”, which ends a take, was right only {rate['stop']:.0%} of the time"
     worst = min(known, key=rate.get)
     assert rate[worst] >= 0.72, f"“{worst}” was right only {rate[worst]:.0%} of the time"
-    # Measured: stray words fired a command 21.6% of the time, and pressed a destructive key on
-    # 3.8% of them (people's "cat" heard as "cut"). That's a known problem (stress/README.md);
+    # Measured: stray words fired a command 21.6% to 21.7% of the time, and pressed a destructive
+    # key on 3.8% to 3.9% of them (people's "cat" heard as "cut"). A known problem (stress/README.md);
     # these ceilings only stop it getting worse. Bring them down when it's fixed.
     assert 1 - quiet / stray_tries <= 0.25, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
     assert destroyed / stray_tries <= 0.045, f"stray words pressed a destructive key {destroyed} times"
@@ -331,9 +331,9 @@ def test_ordinary_talk_rarely_fires_commands():
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud, heard as {utterances} utterances "
           f"in {took:.0f} s with {WORKERS} at once")
 
-    # Most commands an hour of reading aloud may fire. Measured on two runners: Logic Pro 1.9 and
-    # 4.7 an hour, Pro Tools 4.7 and 7.6, none destructive. Only a handful in the hour, so a
-    # different CPU moves them by two or three.
+    # Most commands an hour of reading aloud may fire. Measured on three runners: Logic Pro 1.9,
+    # 4.7 and 1.9 an hour, Pro Tools 4.7, 7.6 and 4.7, none destructive. Only a handful in the
+    # hour, so a different CPU moves them by two or three.
     ceiling = {"Logic Pro": 8, "Pro Tools": 12}
     too_many = []
     for app, most in ceiling.items():

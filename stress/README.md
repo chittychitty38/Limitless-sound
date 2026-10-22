@@ -60,29 +60,30 @@ recognizer.
   dev-clean: 40 people (20 women, 20 men) reading books aloud, 95 seconds each. None of it is
   meant as a command, so everything it fires is a false trigger.
 
-What CI measured (ubuntu-latest, October 2026). Results move a little from one runner's CPU to
-another's; where two runs differed, both are shown. The tests' floors sit a little below.
+What one CI run measured (ubuntu-latest, October 2026). Results move a little from one runner's
+CPU to another's: over three runs, 91.2% to 91.6% of words right, and 1.9 to 4.7 commands an hour
+of talk with Logic Pro in front. The tests' floors sit a little below what any run measured.
 
 | Voice, with Logic Pro in front | |
 |---|---|
-| Words Voice listens for, said by real people | **91.6% right** (1648 of 1800; 91.2% on another runner) |
+| Words Voice listens for, said by real people | **91.6% right** (1648 of 1800) |
 | Commands on their own: stop, no, forward | 96%, 96%, 86% |
 | Numbers | three 96%, two 95%, one 93%, six 92%, seven 91%, zero 91%, four 90%, five 89%, nine 89%, eight 82% |
 | Other words it listens for | yes 97%, right 95%, down 93%, left 93%, up 84% |
-| Talk: commands fired per hour | **4.7** (Logic Pro; 1.9 on another runner), **7.6** (Pro Tools; 4.7); **0 destructive** |
+| Talk: commands fired per hour | **4.7** (Logic Pro), **7.6** (Pro Tools); **0 destructive** |
 | Stray words that aren't commands: fired something | **21.6%** of the time; a destructive key on 3.8% |
 
 | Zoom | |
 |---|---|
 | Stray words: zoomed | 2.3% |
-| Talk: zoomed per hour | 17.0 (17.9), a third of them "again" |
+| Talk: zoomed per hour | 17.0, a third of them "again" |
 
 What goes wrong, from the printed tables:
 
 - **A stray word fires the nearest command.** The command recognizer can only answer with
   command words, so a short word that isn't one comes back as the closest that is. Out of 100
   people each: "cat" fired a command 68 times, 64 of them Cut (Cmd+X); "happy" fired Copy 80
-  times; "wow" 59 times, nearly all volume up; "follow" 55 times, Solo; "bird" 27 times, mostly
+  times; "wow" 59 times, nearly all volume up; "follow" 55 times, nearly all Solo; "bird" 27 times, mostly
   Record. The open recognizer heard the real word nearly every time ("cut / cat").
 - **Talk in full sentences is mostly fine**: a handful of commands an hour, none destructive.
   What does fire is the command recognizer's guess with most of the sentence unknown
