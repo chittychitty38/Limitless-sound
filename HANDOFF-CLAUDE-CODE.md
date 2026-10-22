@@ -130,9 +130,10 @@ item 3).
 
 Its runs on 0.1.0 and 0.2.0 found every bug fixed in 0.2.0 and 0.2.1: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's idle CPU, and false crash logs on Windows. **First job for a new session:
-run it against 0.2.1** (with "Run workflow" once the default branch is `main`, or until then
-from a PR that touches `packaging/proof/`) and check every app passes on all three computers.
+working audio, Zoom's idle CPU, and false crash logs on Windows. **0.2.1 passes it on all three
+computers**: every app ready in 1-8 s, every action answered, no timeouts (check P4), every suite
+check green (run 39827972884, on the website). To run it again before the default branch is
+`main`, open a PR that touches `packaging/proof/`.
 
 ## Public website and branding
 
@@ -203,9 +204,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
    merged, and `diag/control-startup`). Ask Bennet first; cloud sessions weren't allowed to
    delete them.
-6. **GazeStage idle CPU on the proof's Macs: 3.7-4.0%** (target under 3%; Windows 0.9%). Those
-   Macs have no camera, so find what still runs while it sits idle there (the frame loop, a
-   camera retry, the face worker) and measure it the way the proof does.
+6. **Idle CPU still over 3% on the proof's Macs** (0.2.1): GazeStage 7.5% on Apple silicon and
+   3.4% on Intel (1.7% on Windows); Zoom 3.2% on Intel (0.3% on Apple silicon, from 6.8%). A
+   lead for GazeStage: the proof measures 5 s after its last action, and a transport click
+   starts the built-in instrument's audio, which rests only after a minute of silence, now in
+   its own process (#54). Measure what runs then the way the proof does (`usage()` in
+   `packaging/proof/prove_suite.py`) before changing anything; those Macs have no camera.
 
 ## Gotchas learned the hard way
 
