@@ -6,8 +6,10 @@ name: Stress tests
 
 on:
   pull_request:
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
   push:
     branches: [main]
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -16,12 +18,46 @@ on:
         description: "How long each soak runs, in seconds"
         default: "600"
 
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: stress-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   STRESS_SECONDS: ${{ github.event_name == 'pull_request' && '20' || github.event.inputs.seconds || '600' }}
   PYTHONUNBUFFERED: "1"
   PYTHONUTF8: "1"   # Windows consoles default to cp1252; the reports print arrows and µ
 
 jobs:
+  # On a pull request, the app-specific stress jobs run only when that app, the stress tests
+  # or this workflow changed. Main, the nightly run and a manual run always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      voice: ${{ steps.diff.outputs.voice }}
+      gazestage: ${{ steps.diff.outputs.gazestage }}
+      color: ${{ steps.diff.outputs.color }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            for app in voice gazestage color; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          echo "$changed"
+          for app in voice gazestage color; do
+            if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
+              echo "$app=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$app=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
   engines:
     name: Engines and hub (${{ matrix.os }})
     strategy:
@@ -47,6 +83,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.voice == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
@@ -89,6 +127,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.gazestage == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -118,6 +158,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, windows-latest]
+    needs: changes
+    if: needs.changes.outputs.color == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
