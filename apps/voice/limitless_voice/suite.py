@@ -155,9 +155,18 @@ class Suite:
             e.take, e.dictating, e.pending = True, False, None
         elif action == "takeGuardOff":
             e.take = False
-        elif action == "do" or f"daw.{action}" in INTENT_PHRASES:
-            phrase = args.get("phrase", "") if action == "do" else INTENT_PHRASES[f"daw.{action}"]
-            return self._run_phrase(str(phrase))
+        elif action == "do":
+            phrase = str(args.get("phrase") or "").strip()
+            if not phrase:
+                return False, 'Which command? Send the words to run, like "solo track".'
+            return self._run_phrase(phrase)
+        elif f"daw.{action}" in INTENT_PHRASES:
+            ok, message = self._run_phrase(INTENT_PHRASES[f"daw.{action}"])
+            if not ok and not message.startswith("That command needs"):
+                # The DAW commands only exist while Logic Pro or Pro Tools is in front.
+                message = (f"{INTENT_PHRASES[f'daw.{action}'].capitalize()} works when Logic Pro "
+                           f"or Pro Tools is in front.")
+            return ok, message
         else:
             return False, f"Limitless Voice has no action {action!r}."
         self.on_change()

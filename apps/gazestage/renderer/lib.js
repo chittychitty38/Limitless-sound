@@ -72,6 +72,30 @@ export function headToScreen(yaw, pitch, neutral, rangeDeg, W, H) {
   return [x * W, y * H];
 }
 
+// ---------- display ----------
+// GazeStage's own Text size setting (17, 20 and 24 px) as a multiple of the normal size.
+export const TEXT_SCALE = { normal: 1, large: 20 / 17, xlarge: 24 / 17 };
+
+// Text size, contrast and motion in use. own: GazeStage's settings ({ size, contrast,
+// reduceMotion }); shared: the musician's Limitless Sound settings, or null with no hub.
+// One rule: whichever is more accessible. The larger text wins, and high contrast or reduced
+// motion is on if either asks for it.
+export function displayInUse(own, shared) {
+  const scale = +shared?.textScale;
+  return {
+    textScale: Math.max(TEXT_SCALE[own.size] || 1, scale >= 1 ? Math.min(scale, 2) : 1),
+    highContrast: !!(own.contrast || shared?.highContrast),
+    reduceMotion: !!(own.reduceMotion || shared?.reduceMotion),
+  };
+}
+
+// Dwell progress as drawn: smooth, or in quarter steps with reduced motion. Drawing only;
+// a target still fires when the real progress reaches 1.
+export function shownProgress(p, reduceMotion) {
+  const v = Math.min(1, Math.max(0, p || 0));
+  return reduceMotion ? Math.ceil(v * 4) / 4 : v;
+}
+
 // ---------- music ----------
 export const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 export const SCALES = {

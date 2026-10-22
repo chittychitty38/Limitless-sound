@@ -23,13 +23,26 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import __version__, frontmost, keys, login, profiles
+from . import __version__, applog, frontmost, keys, login, mac_keys, profiles
 from .engine import Engine
 
 PORT = 47820
 WEB_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "limitless_control" / "web"
 if not WEB_DIR.exists():
     WEB_DIR = Path(__file__).resolve().parent / "web"
+
+
+def open_in_browser(url: str) -> None:
+    """Open a page without waiting for the browser. Python's webbrowser waits for
+    osascript on a Mac, which can take half a minute, and the controller loop runs
+    on this thread: no button press may ever wait for a browser."""
+    if sys.platform == "darwin":
+        try:
+            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except OSError:
+            pass
+    threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
 def accessibility_ok() -> bool:
@@ -175,7 +188,7 @@ class App:
 
     def open_settings(self) -> None:
         if self.url:
-            webbrowser.open(self.url)
+            open_in_browser(self.url)
 
     def toggle_enabled(self) -> None:
         with self.lock:
@@ -250,13 +263,13 @@ class App:
         self.url = f"http://127.0.0.1:{server.server_address[1]}/?t={self.token}"
         self._write_session(server.server_address[1])
         self.log(f"Limitless Control {__version__} running. Settings: {self.url}")
+        self.suite.start()
         if not accessibility_ok():
             self.log("Mac: allow Accessibility access so key commands reach your apps.")
         # The first time, always show the guided setup.
         if open_browser or not self.config.get("setupDone"):
             self.open_settings()
 
-        self.suite.start()
         self.reader = ControllerReader(self._press, self._release, self.log)
         self.reader.threshold = float(self.config.get("analogThreshold", 0.6))
         self.reader.start()
@@ -482,13 +495,15 @@ def main(argv=None) -> None:
     parser.add_argument("--test-mode", action="store_true", help="log key commands instead of pressing them")
     parser.add_argument("--self-test", action="store_true", help="check the app starts, then quit")
     args = parser.parse_args(argv)
+    applog.start("Limitless Control", __version__)
+    mac_keys.prepare()   # before anything presses keys, on this, the main thread
     if args.self_test:
         sys.exit(self_test())
 
     other = already_running()
     if other is not None:
         if other.get("token"):
-            webbrowser.open(f"http://127.0.0.1:{other.get('port', PORT)}/?t={other['token']}")
+            open_in_browser(f"http://127.0.0.1:{other.get('port', PORT)}/?t={other['token']}")
         else:
             print(f"Something else is using port {PORT}.")
         return
