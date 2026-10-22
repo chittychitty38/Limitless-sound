@@ -1,0 +1,49 @@
+# Temporary: finds what keeps the released Limitless Zoom busy while it sits idle on a Mac
+# (the proof's 3.2% on Intel, 0.3% on Apple silicon; the limit is 3%).
+name: Diagnose Zoom idle CPU
+
+on:
+  push:
+    branches: [diag/zoom-idle]
+
+jobs:
+  diag:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15-intel, dmg: Limitless-Zoom-mac-intel.dmg }
+          - { os: macos-15, dmg: Limitless-Zoom-mac-apple-silicon.dmg }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Install the released Limitless Zoom
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download zoom-v0.1.2 -R "$GITHUB_REPOSITORY" -p "${{ matrix.dmg }}" -D "$RUNNER_TEMP"
+          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "$RUNNER_TEMP/${{ matrix.dmg }}"
+          cp -R "$RUNNER_TEMP/mnt/Limitless Zoom.app" "$RUNNER_TEMP/"
+          xattr -cr "$RUNNER_TEMP/Limitless Zoom.app"
+          pip3 install --break-system-packages py-spy >/dev/null 2>&1 || pip3 install py-spy >/dev/null
+      - name: Measure
+        run: |
+          export LIMITLESS_SOUND_LOGS="$RUNNER_TEMP/logs"
+          "$RUNNER_TEMP/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" > zoom.log 2>&1 &
+          pid=$!
+          sleep 25
+          cpu() { ps -o time= -p "$pid" | awk -F'[:.]' '{ if (NF==3) print $1*60+$2+$3/100; else print $1*3600+$2*60+$3+$4/100 }'; }
+          threads() { ps -M -p "$pid" | tail -n +2; }
+          a=$(cpu); threads > t1.txt; sleep 15; b=$(cpu); threads > t2.txt
+          echo "== Zoom sitting idle: $(echo "$a $b" | awk '{printf "%.1f", ($2-$1)/15*100}')% of one core"
+          echo "-- threads before:"; cat t1.txt; echo "-- threads after:"; cat t2.txt
+          echo "== Python, 15 s (active threads only):"
+          sudo "$(python3 -c 'import sysconfig;print(sysconfig.get_path("scripts"))')/py-spy" record -p "$pid" -d 15 -r 100 -f raw -o spy.txt --nonblocking || sudo py-spy record -p "$pid" -d 15 -r 100 -f raw -o spy.txt --nonblocking || true
+          sort -t' ' -k2 -nr spy.txt 2>/dev/null | awk '{c=$NF; $NF=""; print c, $0}' | sort -nr | head -25 | cut -c1-600
+          echo "== Python threads now:"; sudo py-spy dump -p "$pid" --nonblocking 2>/dev/null | head -80 || true
+          echo "== Native, 5 s:"
+          sample "$pid" 5 -file s.txt >/dev/null 2>&1 || true
+          sed -n '/Call graph:/,/Total number in stack/p' s.txt | grep -v "^ *+ *[0-9]* *???" | head -120
+          sed -n '/Sort by top of stack/,$p' s.txt | head -30
+          kill "$pid" || true
+          echo "== Log"; cat zoom.log; cat "$LIMITLESS_SOUND_LOGS"/*.log 2>/dev/null | tail -40
