@@ -8,6 +8,15 @@ on:
   pull_request:
     paths: ["apps/panda-drums/**", ".github/workflows/panda-drums.yml"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a release with this tag (panda-drums-v...) from an earlier run's installers, without building"
+        required: false
+        default: ""
+      from_run:
+        description: "The id of the run whose installers to publish"
+        required: false
+        default: ""
 
 defaults:
   run:
@@ -16,6 +25,7 @@ defaults:
 jobs:
   # Unit tests on Linux, then the render tool films the panda playing a groove.
   preview:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +64,7 @@ jobs:
           path: apps/panda-drums/preview
 
   mac:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +105,7 @@ jobs:
           path: apps/panda-drums/dist/*.pkg
 
   windows:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -114,28 +126,41 @@ jobs:
           name: Panda-Drums-windows
           path: apps/panda-drums/dist/*.exe
 
+  # A panda-drums-v* tag publishes what this run built; run by hand with a release_tag, it
+  # publishes the installers an earlier run built (from_run), and the release makes the tag.
   release:
-    if: startsWith(github.ref, 'refs/tags/panda-drums-v')
+    if: ${{ !cancelled() && !failure() && (startsWith(github.ref, 'refs/tags/panda-drums-v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')) }}
     needs: [preview, mac, windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
-      - uses: actions/download-artifact@v4
+      - if: ${{ inputs.from_run == '' || inputs.from_run == null }}
+        uses: actions/download-artifact@v4
         with:
           path: out
           merge-multiple: true
+      - if: ${{ inputs.from_run != '' && inputs.from_run != null }}
+        uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+          run-id: ${{ inputs.from_run }}
+          github-token: ${{ github.token }}
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: |
             out/*.pkg
             out/*.exe
             out/*.mp4
-          name: Panda Drums ${{ github.ref_name }}
+          name: Panda Drums ${{ inputs.release_tag || github.ref_name }}
           # The repo's Latest release is the Limitless Sound suite download.
           make_latest: "false"
           # A -beta or -rc tag is a test build, marked as a pre-release.
-          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(inputs.release_tag || github.ref_name, '-beta') || contains(inputs.release_tag || github.ref_name, '-rc') }}
           body: |
             **Mac** (Apple silicon and Intel, macOS 10.13 or later): open the `.pkg` and click through. It installs the Audio Unit, the VST3 and the app. It isn't signed by Apple yet, so the first time macOS refuses: System Settings > Privacy & Security > **Open Anyway**. In Logic, rescan in Plug-in Manager if it doesn't show under Instruments > The Panda Studios.
 
