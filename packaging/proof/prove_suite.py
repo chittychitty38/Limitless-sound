@@ -46,6 +46,7 @@ HUB_APP = "Limitless Sound.app"
 OPEN_LIMIT = 90.0    # seconds to wait for an app to open and join the suite at all
 READY_LIMIT = 15.0   # seconds a musician should ever wait for an app to be ready
 IDLE_SECONDS = 15    # how long to watch CPU while everything sits idle
+SETTLE_SECONDS = 5   # quiet time after the last action before that
 IDLE_CPU_LIMIT = 3.0 # % of one core an app may use sitting idle, so laptops last a session
 
 
@@ -83,14 +84,23 @@ def screenshot(path: Path) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
-def processes() -> list[tuple[int, float, int, str]]:
-    """(pid, cpu %, memory KB, command) for every process, on a Mac."""
-    out = []
-    for line in run(["ps", "-axo", "pid=,%cpu=,rss=,command="]).splitlines():
+def cpu_seconds(text: str) -> float:
+    """CPU time as ps prints it on a Mac ("1:02.53", "1:02:03.04" or "2-01:02:03.04") in seconds."""
+    days, _, rest = text.rpartition("-")
+    total = 0.0
+    for part in rest.split(":"):
+        total = total * 60 + float(part)
+    return total + (int(days) * 86400 if days else 0)
+
+
+def processes() -> dict[int, tuple[str, float, int]]:
+    """pid -> (command, CPU seconds used so far, memory bytes), on a Mac."""
+    out = {}
+    for line in run(["ps", "-axo", "pid=,time=,rss=,command="]).splitlines():
         parts = line.split(None, 3)
         if len(parts) == 4:
             with contextlib.suppress(ValueError):
-                out.append((int(parts[0]), float(parts[1]), int(parts[2]), parts[3]))
+                out[int(parts[0])] = (parts[3], cpu_seconds(parts[1]), int(parts[2]) * 1024)
     return out
 
 
@@ -106,37 +116,31 @@ def windows_processes() -> dict[int, tuple[str, float, int]]:
     return {r["Id"]: (r.get("Path") or "", float(r.get("CPU") or 0), int(r.get("WorkingSet64") or 0)) for r in rows}
 
 
-def usage_windows(bundles: dict[str, str]) -> dict[str, dict]:
-    """The same as usage(), from two readings of each app's CPU time IDLE_SECONDS apart."""
-    folders = {k: "\\" + b.removesuffix(".app").lower() + "\\" for k, b in bundles.items()}
-    before, t0 = windows_processes(), time.time()
+def usage(bundles: dict[str, str]) -> dict[str, dict]:
+    """CPU and memory of each app (all its helper processes together) while everything sits idle.
+
+    CPU comes from two readings of each app's CPU time IDLE_SECONDS apart. (A Mac's own
+    %cpu is a decaying average of the last minute, so it would count the test kit's work.)
+    """
+    if sys.platform == "win32":
+        read = windows_processes
+        marks = {k: "\\" + b.removesuffix(".app").lower() + "\\" for k, b in bundles.items()}
+    elif sys.platform == "darwin":
+        read = processes
+        marks = {k: f"/{b}/".lower() for k, b in bundles.items()}
+    else:
+        return {}
+    time.sleep(SETTLE_SECONDS)
+    before, t0 = read(), time.time()
     time.sleep(IDLE_SECONDS)
-    after, took = windows_processes(), time.time() - t0
+    after, took = read(), time.time() - t0
     out = {}
-    for key, folder in folders.items():
-        mine = [pid for pid, (path, _, _) in after.items() if folder in path.lower()]
+    for key, mark in marks.items():
+        mine = [pid for pid, (path, _, _) in after.items() if mark in path.lower()]
         if mine:
             cpu = sum(after[p][1] - before.get(p, after[p])[1] for p in mine) / took * 100
             out[key] = {"cpuPercent": round(max(cpu, 0.0), 1), "memoryMB": round(sum(after[p][2] for p in mine) / 2**20)}
     return out
-
-
-def usage(bundles: dict[str, str]) -> dict[str, dict]:
-    """Average CPU and peak memory of each app (all its helper processes together) while idle."""
-    if sys.platform == "win32":
-        return usage_windows(bundles)
-    if sys.platform != "darwin":
-        return {}
-    samples: dict[str, list[tuple[float, int]]] = {k: [] for k in bundles}
-    for _ in range(IDLE_SECONDS):
-        procs = processes()
-        for key, bundle in bundles.items():
-            mine = [p for p in procs if f"/{bundle}/" in p[3]]
-            if mine:
-                samples[key].append((sum(p[1] for p in mine), sum(p[2] for p in mine)))
-        time.sleep(1)
-    return {k: {"cpuPercent": round(sum(c for c, _ in s) / len(s), 1), "memoryMB": round(max(m for _, m in s) / 1024)}
-            for k, s in samples.items() if s}
 
 
 def wait_for_hub(limit: float) -> las_check.Hub:
