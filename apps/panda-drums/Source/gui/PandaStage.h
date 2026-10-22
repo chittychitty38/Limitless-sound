@@ -137,6 +137,8 @@ private:
         float nextFromH = 0.0f;
         float nextFromV = 0.0f;     // and how fast it was going (heights a second, + up)
         float ioi = 0.4f;           // the time between its strokes lately
+        float leadFrom = 0.0f;      // the hand's lead over the stick when a new note changed the plan,
+        double leadAt = -10.0;      // carried over from then and eased out: a new note never jolts the fist
         Spring elbowX, elbowY;      // the elbow trailing the hand (overlapping action)
         Spring shoulderLift;        // the shoulder rising with a big stroke
         float home = 1.0f;          // 1: resting in the picture's pose
@@ -190,6 +192,8 @@ private:
     void paintSkin (juce::Graphics&);
     Arm armPose (const Hand&, double t) const;
     float strokeAt (const Hand&, double t) const;
+    float handLift (const Hand&, double t) const;
+    void carryLead (Hand&, double t, float lifted);
     float homeWeight (const Hand&, double t) const;
     P rigStrikePoint (const PieceView&, int hand) const;
     juce::AffineTransform torsoTransform() const;

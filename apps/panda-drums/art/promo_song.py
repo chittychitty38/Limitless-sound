@@ -12,6 +12,7 @@ whole first chorus. Needs numpy, Pillow and ffmpeg.
 """
 
 import json
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -171,6 +172,20 @@ def song_audio(song, total, out_wav):
         w.writeframes((a * 32767).clip(-32768, 32767).astype(np.int16).tobytes())
 
 
+_job = {}
+
+
+def frame_bytes(i):
+    """Frame i as raw RGB, faded in from and out to black at the ends."""
+    tl, d, hero, cuts = _job["tl"], _job["d"], _job["hero"], _job["cuts"]
+    t, total = i / FPS, tl["end"]
+    canvas = draw_frame(tl, t, i, d, hero, cuts)
+    fade = min(P.clamp(t / 0.4), P.clamp((total - t) / 0.6))
+    if fade < 1:
+        canvas = Image.blend(Image.new("RGBA", (W, H), (0, 0, 0, 255)), canvas, fade)
+    return canvas.convert("RGB").tobytes()
+
+
 def main(d, hero_path, song, out):
     P.BG = P.make_bg()
     with open(os.path.join(d, "timeline.json")) as f:
@@ -195,15 +210,15 @@ def main(d, hero_path, song, out):
                            "-r", str(FPS), "-i", "-", "-i", wav, "-c:v", "libx264", "-preset", "slow", "-crf", "17",
                            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k", "-shortest", "-movflags", "+faststart", out],
                           stdin=subprocess.PIPE)
-    for i in range(frames):
-        t = i / FPS
-        canvas = draw_frame(tl, t, i, d, hero, cuts)
-        fade = min(P.clamp(t / 0.4), P.clamp((total - t) / 0.6))
-        if fade < 1:
-            canvas = Image.blend(Image.new("RGBA", (W, H), (0, 0, 0, 255)), canvas, fade)
-        ff.stdin.write(canvas.convert("RGB").tobytes())
+    _job.update(tl=tl, d=d, hero=hero, cuts=cuts)
+    jobs = int(os.environ.get("PROMO_JOBS", "1"))   # draw frames on this many cores (in order)
+    pool = multiprocessing.get_context("fork").Pool(jobs) if jobs > 1 else None
+    for i, raw in enumerate(pool.imap(frame_bytes, range(frames), 4) if pool else map(frame_bytes, range(frames))):
+        ff.stdin.write(raw)
         if i % 300 == 0:
             print("frame", i, "/", frames, flush=True)
+    if pool:
+        pool.close()
     ff.stdin.close()
     ff.wait()
     print("wrote", out)

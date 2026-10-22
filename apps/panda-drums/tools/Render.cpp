@@ -17,7 +17,7 @@ namespace
 {
 constexpr double sampleRate = 48000.0;
 constexpr int blockSize = 480;
-const int fps = juce::jlimit (10, 120, juce::SystemStats::getEnvironmentVariable ("PD_FPS", "30").getIntValue());
+const int fps = juce::jlimit (10, 240, juce::SystemStats::getEnvironmentVariable ("PD_FPS", "30").getIntValue());
 const float frameScale = juce::jlimit (1.0f, 3.0f, juce::SystemStats::getEnvironmentVariable ("PD_SCALE", "1").getFloatValue());   // video frames' pixel scale
 
 bool writePng (const juce::Image& img, const juce::File& f)

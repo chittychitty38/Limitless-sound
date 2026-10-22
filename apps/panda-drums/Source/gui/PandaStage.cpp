@@ -11,6 +11,8 @@ constexpr float floorY = 690.0f;
 constexpr double liveStroke = 0.035;    // how long a stick takes to land a hit played live (s)
 constexpr float strokeDwell = 0.016f;   // how long a stick sits on the head (a frame: the eye needs to see it land)
 constexpr float whipPower = 2.4f;       // a stroke's fall: height (1 - u^p), slow at the top, fastest as it lands
+constexpr double handLead = 0.018;      // the hand leads the stick by this much (the wrist snaps it after)
+constexpr float leadEase = 0.08f;       // a new note's change to that lead eases in over this long
 // How fast a stick comes off the head (heights a second): a loud one bounces back hard.
 float reboundSpeed (float vel) { return 0.6f + 3.0f * (0.12f + 0.98f * std::pow (juce::jlimit (0.0f, 1.0f, vel / 127.0f), 1.8f)); }
 // The art's sticks are longer than the drawn ones were; the rig's says how long its is.
@@ -663,6 +665,7 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
     if (s.hand >= 0)
     {
         auto& h = hands[(size_t) s.hand];
+        auto lifted = rig ? handLift (h, now) : 0.0f;
         h.twirlAt = -10.0;      // no showing off when there's work to do
         P paw, tip;
         handPose (h, now, paw, tip);
@@ -709,12 +712,15 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
         }
         if (h.next.piece < 0 || strikeTime < h.next.time)
             h.next = s;
+        if (rig)
+            carryLead (h, now, lifted);
     }
     pending.push_back (s);
 }
 
 void PandaStage::land (Hand& h, const Strike& s)
 {
+    auto lifted = rig ? handLift (h, s.time) : 0.0f;
     if (h.last.piece >= 0 && s.time - h.last.time > 0.04 && s.time - h.last.time < 1.2)
         h.ioi = h.ioi * 0.7f + (float) (s.time - h.last.time) * 0.3f;
     h.last = s;
@@ -742,6 +748,8 @@ void PandaStage::land (Hand& h, const Strike& s)
         h.moveStart = s.time;
         h.moveEnd = std::max (s.time + 0.04, h.next.time - 0.02);
     }
+    if (rig)
+        carryLead (h, s.time, lifted);
 }
 
 void PandaStage::spawnSparkles (const PieceView& v, float vel)
@@ -2350,6 +2358,22 @@ PandaStage::P PandaStage::rigStrikePoint (const PieceView& v, int hand) const
     return v.pos.translated ((hand == 0 ? -1.0f : 1.0f) * v.radius * 0.12f, across * 0.25f);
 }
 
+// The hand leads the stick a little: its height a moment ahead. When a new note changes the plan,
+// the lead the hand had carries over and eases out, so the fist never jumps.
+float PandaStage::handLift (const Hand& h, double t) const
+{
+    return strokeAt (h, t + handLead) + h.leadFrom * (1.0f - smooth ((float) (t - h.leadAt) / leadEase));
+}
+
+void PandaStage::carryLead (Hand& h, double t, float lifted)
+{
+    if (std::abs (handLift (h, t) - lifted) < 1.0e-5f)
+        return;
+    h.leadFrom = 0.0f;
+    h.leadFrom = lifted - handLift (h, t);
+    h.leadAt = t;
+}
+
 float PandaStage::strokeAt (const Hand& h, double t) const
 {
     // A stick's height (0 on the head ... 1 straight up) moves like a drummer's: every stroke is
@@ -2554,7 +2578,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     a.pitch = hp;
 
     // The stroke. The hand leads the stick a little on the way down (the wrist snaps it after).
-    auto H = strokeAt (h, t), handH = strokeAt (h, t + 0.018);
+    auto H = strokeAt (h, t), handH = handLift (h, t);
     a.height = H;
     auto pitchNow = hp + (topPitch - hp) * std::min (H, 1.15f);
     auto headingNow = juce::jlimit (-80.0f * degrees, 80.0f * degrees, hd - inward * rise * std::min (H, 1.0f));
@@ -2562,7 +2586,8 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     auto pivotNow = hitPivot - P (outward * 0.5f * up, up);
     // Going up, the fist stops under his chin (wherever his head is now): the stick goes on up
     // from the wrist, past his face, but the hand doesn't. A soft stop (a smooth max), never a kink,
-    // and never lower than where it meets the head.
+    // and never lower than where it meets the head. It takes hold gradually over the outer fifth
+    // of his head's width, so a hand waiting by his cheek while he bangs his head never pops.
     if (up > 0.0f)
     {
         auto c = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
@@ -2574,7 +2599,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
             constexpr float soft = 6.0f;
             auto z = (pivotNow.y - chin) / soft;
             auto pushed = chin + soft * (z > 20.0f ? z : std::log1p (std::exp (z)));
-            pivotNow.y = std::min (hitPivot.y, pushed);
+            pivotNow.y += (std::min (hitPivot.y, pushed) - pivotNow.y) * smooth ((1.0f - std::abs (dx)) / 0.2f);
         }
     }
 
