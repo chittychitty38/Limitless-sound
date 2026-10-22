@@ -75,15 +75,21 @@ try {
 
   step('a held switch is released when the window loses focus');
   await win.evaluate(() => { window.__gs.S.mode = 'mouse'; window.__gs.S.select = 'switch'; });
-  const box = await win.locator('#pads .target').nth(5).boundingBox();
+  const target = win.locator('#pads .target').nth(5);
+  const padId = await target.getAttribute('data-pad');
+  const box = await target.boundingBox();
+  await win.evaluate(() => document.activeElement?.blur());
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await win.waitForTimeout(250);
-  await win.keyboard.down('Space'); await win.waitForTimeout(150);
+  // Wait until the pointer has settled on the pad (slower on CI runners than locally).
+  await win.waitForFunction((id) => window.__gs.state.current?.dataset.pad === id, padId, { timeout: 5000 });
+  await win.keyboard.down('Space');
+  await win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 }).catch(() => {});
   assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the switch plays the pad');
   await win.evaluate(() => window.dispatchEvent(new Event('blur')));
   assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'losing focus stops the note');
   await win.keyboard.up('Space');
-  await win.keyboard.down('Space'); await win.waitForTimeout(150);
+  await win.keyboard.down('Space');
+  await win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 }).catch(() => {});
   assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the next press still works');
   await win.keyboard.up('Space'); await win.waitForTimeout(100);
   assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'key-up releases the note');
