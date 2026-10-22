@@ -1,0 +1,68 @@
+# Temporary: finds where Limitless Control spends ~35 s starting on an Intel Mac
+# (the proof run's 37.6 s, and the 38 s smoke test on macos-15-intel).
+name: Diagnose Control startup
+
+on:
+  push:
+    branches: [diag/control-startup]
+
+defaults:
+  run:
+    working-directory: apps/control
+
+jobs:
+  diag:
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ".[dev]"
+      - name: From source, with a traceback every 5 s and import times
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          python -X importtime -c "
+          import faulthandler, sys, time
+          faulthandler.dump_traceback_later(5, repeat=True)
+          t = time.monotonic()
+          from limitless_control import app
+          print(f'import app: {time.monotonic() - t:.1f} s', flush=True)
+          try:
+              app.main(['--self-test'])
+          except SystemExit as e:
+              print('exit', e.code, f'after {time.monotonic() - t:.1f} s', flush=True)
+          " 2> importtime.log || true
+          sort -t'|' -k2 -n importtime.log | grep -v "^Thread\|^  File\|^Current\|^Timeout" | tail -25
+          grep -A25 "^Timeout\|^Thread\|^Current thread" importtime.log | head -150
+      - run: pyinstaller --noconfirm packaging/limitless_control.spec
+      - name: The built app, sampled while it starts
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          start=$(date +%s)
+          "dist/Limitless Control.app/Contents/MacOS/Limitless Control" --self-test > smoke.log 2>&1 &
+          pid=$!
+          sleep 6
+          sample "$pid" 8 -file sample.txt || true
+          wait "$pid" || true
+          echo "self-test took $(( $(date +%s) - start )) s"
+          cat smoke.log
+          # The heaviest stacks: what the main thread was doing.
+          sed -n '/Call graph:/,/Total number in stack/p' sample.txt | head -120
+          sed -n '/Sort by top of stack/,$p' sample.txt | head -40
+      - name: The built app started the way the hub starts it (no self-test)
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          export LIMITLESS_SOUND_LOGS="$RUNNER_TEMP/logs"
+          "dist/Limitless Control.app/Contents/MacOS/Limitless Control" --background > run.log 2>&1 &
+          pid=$!
+          sleep 6
+          sample "$pid" 8 -file sample2.txt || true
+          sleep 30
+          kill "$pid" || true
+          cat run.log; cat "$LIMITLESS_SOUND_LOGS"/*.log || true
+          sed -n '/Call graph:/,/Total number in stack/p' sample2.txt | head -120
