@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Limitless Color Tuner</title>
+<style>
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(fonts/AtkinsonHyperlegibleNext.woff2) format("woff2");font-weight:200 800;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Mono";src:url(fonts/AtkinsonHyperlegibleMono.woff2) format("woff2");font-weight:200 800;font-display:swap}
+/* Layout: a mix-console desk. Big preview "screen" on top with the assistant beside it; channel-strip faders, an element list and a quick eye check below. */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --panel-2:#f5f6f9; --ink:#15181d; --ink-2:#4a5160; --line:#d5d9e1;
+  --accent:#1f5fd1; --accent-ink:#ffffff; --focus:#1f5fd1; --warn:#9a5b00;
+  --f-display:"Atkinson Hyperlegible Next",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible Next",system-ui,sans-serif;
+  --f-mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121418; --panel:#1b1e24; --panel-2:#22262e; --ink:#eef1f6; --ink-2:#a9b0bd; --line:#30353f;
+  --accent:#7fb0ff; --accent-ink:#0b1426; --focus:#9cc2ff; --warn:#f2b552; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121418; --panel:#1b1e24; --panel-2:#22262e; --ink:#eef1f6; --ink-2:#a9b0bd; --line:#30353f;
+  --accent:#7fb0ff; --accent-ink:#0b1426; --focus:#9cc2ff; --warn:#f2b552; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--ink-2);margin:6px 0 0;max-width:70ch}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;margin:0;color:var(--ink-2);font-weight:600}
+.top{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media (max-width:1050px){.top{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage canvas{width:100%;height:auto;display:block;border-radius:6px;background:#1c1d21;cursor:crosshair;touch-action:none}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spacer{flex:1}
+button,.btn{font:inherit;font-size:16px;min-height:44px;padding:8px 16px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button:hover{border-color:var(--ink-2)}
+button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+select{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink)}
+label.inline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px;min-width:0;max-width:100%}
+select{max-width:100%}
+input[type=checkbox]{width:24px;height:24px}
+.hint{color:var(--ink-2);font-size:15px;margin:0}
+.split{display:flex;align-items:center;gap:10px}
+.split input{flex:1}
+
+/* assistant */
+.chat{display:flex;flex-direction:column;gap:10px;max-height:460px;min-height:260px;overflow-y:auto;padding-right:4px}
+.msg{padding:10px 12px;border-radius:10px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink)}
+.msg.bot{align-self:flex-start;background:var(--panel-2);border:1px solid var(--line)}
+.msg .chg{display:block;margin-top:6px;font-family:var(--f-mono);font-size:13px;color:var(--ink-2)}
+.msg .q{display:block;margin-top:6px;font-weight:600}
+textarea{font:inherit;width:100%;min-height:76px;padding:10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font-size:14px;min-height:40px;padding:6px 10px;text-align:left}
+.badge{font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2)}
+
+/* desk */
+.desk{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
+@media (max-width:1050px){.desk{grid-template-columns:1fr}}
+.faders{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.fader{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.fader .top-l{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.fader label{font-weight:600}
+.fader output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:14px}
+.fader .ends{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2)}
+input[type=range]{width:100%;height:44px;accent-color:var(--accent);cursor:pointer}
+.roles{display:flex;flex-direction:column;gap:6px;max-height:620px;overflow-y:auto}
+.role{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
+.role .nm{min-width:0}
+.role .nm b{display:block;font-weight:600}
+.role .nm small{color:var(--ink-2)}
+.sw{width:40px;height:40px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;font-size:12px}
+.arrow{color:var(--ink-2)}
+.role input[type=color]{width:44px;height:44px;border:none;background:none;padding:0;cursor:pointer}
+.role .pin{font-family:var(--f-mono);font-size:12px;color:var(--warn)}
+.check-pair{display:flex;gap:16px;justify-content:center;padding:12px;background:#808080;border-radius:8px}
+.check-pair span{width:96px;height:96px;border-radius:50%;display:block}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.plan h3{margin:0 0 4px;font-size:18px}
+.plan p{margin:0;color:var(--ink-2);max-width:65ch}
+code,.mono{font-family:var(--f-mono);font-size:14px}
+.out{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+input[type=password]{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);flex:1;min-width:0}
+details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+#screenBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{margin:0;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note[hidden]{display:none}
+
+/* clarity check */
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pair{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center}
+.pair .sws{display:flex;gap:4px;grid-row:span 3}
+.pair .sws span{width:34px;height:44px;border-radius:6px;border:2px solid var(--line)}
+.pair b{font-weight:600;line-height:1.25}
+.pair .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.pair .bar i{display:block;height:100%;background:var(--ink);border-radius:99px}
+.pair small{color:var(--ink-2);font-size:14px}
+.pair small strong{color:var(--ink);font-weight:600}
+
+/* first-launch setup */
+dialog#setup{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:auto}
+dialog#setup::backdrop{background:rgba(10,12,16,.62)}
+#setup .setup-title{font-size:clamp(24px,3.4vw,32px);text-transform:none;letter-spacing:-.01em;color:var(--ink);font-weight:800;margin:6px 0 10px;line-height:1.15}
+#setupBody{display:flex;flex-direction:column;gap:14px}
+#setupBody p{margin:0;max-width:62ch}
+#setupBody ol,#setupBody ul{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+#setupBody .big{font-size:18px;min-height:52px;padding:10px 22px}
+#setupBody canvas{width:100%;height:auto;border-radius:8px;display:block}
+.cmp{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:6px 14px;align-items:center}
+.cmp .hd{font-size:14px;color:var(--ink-2);font-weight:600}
+.cmp .duo{display:flex;gap:4px}
+.cmp .duo span{width:40px;height:40px;border-radius:6px;border:2px solid var(--line)}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:6px}
+legend{font-weight:600;padding:0 4px}
+.choice{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:6px 4px;cursor:pointer}
+.choice input{width:22px;height:22px;margin-top:2px;flex:none}
+.choice small{display:block;color:var(--ink-2)}
+.ok{font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Limitless Color Tuner</h1>
+      <p class="sub">Tell it what you see, move the faders, and keep going until the session looks right to your eyes. Everything you set becomes a color profile your Mac can apply to Logic Pro or Pro Tools.</p>
+    </div>
+    <div class="row">
+      <button id="screenBtn" type="button" aria-pressed="false" hidden>Screen colors: Off</button>
+      <button id="bypassBtn" type="button" hidden>Hold to compare</button>
+      <button id="undo" type="button">Undo</button>
+      <button id="reset" type="button">Start over</button>
+    </div>
+  </header>
+  <p class="note" id="screenNote" hidden aria-live="polite"></p>
+
+  <div class="top">
+    <section class="card stage" aria-labelledby="stage-h">
+      <div class="row"><h2 id="stage-h">Your screen</h2><span class="spacer"></span>
+        <span class="badge" id="srcBadge">Sample Logic-style session</span>
+      </div>
+      <canvas id="view" width="1100" height="560" aria-label="Preview of a music session with your color settings applied. Left of the divider is the original, right is your version. Click a color to choose how it should look."></canvas>
+      <div class="split"><span class="hint">Original</span><input id="splitR" type="range" min="0" max="100" value="35" aria-label="Divider between original and your version"><span class="hint">Yours</span></div>
+      <div class="row">
+        <label class="btn" for="upload" style="display:inline-flex;align-items:center">Use a screenshot of my session</label>
+        <input id="upload" class="sr" type="file" accept="image/*">
+        <button id="sampleBtn" type="button">Back to sample</button>
+        <span class="spacer"></span>
+        <label class="inline"><input id="simOn" type="checkbox"> Show it as seen with this color vision (for helpers)</label>
+      </div>
+      <p class="hint" id="pickHint">Tip: click any color in the picture to pin it and choose exactly how it should look.</p>
+    </section>
+
+    <section class="card" aria-labelledby="as-h">
+      <div class="row"><h2 id="as-h">Color assistant</h2><span class="spacer"></span><span class="badge" id="aiBadge">Connecting…</span></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form id="askForm" class="row" style="align-items:stretch;flex-direction:column">
+        <label for="ask" class="sr">Describe what you see</label>
+        <textarea id="ask" placeholder="Example: what is supposed to be red looks like a weird green or yellow to me"></textarea>
+        <div class="row"><button class="primary" id="send" type="submit">Send</button><button id="stop" type="button" hidden>Stop</button><button id="talkBtn" type="button" hidden>Talk</button><span class="hint">You can dictate with the Mac's Dictation key.</span></div>
+      </form>
+      <details id="claudeBox" hidden>
+        <summary>Smarter answers with Claude (optional)</summary>
+        <p class="hint">Paste an Anthropic API key from console.anthropic.com. It's kept in your computer's keychain. Without a key, the built-in helper answers.</p>
+        <div class="row"><input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" aria-label="Anthropic API key"><button id="saveKey" type="button">Save key</button></div>
+        <p class="hint" id="keyMsg" aria-live="polite"></p>
+      </details>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="cl-h">
+    <div class="row"><h2 id="cl-h">Can you tell them apart?</h2><span class="spacer"></span><span class="badge" id="clarityBadge"></span><button class="primary" id="tuneBtn" type="button" hidden>Make it clear for me</button></div>
+    <p class="hint">Controls you should never mix up, in your colors. The bars estimate how different each pair looks with your kind of color vision. Your own eyes have the final say.</p>
+    <div class="pairs" id="pairs"></div>
+    <p class="hint" id="tuneMsg" aria-live="polite"></p>
+  </section>
+
+  <div class="desk">
+    <section class="card" aria-labelledby="f-h">
+      <div class="row"><h2 id="f-h">Faders</h2></div>
+      <div class="row">
+        <label class="inline" for="type">Color vision
+          <select id="type">
+            <option value="deutan">Red-green (green-weak, most common)</option>
+            <option value="protan">Red-green (red-weak, reds look dark)</option>
+            <option value="tritan">Blue-yellow</option>
+          </select></label>
+      </div>
+      <div class="faders" id="faders"></div>
+    </section>
+
+    <section class="card" aria-labelledby="r-h">
+      <div class="row"><h2 id="r-h">What each control looks like</h2></div>
+      <p class="hint">Original, then yours. Pick a color on the right to pin how a control should look. A pinned control stays put while the faders move everything else.</p>
+      <div class="roles" id="roles"></div>
+    </section>
+  </div>
+
+  <div class="desk">
+    <section class="card" aria-labelledby="c-h">
+      <div class="row"><h2 id="c-h">Quick eye check</h2><span class="spacer"></span><span class="badge" id="checkStep"></span></div>
+      <div id="checkBody"></div>
+    </section>
+
+    <section class="card" aria-labelledby="e-h">
+      <div class="row"><h2 id="e-h">Save your profile</h2></div>
+      <p class="hint">Your settings stay in this browser. Download the color profile as a .cube file, the standard color-lookup format a Mac screen filter can load.</p>
+      <div class="row">
+        <button class="primary" id="dlCube" type="button">Download .cube profile</button>
+        <button id="copyJson" type="button">Copy settings</button>
+      </div>
+      <p class="hint" id="exportMsg" aria-live="polite"></p>
+      <textarea class="out" id="jsonOut" readonly aria-label="Your settings as text"></textarea>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="p-h">
+    <h2 id="p-h">Getting this into Logic Pro and Pro Tools</h2>
+    <div class="plan">
+      <div><h3>Today, built in</h3><p>macOS Settings › Accessibility › Display › Color Filters has fixed red-green and blue-yellow filters with an intensity slider. Logic's track color palette and the Pro Tools Color Palette window let you recolor tracks by hand. Use this page to find the colors that work, then type them in.</p></div>
+      <div><h3>Next, a Mac screen filter</h3><p>A small menu bar app captures the screen with ScreenCaptureKit, runs every frame through your .cube profile on the GPU, and shows it in a click-through overlay. It works on any app, including plugins and virtual instruments, with about one frame of delay.</p></div>
+      <div><h3>Then, talk to it live</h3><p>The same assistant runs inside the Mac app. You look at your real session, say "the solo button still looks like mute", and the overlay updates while you work. It pairs with the voice control work in this project.</p></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="setup" aria-labelledby="setup-h">
+  <span class="badge" id="setupStep"></span>
+  <h2 id="setup-h" class="setup-title"></h2>
+  <div id="setupBody"></div>
+</dialog>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp01=x=>x<0?0:x>1?1:x;
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const TAURI=window.__TAURI__;const desktop=!!(TAURI&&TAURI.core);
+const invoke=desktop?TAURI.core.invoke:null;
+let screenOn=false,bypass=false,platform="other";
+
+/* ---------- color math ---------- */
+const s2l=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+const l2s=c=>c<=0.0031308?12.92*c:1.055*Math.pow(c,1/2.4)-0.055;
+const LIN=new Float32Array(256);for(let i=0;i<256;i++)LIN[i]=s2l(i/255);
+const hexToRgb=h=>{h=h.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255)};
+const rgbToHex=c=>'#'+c.map(v=>Math.round(clamp01(v)*255).toString(16).padStart(2,'0')).join('');
+const hexToLin=h=>hexToRgb(h).map(s2l);
+const linToHex=l=>rgbToHex(l.map(v=>l2s(clamp01(v))));
+function toLab([r,g,b]){
+  let l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b),
+      m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b),
+      s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return[0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s];
+}
+function fromLab([L,a,b]){
+  let l=L+0.3963377774*a+0.2158037573*b,m=L-0.1055613458*a-0.0638541728*b,s=L-0.0894841775*a-1.2914855480*b;
+  l=l*l*l;m=m*m*m;s=s*s*s;
+  return[4.0767416621*l-3.3077115913*m+0.2309699292*s,-1.2684380046*l+2.6097574011*m-0.3413193965*s,-0.0041960863*l-0.7034186147*m+1.7076147010*s];
+}
+// Machado, Oliveira & Fernandes (2009), full-severity matrices, linear RGB
+const MACHADO={
+  protan:[[0.152286,1.052583,-0.204868],[0.114503,0.786281,0.099216],[-0.003882,-0.048116,1.051998]],
+  deutan:[[0.367322,0.860646,-0.227968],[0.280085,0.672501,0.047413],[-0.011820,0.042940,0.968881]],
+  tritan:[[1.255528,-0.076749,-0.178779],[-0.078411,0.930809,0.147602],[0.004733,0.691367,0.303900]]
+};
+function simMatrix(type,sev){const M=MACHADO[type];return M.map((row,i)=>row.map((v,j)=>(i===j?1:0)*(1-sev)+v*sev))}
+const mul=(M,c)=>[M[0][0]*c[0]+M[0][1]*c[1]+M[0][2]*c[2],M[1][0]*c[0]+M[1][1]*c[1]+M[1][2]*c[2],M[2][0]*c[0]+M[2][1]*c[1]+M[2][2]*c[2]];
+const angDiff=(a,b)=>{let d=(a-b)%360;if(d>180)d-=360;if(d<-180)d+=360;return d};
+const BANDS=[["redShift",29],["yellowShift",105],["greenShift",142],["blueShift",264]];
+
+function makeTransform(S,anchors){
+  const M=simMatrix(S.type,S.severity);
+  const globalLab=lin=>{
+    let c=lin;
+    if(S.daltonize>0){
+      const sm=mul(M,c),e=[c[0]-sm[0],c[1]-sm[1],c[2]-sm[2]];
+      const k=S.daltonize;
+      const corr=S.type==="tritan"?[e[0]+0.7*e[2],e[1]+0.7*e[2],0]:[0,0.7*e[0]+e[1],0.7*e[0]+e[2]];
+      c=[clamp01(c[0]+k*corr[0]),clamp01(c[1]+k*corr[1]),clamp01(c[2]+k*corr[2])];
+    }
+    let [L,a,b]=toLab(c);
+    let C=Math.hypot(a,b),h=Math.atan2(b,a)*180/Math.PI;
+    L+=S.rgSplit*a*1.3+S.bySplit*b*1.3;
+    const cf=Math.min(1,C/0.05);
+    let dh=0;for(const[k,center]of BANDS){const d=angDiff(h,center)/28;dh+=S[k]*Math.exp(-d*d)}
+    h+=dh*cf;C*=S.saturation;L=0.5+(L-0.5)*S.contrast;
+    const hr=h*Math.PI/180;
+    return[L,C*Math.cos(hr),C*Math.sin(hr)];
+  };
+  const A=Object.values(anchors).map(an=>{
+    const fl=hexToLin(an.from),g=globalLab(fl),t=toLab(hexToLin(an.to));
+    return{o:toLab(fl),d:[t[0]-g[0],t[1]-g[1],t[2]-g[2]]};
+  });
+  const s2=2*S.focus*S.focus;
+  return lin=>{
+    let lab=globalLab(lin);
+    if(A.length){const o=toLab(lin);for(const a of A){const dd=(o[0]-a.o[0])**2+(o[1]-a.o[1])**2+(o[2]-a.o[2])**2;const w=Math.exp(-dd/s2);if(w>1e-3)lab=[lab[0]+w*a.d[0],lab[1]+w*a.d[1],lab[2]+w*a.d[2]]}}
+    const r=fromLab(lab);return[clamp01(r[0]),clamp01(r[1]),clamp01(r[2])];
+  };
+}
+const N=33;
+function buildLut(fn){
+  const out=new Uint8ClampedArray(N*N*N*3);let k=0;
+  for(let b=0;b<N;b++)for(let g=0;g<N;g++)for(let r=0;r<N;r++){
+    const o=fn([s2l(r/(N-1)),s2l(g/(N-1)),s2l(b/(N-1))]);
+    out[k++]=Math.round(l2s(o[0])*255);out[k++]=Math.round(l2s(o[1])*255);out[k++]=Math.round(l2s(o[2])*255);
+  }
+  return out;
+}
+function applyLut(src,lut,dst){
+  const d=src.data,o=dst.data,s=(N-1)/255,N2=N*N;
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i]*s,g=d[i+1]*s,b=d[i+2]*s;
+    const r0=r|0,g0=g|0,b0=b|0,r1=r0<N-1?r0+1:r0,g1=g0<N-1?g0+1:g0,b1=b0<N-1?b0+1:b0;
+    const fr=r-r0,fg=g-g0,fb=b-b0;
+    const i000=(b0*N2+g0*N+r0)*3,i100=(b0*N2+g0*N+r1)*3,i010=(b0*N2+g1*N+r0)*3,i110=(b0*N2+g1*N+r1)*3,
+          i001=(b1*N2+g0*N+r0)*3,i101=(b1*N2+g0*N+r1)*3,i011=(b1*N2+g1*N+r0)*3,i111=(b1*N2+g1*N+r1)*3;
+    for(let c=0;c<3;c++){
+      const x00=lut[i000+c]+(lut[i100+c]-lut[i000+c])*fr,x10=lut[i010+c]+(lut[i110+c]-lut[i010+c])*fr,
+            x01=lut[i001+c]+(lut[i101+c]-lut[i001+c])*fr,x11=lut[i011+c]+(lut[i111+c]-lut[i011+c])*fr;
+      const y0=x00+(x10-x00)*fg,y1=x01+(x11-x01)*fg;
+      o[i+c]=y0+(y1-y0)*fb;
+    }
+    o[i+3]=d[i+3];
+  }
+}
+
+/* ---------- the session's controls ---------- */
+const ROLES=[
+  {id:"record",label:"Record button & armed tracks",hex:"#e5322d"},
+  {id:"play",label:"Play button",hex:"#3bbf4a"},
+  {id:"cycle",label:"Cycle / loop range",hex:"#e8c33a"},
+  {id:"solo",label:"Solo",hex:"#f2d23c"},
+  {id:"mute",label:"Mute",hex:"#2fa9d9"},
+  {id:"input",label:"Input monitoring",hex:"#e98a2c"},
+  {id:"meterLow",label:"Meter: safe level",hex:"#34c759"},
+  {id:"meterMid",label:"Meter: getting hot",hex:"#f4d03f"},
+  {id:"meterClip",label:"Meter: clipping",hex:"#ff3b30"},
+  {id:"automation",label:"Volume automation line",hex:"#a6e05a"},
+  {id:"tKick",label:"Track color: Kick (red)",hex:"#d94b4b"},
+  {id:"tSnare",label:"Track color: Snare (orange)",hex:"#e58a3a"},
+  {id:"tBass",label:"Track color: Bass (yellow)",hex:"#c9b037"},
+  {id:"tKeys",label:"Track color: Keys (green)",hex:"#6cbf4f"},
+  {id:"tGtr",label:"Track color: Guitar (teal)",hex:"#3fa88c"},
+  {id:"tVox",label:"Track color: Vocal (blue)",hex:"#3f86d9"},
+  {id:"tBgv",label:"Track color: Backing vocals (purple)",hex:"#8e5bd6"},
+  {id:"tFx",label:"Track color: FX (pink)",hex:"#d45ba8"}
+];
+const R=Object.fromEntries(ROLES.map(r=>[r.id,r]));
+const SAFE={orange:"#e69f00",sky:"#56b4e9",bluishGreen:"#009e73",yellow:"#f0e442",blue:"#0072b2",vermillion:"#d55e00",reddishPurple:"#cc79a7",white:"#f2f2f2"};
+
+/* ---------- state ---------- */
+const DEFAULTS={type:"deutan",severity:0.8,daltonize:0,rgSplit:0,bySplit:0,redShift:0,greenShift:0,yellowShift:0,blueShift:0,saturation:1,contrast:1,focus:0.08};
+const FADERS=[
+  {k:"daltonize",label:"Color correction",min:0,max:1,step:0.01,lo:"Off",hi:"Full",fmt:v=>Math.round(v*100)+"%"},
+  {k:"severity",label:"How strong the difference is",min:0,max:1,step:0.01,lo:"Mild",hi:"Strong",fmt:v=>Math.round(v*100)+"%"},
+  {k:"rgSplit",label:"Red vs green brightness",min:-1,max:1,step:0.01,lo:"Reds darker",hi:"Reds brighter",fmt:v=>(v>0?"+":"")+v.toFixed(2)},
+  {k:"redShift",label:"Move reds",min:-60,max:60,step:1,lo:"Toward pink",hi:"Toward orange",fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"greenShift",label:"Move greens",min:-60,max:60,step:1,lo:"Toward yellow",hi:"Toward blue-green",fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"yellowShift",label:"Move yellows",min:-60,max:60,step:1,lo:"Toward orange",hi:"Toward green",fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"blueShift",label:"Move blues",min:-60,max:60,step:1,lo:"Toward cyan",hi:"Toward purple",fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"bySplit",label:"Blue vs yellow brightness",min:-1,max:1,step:0.01,lo:"Yellows darker",hi:"Yellows brighter",fmt:v=>(v>0?"+":"")+v.toFixed(2)},
+  {k:"saturation",label:"Color strength",min:0.5,max:2,step:0.01,lo:"Softer",hi:"Bolder",fmt:v=>v.toFixed(2)+"×"},
+  {k:"contrast",label:"Light/dark contrast",min:0.7,max:1.5,step:0.01,lo:"Flatter",hi:"Punchier",fmt:v=>v.toFixed(2)+"×"},
+  {k:"focus",label:"Pin reach",min:0.03,max:0.18,step:0.005,lo:"Exact color only",hi:"Similar colors too",fmt:v=>v.toFixed(3)}
+];
+const RANGES=Object.fromEntries(FADERS.map(f=>[f.k,[f.min,f.max]]));
+let S={...DEFAULTS},anchors={};
+const history=[];
+function snapshot(){history.push(JSON.stringify({S,anchors}));if(history.length>60)history.shift()}
+try{const saved=JSON.parse(localStorage.getItem("lct-profile")||"null");if(saved&&saved.S){S={...DEFAULTS,...saved.S};anchors=saved.anchors||{}}}catch(e){}
+function persist(){try{localStorage.setItem("lct-profile",JSON.stringify({S,anchors}))}catch(e){}}
+
+/* ---------- sample session drawing ---------- */
+function drawDaw(W,H){
+  const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  const sc=W/1100;x.scale(sc,sc);
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const col=id=>R[id].hex;
+  x.fillStyle="#1c1d21";x.fillRect(0,0,1100,560);
+  // control bar
+  x.fillStyle="#2b2c31";x.fillRect(0,0,1100,56);
+  x.font="600 13px system-ui,sans-serif";x.textBaseline="middle";
+  const btn=(bx,w,fill,draw)=>{x.fillStyle=fill;x.beginPath();x.roundRect(bx,12,w,32,6);x.fill();draw()};
+  btn(250,40,"#3a3b41",()=>{x.fillStyle="#cfd0d4";x.fillRect(264,22,12,12)});
+  btn(296,40,col("play"),()=>{x.fillStyle="#102010";x.beginPath();x.moveTo(310,20);x.lineTo(326,28);x.lineTo(310,36);x.fill()});
+  btn(342,40,"#3a3b41",()=>{x.fillStyle=col("record");x.beginPath();x.arc(362,28,8,0,7);x.fill()});
+  btn(388,40,col("cycle"),()=>{x.strokeStyle="#2a2408";x.lineWidth=2.5;x.beginPath();x.arc(408,28,8,0.3,5.8);x.stroke()});
+  x.fillStyle="#111214";x.beginPath();x.roundRect(450,10,300,36,6);x.fill();
+  x.fillStyle="#d8f0ff";x.font="600 18px ui-monospace,Menlo,monospace";x.fillText("37  1  2  1",464,28);
+  x.font="600 13px system-ui";x.fillStyle="#a8b0bb";x.fillText("120 bpm   4/4   C maj",590,28);
+  x.fillStyle="#cfd0d4";x.fillText("Limitless Session — Arrange",20,28);
+  // tracks
+  const T=[["Kick","tKick"],["Snare","tSnare"],["Bass","tBass"],["Keys","tKeys"],["Guitar","tGtr"],["Lead Vocal","tVox"],["Backing Vox","tBgv"],["FX Return","tFx"]];
+  const state={Bass:{M:1},Keys:{S:1},Guitar:{I:1},"Lead Vocal":{R:1},Kick:{S:1}};
+  const top=86,rh=52,hx=230,ax=hx,aw=1100-hx-170;
+  x.fillStyle="#26272c";x.fillRect(0,56,hx,504);
+  // ruler + cycle
+  x.fillStyle="#232428";x.fillRect(ax,56,aw,30);
+  x.fillStyle=col("cycle");x.globalAlpha=.9;x.fillRect(ax+160,58,260,12);x.globalAlpha=1;
+  x.fillStyle="#8b9099";x.font="12px system-ui";for(let i=0;i<9;i++){x.fillText(String(33+i),ax+6+i*addW(),78)}
+  function addW(){return aw/9}
+  T.forEach(([name,id],i)=>{
+    const y=top+i*rh;
+    x.fillStyle=i%2?"#24252a":"#28292e";x.fillRect(0,y,hx,rh-2);
+    x.fillStyle=col(id);x.fillRect(0,y,8,rh-2);
+    x.fillStyle="#e4e6ea";x.font="600 14px system-ui";x.fillText(name,18,y+16);
+    const st=state[name]||{};
+    [["M","mute"],["S","solo"],["R","record"],["I","input"]].forEach(([L,role],j)=>{
+      const bx=18+j*34,by=y+26;
+      x.fillStyle=st[L]?col(role):"#3a3b41";x.beginPath();x.roundRect(bx,by,28,20,4);x.fill();
+      x.fillStyle=st[L]?"#111":"#c7c9ce";x.font="700 12px system-ui";x.fillText(L,bx+9,by+10);
+    });
+    // regions
+    x.fillStyle="#1f2024";x.fillRect(ax,y,aw,rh-2);
+    const segs=name==="FX Return"?[[60,180],[420,200]]:name==="Lead Vocal"?[[120,300],[460,220]]:[[10,250],[270,250],[530,170]];
+    segs.forEach(([sx,w])=>{
+      const rx=ax+sx,ry=y+3,rH=rh-8;
+      x.fillStyle=col(id);x.beginPath();x.roundRect(rx,ry,w,rH,5);x.fill();
+      x.fillStyle="rgba(0,0,0,.28)";x.fillRect(rx,ry,w,14);
+      x.fillStyle="#fff";x.font="600 11px system-ui";x.fillText(name+" #"+(1+Math.floor(sx/100)),rx+6,ry+7);
+      x.strokeStyle="rgba(0,0,0,.55)";x.lineWidth=1;x.beginPath();
+      const mid=ry+14+(rH-14)/2;
+      for(let px=0;px<w-4;px+=3){const a=(rH-18)/2*Math.pow(rnd(),1.6)*(name==="Kick"&&px%40<8?1.8:1);x.moveTo(rx+2+px,mid-a);x.lineTo(rx+2+px,mid+a)}
+      x.stroke();
+    });
+    if(name==="Lead Vocal"){
+      x.strokeStyle=col("automation");x.lineWidth=2.5;x.beginPath();
+      const pts=[[0,.7],[140,.7],[200,.35],[330,.35],[380,.6],[aw,.6]];
+      pts.forEach(([px,py],k)=>{const X=ax+px,Y=y+4+py*(rh-10);k?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke();
+      pts.slice(1,-1).forEach(([px,py])=>{x.fillStyle=col("automation");x.beginPath();x.arc(ax+px,y+4+py*(rh-10),4,0,7);x.fill()});
+    }
+  });
+  // playhead
+  x.fillStyle="#f0f0f0";x.fillRect(ax+372,56,2,504);
+  // meters
+  const mx=1100-170;x.fillStyle="#202126";x.fillRect(mx,56,170,504);
+  x.fillStyle="#a8b0bb";x.font="600 12px system-ui";x.fillText("Mixer meters",mx+12,72);
+  const lv=[.95,.7,.62,.5,.4,.98,.55,.3];
+  lv.forEach((v,i)=>{
+    const bx=mx+12+i*19,bt=96,bh=420;
+    x.fillStyle="#111214";x.fillRect(bx,bt,13,bh);
+    const segN=42;for(let s=0;s<segN;s++){const f=s/segN;if(f>v)break;const role=f>.88?"meterClip":f>.68?"meterMid":"meterLow";x.fillStyle=col(role);x.fillRect(bx+1,bt+bh-(s+1)*10+1,11,8)}
+    x.fillStyle=v>.9?col("meterClip"):"#3a3b41";x.fillRect(bx,bt-14,13,9);
+  });
+  x.fillStyle="#a8b0bb";x.fillText("−∞",mx+12,536);x.fillText("0 dB",mx+120,88);
+  return c;
+}
+
+/* ---------- preview ---------- */
+const view=$("#view"),vctx=view.getContext("2d",{willReadFrequently:true});
+let srcCanvas=null,srcData=null,afterImg=null,beforeImg=null;
+function setSource(c,label){
+  srcCanvas=c;view.width=c.width;view.height=c.height;
+  srcData=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height);
+  afterImg=new ImageData(c.width,c.height);beforeImg=new ImageData(c.width,c.height);
+  $("#srcBadge").textContent=label;schedule();
+}
+function loadSample(){const dpr=Math.min(2,window.devicePixelRatio||1);setSource(drawDaw(Math.round(1100*dpr),Math.round(560*dpr)),"Sample Logic-style session")}
+
+let T=null,raf=0;
+function schedule(){if(!raf)raf=requestAnimationFrame(render)}
+function simFn(){const M=simMatrix(S.type,S.severity);return l=>mul(M,l).map(clamp01)}
+function render(){
+  raf=0;
+  const sim=drawPreview();
+  renderRoles(sim);renderClarity(sim);renderFaders();persist();if(desktop)pushProfile();
+  $("#jsonOut").value=JSON.stringify({S,anchors},null,1);
+}
+function drawPreview(){
+  T=makeTransform(S,anchors);
+  const sim=$("#simOn").checked?simFn():null;
+  const viaScreen=desktop&&screenOn;const showT=viaScreen?(l=>l):T;
+  if(srcData){
+    const lutA=buildLut(sim?l=>sim(showT(l)):showT);
+    applyLut(srcData,lutA,afterImg);
+    if(sim)applyLut(srcData,buildLut(sim),beforeImg);else beforeImg.data.set(srcData.data);
+    vctx.putImageData(afterImg,0,0);
+    const sx=viaScreen?0:Math.round(view.width*$("#splitR").value/100);
+    if(sx>0)vctx.putImageData(beforeImg,0,0,0,0,sx,view.height);
+    const u=view.width/1100;
+    vctx.fillStyle="#ffffff";vctx.fillRect(sx-1*u,0,3*u,view.height);
+    vctx.font=`700 ${14*u}px system-ui`;vctx.textBaseline="top";
+    const tag=(t,xx)=>{const w=vctx.measureText(t).width+16*u;vctx.fillStyle="rgba(0,0,0,.75)";vctx.fillRect(xx,view.height-30*u,w,24*u);vctx.fillStyle="#fff";vctx.fillText(t,xx+8*u,view.height-26*u)};
+    if(sx>90*u)tag("Original",sx-100*u);
+    if(view.width-sx>90*u&&!viaScreen)tag("Yours",sx+10*u);
+  }
+  return sim;
+}
+$("#splitR").addEventListener("input",schedule);
+$("#simOn").addEventListener("change",schedule);
+$("#sampleBtn").addEventListener("click",loadSample);
+$("#upload").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;
+  const img=new Image();img.onload=()=>{const k=Math.min(1,1800/img.width);const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);setSource(c,"Your screenshot");URL.revokeObjectURL(img.src)};
+  img.src=URL.createObjectURL(f);
+});
+view.addEventListener("click",e=>{
+  if(!srcData)return;const r=view.getBoundingClientRect();
+  const px=Math.floor((e.clientX-r.left)/r.width*view.width),py=Math.floor((e.clientY-r.top)/r.height*view.height);
+  const i=(py*view.width+px)*4,d=srcData.data;const hex=rgbToHex([d[i]/255,d[i+1]/255,d[i+2]/255]);
+  snapshot();const id="pick"+Date.now();anchors[id]={from:hex,to:linToHex(T(hexToLin(hex))),label:"Color you picked"};
+  $("#pickHint").textContent="Pinned "+hex+". Choose how it should look in the list below.";schedule();
+  setTimeout(()=>document.querySelector(`[data-anchor="${id}"]`)?.focus(),50);
+});
+
+/* ---------- faders ---------- */
+const fwrap=$("#faders");
+FADERS.forEach(f=>{
+  const d=document.createElement("div");d.className="fader";
+  d.innerHTML=`<div class="top-l"><label for="f-${f.k}">${f.label}</label><output id="o-${f.k}"></output></div><input id="f-${f.k}" type="range" min="${f.min}" max="${f.max}" step="${f.step}"><div class="ends"><span>${f.lo}</span><span>${f.hi}</span></div>`;
+  fwrap.appendChild(d);
+  const inp=d.querySelector("input");
+  inp.addEventListener("pointerdown",snapshot);inp.addEventListener("keydown",e=>{if(!e.repeat)snapshot()});
+  inp.addEventListener("input",()=>{S[f.k]=+inp.value;schedule()});
+});
+$("#type").addEventListener("change",e=>{snapshot();S.type=e.target.value;schedule()});
+function renderFaders(){FADERS.forEach(f=>{const i=$("#f-"+f.k);if(document.activeElement!==i)i.value=S[f.k];$("#o-"+f.k).textContent=f.fmt(S[f.k])});$("#type").value=S.type}
+
+/* ---------- roles ---------- */
+function renderRoles(sim){
+  const box=$("#roles");const keep=document.activeElement?.dataset?.anchor;
+  const items=[...ROLES.map(r=>({id:r.id,label:r.label,from:r.hex,pinned:!!anchors[r.id]})),
+    ...Object.entries(anchors).filter(([id])=>!R[id]).map(([id,a])=>({id,label:a.label,from:a.from,pinned:true,custom:true}))];
+  box.innerHTML="";
+  items.forEach(it=>{
+    const outLin=T(hexToLin(it.from));const disp=desktop&&screenOn?hexToLin(it.from):outLin;const shown=sim?sim(disp):disp;const origShown=sim?sim(hexToLin(it.from)):hexToLin(it.from);
+    const row=document.createElement("div");row.className="role";
+    row.innerHTML=`<div class="nm"><b></b><small></small></div><span class="sw" title="Original"></span><span class="sw" title="Yours"></span><span><input type="color" data-anchor="${it.id}" aria-label="Choose how ${it.label} should look"></span>`;
+    row.querySelector("b").textContent=it.label;
+    row.querySelector("small").innerHTML=it.pinned?`<span class="pin">Pinned</span> · <button type="button" style="min-height:32px;padding:2px 8px;font-size:13px">Unpin</button>`:linToHex(outLin);
+    const sws=row.querySelectorAll(".sw");sws[0].style.background=linToHex(origShown);sws[1].style.background=linToHex(shown);
+    const ci=row.querySelector("input");ci.value=linToHex(outLin);
+    ci.addEventListener("focus",snapshot,{once:true});
+    ci.addEventListener("input",()=>{anchors[it.id]={from:it.from,to:ci.value,label:it.label};sws[1].style.background=ci.value;schedulePartial()});
+    ci.addEventListener("change",schedule);
+    const ub=row.querySelector("small button");if(ub)ub.addEventListener("click",()=>{snapshot();delete anchors[it.id];schedule()});
+    box.appendChild(row);
+  });
+  if(keep)box.querySelector(`[data-anchor="${keep}"]`)?.focus();
+}
+/* ---------- clarity check ---------- */
+// Same pairs and thresholds as the automatic tuning (color-core/src/tune.rs).
+const KEY_PAIRS=[["record","play","Record vs Play"],["solo","mute","Solo vs Mute"],["meterLow","meterClip","Meter: safe vs clipping"],["meterLow","meterMid","Meter: safe vs hot"],["meterMid","meterClip","Meter: hot vs clipping"],["record","input","Record vs Input"],["tKick","tKeys","Red track vs green track"],["tVox","tBgv","Blue track vs purple track"],["tGtr","tVox","Teal track vs blue track"]];
+const CLEAR=0.12;
+function pairDistances(Tn,type,sev){
+  const M=simMatrix(type,sev);const see=hex=>toLab(mul(M,Tn(hexToLin(hex))).map(clamp01));
+  return KEY_PAIRS.map(([a,b])=>{const x=see(R[a].hex),y=see(R[b].hex);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])});
+}
+const clarityWord=d=>d>=CLEAR?"Clear":d>=CLEAR/2?"Getting there":"Hard to tell apart";
+function renderClarity(sim){
+  const ds=pairDistances(T,S.type,S.severity);const box=$("#pairs");box.replaceChildren();
+  KEY_PAIRS.forEach(([a,b,label],i)=>{
+    const d=ds[i];const show=hex=>{const o=T(hexToLin(hex));return linToHex(sim?sim(o):o)};
+    const el=document.createElement("div");el.className="pair";
+    el.innerHTML=`<div class="sws" aria-hidden="true"><span></span><span></span></div><b></b><div class="bar" aria-hidden="true"><i></i></div><small><strong></strong></small>`;
+    const sp=el.querySelectorAll(".sws span");sp[0].style.background=show(R[a].hex);sp[1].style.background=show(R[b].hex);
+    el.querySelector("b").textContent=label;el.querySelector("i").style.width=Math.round(Math.min(1,d/(1.5*CLEAR))*100)+"%";
+    el.querySelector("strong").textContent=clarityWord(d);
+    box.appendChild(el);
+  });
+  const n=ds.filter(d=>d>=CLEAR).length;$("#clarityBadge").textContent=`${n} of ${ds.length} clear`;
+}
+
+let ptimer=0;function schedulePartial(){clearTimeout(ptimer);ptimer=setTimeout(()=>{drawPreview();persist()},60)}
+
+$("#undo").addEventListener("click",()=>{const h=history.pop();if(!h)return;const o=JSON.parse(h);S=o.S;anchors=o.anchors;schedule()});
+$("#reset").addEventListener("click",()=>{snapshot();S={...DEFAULTS};anchors={};schedule()});
+
+/* ---------- assistant ---------- */
+const chat=$("#chat");const convo=[];
+function addMsg(who,text,extra){
+  const d=document.createElement("div");d.className="msg "+who;d.textContent=text;
+  if(extra?.changes){const s=document.createElement("span");s.className="chg";s.textContent=extra.changes;d.appendChild(s)}
+  if(extra?.question){const s=document.createElement("span");s.className="q";s.textContent=extra.question;d.appendChild(s)}
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
+}
+const CHIPS=["What is supposed to be red looks like a weird green or yellow to me","I can't tell Solo from Mute","The meters look like one color all the way up","Reds look almost black","Blue and green tracks blur together","That's too strong, make it more natural"];
+CHIPS.forEach(t=>{const b=document.createElement("button");b.type="button";b.textContent=t;b.onclick=()=>ask(t);$("#chips").appendChild(b)});
+addMsg("bot","Hi. Tell me what looks wrong, in your own words. For example, which color looks like another one, or which buttons you can't tell apart. I'll change the screen and then ask you what you see now.");
+
+function describeChanges(prev,next,anc){
+  const names=Object.fromEntries(FADERS.map(f=>[f.k,f.label]));names.type="Color vision";
+  const parts=[];for(const k in next){if(k in prev&&prev[k]!==next[k])parts.push(`${names[k]||k}: ${k==="type"?next[k]:FADERS.find(f=>f.k===k)?.fmt(next[k])}`)}
+  Object.keys(anc||{}).forEach(id=>parts.push(`Pinned ${R[id]?.label||id}`));
+  return parts.length?"Changed: "+parts.join(" · "):"";
+}
+function sanitize(res){
+  const ch={};const c=res?.changes||{};
+  if(["protan","deutan","tritan"].includes(c.type))ch.type=c.type;
+  for(const k in RANGES)if(typeof c[k]==="number"&&isFinite(c[k]))ch[k]=clamp(c[k],...RANGES[k]);
+  const an={};for(const[id,h]of Object.entries(res?.anchors||{}))if(R[id]&&/^#[0-9a-f]{6}$/i.test(h))an[id]=h.toLowerCase();
+  const rm=(res?.removeAnchors||[]).filter(id=>anchors[id]);
+  return{ch,an,rm,reply:String(res?.reply||"").slice(0,800),question:String(res?.question||"").slice(0,300)};
+}
+function applyResult(r){
+  snapshot();const prev={...S};Object.assign(S,r.ch);
+  for(const[id,h]of Object.entries(r.an))anchors[id]={from:R[id].hex,to:h,label:R[id].label};
+  r.rm.forEach(id=>delete anchors[id]);
+  schedule();return describeChanges(prev,S,r.an);
+}
+
+function stateForModel(){
+  const Tn=makeTransform(S,anchors),sm=simMatrix(S.type,S.severity);
+  return{settings:S,pinned:Object.fromEntries(Object.entries(anchors).map(([k,a])=>[k,a.to])),
+    controls:ROLES.map(r=>{const o=Tn(hexToLin(r.hex));return{id:r.id,label:r.label,original:r.hex,shownNow:linToHex(o),likelyPerceivedAs:linToHex(mul(sm,o).map(clamp01))}})};
+}
+const RULES=`You are the color assistant inside "Limitless Color Tuner", a tool that helps a colorblind musician make Logic Pro or Pro Tools look right to their own eyes. You change display settings, then ask what they see, and repeat until they're happy.
+
+SETTINGS you control (absolute values):
+- type: "deutan" (red-green, green-weak; most common), "protan" (red-green, red-weak; reds look dark/black or brownish), "tritan" (blue-yellow; blue/green and yellow/pink/grey confusions).
+- severity 0..1: how strong their color difference is. Also sets how hard the correction works.
+- daltonize 0..1: automatic correction that moves the colors they can't see into ones they can. 0.4-0.7 is a good start.
+- rgSplit -1..1: positive makes reds brighter and greens darker; negative the opposite. Brightness differences work for every kind of colorblindness. For protan, positive values help reds that look black.
+- redShift, greenShift, yellowShift, blueShift: -60..60 degrees. Rotates that band of hues. redShift negative = toward pink/magenta, positive = toward orange. greenShift positive = toward blue-green/cyan, negative = toward yellow. yellowShift negative = toward orange, positive = toward green. blueShift negative = toward cyan, positive = toward purple. For red-green confusion, pushing reds toward magenta (negative) and greens toward cyan (positive) usually separates them.
+- bySplit -1..1: positive makes yellows brighter and blues darker. Helps blue-yellow confusion.
+- saturation 0.5..2, contrast 0.7..1.5.
+- focus 0.03..0.18: how far a pinned color's change spreads to similar colors.
+- anchors: pin a specific control (by id from CONTROLS) to an exact hex color. Use this when they name a control (solo, mute, record, play, meters, a track). Choose from colorblind-safe colors: orange #e69f00, sky blue #56b4e9, bluish green #009e73, yellow #f0e442, blue #0072b2, vermillion #d55e00, reddish purple #cc79a7, near-white #f2f2f2. Make paired controls differ strongly in brightness too (e.g. solo #f0e442 vs mute #0072b2).
+- removeAnchors: ids to unpin.
+
+STATE gives current settings and each control's original color, the color shown now, and an estimate of how the person likely perceives it (under the current type and severity). Use likelyPerceivedAs to check two controls are actually different before you answer.
+
+HOW TO WORK:
+1. Work out what they see. If they describe red looking green/yellow/brown, they have red-green colorblindness. If reds look dark or black, prefer protan. Set type and severity when you learn something about them.
+2. Make one clear, moderate change per turn. If they say it's better but not enough, go further. If it's too much or looks strange, back off.
+3. Don't rely on hue alone. Use brightness splits and pinned colors.
+4. Ask one short question they can answer by looking at the screen, naming specific controls, like "Does the Record button now look different from Play? What color does each look like to you?"
+5. Speak plainly and warmly, 1-3 short sentences. Say "red-green" rather than medical terms unless they use them.
+
+Return ONLY a JSON object: {"reply": string, "changes": {only settings you change}, "anchors": {controlId: "#rrggbb"}, "removeAnchors": [controlId], "question": string}`;
+
+let sample=null,ctl=null,busy=false;
+(async()=>{
+  if(desktop)return;
+  try{sample=window.claude?await window.claude.use("sample"):null}catch(e){sample=null}
+  $("#aiBadge").textContent=sample?"Claude":"Offline helper";
+})();
+setTimeout(()=>{if($("#aiBadge").textContent==="Connecting…")$("#aiBadge").textContent="Offline helper"},11000);
+
+$("#askForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#ask").value.trim();if(t)ask(t)});
+$("#ask").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#askForm").requestSubmit()}});
+$("#stop").addEventListener("click",()=>ctl?.abort());
+
+async function ask(text){
+  if(desktop)return askDesktop(text);
+  if(busy)return;busy=true;$("#send").disabled=true;
+  addMsg("you",text);$("#ask").value="";
+  const recent=convo.slice(-8).map(m=>`${m.who==="you"?"Person":"Assistant"}: ${m.text}`).join("\n");
+  convo.push({who:"you",text});
+  let r=null;
+  if(sample){
+    const thinking=addMsg("bot","Thinking…");$("#stop").hidden=false;ctl=new AbortController();
+    try{
+      const prompt=`${RULES}\n\nCONVERSATION SO FAR:\n${recent||"(none)"}\n\nSTATE:\n${JSON.stringify(stateForModel())}\n\nPerson says: ${text}`;
+      const res=await sample.json(prompt,{cache:false,signal:ctl.signal});
+      r=sanitize(res);thinking.remove();
+    }catch(e){
+      thinking.remove();
+      if(e?.code==="not_granted"){sample=null;$("#aiBadge").textContent="Offline helper"}
+      if(e?.code==="cancelled"){addMsg("bot","Stopped.");done();return}
+    }
+    $("#stop").hidden=true;
+  }
+  if(!r)r=localHelper(text);
+  const chg=applyResult(r);
+  addMsg("bot",r.reply,{changes:chg,question:r.question});
+  convo.push({who:"bot",text:r.reply+" "+r.question+" ["+chg+"]"});
+  done();
+  function done(){busy=false;$("#send").disabled=false}
+}
+
+/* Offline helper: simple rules, used when Claude is not available in this view */
+let lastDir=null;
+function localHelper(t){
+  const s=t.toLowerCase();const has=w=>new RegExp("\\b("+w+")").test(s);
+  const red=has("red|record|clip"),green=has("green|play"),yellow=has("yellow|gold"),brown=has("brown|olive|khaki"),orange=has("orange"),blue=has("blue|navy|cyan|teal"),purple=has("purple|violet|pink|magenta"),grey=has("gr[ae]y|white");
+  const less=has("too much|too strong|less|weird looking|ugly|natural|harsh|tone it"),more=has("still|more|not enough|stronger|same|can't|cannot|hard");
+  const r={changes:{},anchors:{},removeAnchors:[],reply:"",question:""};
+  if(less){
+    const ch={};["daltonize","rgSplit","bySplit","redShift","greenShift","yellowShift","blueShift"].forEach(k=>ch[k]=+(S[k]*0.6).toFixed(2));ch.saturation=+(1+(S.saturation-1)*0.6).toFixed(2);
+    r.changes=ch;r.reply="I eased everything back by about a third so it looks more natural.";r.question="Can you still tell the colors apart that were giving you trouble?";return sanitize(r);
+  }
+  if(has("solo")&&has("mute")){r.anchors={solo:SAFE.yellow,mute:SAFE.blue};r.reply="I pinned Solo to a bright yellow and Mute to a deep blue, so they differ in brightness as well as color.";r.question="Do the S and M buttons on the Keys and Bass tracks look clearly different now?";return sanitize(r)}
+  if(has("meter")){r.anchors={meterLow:SAFE.sky,meterMid:SAFE.yellow,meterClip:SAFE.vermillion};r.changes={rgSplit:clamp(S.rgSplit+0.2,-1,1)};r.reply="I changed the meters to blue for safe, yellow for hot and orange-red for clipping, three colors that stay apart for most kinds of colorblindness.";r.question="Looking at the mixer meters on the right, can you see where blue turns to yellow and then to red?";return sanitize(r)}
+  if(red&&has("black|dark")){r.changes={type:"protan",severity:Math.max(S.severity,0.8),daltonize:Math.max(S.daltonize,0.5),rgSplit:clamp(S.rgSplit+0.35,-1,1),redShift:clamp(S.redShift-15,-60,60)};r.reply="Reds that look dark usually mean the red-sensing part of the eye is weaker. I made reds brighter and nudged them toward pink.";r.question="Does the Kick track and the Record button look brighter now? What color do they look like?";return sanitize(r)}
+  if((red||green)&&(green&&red||yellow||brown||orange)&&!blue){
+    const step=more&&lastDir==="rg"?1.5:1;lastDir="rg";
+    r.changes={type:S.type==="tritan"?"deutan":S.type,daltonize:clamp(Math.max(S.daltonize,0.5)*(step>1?1.25:1),0,1),redShift:clamp((S.redShift||0)-20*step,-60,60),greenShift:clamp((S.greenShift||0)+22*step,-60,60),rgSplit:clamp(S.rgSplit+0.15*step,-1,1)};
+    r.reply=step>1?"I pushed further: reds more toward pink, greens more toward blue-green.":"That sounds like red-green colorblindness. I moved reds toward pink, greens toward blue-green, and made reds a bit brighter so they stand apart.";
+    r.question="Compare the Record button and the Play button at the top. Do they look different now? What color does each look like to you?";return sanitize(r);
+  }
+  if(blue&&(green||purple)||yellow&&(purple||grey)){
+    lastDir="by";r.changes={type:"tritan",severity:Math.max(S.severity,0.7),daltonize:Math.max(S.daltonize,0.5),bySplit:clamp(S.bySplit+0.3,-1,1),blueShift:clamp(S.blueShift+15,-60,60),greenShift:clamp(S.greenShift-12,-60,60)};
+    r.reply="That points to blue-yellow colorblindness. I made yellows brighter than blues and pulled blues toward purple, away from greens.";r.question="Do the Vocal (blue) and Guitar (teal) tracks look different now?";return sanitize(r);
+  }
+  if(more){const ch={daltonize:clamp(S.daltonize+0.2,0,1),saturation:clamp(S.saturation+0.15,0.5,2)};r.changes=ch;r.reply="I turned the correction up and made colors a little bolder.";r.question="Which two things still look the same to you?";return sanitize(r)}
+  r.reply="I'm not sure what to change yet. Try naming two things that look the same to you, for example \"the Record button and the Play button look the same\" or \"red looks brown\".";
+  return sanitize(r);
+}
+
+/* ---------- quick eye check ---------- */
+function nullVec(type){
+  const M=MACHADO[type];const cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  let best=null,bs=1e9;[[0,1],[0,2],[1,2]].forEach(([i,j])=>{const n=cr(M[i],M[j]);const L=Math.hypot(...n);if(L<1e-6)return;const u=n.map(v=>v/L);const r=Math.hypot(...mul(M,u));if(r<bs){bs=r;best=u}});return best;
+}
+function confusionPair(type,base){
+  const n=nullVec(type);let lo=-1e9,hi=1e9;
+  base.forEach((c,i)=>{if(Math.abs(n[i])<1e-9)return;const a=(0.02-c)/n[i],b=(0.98-c)/n[i];lo=Math.max(lo,Math.min(a,b));hi=Math.min(hi,Math.max(a,b))});
+  const p1=base.map((c,i)=>c+lo*0.85*n[i]),p2=base.map((c,i)=>c+hi*0.85*n[i]);
+  return[linToHex(p1),linToHex(p2)];
+}
+const CHECK=[];
+[["deutan",[0.25,0.22,0.06]],["protan",[0.3,0.2,0.1]],["tritan",[0.2,0.3,0.35]],["deutan",[0.45,0.4,0.2]],["protan",[0.18,0.14,0.2]],["tritan",[0.4,0.45,0.3]]].forEach(([t,b])=>CHECK.push({t,pair:confusionPair(t,b)}));
+CHECK.sort((a,b)=>a.pair[0]<b.pair[0]?-1:1);
+let ck={i:-1,score:{protan:0,deutan:0,tritan:0}};
+function renderCheck(){
+  const body=$("#checkBody");body.innerHTML="";
+  if(ck.i<0){
+    $("#checkStep").textContent="6 pairs, about a minute";
+    body.innerHTML=`<p class="hint">You'll see two circles at a time. Say whether they look like the same color. This tells the tuner which colors to work on. Your answers stay on this page.</p>`;
+    const b=document.createElement("button");b.className="primary";b.type="button";b.textContent="Start the check";b.onclick=async()=>{ck={i:0,score:{protan:0,deutan:0,tritan:0},resume:false};if(desktop&&screenOn){ck.resume=true;await setScreen(false)}renderCheck()};body.appendChild(b);return;
+  }
+  if(ck.i>=CHECK.length){
+    if(ck.resume){ck.resume=false;setScreen(true)}
+    $("#checkStep").textContent="Done";
+    const sc=ck.score;const best=Object.entries(sc).sort((a,b)=>b[1]-a[1])[0];
+    const p=document.createElement("p");
+    if(best[1]<0.75){p.textContent="Every pair looked different to you, so your color vision may be close to typical for these colors. Use the assistant to describe anything that still looks off.";body.appendChild(p)}
+    else{
+      const nm={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"}[best[0]];
+      const sev=clamp(0.4+best[1]*0.3,0.4,1);
+      if(desktop){
+        p.textContent=`Your answers match ${nm} color vision. Tuning your colors for that…`;body.appendChild(p);
+        tuneFor(best[0],sev).then(r=>{const m=useTune(r,true);p.textContent=`Your answers match ${nm} color vision. I tuned your colors for it. `+m;
+          addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I tuned your colors for it. `+m,{question:"How does the session look now? Tell me anything that still looks wrong."})}).catch(e=>{p.textContent="Automatic tuning didn't work: "+e});
+      }else{
+      p.textContent=`Your answers match ${nm} color vision. I set the tuner to that and turned on a starting correction.`;body.appendChild(p);
+      snapshot();S.type=best[0];S.severity=+sev.toFixed(2);S.daltonize=Math.max(S.daltonize,0.5);schedule();
+      if(best[0]==="deutan"||best[0]==="protan"){S.redShift=Math.min(S.redShift,-15);S.greenShift=Math.max(S.greenShift,15)}else{S.bySplit=Math.max(S.bySplit,0.25)}
+      addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I set a starting correction.`,{question:"How does the session look now? Tell me anything that still looks wrong."});
+      }
+    }
+    const again=document.createElement("button");again.type="button";again.textContent="Do it again";again.onclick=()=>{ck.i=-1;renderCheck()};body.appendChild(again);return;
+  }
+  const it=CHECK[ck.i];$("#checkStep").textContent=`Pair ${ck.i+1} of ${CHECK.length}`;
+  body.innerHTML=`<div class="check-pair" role="img" aria-label="Two colored circles"><span style="background:${it.pair[0]}"></span><span style="background:${it.pair[1]}"></span></div><p style="margin:0;font-weight:600">Do these two circles look like the same color?</p>`;
+  const row=document.createElement("div");row.className="row";
+  [["Same color",1],["Almost the same",0.5],["Clearly different",0]].forEach(([l,v])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.onclick=()=>{ck.score[it.t]+=v;ck.i++;renderCheck();$("#checkBody button")?.focus()};row.appendChild(b)});
+  body.appendChild(row);
+}
+renderCheck();
+
+/* ---------- export ---------- */
+function cubeText(){
+  const Tn=makeTransform(S,anchors);const lines=["TITLE \"Limitless Color profile\"","# Made with Limitless Color Tuner. Apply to the screen, not to audio.","LUT_3D_SIZE 33","DOMAIN_MIN 0.0 0.0 0.0","DOMAIN_MAX 1.0 1.0 1.0"];
+  for(let b=0;b<N;b++)for(let g=0;g<N;g++)for(let r=0;r<N;r++){const o=Tn([s2l(r/(N-1)),s2l(g/(N-1)),s2l(b/(N-1))]).map(v=>l2s(v).toFixed(6));lines.push(o.join(" "))}
+  return lines.join("\n")+"\n";
+}
+let downloads=null;(async()=>{try{downloads=window.claude?await window.claude.use("downloads"):null}catch(e){}})();
+$("#dlCube").addEventListener("click",async()=>{
+  if(desktop){try{const p=await invoke("export_cube");$("#exportMsg").textContent="Saved to "+p}catch(e){$("#exportMsg").textContent=String(e)}return}
+  const txt=cubeText();const msg=$("#exportMsg");
+  if(downloads){try{const r=await downloads.save({filename:"limitless-color.cube",data:txt});msg.textContent=r.status==="saved"?"Saved limitless-color.cube.":"Sent.";return}catch(e){if(e?.code==="cancelled"||e?.code==="declined"){msg.textContent="Not saved.";return}}}
+  $("#jsonOut").value=txt;msg.textContent="Downloads aren't available here, so the profile is in the box below. Select it all and save it as limitless-color.cube.";
+});
+$("#copyJson").addEventListener("click",async()=>{
+  const t=JSON.stringify({S,anchors},null,1);$("#jsonOut").value=t;
+  try{await navigator.clipboard.writeText(t);$("#exportMsg").textContent="Copied."}catch(e){$("#jsonOut").select();$("#exportMsg").textContent="Press Command-C to copy the selected text."}
+});
+
+loadSample();
+
+/* ---------- desktop app ---------- */
+function note(t,action){
+  const n=$("#screenNote");n.replaceChildren();n.hidden=!t;if(!t)return;
+  const sp=document.createElement("span");sp.textContent=t;n.appendChild(sp);
+  if(action){const b=document.createElement("button");b.type="button";b.textContent=action.label;b.onclick=action.run;n.appendChild(b)}
+}
+function applyStatus(st){
+  if(!bypass)screenOn=st.filterOn;platform=st.platform;
+  const b=$("#screenBtn");b.setAttribute("aria-pressed",String(st.filterOn||bypass));b.textContent="Screen colors: "+(st.filterOn||bypass?"On":"Off");
+  $("#bypassBtn").hidden=!(st.filterOn||bypass);
+  $("#aiBadge").textContent=st.hasApiKey?"Claude":"Offline helper";
+  $("#keyMsg").textContent=st.hasApiKey?"A key is saved. Save an empty box to remove it.":"";
+  if(!bypass)note(st.filterOn?(st.filterNote||""):"");
+  if(setup.open&&su.step==="on")renderSetup();
+  schedule();
+}
+let pushT=0;
+function pushProfile(){clearTimeout(pushT);pushT=setTimeout(()=>invoke("set_profile",{profile:{S,anchors}}).catch(e=>note(String(e))),120)}
+async function setScreen(on){try{applyStatus(await invoke("set_filter",{on}))}catch(e){note(String(e))}}
+async function askDesktop(text){
+  if(busy)return;busy=true;$("#send").disabled=true;
+  addMsg("you",text);$("#ask").value="";
+  const thinking=addMsg("bot","Thinking…");
+  try{
+    const r=await invoke("ask_assistant",{message:text});
+    thinking.remove();snapshot();
+    S={...DEFAULTS,...r.status.profile.S};anchors=r.status.profile.anchors||{};
+    addMsg("bot",r.reply,{changes:r.changes.length?"Changed: "+r.changes.join(" · "):"",question:r.question});
+    if(r.note)addMsg("bot",r.note);
+    applyStatus(r.status);
+  }catch(e){thinking.remove();addMsg("bot","Something went wrong: "+e)}
+  busy=false;$("#send").disabled=false;
+}
+
+/* Automatic tuning: searches the faders for the clearest natural-looking profile. */
+const TYPE_NAME={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"};
+async function tuneFor(type,sev){return invoke("auto_tune_profile",{cvd:type,severity:+(+sev).toFixed(2)})}
+function useTune(r,keepPins){
+  snapshot();
+  const mine=keepPins?anchors:{};
+  S={...DEFAULTS,...r.profile.S};anchors={...(r.profile.anchors||{}),...mine};schedule();
+  const clearNow=r.pairs.filter(p=>p.after>=CLEAR).length,clearBefore=r.pairs.filter(p=>p.before>=CLEAR).length;
+  return `${clearNow} of ${r.pairs.length} key pairs are now clear for ${TYPE_NAME[S.type]} color vision (${clearBefore} before).`+(r.pinned.length?` I also gave ${r.pinned.join(", ")} their own colorblind-safe colors.`:"");
+}
+async function makeClear(){
+  const b=$("#tuneBtn");b.disabled=true;$("#tuneMsg").textContent="Trying thousands of settings for your eyes…";
+  try{const msg=useTune(await tuneFor(S.type,S.severity),true);$("#tuneMsg").textContent=msg+" Undo takes you back.";
+    addMsg("bot","I tuned the colors automatically. "+msg,{question:"Look at your session. What still looks wrong, if anything?"})}
+  catch(e){$("#tuneMsg").textContent="Automatic tuning didn't work: "+e}
+  b.disabled=false;
+}
+
+/* Hold to compare: shows the original colors while held, like bypass on a plugin. */
+const holdOn=async()=>{if(bypass||!screenOn)return;bypass=true;note("Showing the original colors. Let go to see yours.");try{await invoke("set_filter",{on:false})}catch(e){}};
+const holdOff=async()=>{if(!bypass)return;bypass=false;await setScreen(true)};
+function bindHold(bp){
+  bp.addEventListener("pointerdown",holdOn);["pointerup","pointerleave","pointercancel"].forEach(ev=>bp.addEventListener(ev,holdOff));
+  bp.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&!e.repeat){e.preventDefault();holdOn()}});
+  bp.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")holdOff()});
+}
+
+/* ---------- first-launch setup ---------- */
+const setup=$("#setup");
+let su={step:"welcome",ck:null,tune:null,type:"deutan",sev:0.8,fix:false,poll:0,stuck:false};
+let shortcutText="";
+const h=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(k==="on")for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(k==="class")e.className=v;else if(k in e)e[k]=v;else e.setAttribute(k,v)}e.append(...kids.flat().filter(x=>x!=null&&x!==false));return e};
+const setupSteps=()=>platform==="mac"?["welcome","check","tune","permission","on"]:["welcome","check","tune","on"];
+function go(step){
+  clearInterval(su.poll);
+  if(step==="done"){finishSetup();return}
+  su.step=step;if(!setup.open)setup.showModal();
+  if(!su.fix)invoke("set_onboarding",{step}).catch(()=>{});
+  renderSetup();
+}
+function nextStep(){const st=setupSteps();go(st[st.indexOf(su.step)+1]||"done")}
+function finishSetup(){
+  clearInterval(su.poll);if(setup.open)setup.close();
+  if(!su.fix)invoke("set_onboarding",{step:"done"}).catch(()=>{});
+  su.fix=false;$("#ask").focus();
+}
+function startSetup(){su={...su,ck:null,tune:null,type:S.type,sev:S.severity,fix:false,stuck:false};go("welcome")}
+setup.addEventListener("cancel",e=>{e.preventDefault();finishSetup()});
+function focusFirst(){setTimeout(()=>($("#setupBody .primary")||$("#setupBody button,#setupBody input"))?.focus(),30)}
+
+function renderSetup(){
+  const body=$("#setupBody"),title=$("#setup-h"),st=setupSteps();
+  $("#setupStep").textContent=su.fix?"Screen access":`Step ${st.indexOf(su.step)+1} of ${st.length}`;
+  body.replaceChildren();const btn=(label,run,primary)=>h("button",{type:"button",class:primary?"primary big":"big",on:{click:run}},label);
+  const p=t=>h("p",{},t);
+
+  if(su.step==="welcome"){
+    title.textContent="Welcome to Limitless Color";
+    body.append(
+      p("Limitless Color changes the colors on your whole screen, in Logic Pro, Pro Tools, plugins and everything else, so the things you need to tell apart really look different to you."),
+      p("Setup takes about two minutes: a quick eye check, automatic tuning for your eyes, then you switch it on. You can change anything later by telling the color assistant what you see, or with the faders."),
+      h("div",{class:"row"},btn("Let's start",()=>go("check"),true),btn("Skip setup",finishSetup)));
+  }
+
+  else if(su.step==="check"){
+    title.textContent="Quick eye check";
+    const ck=su.ck;
+    if(screenOn&&!bypass)setScreen(false);
+    if(!ck){
+      body.append(p("You'll see two circles at a time. Say whether they look like the same color to you. Six pairs, about a minute. There are no wrong answers."),
+        h("div",{class:"row"},btn("Start the check",()=>{su.ck={i:0,score:{protan:0,deutan:0,tritan:0}};renderSetup()},true),btn("I already know my color vision",()=>{su.ck={manual:true};renderSetup()})));
+    }else if(ck.manual){
+      const types=[["deutan","Red-green, green-weak","The most common kind. Reds and greens look alike, often brownish or yellowish."],["protan","Red-green, red-weak","Reds look dark, almost black or brown, and get confused with greens."],["tritan","Blue-yellow","Blues and greens look alike, and yellows look pink or grey."]];
+      const sevs=[[0.4,"Mild","I can usually tell, but it takes effort."],[0.7,"Medium","I mix these colors up often."],[1,"Strong","These colors look the same to me."]];
+      const fs1=h("fieldset",{},h("legend",{},"Which colors do you mix up?"),types.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"sutype",value:v,checked:su.type===v}),h("span",{},l,h("small",{},d)))));
+      const pick=sevs.reduce((a,b)=>Math.abs(b[0]-su.sev)<Math.abs(a[0]-su.sev)?b:a)[0];
+      const fs2=h("fieldset",{},h("legend",{},"How strong is it?"),sevs.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"susev",value:v,checked:v===pick}),h("span",{},l,h("small",{},d)))));
+      body.append(fs1,fs2,h("div",{class:"row"},btn("Continue",()=>{su.type=body.querySelector("[name=sutype]:checked").value;su.sev=+body.querySelector("[name=susev]:checked").value;su.tune=null;go("tune")},true),btn("Do the eye check instead",()=>{su.ck=null;renderSetup()})));
+    }else if(ck.i<CHECK.length){
+      const it=CHECK[ck.i];
+      body.append(h("p",{class:"ok"},`Pair ${ck.i+1} of ${CHECK.length}: do these two circles look like the same color?`));
+      const pair=h("div",{class:"check-pair",role:"img","aria-label":"Two colored circles"},h("span"),h("span"));
+      pair.children[0].style.background=it.pair[0];pair.children[1].style.background=it.pair[1];body.append(pair);
+      body.append(h("div",{class:"row"},[["Same color",1],["Almost the same",0.5],["Clearly different",0]].map(([l,v],j)=>btn(l,()=>{ck.score[it.t]+=v;ck.i++;renderSetup();focusFirst()},j===0))));
+    }else{
+      const best=Object.entries(ck.score).sort((a,b)=>b[1]-a[1])[0];
+      if(best[1]<0.75){
+        body.append(p("Every pair looked clearly different to you, so the usual colorblind confusions may not affect you, or only a little."),
+          p("If some things in your session still look alike, choose your color vision yourself and the app will tune for it."),
+          h("div",{class:"row"},btn("Choose it myself",()=>{su.ck={manual:true};renderSetup()},true),btn("Finish without changes",finishSetup)));
+      }else{
+        su.type=best[0];su.sev=+clamp(0.4+best[1]*0.3,0.4,1).toFixed(2);su.tune=null;
+        body.append(p(`Your answers match ${TYPE_NAME[su.type]} color vision. Next, the app tunes your colors for that.`),
+          h("div",{class:"row"},btn("Tune my colors",()=>go("tune"),true),btn("That's not right, let me choose",()=>{su.ck={manual:true};renderSetup()})));
+      }
+    }
+    focusFirst();
+  }
+
+  else if(su.step==="tune"){
+    title.textContent="Your colors, tuned";
+    if(!su.tune){
+      body.append(p(`Trying thousands of color settings for ${TYPE_NAME[su.type]} color vision…`));
+      tuneFor(su.type,su.sev).then(r=>{su.tune=r;useTune(r,false);renderSetup()}).catch(e=>{body.replaceChildren(p("Automatic tuning didn't work: "+e),h("div",{class:"row"},btn("Continue anyway",nextStep,true)))});
+      return;
+    }
+    const Tn=makeTransform(S,anchors);const after=hex=>linToHex(Tn(hexToLin(hex)));
+    const cv=h("canvas",{"aria-label":"A sample music session. Left half: original colors. Right half: your tuned colors."});
+    const W=1100,H=560,dpr=Math.min(2,window.devicePixelRatio||1),src=drawDaw(Math.round(760*dpr),Math.round(387*dpr));
+    cv.width=src.width;cv.height=src.height;const cx=cv.getContext("2d");
+    const sd=src.getContext("2d").getImageData(0,0,src.width,src.height),out=new ImageData(src.width,src.height);applyLut(sd,buildLut(Tn),out);
+    cx.putImageData(out,0,0);cx.putImageData(sd,0,0,0,0,Math.round(src.width/2),src.height);
+    const u=src.width/W;cx.fillStyle="#fff";cx.fillRect(src.width/2-u,0,3*u,src.height);cx.font=`700 ${16*u}px system-ui`;cx.textBaseline="top";
+    [["Original",src.width/2-110*u],["Yours",src.width/2+12*u]].forEach(([t,x])=>{const w=cx.measureText(t).width+16*u;cx.fillStyle="rgba(0,0,0,.75)";cx.fillRect(x,src.height-34*u,w,26*u);cx.fillStyle="#fff";cx.fillText(t,x+8*u,src.height-30*u)});
+    const rows=[0,1,2,4,6].map(i=>KEY_PAIRS[i]);
+    const duo=(a,b)=>{const d=h("div",{class:"duo","aria-hidden":"true"},h("span"),h("span"));d.children[0].style.background=a;d.children[1].style.background=b;return d};
+    const cmp=h("div",{class:"cmp"},h("span",{class:"hd"},"Pair"),h("span",{class:"hd"},"Before"),h("span",{class:"hd"},"After"),
+      rows.flatMap(([a,b,l])=>[h("span",{},l),duo(R[a].hex,R[b].hex),duo(after(R[a].hex),after(R[b].hex))]));
+    const strength=Math.round(su.sev*100);
+    body.append(cv,p("Compare the pairs. Can you tell each pair apart more easily in the After column, and in the right half of the picture?"),cmp,
+      h("p",{class:"hint"},`Tuned for ${TYPE_NAME[su.type]} color vision at ${strength}% strength.`),
+      h("div",{class:"row"},
+        btn("Yes, use this",nextStep,true),
+        su.sev<1&&btn("Make it stronger",()=>{su.sev=Math.min(1,su.sev+0.2);su.tune=null;renderSetup()}),
+        su.sev>0.2&&btn("Too much, make it gentler",()=>{su.sev=Math.max(0.2,su.sev-0.2);su.tune=null;renderSetup()})));
+    focusFirst();
+  }
+
+  else if(su.step==="permission"){
+    title.textContent="Let Limitless Color see the screen";
+    body.append(p("Checking screen access…"));
+    const done=()=>{clearInterval(su.poll);body.replaceChildren(h("p",{class:"ok"},"Screen access is on."));
+      invoke("restart_filter").then(applyStatus).catch(()=>{});setTimeout(su.fix?finishSetup:nextStep,900)};
+    const check=()=>invoke("screen_permission",{request:false}).then(r=>{if(r!=="denied")done();return r}).catch(()=>"denied");
+    check().then(r=>{
+      if(r!=="denied"||su.step!=="permission")return;
+      body.replaceChildren(
+        p("To recolor Logic Pro and everything else, macOS needs to let Limitless Color see the screen. It only uses the picture to redraw it in your colors. Nothing is recorded, saved, or sent anywhere."),
+        h("ol",{},h("li",{},"Click Open System Settings."),h("li",{},"Turn on Limitless Color in the list. Your Mac may ask for your password."),h("li",{},"If macOS offers to Quit & Reopen, choose it. This window comes back by itself.")),
+        h("div",{class:"row"},
+          btn("Open System Settings",async()=>{try{if(await invoke("screen_permission",{request:true})==="granted")return done();await invoke("open_screen_settings")}catch(e){}
+            clearInterval(su.poll);su.poll=setInterval(check,1500);
+            const w=$("#permWait");if(w)w.hidden=false},true),
+          btn(su.fix?"Not now":"Skip for now",()=>su.fix?finishSetup():nextStep())),
+        h("p",{class:"hint",id:"permWait",hidden:true},"Waiting for you to turn it on… This page notices by itself."),
+        h("details",{},h("summary",{},"I turned it on, but nothing changed"),
+          p("macOS sometimes only applies the change after Limitless Color reopens."),
+          h("div",{class:"row"},btn("Quit & Reopen Limitless Color",()=>invoke("relaunch")))));
+      focusFirst();
+    });
+  }
+
+  else if(su.step==="on"){
+    title.textContent=screenOn?"Your colors are on":"Switch on your colors";
+    if(!screenOn&&!bypass){
+      body.append(p("Press the button and your whole screen changes to your colors, in every app."),
+        h("div",{class:"row"},btn("Switch on screen colors",()=>setScreen(true),true)));
+    }else{
+      const hold=h("button",{type:"button",class:"big"},"Hold to compare");bindHold(hold);
+      const auto=h("input",{type:"checkbox",id:"suAuto",checked:true});
+      body.append(p("Hold the button below to see the original colors for a moment, like bypass on a plugin. Let go to see yours."),
+        h("div",{class:"row"},hold),
+        h("ul",{},
+          h("li",{},`Press ${shortcutText} in any app to switch your colors on or off.`),
+          h("li",{},platform==="mac"?"The Limitless Color icon in the menu bar has the same switch. Closing this window keeps your colors on.":"The Limitless Color icon in the taskbar tray has the same switch. Closing this window keeps your colors on."),
+          h("li",{},"Something still hard to see? Tell the color assistant in your own words, for example \"Solo and Mute look the same\".")),
+        h("label",{class:"choice"},auto,h("span",{},"Start Limitless Color when I log in",h("small",{},"Your colors come back on by themselves after a restart."))),
+        h("div",{class:"row"},btn("Finish",async()=>{try{await invoke("set_autostart",{on:auto.checked})}catch(e){}finishSetup()},true)));
+    }
+    focusFirst();
+  }
+}
+
+if(desktop){
+  ["#screenBtn","#talkBtn","#claudeBox","#tuneBtn"].forEach(id=>$(id).hidden=false);
+  $(".sub").textContent="Your colors apply to your whole screen. Tell the assistant what you see, move the faders, or press Make it clear for me, and keep going until it looks right to you.";
+  document.querySelector('[aria-labelledby="p-h"]').innerHTML=`<h2 id="p-h">How it works</h2><div class="plan">
+    <div><h3>Screen colors</h3><p>Switch them on and your profile is applied to the whole screen: Logic Pro, Pro Tools, plugins and everything else. Closing this window keeps them on. Use the menu bar or tray icon to switch them off or quit.</p></div>
+    <div><h3>Quick switch</h3><p id="shortcutHelp"></p></div>
+    <div><h3>Talk instead of typing</h3><p>Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.</p></div></div>
+    <div class="row"><button type="button" id="setupAgain">Run the setup guide again</button></div>`;
+  $("#setupAgain").addEventListener("click",startSetup);
+  $(".split").hidden=true;
+  $("#tuneBtn").addEventListener("click",makeClear);
+  $("#screenBtn").addEventListener("click",()=>setScreen(!($("#screenBtn").getAttribute("aria-pressed")==="true")));
+  bindHold($("#bypassBtn"));
+  $("#talkBtn").addEventListener("click",async()=>{$("#ask").focus();try{await invoke("start_dictation")}catch(e){}
+    note(platform==="mac"?"Speak now. If nothing happens, press the Fn key twice, or turn on Dictation in System Settings › Keyboard.":"Speak now. If nothing happens, press Windows key + H.")});
+  $("#saveKey").addEventListener("click",async()=>{try{await invoke("set_api_key",{key:$("#apiKey").value});$("#apiKey").value="";applyStatus(await invoke("get_status"))}catch(e){$("#keyMsg").textContent=String(e)}});
+  document.querySelector('#e-h').closest(".card").querySelector(".hint").textContent="Your settings are saved automatically. You can also save them as a .cube color profile in Documents › Limitless Color, to share or back up.";
+  $("#dlCube").textContent="Save .cube profile";
+  TAURI.event.listen("status",e=>applyStatus(e.payload));
+  TAURI.event.listen("filter-error",e=>note(e.payload));
+  TAURI.event.listen("permission-needed",()=>{if(setup.open&&su.step==="permission")return;su.fix=!setup.open;go("permission")});
+  TAURI.event.listen("filter-stopped",()=>note("The screen filter stopped unexpectedly.",{label:"Restart it",run:()=>invoke("restart_filter").then(applyStatus).catch(e=>note(String(e)))}));
+  invoke("get_status").then(st=>{
+    S={...DEFAULTS,...st.profile.S};anchors=st.profile.anchors||{};
+    shortcutText=st.shortcut.replace("CommandOrControl",st.platform==="mac"?"Command":"Ctrl").replace("Alt",st.platform==="mac"?"Option":"Alt").split("+").join(" + ");
+    $("#shortcutHelp").textContent="Press "+shortcutText+" from any app to switch the screen colors on or off.";
+    applyStatus(st);
+    if(st.onboarding!=="done"){su.type=S.type;su.sev=S.severity;go(setupSteps().includes(st.onboarding)?st.onboarding:"welcome")}
+  });
+}
+})();
+</script>
+
+</body>
+</html>
