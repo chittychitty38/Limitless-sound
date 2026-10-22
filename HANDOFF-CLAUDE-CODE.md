@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-22, after the 0.2.0 release. Everything below is the state of the project then.
+Written 2026-10-22, after the 0.2.1 release. Everything below is the state of the project then.
 
 ---
 
@@ -51,14 +51,14 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup and shared settings | Python stdlib only | 0.2.0, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.3 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.1 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.1 |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup and shared settings | Python stdlib only | 0.2.1, in the suite |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.4 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.2 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.2 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.3 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.2 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, virtual MIDI ports | gazestage-v0.3.3 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.0** (the repo's Latest release) |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.3 |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports | gazestage-v0.3.4 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.1** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -122,9 +122,17 @@ identical. Every app works alone without the hub.
 ### Nightly proof
 `proof.yml` downloads the **public** suite from the Latest release onto fresh Apple silicon and
 Intel Macs and a Windows PC, installs it the way a musician would, opens every app, checks each
-joins the suite, presses every action it offers, and measures start time and idle CPU. Its
-results go on the website's Proof section. It runs on a pull request that changes the proof,
-and nightly (or with "Run workflow") once the default branch is `main` (open item 3).
+joins the suite, presses every action it offers, and measures start time and idle CPU. It prints
+each app's log and crash reports in the workflow log. Results go to the `proof-results` branch
+and the website's Proof section (`proof-results-test` from a PR). It runs on a pull request that
+changes the proof, and nightly (or with "Run workflow") once the default branch is `main` (open
+item 3).
+
+Its runs on 0.1.0 and 0.2.0 found every bug fixed in 0.2.0 and 0.2.1: Zoom crashing on Apple
+silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
+working audio, Zoom's idle CPU, and false crash logs on Windows. **First job for a new session:
+run it against 0.2.1** (with "Run workflow" once the default branch is `main`, or until then
+from a PR that touches `packaging/proof/`) and check every app passes on all three computers.
 
 ## Public website and branding
 
@@ -192,10 +200,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    certificate for the installers. Bennet's decision; once he has them, add them as repo secrets.
    Voice's workflow already signs and notarizes when the `APPLE_*` secrets exist; the other
    apps and the suite `.pkg` need the same steps added.
-5. **Known bugs sent to app threads, check they're fixed:** Voice "delete fifty times" (should
-   cap at 3 presses), Control trigger threshold without hysteresis.
-6. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
-   merged). Ask Bennet first; cloud sessions weren't allowed to delete them.
+5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
+   merged, and `diag/control-startup`). Ask Bennet first; cloud sessions weren't allowed to
+   delete them.
+6. **GazeStage idle CPU on the proof's Macs: 3.7-4.0%** (target under 3%; Windows 0.9%). Those
+   Macs have no camera, so find what still runs while it sits idle there (the frame loop, a
+   camera retry, the face worker) and measure it the way the proof does.
 
 ## Gotchas learned the hard way
 
@@ -218,6 +228,25 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   launches at the end): wait on the installer's own process (`WaitForExit`) instead, and give
   Inno Setup `postinstall` entries `skipifsilent`.
 - `ps %cpu` on a Mac is a decaying average; measure idle CPU from CPU-time deltas instead.
+- A soak measures its whole test process, test code included: the hub soak once "leaked" 200 MB
+  because the test kept every app link it had closed (#50). Before blaming the app, check what
+  the test itself holds on to (`tracemalloc` snapshots show it in a minute).
+- Python's `http.server` looks up the computer's network name when it starts (`socket.getfqdn`),
+  which can wait 35 s on a Mac's multicast DNS: Control took 37 s to start that way (#52). Any
+  new local web server must override `server_bind` the same way Control's and the hub's do.
+- In Electron, `new AudioContext()` blocks the page that makes it until the audio device answers
+  (twice, up to 10 s each). GazeStage's built-in instrument plays in a hidden page of its own for
+  that reason (#54); never make one in a window that has to stay responsive.
+- To find where an app hangs on a CI Mac, push a throwaway workflow that runs it with
+  `faulthandler.dump_traceback_later(5, repeat=True)` and samples the built app with macOS's
+  `sample` (branch `diag/control-startup` has the one that found #52).
+- GitHub's workflow-runs API sometimes answers a `branch=` or `status=` query with no runs at
+  all. List runs unfiltered and pick on your side (`.github/scripts/newest-builds.sh`, #51).
+- On Windows, Python's faulthandler also reports exceptions that were handled (COM's
+  0x8001010d): the crash log drops a run's lines when the app closes normally (#53).
+- Windows: `Start-Process` on a file marked as downloaded asks first and is "canceled by the
+  user" with nobody to click; start it with `UseShellExecute = $false`. Python writes files and
+  pipes in the old code page there, so write UTF-8 explicitly.
 - Chromium burns CPU when idle if anything runs a 60 fps animation frame loop or keeps an
   AudioContext running: GazeStage sleeps its loop and rests its audio when nothing moves.
 - Cloud sessions couldn't download Actions logs or artifacts. On the Mac,
