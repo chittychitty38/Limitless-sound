@@ -94,8 +94,37 @@ def processes() -> list[tuple[int, float, int, str]]:
     return out
 
 
+def windows_processes() -> dict[int, tuple[str, float, int]]:
+    """pid -> (program path, CPU seconds used so far, memory bytes), on Windows."""
+    ps = ("Get-Process | Where-Object Path | Select-Object Id, Path, CPU, WorkingSet64 "
+          "| ConvertTo-Json -Compress")
+    try:
+        rows = json.loads(run(["powershell", "-NoProfile", "-Command", ps], timeout=60) or "[]")
+    except ValueError:
+        return {}
+    rows = rows if isinstance(rows, list) else [rows]
+    return {r["Id"]: (r.get("Path") or "", float(r.get("CPU") or 0), int(r.get("WorkingSet64") or 0)) for r in rows}
+
+
+def usage_windows(bundles: dict[str, str]) -> dict[str, dict]:
+    """The same as usage(), from two readings of each app's CPU time IDLE_SECONDS apart."""
+    folders = {k: "\\" + b.removesuffix(".app").lower() + "\\" for k, b in bundles.items()}
+    before, t0 = windows_processes(), time.time()
+    time.sleep(IDLE_SECONDS)
+    after, took = windows_processes(), time.time() - t0
+    out = {}
+    for key, folder in folders.items():
+        mine = [pid for pid, (path, _, _) in after.items() if folder in path.lower()]
+        if mine:
+            cpu = sum(after[p][1] - before.get(p, after[p])[1] for p in mine) / took * 100
+            out[key] = {"cpuPercent": round(max(cpu, 0.0), 1), "memoryMB": round(sum(after[p][2] for p in mine) / 2**20)}
+    return out
+
+
 def usage(bundles: dict[str, str]) -> dict[str, dict]:
     """Average CPU and peak memory of each app (all its helper processes together) while idle."""
+    if sys.platform == "win32":
+        return usage_windows(bundles)
     if sys.platform != "darwin":
         return {}
     samples: dict[str, list[tuple[float, int]]] = {k: [] for k in bundles}

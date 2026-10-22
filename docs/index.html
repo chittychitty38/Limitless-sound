@@ -367,12 +367,12 @@ footer p { margin: 0; }
   <section id="proof" aria-labelledby="proof-title">
     <div class="wrap">
       <p class="kicker label">Proof, every night</p>
-      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> Mac, every night.</h2>
-      <p class="section-lede">Every night a brand-new Mac downloads Limitless Sound from this page, installs it and opens every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
+      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
+      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
         <p class="fine">Loading last night&rsquo;s results&hellip;</p>
       </div>
-      <p class="fine">These Macs have no microphone, camera or controller, so this proves the install, start-up, the suite and every command. Voices, faces and hands are tested by musicians. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml">Every run, in full</a>.</p>
+      <p class="fine">These computers have no microphone, camera or controller, so this proves the install, start-up, the suite and every command. Voices, faces and hands are tested by musicians. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml">Every run, in full</a>.</p>
     </div>
   </section>
 
@@ -438,7 +438,7 @@ footer p { margin: 0; }
 (() => {
   const box = document.getElementById("proof-runs");
   const shots = "https://raw.githubusercontent.com/chittychitty38/Limitless-sound/proof-results/";
-  const mac = { "mac-apple-silicon": "Apple silicon Mac", "mac-intel": "Intel Mac" };
+  const mac = { "mac-apple-silicon": "Apple silicon Mac", "mac-intel": "Intel Mac", "windows": "Windows PC" };
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const passed = (a) => !!a.level && (a.proof || []).every((x) => x.ok || x.warn);
   const why = (a) => {

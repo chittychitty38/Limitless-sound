@@ -149,12 +149,108 @@ jobs:
           name: proof-${{ matrix.arch }}
           path: proof
 
+  # The same on a fresh Windows PC, with the Windows suite installer.
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            packaging/proof
+            standard/conformance
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the suite the way a musician does
+        id: get
+        shell: bash
+        run: |
+          mkdir -p dl
+          if [ -n "${{ inputs.run_id }}" ]; then
+            gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n Limitless-Sound-Suite-windows -D dl
+            echo "version=build ${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          elif curl -fsSL --retry 3 -o dl/Limitless-Sound-Suite-windows.exe \
+                 "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-windows.exe"; then
+            echo "version=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The public release has no Windows suite installer yet, so there is nothing to prove on Windows."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l dl
+
+      - name: Install it
+        id: install
+        if: steps.get.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          $start = Get-Date
+          # A browser marks a download as coming from the internet; so does this.
+          Set-Content -Path dl\Limitless-Sound-Suite-windows.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+          $p = Start-Process dl\Limitless-Sound-Suite-windows.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log" -Wait -PassThru
+          Get-Content install.log -Tail 30
+          if ($p.ExitCode -ne 0) { throw "The suite installer failed with code $($p.ExitCode)" }
+          "seconds=$([int]((Get-Date) - $start).TotalSeconds)" >> $env:GITHUB_OUTPUT
+          # Limitless Sound starts by itself at the next sign-in; start it the same way now.
+          $hub = Join-Path $env:LOCALAPPDATA "Programs\Limitless Sound\Limitless Sound.exe"
+          Start-Process -FilePath $hub -ArgumentList "--background"
+
+      - name: Open every app and prove it works
+        if: steps.get.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set +e
+          python packaging/proof/prove_suite.py --out proof \
+            --suite-version "${{ steps.get.outputs.version }}" --install-seconds "${{ steps.install.outputs.seconds }}"
+          code=$?
+          if [ $code -eq 3 ] && [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::warning::Apps in the public release failed the proof on Windows; see the summary. The proof itself ran."
+            exit 0
+          fi
+          exit $code
+
+      - name: Gather the apps' logs and any crash reports
+        if: always() && steps.get.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force proof\logs | Out-Null
+          Copy-Item install.log proof\logs\ -ErrorAction SilentlyContinue
+          $roots = @("$env:LOCALAPPDATA\Limitless Sound\Logs", "$env:LOCALAPPDATA\CrashDumps",
+                     "$env:LOCALAPPDATA\Microsoft\Windows\WER\ReportArchive", "$env:ProgramData\Microsoft\Windows\WER\ReportArchive")
+          foreach ($r in $roots) {
+            if (Test-Path $r) {
+              Get-ChildItem $r -Recurse -File -Include *.log, *.txt, Report.wer -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "Limitless|GazeStage" -or $_.DirectoryName -match "Limitless" } |
+                ForEach-Object { Copy-Item $_.FullName ("proof\logs\" + ($_.FullName.Substring(3) -replace '[\\: ]', '_')) }
+            }
+          }
+          Get-ChildItem proof\logs | Format-Table Name, Length
+          foreach ($f in Get-ChildItem proof\logs -File) {
+            Write-Output "::group::$($f.Name) (last 80 lines)"; Get-Content $f.FullName -Tail 80; Write-Output "::endgroup::"
+          }
+          # Small screenshots for the results page.
+          Add-Type -AssemblyName System.Drawing
+          foreach ($f in Get-ChildItem proof\shots -Filter *.png -ErrorAction SilentlyContinue) {
+            $img = [System.Drawing.Image]::FromFile($f.FullName)
+            $img.Save(($f.FullName -replace '\.png$', '.jpg'), [System.Drawing.Imaging.ImageFormat]::Jpeg)
+            $img.Dispose(); Remove-Item $f.FullName
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.get.outputs.skip != 'true'
+        with:
+          name: proof-windows
+          path: proof
+
   # Publish the results, failures included. They go on a branch of their own, replaced on
   # every run so the repository doesn't grow: proof-results for the nightly run on main,
   # proof-results-test for pull requests and manual runs. The nightly results also go on the
   # website (gh-pages proof/latest.json).
   publish:
-    needs: mac
+    needs: [mac, windows]
     if: always()
     runs-on: ubuntu-latest
     env:
