@@ -34,6 +34,7 @@
   h1 { margin: 0; font-size: 1.8em; }
   header p { margin: 4px 0 0; color: var(--muted); }
   nav { max-width: 1100px; margin: 8px auto 0; padding: 0 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  nav[hidden] { display: none; }
   nav button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
   main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 48px; }
   section[role="tabpanel"][hidden] { display: none; }
@@ -72,6 +73,15 @@
   ol#order li { margin: 6px 0; }
   ol#order .row { gap: 6px; }
   .offline { padding: 12px 16px; border: 2px solid var(--warn); border-radius: 12px; margin: 12px 0; }
+  .setup fieldset { border: 2px solid var(--line); border-radius: 14px; padding: 12px 16px 16px; margin: 16px 0; }
+  .setup legend { font-weight: 700; font-size: 1.15em; padding: 0 6px; }
+  .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; }
+  .choice { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 2px solid var(--line);
+            border-radius: 14px; padding: 14px 16px; min-height: 72px; cursor: pointer; }
+  .choice:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .choice b { display: block; }
+  .choice small { display: block; color: var(--muted); font-size: .9em; }
+  .follows { color: var(--ok); }
 </style>
 </head>
 <body>
@@ -91,8 +101,36 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="offline" class="offline" hidden role="alert">Limitless Sound has stopped. Open it again from its icon.</div>
 
+  <section id="setup" class="setup" aria-labelledby="setup-title" hidden>
+    <h2 id="setup-title" tabindex="-1">Let's set up Limitless Sound for you</h2>
+    <p class="muted">Two questions. Every app then fits the way you play, and you can change anything later.</p>
+    <fieldset>
+      <legend>1. How do you like to play?</legend>
+      <p class="muted">Pick everything that fits.</p>
+      <div class="choices" id="setup-inputs"></div>
+    </fieldset>
+    <fieldset>
+      <legend>2. How should things look and sound?</legend>
+      <div class="field">
+        <label for="setup-size">Text size in every app</label>
+        <select id="setup-size">
+          <option value="1">Normal</option><option value="1.25">Large</option>
+          <option value="1.5">Larger</option><option value="2">Largest</option>
+        </select>
+      </div>
+      <div class="check"><input type="checkbox" id="setup-contrast"><label for="setup-contrast">High contrast</label></div>
+      <div class="check"><input type="checkbox" id="setup-motion"><label for="setup-motion">Reduce motion</label></div>
+      <div class="check"><input type="checkbox" id="setup-speak"><label for="setup-speak">Say what happens out loud</label></div>
+    </fieldset>
+    <div class="row">
+      <button class="primary" id="setup-go">Set up my apps</button>
+      <button id="setup-skip">Skip for now</button>
+    </div>
+  </section>
+
   <section role="tabpanel" id="p-tools" aria-labelledby="t-tools">
     <h2>My apps</h2>
+    <div class="row"><button id="setup-again">Set up again: how I play</button></div>
     <div class="grid" id="tools"></div>
     <h2>Open with Limitless Sound</h2>
     <p class="muted">Tick the apps you use. They open together, and when Limitless Sound starts.</p>
@@ -243,6 +281,7 @@ function renderTools() {
       el("h3", {}, t.name),
       el("p", {}, t.about || ""),
       el("p", {}, el("span", { class: "status " + status[0] }, status[1]), t.version ? ` · version ${t.version}` : ""));
+    if (t.connected && followsPrefs(t.id)) card.append(el("p", { class: "follows" }, "✓ Uses your text size, contrast and motion settings"));
     const row = el("div", { class: "row" });
     if (!t.connected && t.installed)
       row.append(el("button", { onclick: async () => say((await api("/api/open", { tool: t.id })).message) , "aria-label": `Open ${t.name}` }, "Open"));
@@ -259,6 +298,11 @@ function renderTools() {
     st.append(el("div", { class: "check" }, cb, el("label", { for: id }, t.name)));
   }
   $("autostart").checked = state.autostart;
+}
+function followsPrefs(tool) {
+  const applied = state.states[tool + ".prefs.applied"];
+  if (!applied || typeof applied !== "object") return false;
+  return ["textScale", "highContrast", "reduceMotion"].every((k) => k in applied && applied[k] === state.prefs[k]);
 }
 async function locate(t) {
   const path = prompt(`Where is ${t.name}? Paste the full path to the app or its .exe.`);
@@ -383,6 +427,9 @@ function renderPrefs() {
     if (document.activeElement === e) continue;
     if (e.type === "checkbox") e.checked = !!p[k]; else e.value = String(p[k]);
   }
+  if (!setupShown) showLook(p);
+}
+function showLook(p) {
   document.documentElement.style.setProperty("--scale", p.textScale || 1);
   document.documentElement.toggleAttribute("data-contrast", !!p.highContrast);
   if (p.highContrast) document.documentElement.setAttribute("data-contrast", "high");
@@ -422,6 +469,59 @@ $("autostart").addEventListener("change", async (e) => {
   say(r.ok ? (e.target.checked ? "Limitless Sound will start when you sign in" : "Won't start at sign-in") : "Couldn't change that: " + r.message);
 });
 
+// ---------- guided setup: the first time this page opens, and again from My apps
+let setupShown = false;
+function showSetup(on) {
+  setupShown = on;
+  $("setup").hidden = !on;
+  document.querySelector("nav").hidden = on;
+  for (const t of tabs) $(t.getAttribute("aria-controls")).hidden = on || t.getAttribute("aria-selected") !== "true";
+  if (on) { renderSetup(); $("setup-title").focus(); } else showLook(state.prefs);
+}
+function renderSetup() {
+  const box = $("setup-inputs"); box.textContent = "";
+  for (const c of state.setupChoices) {
+    const id = "in-" + c.id;
+    box.append(el("label", { class: "choice", for: id },
+      el("input", { type: "checkbox", id, value: c.id, checked: state.setupInputs.includes(c.id) }),
+      el("span", {}, el("b", {}, c.label), el("small", {}, c.about))));
+  }
+  $("setup-size").value = String(state.prefs.textScale || 1);
+  if (!$("setup-size").value) $("setup-size").value = "1";
+  $("setup-contrast").checked = !!state.prefs.highContrast;
+  $("setup-motion").checked = !!state.prefs.reduceMotion;
+  $("setup-speak").checked = !!state.prefs.speak;
+}
+function setupLook() {
+  return { textScale: Number($("setup-size").value), highContrast: $("setup-contrast").checked,
+           reduceMotion: $("setup-motion").checked, speak: $("setup-speak").checked };
+}
+// See the choice at once: the page itself takes the size and contrast picked.
+for (const id of ["setup-size", "setup-contrast", "setup-motion"]) $(id).addEventListener("change", () => showLook(setupLook()));
+$("setup-go").addEventListener("click", async () => {
+  const inputs = [...$("setup-inputs").querySelectorAll("input:checked")].map((i) => i.value);
+  if (!inputs.length) {
+    say("Pick at least one way you like to play.");
+    $("setup-inputs").querySelector("input")?.focus();
+    return;
+  }
+  const r = await api("/api/setup", { inputs, look: setupLook() });
+  if (!r.ok) { say("That didn't work: " + (r.message || r.error || "try again")); return; }
+  showSetup(false);
+  await refresh(true);
+  selectTab($("t-tools"));
+  const opened = (r.message || "").replace(/\.$/, "");
+  say(`Your apps: ${r.tools.map(toolName).join(", ")}. ${opened ? opened + ". " : ""}`
+      + "They open together whenever Limitless Sound starts, and every app uses your settings.");
+});
+$("setup-skip").addEventListener("click", async () => {
+  await api("/api/setup", { skip: true });
+  state.setupDone = true;
+  showSetup(false);
+  selectTab($("t-tools"));
+});
+$("setup-again").addEventListener("click", () => showSetup(true));
+
 function renderLog(entries) {
   logItems = entries.concat(logItems).slice(0, 200);
   const box = $("log");
@@ -441,7 +541,10 @@ async function refresh(force) {
   const newLog = s.log || []; delete s.log;
   if (newLog.length) since = newLog[newLog.length - 1].seq;
   // Only rebuild the page when something changed, so focus and screen readers aren't disturbed.
-  const shape = JSON.stringify([s.tools, s.actions.map((a) => [a.id, a.live]), s.routes, s.intentOrder, s.startTools, s.autostart]);
+  const applied = Object.entries(s.states || {}).filter(([k]) => k.endsWith(".prefs.applied"));
+  const shape = JSON.stringify([s.tools, s.actions.map((a) => [a.id, a.live]), s.routes, s.intentOrder, s.startTools,
+                                s.autostart, s.prefs, applied]);
+  const first = state === null;
   state = s;
   if (force || shape !== lastShape) {
     lastShape = shape;
@@ -451,6 +554,7 @@ async function refresh(force) {
   }
   renderPrefs();
   renderLog(newLog);
+  if (first && !s.setupDone) showSetup(true);
 }
 refresh(true);
 setInterval(refresh, 1000);
