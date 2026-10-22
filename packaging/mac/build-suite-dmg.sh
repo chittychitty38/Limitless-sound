@@ -7,6 +7,17 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 STAGE="$(mktemp -d)/Limitless Sound"
 mkdir -p "$STAGE"
 
+# hdiutil on the hosted Mac runners sometimes fails with "Resource busy"; try again.
+retry() {
+  local n
+  for n in 1 2 3 4; do
+    "$@" && return 0
+    echo "  $1 failed (try $n), retrying in $((n * 5)) s"
+    sleep $((n * 5))
+  done
+  "$@"
+}
+
 copy_apps() {  # copy every top-level .app from a folder
   find "$1" -maxdepth 2 -name "*.app" -type d -prune | while read -r app; do
     echo "  + $(basename "$app")"
@@ -17,7 +28,7 @@ copy_apps() {  # copy every top-level .app from a folder
 find "$IN" -name "*.dmg" | while read -r dmg; do
   echo "From $(basename "$dmg"):"
   mnt="$(mktemp -d)"
-  hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$mnt" "$dmg" >/dev/null
+  retry hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$mnt" "$dmg" >/dev/null
   copy_apps "$mnt"
   hdiutil detach "$mnt" -quiet || hdiutil detach "$mnt" -force -quiet
 done
@@ -38,5 +49,5 @@ done
 
 cp "$HERE/Install Limitless Sound.command" "$HERE/READ-ME-FIRST.txt" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "Limitless Sound" -srcfolder "$STAGE" -ov -format UDZO "$OUT"
+retry hdiutil create -volname "Limitless Sound" -srcfolder "$STAGE" -ov -format UDZO "$OUT"
 echo "Built $OUT"
