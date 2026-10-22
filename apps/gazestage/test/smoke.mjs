@@ -361,6 +361,27 @@ try {
     listener.closePort();
     assert.ok(heard.some((m) => m[0] === 0xb0 && m[1] === 16 && m[2] === 0), `GazeStage Notes carried the tone pad: ${JSON.stringify(heard.slice(-4))}`);
   }
+
+  step('tone pad: moves and sends with GazeStage minimised, as when the DAW is in front');
+  // Drawing stops while the window is minimised; the tone pad's MIDI must not wait for it. It
+  // used to move with the drawing: "tone A" from Voice waited for GazeStage to be looked at.
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.isVisible())?.minimize());
+  await win.evaluate(() => {   // and, wherever minimising doesn't stop it (a test display), no frames
+    const ask = window.requestAnimationFrame.bind(window), held = [];
+    window.requestAnimationFrame = (f) => { held.push(f); return 0; };
+    window.__framesBack = () => { window.requestAnimationFrame = ask; held.forEach((f) => ask(f)); };
+  });
+  await sleep(500);
+  const asked = Date.now();
+  assert.equal((await hubInvoke(7, 'xySet', { x: 127, y: 0, glide: 300 }))?.ok, true);
+  await win.waitForFunction(() => window.__gs.sent.filter((m) => m[1] === 16).at(-1)?.[2] === 127, null, { polling: 20, timeout: 3000 });
+  const glided = Date.now() - asked;
+  assert.ok(glided < 1000, `a 300 ms glide finished ${glided} ms after the action, with the window minimised`);
+  assert.equal(await win.evaluate(() => window.__gs.sent.filter((m) => m[1] === 17).at(-1)?.[2]), 0);
+  await win.evaluate(() => window.__framesBack());
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.isMinimized())?.restore());
+  await sleep(300);
+
   await win.evaluate(() => Object.assign(window.__gs.S, { mode: 'head', select: 'dwell' }));
   await win.click('[data-goto=play]');
 
