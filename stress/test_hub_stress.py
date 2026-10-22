@@ -389,6 +389,7 @@ def test_soak(hub):
             urllib.request.urlopen(req, timeout=5).read()
         else:
             link.stop()  # the app quits...
+            LIVE.remove(link)  # (holding on to it here would look like the hub leaking)
             links[tool] = connect(tool)  # ...and the musician opens it again
         time.sleep(0.002)
 
