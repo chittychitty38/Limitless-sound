@@ -17,6 +17,12 @@ PandaDrumsRender songpromo part.json script.json promo/
 PROMO_JOBS=4 python ../../art/promo_song.py promo/ ../../docs/hero.jpg song.mp3 promo.mp4
 ```
 
+To play it in a DAW: `python part_to_midi.py part.json part.mid` writes the part as a MIDI
+file (General MIDI drums, the song's tempo). Set the project to that tempo, put the song at the
+start of an audio track and the MIDI at the start of Panda Drums' track, and press play: Showtime
+reports its latency, the DAW compensates, and every stroke lands on the song's own drums.
+`this_sucks_drums.mid` is This Sucks' part (165 bpm).
+
 `song` and `songpromo` both play the song from its start, so a long take can be rendered in
 parallel pieces: `song part.json piece/ <from> <to>` draws only that stretch (numbering its
 frames from 1), and a `songpromo` script's `from` and `end` do the same for the promo.
