@@ -120,12 +120,15 @@ def test_big_text_fits_and_stays_on_screen(qapp):
     area = p.screen().availableGeometry()
     p.move(area.right() - p.width() - 20, area.top() + 80)
     right = p.x() + p.width()
+    usual = p.width()   # 440, or wider where the system font needs it (Segoe UI on Windows)
     p.set_look(Look(2.0, high_contrast=True))
+    big = p.width()
     for b in p.buttons:   # every button is big enough for its text
         assert b.width() >= b.sizeHint().width() and b.height() >= b.sizeHint().height()
     assert p.x() >= area.left() and (p.x() + p.width() == right or p.x() == area.left())
     p.set_look(Look())
-    assert p.width() == 440 and p.x() + p.width() == right   # back to its usual size
+    assert p.width() == usual and p.x() + p.width() == right, (   # back to its usual size
+        f"usual {usual}, at 2x {big}, now {p.width()}, minimum {p.minimumSizeHint().width()}")
     p.hide()
 
     t = Toast()
