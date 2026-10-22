@@ -175,6 +175,19 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .levels li { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-weight: 700; font-size: .98rem; line-height: 1.25; }
 .levels b { display: block; font-family: var(--mono); font-weight: 400; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
+.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; }
+.proofrun h3 { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 0 0 4px; }
+.proofrun .label { display: block; margin-bottom: 14px; }
+.prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
+.prooflist li { display: grid; grid-template-columns: 1.6em 1fr; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
+.prooflist .ok .mark { color: #7fd6a4; }
+.prooflist .bad .mark { color: var(--red); }
+.prooflist b { display: block; }
+.prooflist span.how { color: var(--muted); font-size: 1rem; }
 .doc .note { font-size: .98rem; color: var(--muted); margin-bottom: 22px; }
 
 /* Involved */
@@ -202,6 +215,7 @@ footer p { margin: 0; }
       <ul>
         <li class="hide-sm"><a href="#apps">Apps</a></li>
         <li class="hide-sm"><a href="#install">Install</a></li>
+        <li class="hide-sm"><a href="#proof">Proof</a></li>
         <li class="hide-sm"><a href="#vision">The plan</a></li>
         <li><a class="pill" href="#download">Download</a></li>
       </ul>
@@ -353,6 +367,18 @@ footer p { margin: 0; }
     </div>
   </section>
 
+  <section id="proof" aria-labelledby="proof-title">
+    <div class="wrap">
+      <p class="kicker label">Proof, every night</p>
+      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
+      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
+      <div class="proofruns" id="proof-runs" aria-live="polite">
+        <p class="fine">Loading last night&rsquo;s results&hellip;</p>
+      </div>
+      <p class="fine">These computers have no microphone, camera or controller, so this proves the install, start-up, the suite and every command. Voices, faces and hands are tested by musicians. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml">Every run, in full</a>.</p>
+    </div>
+  </section>
+
   <section id="vision" aria-labelledby="vision-title">
     <div class="wrap">
       <p class="kicker label">Where this is going</p>
@@ -411,5 +437,44 @@ footer p { margin: 0; }
     <p>Limitless Sound Foundation &middot; 501(c)(3) &middot; Conyers, Georgia &middot; Founded by Jason Barnes<br>Software free and open source &middot; <a href="https://github.com/chittychitty38/limitless-sound">Source on GitHub</a></p>
   </div>
 </footer>
+<script>
+(() => {
+  const box = document.getElementById("proof-runs");
+  const shots = "https://raw.githubusercontent.com/chittychitty38/Limitless-sound/proof-results/";
+  const mac = { "mac-apple-silicon": "Apple silicon Mac", "mac-intel": "Intel Mac", "windows": "Windows PC" };
+  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const passed = (a) => !!a.level && (a.proof || []).every((x) => x.ok || x.warn);
+  const why = (a) => {
+    const bad = [...(a.checks || []), ...(a.proof || [])].find((x) => !x.ok && !x.warn && (x.level || "proof") !== "adaptive"
+      && ["connected", "proof"].includes(x.level || "proof"));
+    return bad ? `${bad.check}: ${bad.detail || "failed"}` : "";
+  };
+  fetch("proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
+    .then((data) => {
+      const link = document.getElementById("proof-run");
+      if (data.run) link.href = data.run;
+      box.innerHTML = data.runs.map((run) => {
+        if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>${esc(run.error)}</p></div>`;
+        const ok = run.apps.filter(passed).length;
+        const when = new Date(run.when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+        const apps = run.apps.map((a) => {
+          const good = passed(a);
+          const c4 = (a.checks || []).find((x) => x.id === "C4");
+          const how = good
+            ? `ready in ${a.joinedSeconds} s, answered all ${a.actionsTried} of its commands`
+            : esc(why(a));
+          const shot = a.screenshot ? ` <a href="${shots}${esc(a.screenshot)}">screenshot</a>` : "";
+          return `<li class="${good ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${good ? "✓" : "✕"}</span>`
+            + `<span><b>${esc(a.name)}<span class="vh">: ${good ? "passed" : "failed"}</span></b><span class="how">${how}${shot}</span></span></li>`;
+        }).join("");
+        return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
+          + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
+          + `<ul class="prooflist">${apps}</ul></div>`;
+      }).join("");
+    })
+    .catch(() => { box.innerHTML = `<p class="fine">The first nightly results haven&rsquo;t been published yet.</p>`; });
+})();
+</script>
 </body>
 </html>
