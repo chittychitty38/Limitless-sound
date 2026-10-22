@@ -62,3 +62,17 @@ def test_default_timing_is_the_steady_preset():
     steady = profiles.TIMING_PRESETS["steady"]
     assert config["timing"] == steady["timing"]
     assert config["analogThreshold"] == steady["analogThreshold"]
+
+
+def test_opening_settings_never_waits_for_the_browser(app, monkeypatch):
+    """The controller loop runs on the same thread: a slow browser must not hold up a press."""
+    import time
+    import webbrowser
+    from limitless_control import app as app_module
+
+    monkeypatch.setattr(app_module.sys, "platform", "linux")
+    monkeypatch.setattr(webbrowser, "open", lambda url: time.sleep(5))
+    app.url = "http://127.0.0.1:1/?t=x"
+    started = time.monotonic()
+    app.open_settings()
+    assert time.monotonic() - started < 0.5
