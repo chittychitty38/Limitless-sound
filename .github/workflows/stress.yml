@@ -29,6 +29,35 @@ env:
   PYTHONUTF8: "1"   # Windows consoles default to cp1252; the reports print arrows and µ
 
 jobs:
+  # On a pull request, the app-specific stress jobs run only when that app, the stress tests
+  # or this workflow changed. Main, the nightly run and a manual run always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      voice: ${{ steps.diff.outputs.voice }}
+      gazestage: ${{ steps.diff.outputs.gazestage }}
+      color: ${{ steps.diff.outputs.color }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            for app in voice gazestage color; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          echo "$changed"
+          for app in voice gazestage color; do
+            if echo "$changed" | grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)"; then
+              echo "$app=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$app=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
   engines:
     name: Engines and hub (${{ matrix.os }})
     strategy:
@@ -54,6 +83,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.voice == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
@@ -96,6 +127,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-latest]
+    needs: changes
+    if: needs.changes.outputs.gazestage == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -125,6 +158,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, windows-latest]
+    needs: changes
+    if: needs.changes.outputs.color == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
