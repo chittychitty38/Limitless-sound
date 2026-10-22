@@ -141,6 +141,26 @@ class Matching(unittest.TestCase):
         self.assertFalse(e.handle("make me a sandwich").handled)
         self.assertEqual(p.log, [])
 
+    def test_daw_command_with_no_daw_in_front_says_where_it_works(self):
+        # Heard right, just not in a DAW: say so, instead of "didn't catch" (which sounds like
+        # the microphone or the accent was the problem).
+        e, p = engine("Finder")
+        r = e.handle("play")
+        self.assertFalse(r.handled)
+        self.assertEqual(r.message, '"play" works in Logic Pro and Pro Tools. '
+                                    'Bring one of them to the front, then say it again.')
+        self.assertEqual(p.log, [])
+        r = e.handle("show the piano roll")
+        self.assertEqual(r.message, '"show the piano roll" works in Logic Pro. '
+                                    'Bring it to the front, then say it again.')
+        # Logic is Mac only, so Windows only offers Pro Tools.
+        e, _ = engine("Notepad", os_name="windows")
+        self.assertEqual(e.handle("record").message, '"record" works in Pro Tools. '
+                                                     'Bring it to the front, then say it again.')
+        # Something no app knows still says it wasn't caught.
+        e, _ = engine("Finder")
+        self.assertEqual(e.handle("make me a sandwich").message, 'Didn\'t catch a command in "make me a sandwich"')
+
     def test_global_in_other_app(self):
         e, _ = engine("Safari")
         self.assertTrue(e.handle("copy that").handled)

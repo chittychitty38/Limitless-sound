@@ -597,7 +597,9 @@ class MainWindow(QMainWindow):
             first_line = result.message.splitlines()[0]
             self._show_did(("✓ " if result.handled else "? ") + first_line)
             if self.settings.show_hud and not self.isActiveWindow():
-                did = first_line if result.handled else "Didn't catch a command"
+                # The transcript is shown above it, so a miss needs only these words; any other
+                # refusal (a DAW command with no DAW in front, say) shows its reason.
+                did = "Didn't catch a command" if first_line.startswith("Didn't catch") else first_line
                 self.hud.show_message(shown.replace("[unk]", "").strip(), did, result.handled,
                                       self.settings.hud_seconds)
             self.history.insertItem(0, f"{shown}  →  {first_line}")
