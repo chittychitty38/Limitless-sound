@@ -5,6 +5,10 @@
 //                                           playing a groove, frame-exact; join them with
 //                                           ffmpeg -framerate 30 -i frames/%04d.png -i groove.wav ...
 //   PandaDrumsRender icon <file.png>        the app icon on its own
+//   PandaDrumsRender promo <dir>            the promo performance: the panda plays through five
+//                                           keys and a tour of the pages, then cheers; frames at
+//                                           1920 wide, drums.wav and timeline.json for the
+//                                           compositor (art/promo.py)
 #include "PluginEditor.h"
 #include "gui/PandaArt.h"
 
@@ -224,6 +228,180 @@ int video (const juce::File& dir, double seconds)
     std::printf ("%d frames and groove.wav in %s\n", frames, dir.getFullPathName().toRawUTF8());
     return 0;
 }
+// The promo: a groove that moves through five keys (the tom melody follows each one), a tour
+// of the pages, a big ending and the panda's cheer. Writes JPEG frames of the whole window at
+// 1.5x, the drums, and timeline.json saying when each key and page starts, what every drum is
+// tuned to, and where the kicks land (the compositor ducks its pad on them).
+int promo (const juce::File& dir)
+{
+    Session s;
+    s.proc.setShowtime (true);
+    const double bpm = 100.0, bar = 240.0 / bpm, sixteenth = bar / 16.0, intro = 3.6;
+    struct Section { int firstBar, bars; pd::Key key; int page; const char* caption; };
+    const std::vector<Section> sections {
+        { 0, 4,  { 2, 2 }, 0, "groove" },     // D minor
+        { 4, 2,  { 0, 2 }, 0, "key" },        // C minor
+        { 6, 2,  { 4, 1 }, 0, "key" },        // E major
+        { 8, 2,  { 6, 2 }, 0, "key" },        // F# minor
+        { 10, 2, { 9, 1 }, 0, "key" },        // A major
+        { 12, 1, { 2, 2 }, 2, "lab" },
+        { 13, 1, { 2, 2 }, 1, "mixer" },
+        { 14, 1, { 2, 2 }, 3, "mapping" },
+        { 15, 1, { 2, 2 }, 0, "fill" },
+    };
+    const int bars = 16;
+    auto at = [&] (int b, double step) { return (juce::int64) ((intro + (b * 16 + step) * sixteenth) * sampleRate); };
+
+    std::vector<std::pair<juce::int64, juce::MidiMessage>> notes;
+    std::vector<double> kicks;
+    auto add = [&] (juce::int64 t, int note, int vel)
+    {
+        notes.push_back ({ t, on (note, vel) });
+        if (note == 36)
+            kicks.push_back ((double) t / sampleRate);
+    };
+    // The title hit in the intro.
+    add ((juce::int64) (2.2 * sampleRate), 36, 127);
+    add ((juce::int64) (2.2 * sampleRate), 49, 124);
+    juce::Random r (7);
+    for (auto& sec : sections)
+        for (int b = sec.firstBar; b < sec.firstBar + sec.bars; ++b)
+        {
+            auto last = b == sec.firstBar + sec.bars - 1;
+            juce::String kind (sec.caption);
+            auto melody = kind == "key" && last;
+            auto fill = (kind == "groove" && last) || kind == "fill";
+            if (b == sec.firstBar)
+            {
+                add (at (b, 0), b % 2 == 0 ? 49 : 57, 120);
+                add (at (b, 0), 36, 125);
+            }
+            for (int st = 0; st < 16; ++st)
+            {
+                if (fill && st >= 8)
+                    break;
+                if (st % 2 == 0 && ! (b == sec.firstBar && st == 0))
+                    add (at (b, st), b >= 8 ? 51 : 42, st % 4 == 0 ? 112 : 76 + r.nextInt (18));
+                if ((st == 0 || st == 7 || st == 10) && ! (b == sec.firstBar && st == 0))
+                    add (at (b, st), 36, st == 0 ? 118 : 100);
+                if (st == 4 || st == 12)
+                    add (at (b, st), 38, 108 + r.nextInt (19));
+                if ((st == 6 || st == 15) && ! melody)
+                    add (at (b, st), 38, 28 + r.nextInt (20));
+            }
+            if (fill)
+            {
+                int toms[] = { 48, 48, 45, 45, 43, 43, 41, 41 };
+                for (int st = 0; st < 8; ++st)
+                    add (at (b, 8 + st), toms[st], 100 + st * 3);
+            }
+            if (melody)
+            {
+                // The floor tom sings the key: 1 3 5 6 5 3 2 1 in major, 1 b3 5 4 b3 2 1 b7 in minor.
+                std::vector<int> major { 0, 4, 7, 9, 7, 4, 2, 0 }, minor { 0, 3, 7, 5, 3, 2, 0, -2 };
+                auto& line = sec.key.scale == 1 ? major : minor;
+                auto base = 72 + sec.key.root;
+                if (base - 2 < 72)
+                    base += 12;
+                for (int i = 0; i < 8; ++i)
+                    add (at (b, i * 2 + 1), base + line[(size_t) i], 112);
+            }
+        }
+    // The ending: everything at once, then he cheers.
+    add (at (bars, 0), 36, 127);
+    add (at (bars, 0), 49, 127);
+    add (at (bars, 0), 57, 125);
+    add (at (bars, 0), 52, 120);
+    auto endTime = (double) at (bars, 0) / sampleRate;
+    auto total = endTime + 4.2;
+
+    juce::AudioBuffer<float> audio (2, 0);
+    auto framesDir = dir.getChildFile ("frames");
+    framesDir.deleteRecursively();
+    framesDir.createDirectory();
+    auto& stage = s.editor->getKitPage().stage;
+    juce::JPEGImageFormat jpeg;
+    jpeg.setQuality (0.93f);
+    auto timeline = std::make_unique<juce::DynamicObject>();
+    juce::Array<juce::var> sectionList;
+    size_t current = (size_t) -1;
+    auto frames = (int) (total * fps);
+    for (int f = 0; f < frames; ++f)
+    {
+        auto t0 = (double) s.clock / sampleRate;
+        // Change key and page when a section starts (just before its downbeat is heard).
+        for (size_t i = 0; i < sections.size(); ++i)
+        {
+            auto start = intro + sections[i].firstBar * bar - 0.05;
+            if (i != current && t0 >= start && (i + 1 == sections.size() || t0 < intro + sections[i + 1].firstBar * bar - 0.05))
+            {
+                current = i;
+                s.proc.setKey (sections[i].key);
+                s.editor->refreshAll();
+                s.editor->showPage (sections[i].page);
+                auto sec = std::make_unique<juce::DynamicObject>();
+                sec->setProperty ("time", intro + sections[i].firstBar * bar);
+                sec->setProperty ("end", intro + (sections[i].firstBar + sections[i].bars) * bar);
+                sec->setProperty ("key", sections[i].key.name());
+                sec->setProperty ("root", sections[i].key.root);
+                sec->setProperty ("major", sections[i].key.scale == 1);
+                sec->setProperty ("page", sections[i].page);
+                sec->setProperty ("caption", sections[i].caption);
+                auto pitches = std::make_unique<juce::DynamicObject>();
+                if (auto kit = s.proc.getKit())
+                    for (size_t p = 0; p < kit->pieces.size(); ++p)
+                        if (isTunable (kit->pieces[p].type))
+                            pitches->setProperty (kit->pieces[p].name, pd::pitchName (s.proc.getPitch ((int) p)).upToFirstOccurrenceOf (" ", false, false));
+                sec->setProperty ("pitches", juce::var (pitches.release()));
+                sectionList.add (juce::var (sec.release()));
+            }
+        }
+        s.run ((int) (sampleRate / fps), notes, &audio);
+        auto t = (double) s.clock / sampleRate;
+        auto playing = t >= intro - 0.1 && t < endTime + 0.15;
+        stage.setTransport (bpm, std::max (0.0, (t - intro) / 60.0 * bpm), playing);
+        s.pump (t);
+        stage.advanceTo (t);
+        if (current < sections.size() && sections[current].page == 2)
+        {
+            pd::HitEvent e;
+            e.piece = 1;
+            s.editor->getLabPage().onHit (e);
+        }
+        if (t < intro - 0.2)
+            continue;       // the compositor shows its titles here
+        auto img = snapshot (*s.editor, 1.5f);
+        auto file = framesDir.getChildFile (juce::String (f + 1).paddedLeft ('0', 4) + ".jpg");
+        juce::FileOutputStream os (file);
+        if (os.openedOk())
+            jpeg.writeImageToStream (img, os);
+    }
+
+    juce::WavAudioFormat wav;
+    auto out = dir.getChildFile ("drums.wav");
+    out.deleteFile();
+    if (std::unique_ptr<juce::OutputStream> stream = out.createOutputStream())
+    {
+        auto opts = juce::AudioFormatWriterOptions().withSampleRate (sampleRate).withNumChannels (2).withBitsPerSample (24);
+        if (auto writer = wav.createWriterFor (stream, opts))
+            writer->writeFromAudioSampleBuffer (audio, 0, audio.getNumSamples());
+    }
+    juce::Array<juce::var> kickList;
+    for (auto k : kicks)
+        kickList.add (k);
+    timeline->setProperty ("fps", fps);
+    timeline->setProperty ("bpm", bpm);
+    timeline->setProperty ("intro", intro);
+    timeline->setProperty ("end", endTime);
+    timeline->setProperty ("total", total);
+    timeline->setProperty ("frames", frames);
+    timeline->setProperty ("sections", sectionList);
+    timeline->setProperty ("kicks", kickList);
+    dir.getChildFile ("timeline.json").replaceWithText (juce::JSON::toString (juce::var (timeline.release())));
+    std::printf ("%d frames, drums.wav and timeline.json in %s\n", frames, dir.getFullPathName().toRawUTF8());
+    return 0;
+}
+
 // Peak and loudness of every drum at full force through the whole mix, for balancing kits.
 int levels()
 {
@@ -256,11 +434,13 @@ int main (int argc, char** argv)
         return video (target, argc > 3 ? juce::String (argv[3]).getDoubleValue() : 12.0);
     if (mode == "levels")
         return levels();
+    if (mode == "promo")
+        return promo (target);
     if (mode == "icon")
     {
         writeIcon (target, 1024);
         return 0;
     }
-    std::printf ("usage: PandaDrumsRender screenshots|video|icon <path> [seconds]\n");
+    std::printf ("usage: PandaDrumsRender screenshots|video|promo|icon <path> [seconds]\n");
     return 1;
 }

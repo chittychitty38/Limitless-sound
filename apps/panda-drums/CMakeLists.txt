@@ -25,6 +25,13 @@ juce_add_binary_data(PandaDrumsData
         Resources/fonts/LilitaOne-Regular.ttf
         Resources/fonts/VarelaRound-Regular.ttf)
 
+# The 3D-rendered panda, kit and room (art/panda3d.py renders them; see art/README.md).
+file(GLOB PD_ART_FILES CONFIGURE_DEPENDS Resources/art/*.png Resources/art/*.jpg Resources/art/*.json)
+juce_add_binary_data(PandaArtData
+    HEADER_NAME PandaArtData.h
+    NAMESPACE   PandaArtData
+    SOURCES     ${PD_ART_FILES})
+
 set(PD_ENGINE_SOURCES
     Source/engine/KitTypes.cpp
     Source/engine/Analysis.cpp
@@ -39,6 +46,7 @@ set(PD_ENGINE_SOURCES
 set(PD_GUI_SOURCES
     Source/gui/Theme.cpp
     Source/gui/PandaArt.cpp
+    Source/gui/Skin.cpp
     Source/gui/PandaStage.cpp
     Source/gui/KitPage.cpp
     Source/gui/MixerPage.cpp
@@ -89,7 +97,7 @@ if (PD_BUILD_PLUGIN)
     target_include_directories(PandaDrums PRIVATE Source)
     target_compile_definitions(PandaDrums PUBLIC ${PD_DEFINITIONS})
     target_link_libraries(PandaDrums
-        PRIVATE PandaDrumsData ${PD_MODULES}
+        PRIVATE PandaDrumsData PandaArtData ${PD_MODULES}
         PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 endif()
 
@@ -99,7 +107,7 @@ if (PD_BUILD_TOOLS)
     target_sources(PandaDrumsTests PRIVATE ${PD_ENGINE_SOURCES} ${PD_GUI_SOURCES} tests/Tests.cpp)
     target_include_directories(PandaDrumsTests PRIVATE Source)
     target_compile_definitions(PandaDrumsTests PRIVATE ${PD_DEFINITIONS} JUCE_MODAL_LOOPS_PERMITTED=1)
-    target_link_libraries(PandaDrumsTests PRIVATE PandaDrumsData ${PD_MODULES}
+    target_link_libraries(PandaDrumsTests PRIVATE PandaDrumsData PandaArtData ${PD_MODULES}
         juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 
     # Offline renderer: screenshots of every page and a demo video of the panda playing a groove.
@@ -107,6 +115,6 @@ if (PD_BUILD_TOOLS)
     target_sources(PandaDrumsRender PRIVATE ${PD_ENGINE_SOURCES} ${PD_GUI_SOURCES} tools/Render.cpp)
     target_include_directories(PandaDrumsRender PRIVATE Source)
     target_compile_definitions(PandaDrumsRender PRIVATE ${PD_DEFINITIONS} JUCE_MODAL_LOOPS_PERMITTED=1)
-    target_link_libraries(PandaDrumsRender PRIVATE PandaDrumsData ${PD_MODULES}
+    target_link_libraries(PandaDrumsRender PRIVATE PandaDrumsData PandaArtData ${PD_MODULES}
         juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 endif()

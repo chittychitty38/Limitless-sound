@@ -11,6 +11,7 @@ namespace pd::art
 struct PandaPose
 {
     juce::Point<float> head { 640.0f, 205.0f };
+    juce::Point<float> torso { 640.0f, 205.0f };   // the head's place before it nods: the body hangs off this
     float radius = 118.0f;
     float tilt = 0.0f;            // radians, around the neck
     float squash = 1.0f;          // vertical scale of the head
@@ -23,6 +24,7 @@ struct PandaPose
     float blushGlow = 0.0f;       // 0..1
     float bodyBounce = 0.0f;      // stage units down
     float breath = 0.0f;          // -1..1
+    juce::Point<float> shoulderOffset { 0.98f, 1.42f };  // from the head centre, in head radii (x mirrored)
 
     juce::Point<float> shoulder (bool left) const;    // where an arm leaves the sleeve
 };

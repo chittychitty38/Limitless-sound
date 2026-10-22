@@ -2,6 +2,7 @@
 
 #include "../PluginProcessor.h"
 #include "PandaArt.h"
+#include "Skin.h"
 
 // The stage: the panda behind the kit, playing every hit the engine plays.
 //
@@ -70,6 +71,10 @@ private:
         juce::String variantName, pitchText;
         bool tunable = false, inKey = false, keyOn = false;
         int variants = 1;
+        int slot = 0;              // which of the slots for its kind it sits in
+        float squash = 0.36f;      // drum head / cymbal: height of its ellipse over its width
+        bool flip = false;         // the 3D layer is drawn mirrored (rendered on the other side)
+        float stretch = 1.0f;      // deeper or shallower shell than the rendered one
 
         // Animation.
         double flashAt = -10.0, rippleAt = -10.0;
@@ -121,6 +126,15 @@ private:
     void spawnHearts (float count);
     P toDesign (P screen) const;
     juce::AffineTransform designTransform() const;
+    void paintVector (juce::Graphics&);
+    void drawSelection (juce::Graphics&);
+    void paintSkin (juce::Graphics&);
+    void drawSkinArm (juce::Graphics&, P shoulder, P paw, P tip, float alpha);
+    static P elbowFor (P shoulder, P paw);
+    void drawContactShadow (juce::Graphics&, juce::Rectangle<float> footprint, float alpha = 0.26f);
+    pd::art::DrumState drumState (const PieceView&) const;
+    juce::AffineTransform pieceTransform (const PieceView&, P anchor, float renderedRadius, float extraScale = 1.0f) const;
+    juce::String pickFace() const;
     void drawTags (juce::Graphics&);
     void drawChips (juce::Graphics&);
     void drawParticles (juce::Graphics&);
@@ -133,6 +147,18 @@ private:
     std::vector<Strike> pending;                  // strikes waiting for their time
     pd::art::PandaPose pose;
     juce::Image background;
+
+    // The 3D panda's face: which rendered head shows, and the one it is fading from.
+    juce::String face { "neutral" }, lastFace { "neutral" };
+    double faceAt = -10.0;
+    juce::String mood;             // a face held for a moment (a wink when idle, a scowl on a china)
+    double moodUntil = -10.0, nextIdleMood = 6.0, cheerUntil = -10.0, playingSince = -10.0;
+    bool wasPlaying = false;
+    double lastLanded = -10.0;
+    int lastBadCount = -1;
+    P headBase { 640.0f, 205.0f };
+    int recentToms = 0;
+    double recentTomsAt = -10.0;
 
     double now = 0.0, lastAdvance = 0.0;
     double lastAnyHit = -10.0, lastBurst = -10.0, nextBlink = 2.0, blinkAt = -10.0, happyUntil = -10.0;

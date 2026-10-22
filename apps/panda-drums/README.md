@@ -2,8 +2,8 @@
 
 The first drum plugin that plays **in key with any song**, and the drummer is a **panda**.
 Pick the song's key and every kick, snare and tom tunes itself onto its notes. Play a tom
-across the keyboard like an instrument. And a cartoon panda in glasses sits behind the kit
-and plays every hit your MIDI sends, in time.
+across the keyboard like an instrument. And a plush 3D panda in glasses sits behind a purple
+glitter kit and plays every hit your MIDI sends, in time.
 
 AU, VST3 and stand-alone, for macOS 11+ (Apple silicon and Intel in one) and Windows 10/11.
 
@@ -29,7 +29,7 @@ AU, VST3 and stand-alone, for macOS 11+ (Apple silicon and Intel in one) and Win
 | A Panda effect on each fader | **PANDA** knob on every channel and on the master bus. For now it's a punch-and-grit chain (compressor into saturation); the real Panda chain drops into the same knob. |
 | A default map, saved maps, Superior Drummer style, import your own | **Mapping** page: Panda (General MIDI +), General MIDI, Toontrack style (SD3 / EZdrummer), Roland V-Drums. Save, load, MIDI-learn from your pads. |
 | A menu bar item for the song's key | **KEY** at the top: pick the root and scale; the kit retunes itself. |
-| The panda playing the drums along with the MIDI | The whole stage. Two arms, two sticks, a foot on the hi-hat pedal; open-handed playing, alternating sticking on fills, crashes with both hands, a head bob to the host's tempo, blinks, a big grin on big hits. **Showtime sync** lets him wind up before every hit and land it exactly on the sound. |
+| The panda playing the drums along with the MIDI | The whole stage, rendered in 3D (fur, glasses, glitter wraps, gold cymbals, the CRUSH kick, bamboo and heart lights; see [art/](art/README.md)). Two arms, two sticks, the hi-hat opening and closing with the pedal; open-handed playing, alternating sticking on fills, a head bob to the host's tempo, blinks. Thirteen rendered faces follow the playing: happy, open-mouthed, excited, laughing on a big crash, focused through fills, a wink when idle, both sticks up when the song stops. **Showtime sync** lets him wind up before every hit and land it exactly on the sound. |
 
 ## Install
 
@@ -112,7 +112,9 @@ the panda playing a groove frame by frame with the matching audio (join with ffm
 workflow does); `PandaDrumsRender levels` prints each drum's level through the mix.
 
 Layout: `Source/engine` (kit model, folder loader, velocity zones, keys, maps, sampler, mixer,
-factory kit), `Source/gui` (the panda and the kit art, the stage animation, the pages),
+factory kit), `Source/gui` (the stage animation, the 3D art loader, the pages), `art` (the
+Blender script that models and renders the panda, kit and room; its layers are in
+`Resources/art`),
 `tests`, `tools`, `packaging`. CI: `.github/workflows/panda-drums.yml` runs the tests on Linux,
 macOS and Windows, validates the Audio Unit with `auval` and the VST3 with pluginval, builds the
 Mac `.pkg` and Windows installer, and renders the screenshots and demo video. A

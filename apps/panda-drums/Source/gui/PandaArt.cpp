@@ -1,4 +1,5 @@
 #include "PandaArt.h"
+#include "Skin.h"
 #include "Theme.h"
 
 namespace pd::art
@@ -87,7 +88,7 @@ float hash01 (int i)
 P PandaPose::shoulder (bool left) const
 {
     auto side = left ? -1.0f : 1.0f;
-    return { head.x + side * 0.98f * radius, head.y + 1.42f * radius + bodyBounce };
+    return { torso.x + side * shoulderOffset.x * radius, torso.y + shoulderOffset.y * radius + bodyBounce };
 }
 
 void drawPandaShadow (juce::Graphics& g, const PandaPose& pose)
@@ -98,7 +99,7 @@ void drawPandaShadow (juce::Graphics& g, const PandaPose& pose)
 void drawPandaBody (juce::Graphics& g, const PandaPose& pose)
 {
     auto R = pose.radius;
-    auto B = pose.head.translated (0.0f, pose.bodyBounce);
+    auto B = pose.torso.translated (0.0f, pose.bodyBounce);
     auto widen = 1.0f + 0.012f * pose.breath;
     auto x = [&] (float u) { return B.x + u * R * widen; };
     auto y = [&] (float v) { return B.y + v * R; };
@@ -922,6 +923,29 @@ void drawStage (juce::Graphics& g, juce::Rectangle<float> a)
 
 void drawPandaBadge (juce::Graphics& g, juce::Rectangle<float> r)
 {
+    // The rendered head when there is one: ears, then the happy face, fitted to the badge.
+    if (auto& skin = Skin::get(); skin.isLoaded())
+    {
+        auto head = skin.sprite (skin.at ("panda/heads/happy").toString());
+        if (head.isValid())
+        {
+            auto all = head.bounds;
+            if (auto* ears = skin.at ("panda/ears").getArray())
+                for (auto& e : *ears)
+                    all = all.getUnion (skin.sprite (e.getProperty ("file", {}).toString()).bounds);
+            auto size = std::min (r.getWidth(), r.getHeight()) * 0.9f;
+            auto scale = size / std::max (all.getWidth(), all.getHeight());
+            auto t = juce::AffineTransform::translation (-all.getCentreX(), -all.getCentreY()).scaled (scale)
+                         .translated (r.getCentreX(), r.getCentreY());
+            juce::Graphics::ScopedSaveState save (g);
+            g.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
+            if (auto* ears = skin.at ("panda/ears").getArray())
+                for (auto& e : *ears)
+                    skin.draw (g, skin.sprite (e.getProperty ("file", {}).toString()), t);
+            skin.draw (g, head, t);
+            return;
+        }
+    }
     PandaPose pose;
     auto size = std::min (r.getWidth(), r.getHeight());
     pose.radius = size * 0.36f;

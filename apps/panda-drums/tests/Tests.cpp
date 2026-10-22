@@ -379,6 +379,59 @@ public:
     }
 };
 
+class ArtTests : public juce::UnitTest
+{
+public:
+    ArtTests() : UnitTest ("3D art", "Panda") {}
+    void runTest() override
+    {
+        auto& skin = Skin::get();
+        beginTest ("the manifest loads");
+        expect (skin.isLoaded());
+
+        beginTest ("every layer the stage draws is there, at 1x and 2x");
+        juce::StringArray names { "stage", skin.at ("panda/body").toString(), skin.at ("panda/arm/file").toString(),
+                                  skin.at ("panda/paw/file").toString(), skin.at ("panda/stick/file").toString(),
+                                  skin.at ("kit/hihat/top_file").toString(), skin.at ("kit/hihat/bottom_file").toString(),
+                                  skin.at ("kit/hihat/stand_file").toString() };
+        for (auto* kind : { "kick", "tom", "floor", "snare" })
+            for (auto* wrap : { "purple", "brass", "maple", "chrome", "walnut", "black" })
+                names.add (skin.at (juce::String ("kit/") + kind + "/wraps/" + wrap).toString());
+        for (auto* kind : { "crash", "ride", "china", "splash" })
+        {
+            names.add (skin.at (juce::String ("kit/") + kind + "/file").toString());
+            auto stands = skin.at (juce::String ("kit/stands/") + kind);
+            expect (stands.size() >= 2, kind);
+            for (int i = 0; i < stands.size(); ++i)
+                names.add (stands[i].getProperty ("file", {}).toString());
+        }
+        for (auto* face : { "neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh",
+                            "surprised", "tongue_out", "angry", "sad", "blink" })
+            names.add (skin.at (juce::String ("panda/heads/") + face).toString());
+        for (auto* part : { "panda/ears", "panda/sleeves" })
+        {
+            expect (skin.at (part).size() == 2, part);
+            for (int i = 0; i < skin.at (part).size(); ++i)
+                names.add (skin.at (part)[i].getProperty ("file", {}).toString());
+        }
+        for (auto& n : names)
+            expect (skin.imagesLoad (skin.sprite (n)), "missing layer: " + n);
+
+        beginTest ("slots and anchors for every kind of drum");
+        for (auto* kind : { "kick", "rack1", "rack2", "rack3", "rack4", "floor", "snare", "hihat", "crash", "ride", "china", "splash", "perc" })
+        {
+            auto slots = skin.at (juce::String ("slots/") + kind);
+            expect (slots.size() > 0, kind);
+            for (int i = 0; i < slots.size(); ++i)
+                expect (Skin::number (slots[i].getProperty ("ppi", {})) > 1.0f, kind);
+        }
+        for (auto* kind : { "kick", "tom", "floor", "snare" })
+            expect (Skin::ellipse (skin.at (juce::String ("kit/") + kind + "/head")).getWidth() > 10.0f, kind);
+        expect (Skin::number (skin.at ("panda/head/radius")) > 50.0f);
+        expect (skin.at ("panda/shoulders").size() == 2);
+    }
+};
+
 class EditorTests : public juce::UnitTest
 {
 public:
@@ -414,6 +467,7 @@ static KeyTests keyTests;
 static MapTests mapTests;
 static EngineTests engineTests;
 static LoaderTests loaderTests;
+static ArtTests artTests;
 static EditorTests editorTests;
 
 int main()
