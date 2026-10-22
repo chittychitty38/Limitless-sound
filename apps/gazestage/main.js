@@ -106,6 +106,8 @@ function startSuite() {
     },
   });
   suite.link.on('connected', (on) => win?.webContents.send('suite:connected', on));
+  // The musician's shared settings: the page applies text size, contrast and motion.
+  suite.link.on('prefs', (prefs) => win?.webContents.send('suite:prefs', prefs));
   suite.link.start();
   // Which face tracking runs here (media:tracking), told again after every reconnect.
   suite.link.on('connected', (on) => { if (on && suite.tracking) suite.link.state('faceTracking', suite.tracking); });
@@ -127,7 +129,9 @@ ipcMain.on('suite:did', (_e, action) => { if (TRANSPORT.has(action)) suite.link?
 ipcMain.handle('suite:invoke', (_e, action, args) => suite.link
   ? suite.link.invoke(String(action), args && typeof args === 'object' ? args : {})
   : { ok: false, message: 'Limitless Sound isn’t running.' });
-ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected }));
+ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected, prefs: suite.link?.connected ? suite.link.prefs : null }));
+// What the page is now showing, so the settings page (and the Access Standard test) can see it.
+ipcMain.on('suite:applied', (_e, applied) => { if (applied && typeof applied === 'object') suite.link?.state('prefs.applied', applied); });
 
 // ---------- permissions ----------
 ipcMain.handle('media:status', () => {
