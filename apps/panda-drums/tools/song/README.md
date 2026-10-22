@@ -6,14 +6,20 @@ Turn a finished song into the drum part the panda plays, then film him playing i
 # 1. The drum part, from the song itself (drums separated, transcribed, put on the song's click).
 MDX=kuielab_a_drums.onnx ADTOF=ADTOF-pytorch python transcribe_drums.py song.mp3 part.json
 
-# 2. Watch him play it: frames of the stage (60 fps, 1080p here), the song under them.
-PD_STAGE=1 PD_SCALE=1.5 PD_FPS=60 PandaDrumsRender song part.json take/
-ffmpeg -framerate 60 -i take/frames/%05d.png -i song.mp3 -shortest take.mp4
+# 2. Watch him play it: frames of the stage at 60 fps (frame n shows him n/60 s in), the song
+#    under them. At this scale the stage's picture fills a 1920 x 1080 crop edge to edge.
+PD_STAGE=1 PD_SCALE=1.592 PD_FPS=60 PandaDrumsRender song part.json take/
+ffmpeg -framerate 60 -start_number 1 -i take/frames/%05d.png -itsoffset -0.0167 -i song.mp3 \
+       -vf crop=1920:1080:59:12 -pix_fmt yuv420p -shortest take.mp4
 
 # 3. Or the promo, cut to the song (a script says its key and when each page shows).
 PandaDrumsRender songpromo part.json script.json promo/
-python ../../art/promo_song.py promo/ ../../docs/hero.jpg song.mp3 promo.mp4
+PROMO_JOBS=4 python ../../art/promo_song.py promo/ ../../docs/hero.jpg song.mp3 promo.mp4
 ```
+
+`song` and `songpromo` both play the song from its start, so a long take can be rendered in
+parallel pieces: `song part.json piece/ <from> <to>` draws only that stretch (numbering its
+frames from 1), and a `songpromo` script's `from` and `end` do the same for the promo.
 
 - `transcribe_drums.py` needs numpy, librosa, soundfile, onnxruntime, torch and scikit-learn,
   KUIELab's MDX-Net drums model (`kuielab_a_drums.onnx`, from the TRvlvr/model_repo releases)
