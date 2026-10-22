@@ -9,7 +9,7 @@ AU, VST3 and stand-alone, for macOS 11+ (Apple silicon and Intel in one) and Win
 Every control on screen (panels, tabs, knobs, toggles, the drum tiles, the readouts, icons) is
 a piece of the Panda Drums GUI asset pack; see [art/](art/README.md).
 
-![The panda playing](docs/panda-playing.gif)
+![The panda playing](docs/panda-playing.webp)
 
 | | |
 |---|---|

@@ -264,6 +264,7 @@ int video (const juce::File& dir, double seconds)
 int promo (const juce::File& dir)
 {
     Session s;
+    s.proc.setComicFx (false);   // the picture's look: no cartoon words over it
     s.proc.setShowtime (true);
     const double bpm = 124.0, bar = 240.0 / bpm, sixteenth = bar / 16.0, intro = 3.6;
     struct Section { int firstBar, bars; pd::Key key; int page; const char* caption; };
