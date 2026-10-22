@@ -1,11 +1,12 @@
 # The panda, the kit, the room and the controls
 
-Everything on screen comes from the Panda Drums GUI asset pack. The Kit page is drawn from its
-art: `source_sprite_sheet.png` has every piece on a transparent background (the twelve faces,
-eleven poses, paws with sticks and motion streaks, the kit, the hardware, the room, the lights,
-sparks and hearts). Every control (panels, buttons, the knob, toggles, instrument tiles,
-readouts, icons) is one of the pack's `ui` pieces. Three scripts turn them into what the plugin
-draws: `Resources/art` and `Resources/ui` hold the result.
+Everything on screen comes from the Panda Drums art. The Kit page is the hero picture
+(`hero.jpg`, the panda at his kit) cut into layers and brought to life: every drum and cymbal
+is its own layer, and the panda is a rig that plays them. The sprite sheet
+(`source_sprite_sheet.png`, from the GUI asset pack) gives the effects (motion streaks, sparks,
+hearts), the badge and one face; every control (panels, buttons, the knob, toggles, instrument
+tiles, readouts, icons) is one of the pack's `ui` pieces. `Resources/art` and `Resources/ui`
+hold what the scripts below make.
 
 ![The Panda Drums art](../docs/hero.jpg)
 
@@ -16,28 +17,42 @@ GitHub releases: Real-ESRGAN's `RealESRGAN_x4plus.pth` (xinntao/Real-ESRGAN) and
 `big-lama.pt` (Sanster/models).
 
 ```
-python sheet_cut.py source_sprite_sheet.png RealESRGAN_x4plus.pth pieces/     # cut + 4x upscale
-LAMA=big-lama.pt python sheet_stage.py pieces/ out/                           # lay out the stage
-rm -r ../Resources/art && cp -r out ../Resources/art
+python sheet_cut.py source_sprite_sheet.png RealESRGAN_x4plus.pth pieces/     # the sheet, cut + 4x
+ESRGAN=RealESRGAN_x4plus.pth LAMA=big-lama.pt python hero_layers.py hero.jpg layers/
+python hero_stage.py layers/ pieces/ out/                                     # the stage + manifest
+cp out/* ../Resources/art/
 python ui_prep.py <pack>/ui RealESRGAN_x4plus.pth ui/                         # the controls
-rm -r ../Resources/ui && cp -r ui ../Resources/ui
+cp ui/* ../Resources/ui/
 ```
 
-- `sheet_cut.py` cuts each piece out by its box on the sheet, bleeds its colours under the
+- `sheet_cut.py` cuts each piece of the sheet out by its box, bleeds its colours under the
   transparent edge (so it never gets a dark fringe when scaled) and upscales it 4x with
   Real-ESRGAN, colour and alpha separately.
-- `sheet_stage.py` builds the room (the background plate, its bamboo kept at the sides, the
-  rug, the spotlights' beams softened into light), puts each drum and cymbal where the plugin's
-  slots are at its size in inches, stands under the cymbals, the hi-hat on its stand, the snare
-  on its stand and the pedal on the kick. Each pose came with a drum or a cymbal: those are
-  taken out and LaMa paints back the panda's arm or leg that was behind them. Every pose is
-  lined up on the panda's head and cut in two, head and body, so the head can nod, tilt and lean
-  on its own; the body keeps a neck under the chin, narrower than the head, so nothing shows
-  when it moves. Each face is cut down to its features (brows, glasses, eyes, nose, mouth,
-  cheeks) with a soft edge, and each pose gets the transform that lays a face over its own,
-  lined up on the glasses. The layers are written at 1x and 2x the 1280 x 736 stage with
-  `manifest.json`: where each layer sits, the drum heads and cymbal discs (for the flashes and
-  ripples), the slots, the poses' necks, the faces, the bulbs, beams and rug.
+- `hero_layers.py` upscales the hero picture 4x and takes it apart. Every piece is traced in the
+  picture's own pixels: each cymbal's disc, each drum, the panda's head, torso, sleeves and arms,
+  and the china's stand in front of the floor tom. Inside its outline a piece takes everything
+  that isn't the pink wall. A guided filter softens each edge (fur, cymbal rims) and the wall's
+  pink is unmixed out of it. LaMa paints in what one piece hid of another (the crash behind the
+  ride, the bottom hi-hat under the top one, the shirt under the arms and chin). The wall is
+  spread back in behind everything that moves; the room keeps its stands and the panda's legs.
+  For the rig it cuts:
+  - the right fist with its stick painted out of it in fur;
+  - the whole stick, upright, carried on through the fist to a rounded butt;
+  - an arm: a plush tube of his own fur, shaded round.
+- `hero_stage.py` lays the layers out on the 1280 x 736 stage, at 1x and 2x, with
+  `manifest.json`:
+  - where each layer sits, the drum heads and cymbal discs, and the slots other kits' drums go in;
+  - the rig's points: the shoulders, the fulcrum in the fist, the wrist, the stick's length either
+    side of the fulcrum, the neck and the seat.
+
+  The kit is laid out the way a real one is around the drummer:
+  - on his left (the picture's right): the hi-hat, rack tom 1 and the first crash;
+  - in front of him: the snare;
+  - on his right: a second rack tom, the floor tom, the ride, the china and the second crash.
+
+  His faces are the picture's own: its grin, and its eyes shut (a blink), squinting (focused), as
+  happy arcs (a laugh) or one of them (a wink). The glasses and the grin never move. Only the sad
+  face comes from the sheet.
 - `ui_prep.py` upscales every control of the pack 4x and writes it at 1x and 2x. It takes the
   knob apart (face, needle, centre dot) so the needle turns smoothly, paints the lettering out of
   the key and kit selectors and a tile so any key, kit or drum name fits on them, stands the
@@ -72,13 +87,14 @@ tooltip and the key panel from them.
 
 | Part | What it does |
 |---|---|
-| Room | Drawn once as the background; the heart lights glow, twinkle and flare with the kick. |
-| Drums | Scaled to the drum's size in inches, the shell stretched for deeper or shallower drums; the head flashes and a ring runs across it on every hit. |
+| Room | The picture's room; the heart lights glow, twinkle and flare with the kick. |
+| Drums | Scaled to the drum's size in inches; the head flashes and a ring runs across it on every hit. |
 | Cymbals | Swing on their stands; a flash of light across the bronze. The hi-hat opens with the pedal. |
-| Room | The spotlights' beams sway and flare with the cymbals; the rug's ring lights up with the kick; specks of light drift up through the beams. |
-| Panda | Switches to the pose for what he's playing: hi-hat, snare, left or right tom, left or right crash, kick, a fill when the toms come fast, and the cheer when the song stops. Each new pose lands with a little punch, cut like a cartoon (no blend, no double image); he bounces with the kick and breathes. His head moves on its own: it nods to the beat, leans toward each drum he hits and dips into it. |
-| Face | One of the twelve faces (and a blink) over every pose but the cheer: focused, happy and excited as the playing builds, laughing on a big crash, surprised by the first hit after a rest, a scowl on a solid china hit, sad when you mark a hit bad, a wink or a tongue when idle. |
-| Effects | A stick streak where the stick came down, a spark on hard hits, hearts on big crashes. |
+| Arms | Each hand plays like a drummer's. The stick turns in 3D about the fulcrum in his fist, so it shortens on screen when it points at the drum. A stroke starts at the height its velocity needs: an accent gets an upstroke first, and a ghost note is an inch-high tap. The stick drops onto the head, faster and faster, and lands exactly when the hit sounds. It sits for a frame, then bounces back up to the height that hand has been playing at. The hand leads the stick down; the forearm joins in for the loud ones. As the sticks rise they open into a V, away from his face. Sticks lie nearly flat to a drum head, go across the hi-hat from the side, put the tip on the ride's bow and the shoulder on a crash's edge. |
+| Sticking | Open-handed: his left hand keeps time on the hi-hat, his right plays the snare and the ride. Fills go hand to hand around the toms, as far as each hand can reach. Each hand finishes the stroke it's on before it heads for the next drum, in an arc, the stick turning as it goes. |
+| Body | Leans into far reaches, bounces with the kick, breathes. His head nods to the beat, leans toward each hit and dips into it. Hands with nothing to play go back to the picture's sticks-up pose; arms up, sticks waving, when the song stops. |
+| Face | His grin while he plays; a blink every few seconds; a squint through a tom fill and on a solid china; a laugh on a big crash; a wink when idle; sad when you mark a hit bad. |
+| Effects | A stick streak and a spark on hard hits, hearts on big crashes. |
 
 ## Promo video
 

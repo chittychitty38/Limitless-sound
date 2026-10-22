@@ -6,7 +6,7 @@
 
 // The stage: the panda behind the kit, playing every hit the engine plays.
 //
-// Hits arrive with the time they will be heard. With Showtime on they arrive ~75 ms early,
+// Hits arrive with the time they will be heard. With Showtime on they arrive ~150 ms early,
 // so a hand can wind up and land exactly on the sound; otherwise the stick snaps down the
 // moment the hit is heard, with a smear frame so it still reads as a swing.
 class PandaStage : public juce::Component,
@@ -200,6 +200,7 @@ private:
     Spring bounce, nod, earL, earR, lookX, lookY, shake;
     Spring headLean, headDip;       // the head on its own: leaning toward a hit (radians), dipping with it (stage units)
     Spring bodyLean;                // the rigged panda leaning toward a far reach (stage units)
+    std::array<Arm, 2> shownArms;   // the arms as this frame draws them
     bool rig = false;               // the art is the rigged hero panda
     float centreX = 640.0f;         // the panda's middle: pieces left of it are his right hand's
     double tBpm = 120.0, tPpq = 0.0;

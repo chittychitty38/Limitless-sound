@@ -117,7 +117,7 @@ public:
     // before each hit lands, exactly in time.
     bool getShowtime() const { return showtime; }
     void setShowtime (bool);
-    int getShowtimeLatency() const { return showtime ? (int) std::lround (0.075 * currentSampleRate) : 0; }
+    int getShowtimeLatency() const { return showtime ? (int) std::lround (0.15 * currentSampleRate) : 0; }
 
     struct Transport { double bpm = 120.0, ppq = 0.0; bool playing = false; };
     Transport getTransport() const;

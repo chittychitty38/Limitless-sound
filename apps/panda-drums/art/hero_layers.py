@@ -2,7 +2,10 @@
 Separates the Panda Drums hero picture (the panda at the kit) into the layers the stage draws,
 so the stage is that picture, alive.
 
-    LAMA=big-lama.pt python hero_layers.py <hero, upscaled 4x> <outdir>
+    ESRGAN=RealESRGAN_x4plus.pth LAMA=big-lama.pt python hero_layers.py hero.jpg <outdir>
+
+The picture is upscaled 4x with Real-ESRGAN first (kept as <outdir>/hero4x.png; an already
+upscaled picture is used as it is).
 
 Every piece is traced here in the hero's own pixels (1206 x 667): each cymbal's disc, each drum,
 the panda's head, torso, sleeves, arms and fists with their sticks, and the china's stand where
@@ -240,10 +243,32 @@ def soften(rgb, mask, room):
     return F.astype(np.uint8), a
 
 
+def upscaled(src, outdir):
+    """The hero picture at 4x: Real-ESRGAN ($ESRGAN), done once."""
+    img = Image.open(src).convert("RGB")
+    if img.width >= HERO_W * 2:
+        return img
+    cached = os.path.join(outdir, "hero4x.png")
+    if os.path.exists(cached):
+        return Image.open(cached).convert("RGB")
+    import torch
+    from sheet_cut import RRDBNet, upscale
+    torch.set_num_threads(os.cpu_count() or 4)
+    model = RRDBNet()
+    state = torch.load(os.environ["ESRGAN"], map_location="cpu")
+    model.load_state_dict(state.get("params_ema", state.get("params", state)))
+    model.eval()
+    print("upscaling the picture 4x", flush=True)
+    out = upscale(model, np.asarray(img).astype(np.float32) / 255)
+    big = Image.fromarray((out * 255 + 0.5).clip(0, 255).astype(np.uint8))
+    big.save(cached)
+    return big
+
+
 def main(src, outdir):
     os.makedirs(outdir, exist_ok=True)
     W, H = int(round(HERO_W * SCALE)), int(round(HERO_H * SCALE))
-    rgb = np.asarray(Image.open(src).convert("RGB").resize((W, H), Image.LANCZOS)).copy()
+    rgb = np.asarray(upscaled(src, outdir).resize((W, H), Image.LANCZOS)).copy()
     hw = (H, W)
     wall = wall_of(rgb)
     purple = purple_of(rgb)

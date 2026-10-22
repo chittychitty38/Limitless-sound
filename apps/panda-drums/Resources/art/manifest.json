@@ -280,10 +280,10 @@
   },
   "face_focused": {
    "file": "face_focused",
-   "x": 627.35,
-   "y": 22.67,
-   "w": 307.92,
-   "h": 317.81
+   "x": 686.06,
+   "y": 142.5,
+   "w": 169.5,
+   "h": 79.0
   },
   "face_excited": {
    "file": "face_excited",
@@ -294,17 +294,17 @@
   },
   "face_wink": {
    "file": "face_wink",
-   "x": 627.99,
-   "y": 22.03,
-   "w": 308.76,
-   "h": 320.12
+   "x": 686.06,
+   "y": 142.5,
+   "w": 169.5,
+   "h": 79.0
   },
   "face_laugh": {
    "file": "face_laugh",
-   "x": 626.11,
-   "y": 26.69,
-   "w": 309.7,
-   "h": 313.89
+   "x": 686.06,
+   "y": 142.5,
+   "w": 169.5,
+   "h": 79.0
   },
   "face_surprised": {
    "file": "face_surprised",
@@ -336,10 +336,10 @@
   },
   "face_blink": {
    "file": "face_blink",
-   "x": 619.43,
-   "y": 27.63,
-   "w": 322.86,
-   "h": 384.74
+   "x": 686.06,
+   "y": 142.5,
+   "w": 169.5,
+   "h": 79.0
   },
   "fx_blur_1": {
    "file": "fx_blur_1",
@@ -942,7 +942,8 @@
   ],
   "faces": {
    "neutral": {
-    "file": "face_neutral"
+    "file": "face_neutral",
+    "own": true
    },
    "happy": {
     "file": "face_happy",
@@ -953,7 +954,8 @@
     "own": true
    },
    "smile": {
-    "file": "face_smile"
+    "file": "face_smile",
+    "own": true
    },
    "focused": {
     "file": "face_focused"
@@ -969,13 +971,15 @@
     "file": "face_laugh"
    },
    "surprised": {
-    "file": "face_surprised"
+    "file": "face_surprised",
+    "own": true
    },
    "tongue_out": {
-    "file": "face_tongue_out"
+    "file": "face_tongue_out",
+    "own": true
    },
    "angry": {
-    "file": "face_angry"
+    "file": "face_focused"
    },
    "sad": {
     "file": "face_sad"

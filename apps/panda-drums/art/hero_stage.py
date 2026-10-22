@@ -12,8 +12,10 @@ first crash on his left (the picture's right), a second rack tom, the floor tom,
 china and the second crash on his right.
 
 The panda is a rig: torso, head, sleeves, an arm (a plush tube of his own fur), the fist and the
-stick, with the shoulder and grip points the plugin drives them by. His twelve faces (and a
-blink) come from the sprite sheet, lined up on the picture's glasses and toned to its fur.
+stick, with the shoulder and grip points the plugin drives them by. His face is the picture's
+own: its grin for most moods, and its eyes closed (a blink), squinted (focused), turned to happy
+arcs (laughing) or one of them (a wink), so the glasses and the grin never move. Only the sad
+face comes from the sprite sheet, lined up on the picture's glasses and toned to its fur.
 """
 
 import json
@@ -85,7 +87,8 @@ RIG = dict(shoulders=[(588, 264), (836, 288)], wrist=(546, 258), grip=(526, 200)
            neck=(720, 262), head=(720, 160, 137, 105), seat=(712, 430))
 FACES = ["neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh", "surprised", "tongue_out",
          "angry", "sad"]
-OWN_FACES = ("excited", "happy", "open_mouth")
+OWN_FACES = ("excited", "happy", "open_mouth", "neutral", "smile", "surprised", "tongue_out")
+EYES = [(658, 146), (789, 166)]        # a point on the white of each eye (his right, his left), hero px
 SCALES = (1, 2)
 
 
@@ -240,6 +243,12 @@ def main(src, pieces, outdir):
         pan["faces"][face] = dict(file="face_" + face)
         if face in OWN_FACES:
             pan["faces"][face]["own"] = True     # the picture's own grin is this face: no patch over it
+    # The faces made from the picture's own eyes replace the sheet's.
+    hx_stage, hy_stage = S(hx0, hy0)
+    for face, patch, (bx, by) in hero_eyes(head_img, (hx0, hy0, hs)):
+        out.write("face_" + face, patch, hx_stage + bx / hs * K, hy_stage + by / hs * K, patch.width / hs * K, patch.height / hs * K)
+        pan["faces"][face] = dict(file="face_" + face)
+    pan["faces"]["angry"] = dict(file="face_focused")    # a rock-out scowl: the same squint
 
     # ---- effects and the badge, from the sheet
     fx = {}
@@ -262,6 +271,96 @@ def main(src, pieces, outdir):
     with open(os.path.join(outdir, "manifest.json"), "w") as f:
         json.dump(man, f, indent=1)
     print("wrote", len(out.files), "layers to", outdir)
+
+
+def hero_eyes(head_img, head_place):
+    """Faces made from the picture's own: the eyes closed (blink), squinting (focused), happy arcs
+    (laugh), and a wink. Each is a patch over just the eyes, at the head picture's scale."""
+    hx0, hy0, hs = head_place
+    a = np.asarray(head_img).astype(np.float32)
+    rgb = a[..., :3]
+    bright = (rgb.min(2) > 150).astype(np.uint8)
+    _, lab = cv2.connectedComponents(bright, connectivity=4)
+    eyes = []
+    for ex, ey in EYES:
+        sx, sy = int((ex - hx0) * hs), int((ey - hy0) * hs)
+        white = lab == lab[sy, sx]
+        # The white wraps most of the way round the iris: its hull is the whole eye.
+        hull = cv2.convexHull(cv2.findNonZero(white.astype(np.uint8)))
+        m = np.zeros(white.shape, np.uint8)
+        cv2.fillConvexPoly(m, hull, 1)
+        m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))) > 0
+        assert m.sum() < 20000, "an eye's white ran out of its patch"
+        ys, xs = np.nonzero(m)
+        ring = (cv2.dilate(m.astype(np.uint8), np.ones((15, 15), np.uint8)) > 0) & ~m & (rgb.max(2) < 60)
+        lid = np.median(rgb[ring], axis=0) * 0.85
+        eyes.append(dict(mask=m, cx=xs.mean(), cy=ys.mean(), rw=(xs.max() - xs.min()) / 2, rh=(ys.max() - ys.min()) / 2, lid=lid))
+    union = np.zeros(bright.shape, bool)
+    for e in eyes:
+        union |= e["mask"]
+    union = cv2.dilate(union.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+    ys, xs = np.nonzero(union)
+    x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+
+    fur = np.array([246, 226, 214], np.float32)       # the cream of his face, for the lines on the dark lids
+
+    def closed(img, e):
+        """The eye shut: the lid (the patch's black, with a little sheen at the top) over the white."""
+        m = e["mask"]
+        yy = np.arange(img.shape[0], dtype=np.float32)[:, None]
+        sheen = np.clip(1 - np.abs(yy - (e["cy"] - e["rh"] * 0.45)) / (e["rh"] * 0.5), 0, 1) * 9
+        soft = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 1.2)[..., None]
+        img[..., :3] = img[..., :3] * (1 - soft) + (e["lid"] + sheen[..., None]) * soft
+
+    def arc(img, e, up, width, colour, sag=0.32, span=0.78, lift=0.0):
+        """A curved line across the eye: up (a happy arc) or down (a shut lid's seam)."""
+        canvas = np.zeros(img.shape[:2], np.uint8)
+        pts = []
+        for u in np.linspace(-1, 1, 25):
+            x = e["cx"] + u * e["rw"] * span
+            y = e["cy"] + e["rh"] * lift + (-1 if up else 1) * e["rh"] * sag * (1 - u * u)
+            pts.append((int(round(x * 4)), int(round(y * 4))))
+        cv2.polylines(canvas, [np.array(pts, np.int32)], False, 255, int(width * 4), cv2.LINE_AA, shift=2)
+        k = cv2.GaussianBlur(canvas.astype(np.float32) / 255, (0, 0), 0.8)[..., None]
+        img[..., :3] = img[..., :3] * (1 - k) + colour * k
+
+    def squint(img, e, inner):
+        """The upper lid down past the middle, lower toward the nose: concentration."""
+        m = e["mask"]
+        yy, xx = np.mgrid[0:img.shape[0], 0:img.shape[1]].astype(np.float32)
+        line = e["cy"] - e["rh"] * 0.08 + inner * (xx - e["cx"]) / e["rw"] * e["rh"] * 0.22
+        lid = (m & (yy < line)).astype(np.float32)
+        soft = cv2.GaussianBlur(lid, (0, 0), 1.0)[..., None] * m[..., None]
+        img[..., :3] = img[..., :3] * (1 - soft) + e["lid"] * soft
+
+    faces = {}
+    img = a.copy()
+    for e in eyes:
+        closed(img, e)
+        arc(img, e, False, 3.0, fur * 0.75, sag=0.22, lift=0.1)
+    faces["blink"] = img
+    img = a.copy()
+    for e in eyes:
+        closed(img, e)
+        arc(img, e, True, 6.0, fur, sag=0.42, span=0.7, lift=0.3)
+    faces["laugh"] = img
+    img = a.copy()
+    closed(img, eyes[1])
+    arc(img, eyes[1], True, 6.0, fur, sag=0.42, span=0.7, lift=0.3)
+    faces["wink"] = img
+    img = a.copy()
+    squint(img, eyes[0], 1.0)       # his right eye is on the left: its inner corner is to the right
+    squint(img, eyes[1], -1.0)
+    faces["focused"] = img
+
+    out = []
+    alpha = cv2.GaussianBlur(union.astype(np.float32), (0, 0), 2.0)
+    for name, img in faces.items():
+        rgba = img.copy()
+        rgba[..., 3] = np.minimum(rgba[..., 3], alpha * 255)
+        crop = rgba[y0:y1, x0:x1].clip(0, 255).astype(np.uint8)
+        out.append((name, Image.fromarray(crop, "RGBA"), (x0, y0)))
+    return out
 
 
 def tone_to(patch, head_rgb, place, head_place):

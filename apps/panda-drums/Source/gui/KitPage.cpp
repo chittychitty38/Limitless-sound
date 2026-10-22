@@ -442,7 +442,7 @@ public:
         showtime.setToggleState (proc.getShowtime(), juce::dontSendNotification);
         comic.setToggleState (proc.comicFx, juce::dontSendNotification);
         popups.setTooltip ("A little pop-up on each drum with its round robin, velocity and zone");
-        showtime.setTooltip ("Delays the sound by 75 ms (your DAW compensates on playback) so the panda winds up and lands every hit dead on time. Turn off when playing live.");
+        showtime.setTooltip ("Delays the sound by 150 ms (your DAW compensates on playback) so the panda sees every hit coming: he moves to the drum, winds up and lands it dead on time. Turn off when playing live.");
         comic.setTooltip ("BOOM! CRASH! on the big hits");
         theme::accent (popups, "pink");
         theme::accent (showtime, "teal");

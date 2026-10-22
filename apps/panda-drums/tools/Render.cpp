@@ -200,7 +200,7 @@ int video (const juce::File& dir, double seconds)
 {
     Session s;
     s.proc.setKey ({ 2, 2 });   // D minor: the kit tunes itself, the chromatic tom melody lands in key
-    s.proc.setShowtime (true);  // hits are known 75 ms early, so the panda winds up and lands on time
+    s.proc.setShowtime (true);  // hits are known 150 ms early, so the panda winds up and lands on time
     s.editor->refreshAll();
     auto bpm = 100.0;
     auto bars = std::max (1, (int) ((seconds - 1.5) / (240.0 / bpm)));

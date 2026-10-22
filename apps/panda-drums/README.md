@@ -31,7 +31,7 @@ a piece of the Panda Drums GUI asset pack; see [art/](art/README.md).
 | A Panda effect on each fader | **PANDA** knob on every channel and on the master bus. For now it's a punch-and-grit chain (compressor into saturation); the real Panda chain drops into the same knob. |
 | A default map, saved maps, Superior Drummer style, import your own | **Mapping** page: Panda (General MIDI +), General MIDI, Toontrack style (SD3 / EZdrummer), Roland V-Drums. Save, load, MIDI-learn from your pads. |
 | A menu bar item for the song's key | **KEY** at the top: pick the root and scale; the kit retunes itself. |
-| The panda playing the drums along with the MIDI | The whole stage is the Panda Drums art (the panda, the purple glitter kit, gold cymbals, the CRUSH kick, bamboo and heart lights; see [art/](art/README.md)). He switches to the pose for what he's playing (hi-hat, snare, toms, crashes, kick, fills) on every hit, with a stick streak and a spark; his head moves on its own, nodding to the host's tempo, leaning toward each drum and dipping into it; the hi-hat opens and closes with the pedal; spotlights sway and flare with the cymbals and the rug glows with the kick. The drum's tile lights up in the strip below. Twelve faces and a blink follow the playing: focused, happy, excited, laughing on a big crash, surprised after a rest, a wink when idle, and he cheers with both sticks up when the song stops. **Showtime sync** lands every pose exactly on the sound. |
+| The panda playing the drums along with the MIDI | The stage is the Panda Drums hero picture come to life: the panda, the purple glitter kit, gold cymbals, the CRUSH kick and the heart lights (see [art/](art/README.md)). He plays every hit like a drummer: the stick drops onto the head and lands exactly on the sound, then rebounds; strokes are as high as they are loud, with an upstroke before an accent and a tap for a ghost note. He plays open-handed (left hand on the hi-hat), sticks fills hand to hand around the toms, reaches up for the crashes and leans into the far ones. His head nods to the host's tempo, leans toward each drum and dips into it; the hi-hat opens and closes with the pedal; the drum's tile lights up in the strip below. His face is the picture's grin, with a blink, a squint through fills, a laugh on a big crash and a wink when idle, and he cheers with both sticks up when the song stops. **Showtime sync** gives him the time to move to each drum and land every stroke on the sound. |
 
 ## Install
 
@@ -96,8 +96,9 @@ and pitches (`pitchHz`), edit and reload. Missing pitches are found by pitch det
 
 ## Showtime sync
 
-With Showtime on, the plugin reports 75 ms of latency, which the DAW compensates on playback,
-so the panda knows every hit 75 ms before you hear it and swings into it. Turn it off when
+With Showtime on, the plugin reports 150 ms of latency, which the DAW compensates on playback,
+so the panda knows every hit 150 ms before you hear it: he moves to the drum, winds up and
+lands the stroke exactly as it sounds. Turn it off when
 playing live from pads or a keyboard. Without it, the sticks snap down the moment a hit
 sounds (with a motion smear), with no latency at all.
 
