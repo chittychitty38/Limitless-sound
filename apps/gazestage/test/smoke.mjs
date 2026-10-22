@@ -7,7 +7,7 @@
 //   npm run test:packaged    the built app in dist/
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,7 @@ const BUILT = {
   linux: join(root, 'dist', 'linux-unpacked', 'gazestage'),
 };
 const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
+const logs = mkdtempSync(join(tmpdir(), 'gazestage-logs-'));
 
 // A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
 const hubHome = mkdtempSync(join(tmpdir(), 'gazestage-hub-'));
@@ -49,9 +50,10 @@ const hubInvoke = async (id, action) => {
   return hub.results.get(id);
 };
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
+const env = { ...process.env, LIMITLESS_SOUND_HOME: hubHome, LIMITLESS_SOUND_LOGS: logs };
 const launch = (more = []) => electron.launch(packaged
-  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
-  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
+  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env });
 let app = await launch();
 
 const step = (name) => console.log('•', name);
@@ -59,7 +61,7 @@ try {
   const win = await app.firstWindow();
   const errors = [];
   win.on('pageerror', (e) => errors.push(e.message));
-  win.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
+  win.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL|^smoke test:/.test(m.text())) errors.push(m.text()); });
   await win.waitForLoadState();
   await win.setViewportSize({ width: 1280, height: 800 });
   assert.equal(await win.title(), 'GazeStage');
@@ -73,6 +75,17 @@ try {
   await win.waitForFunction(() => window.__gs.state.cameraOn || window.__gs.state.cameraState === 'error', null, { timeout: 90000 });
   assert.equal(await win.evaluate(() => window.__gs.state.cameraState === 'error' ? window.__gs.state.cameraError : 'ok'), 'ok');
   await win.click('[data-ob=next]');
+
+  step('keeps a log file: how it started, the face tracking it runs, and what the page reports');
+  await win.evaluate(() => { for (let i = 0; i < 3; i++) console.error('smoke test: an error the page reports'); console.log('smoke test: not an error'); });
+  const logText = () => { try { return readFileSync(join(logs, 'GazeStage.log'), 'utf8'); } catch { return ''; } };
+  const bothLogged = () => /Face tracking: /.test(logText()) && /Page: smoke test/.test(logText());
+  for (let t = 0; t < 100 && !bothLogged(); t++) await new Promise((r) => setTimeout(r, 100));
+  const logged = logText();
+  assert.match(logged, /^\d{4}-\d\d-\d\d [\d:,]+ INFO    GazeStage: Started GazeStage \d+\.\d+\.\d+ on /);
+  assert.match(logged, /INFO    GazeStage: Face tracking: (CPU|GPU), /);
+  assert.equal(logged.match(/ERROR   GazeStage: Page: smoke test: an error the page reports/g)?.length, 1, logged);
+  assert.doesNotMatch(logged, /not an error/);
 
   step('pointer and select choices');
   await win.click('[data-ob=mode][data-value=head]');
@@ -299,4 +312,5 @@ try {
   hubServer.close();
   rmSync(profile, { recursive: true, force: true });
   rmSync(hubHome, { recursive: true, force: true });
+  rmSync(logs, { recursive: true, force: true });
 }

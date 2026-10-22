@@ -65,11 +65,15 @@ jobs:
         run: |
           set -e
           bin=target/release/limitless-color
-          "$bin" --background &
+          logs=$(mktemp -d)
+          LIMITLESS_SOUND_LOGS="$logs" "$bin" --background &
           pid=$!
           sleep 15
           kill -0 $pid
           kill $pid
+          # It wrote its log file, where Open the log folder looks.
+          cat "$logs/Limitless Color.log"
+          grep "INFO    Limitless Color: Started Limitless Color " "$logs/Limitless Color.log" > /dev/null
           ls target/release/bundle/dmg/
       - uses: actions/upload-artifact@v4
         with:
@@ -91,10 +95,15 @@ jobs:
       - name: Smoke test the app and installer
         shell: pwsh
         run: |
+          $env:LIMITLESS_SOUND_LOGS = Join-Path $env:RUNNER_TEMP "color-logs"
           $p = Start-Process -FilePath target\release\limitless-color.exe -ArgumentList "--background" -PassThru
           Start-Sleep -Seconds 15
           if ($p.HasExited) { throw "The app exited early with code $($p.ExitCode)" }
           Stop-Process -Id $p.Id
+          # It wrote its log file, where Open the log folder looks.
+          $log = Join-Path $env:LIMITLESS_SOUND_LOGS "Limitless Color.log"
+          Get-Content $log
+          if (-not (Select-String -Path $log -SimpleMatch "INFO    Limitless Color: Started Limitless Color " -Quiet)) { throw "No log file" }
           $setup = Get-ChildItem target\release\bundle\nsis\*.exe | Select-Object -First 1
           $i = Start-Process -FilePath $setup.FullName -ArgumentList "/S" -PassThru -Wait
           if ($i.ExitCode -ne 0) { throw "The installer failed with code $($i.ExitCode)" }

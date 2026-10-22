@@ -1,6 +1,7 @@
 //! Limitless Color desktop app: the Color Tuner window, a menu bar / tray
 //! switch, and the screen filter that applies the person's profile everywhere.
 
+mod applog;
 mod assistant;
 mod filter;
 #[allow(dead_code)]
@@ -112,6 +113,9 @@ fn sync(app: &AppHandle, inner: &mut Inner) {
     match inner.filter.apply(&inner.profile, inner.filter_on) {
         Ok(note) => inner.filter_note = note,
         Err(e) => {
+            if e != inner.filter_note {
+                applog::error(&format!("The screen filter couldn't be applied: {e}"));
+            }
             inner.filter_note = e;
         }
     }
@@ -440,6 +444,8 @@ fn hide_tuner(window: &tauri::Window) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Limitless Color.log in the suite's log folder: what went wrong, when nobody was watching.
+    applog::start("Limitless Color", env!("CARGO_PKG_VERSION"));
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
@@ -474,7 +480,7 @@ pub fn run() {
             app.manage(AppState(Mutex::new(inner)));
             start_suite(&handle);
             if let Err(e) = app.global_shortcut().register(TOGGLE_SHORTCUT) {
-                eprintln!("could not register {TOGGLE_SHORTCUT}: {e}");
+                applog::warn(&format!("Couldn't register the shortcut {TOGGLE_SHORTCUT}: {e}"));
             }
             // Started at login: stay in the menu bar / tray with the filter running.
             // Before first-launch setup is finished, always show the window.
