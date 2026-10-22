@@ -98,8 +98,15 @@ def with_noise(pcm, snr_db, seed):
 
 
 def pad(rate, pcm):
-    silence = b"\0\0" * int(rate * 0.5)
-    return silence + pcm + silence * 2
+    """Room tone around the words. A real mic never gives digital zeros, and
+    Kaldi's end-of-speech detection behaves oddly on them."""
+    rng = random.Random(len(pcm))
+    floor = array("h", (rng.randint(-12, 12) for _ in range(int(rate * 2.5))))
+    voice = array("h", pcm)
+    for i in range(len(voice)):
+        voice[i] = max(-32768, min(32767, voice[i] + floor[i % len(floor)]))
+    lead = floor[: int(rate * 0.5)].tobytes()
+    return lead + voice.tobytes() + floor.tobytes()
 
 
 class Run:
@@ -110,6 +117,7 @@ class Run:
         self.listener.load_model()
         self.load_seconds = time.time() - t
         self.audio_seconds = self.cpu_seconds = 0.0
+        self.slow_endings = 0
 
     def transcribe(self, rate, pcm):
         self.heard.clear()
@@ -121,6 +129,16 @@ class Run:
             self.listener._feed(recs, pcm[i:i + block])
         self.cpu_seconds += time.process_time() - t
         self.audio_seconds += len(pcm) / 2 / rate
+        if not self.heard:
+            # never decided the utterance was over within 2.5 s of quiet
+            self.slow_endings += 1
+            parts = self.listener._cmd_parts
+            if "commands" in recs:
+                parts.append(json.loads(recs["commands"].FinalResult()).get("text", ""))
+            open_text = json.loads(recs["open"].FinalResult()).get("text", "")
+            cmd = " ".join(p for p in parts if p).strip()
+            if open_text or cmd:
+                self.heard.append((cmd or open_text, open_text))
         return self.heard[-1] if self.heard else ("", "")
 
 
@@ -192,17 +210,18 @@ def main():
                     wer.append(words_error(text, run.transcribe(*audio[(voice, text, cond)])[1]))
             res[cond] = {"commands": ok / total, "false_triggers": fp, "of": len(NOT_COMMANDS) * len(vs),
                          "dictation_wer": sum(wer) / len(wer)}
+        res["slow_endings"] = run.slow_endings
         res["realtime"] = round(run.cpu_seconds / max(1e-9, run.audio_seconds), 3)
         results[name] = res
 
     lines = [f"### Speech benchmark ({len(vs)} voices: {', '.join(str(v) for _, v in vs)})", "",
-             "| Model | Commands (clean) | Commands (noisy) | False triggers | Dictation word errors (clean / noisy) | CPU per second of audio | Load |",
-             "|---|---|---|---|---|---|---|"]
+             "| Model | Commands (clean) | Commands (noisy) | False triggers | Dictation word errors (clean / noisy) | CPU per second of audio | Load | Slow endings |",
+             "|---|---|---|---|---|---|---|---|"]
     for name, r in results.items():
         c, n = r["clean"], r["noisy"]
         lines.append(f"| {name} | {c['commands']:.0%} | {n['commands']:.0%} | "
                      f"{c['false_triggers'] + n['false_triggers']} of {c['of'] + n['of']} | "
-                     f"{c['dictation_wer']:.0%} / {n['dictation_wer']:.0%} | {r['realtime']:.2f}s | {r['load_seconds']}s |")
+                     f"{c['dictation_wer']:.0%} / {n['dictation_wer']:.0%} | {r['realtime']:.2f}s | {r['load_seconds']}s | {r['slow_endings']} |")
     for name, r in results.items():
         lines += ["", f"<details><summary>{name}: {len(r['misses'])} misses, "
                   f"{len(r['false_triggers'])} false triggers</summary>", "", "```"]
@@ -220,7 +239,7 @@ def main():
             body = (f"commands clean {c['commands']:.0%}, noisy {n['commands']:.0%}; false triggers "
                     f"{c['false_triggers'] + n['false_triggers']}/{c['of'] + n['of']}; dictation WER "
                     f"{c['dictation_wer']:.0%}/{n['dictation_wer']:.0%}; cpu {r['realtime']:.2f}s/s; "
-                    f"load {r['load_seconds']}s%0A" + "%0A".join(r["misses"][:60] + r["false_triggers"]))
+                    f"load {r['load_seconds']}s; slow endings {r['slow_endings']}%0A" + "%0A".join(r["misses"][:60] + r["false_triggers"]))
             print(f"::notice title=Speech benchmark {name}::{body}")
 
 
