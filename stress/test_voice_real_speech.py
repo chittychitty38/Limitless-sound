@@ -232,13 +232,17 @@ def _sums(tally, words):
     return sum(tally[w]["hits"] for w in words), sum(tally[w]["tries"] for w in words)
 
 
-def _agreeing(heard):
+def _agreeing(heard, only_destructive=False):
     """A possible fix, measured here (not in the app): a one-word command only counts when
     the open recognizer heard that word too; otherwise the engine reads the open transcript."""
     out = []
     for c, o in heard:
         cmd = normalize(c).split()
-        out.append((o, o) if len(cmd) == 1 and cmd[0] not in normalize(o).split() else (c, o))
+        if len(cmd) == 1 and cmd[0] not in normalize(o).split():
+            _, log, changed = outcome([(c, c)])
+            if _destructive(log) if only_destructive else (log or changed):
+                c = o
+        out.append((c, o))
     return out
 
 
@@ -284,16 +288,30 @@ def test_real_people_saying_command_words():
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
 
-    t2, _, w2 = score(words, jobs, [_agreeing(h) for h in heard], kinds)
-    h2, _ = _sums(t2, known)
-    q2, _ = _sums(t2, others)
-    print(f"\nWhat if a one-word command needed the open recognizer to hear that word too? Right "
-          f"{h2 / tries:.1%} (now {hits / tries:.1%}); stray words fire {1 - q2 / stray_tries:.1%} "
-          f"(now {1 - quiet / stray_tries:.1%}); destructive {sum(t2[w]['destructive'] for w in words)} "
-          f"(now {destroyed}). Per word: "
-          + ", ".join(f"{w} {tally[w]['hits']}→{t2[w]['hits']}" for w in words if t2[w]["hits"] != tally[w]["hits"]))
+    for only_destructive in (False, True):
+        t2, _, _ = score(words, jobs, [_agreeing(h, only_destructive) for h in heard], kinds)
+        h2, _ = _sums(t2, known)
+        q2, _ = _sums(t2, others)
+        print(f"\nWhat if a one-word {'destructive ' if only_destructive else ''}command needed the open "
+              f"recognizer to hear that word too? Right {h2 / tries:.1%} (now {hits / tries:.1%}); stray words "
+              f"fire {1 - q2 / stray_tries:.1%} (now {1 - quiet / stray_tries:.1%}); destructive "
+              f"{sum(t2[w]['destructive'] for w in words)} (now {destroyed}). Per word: "
+              + ", ".join(f"{w} {tally[w]['hits']}→{t2[w]['hits']}" for w in words if t2[w]["hits"] != tally[w]["hits"]))
 
-    assert tries and stray_tries
+    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin
+    # for another CPU or another sample size. Measured: 91.2% right; "stop" 96%; the weakest
+    # word, "eight", 82% (people's "eight" often comes back as "a").
+    rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in words}
+    assert hits / tries >= 0.87, f"only {hits / tries:.1%} of the words Voice listens for were right"
+    if "stop" in rate:
+        assert rate["stop"] >= 0.90, f"“stop”, which ends a take, was right only {rate['stop']:.0%} of the time"
+    worst = min(known, key=rate.get)
+    assert rate[worst] >= 0.72, f"“{worst}” was right only {rate[worst]:.0%} of the time"
+    # Measured: stray words fired a command 21.6% of the time, and pressed a destructive key on
+    # 3.8% of them (people's "cat" heard as "cut"). That's a known problem (stress/README.md);
+    # these ceilings only stop it getting worse. Bring them down when it's fixed.
+    assert 1 - quiet / stray_tries <= 0.25, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
+    assert destroyed / stray_tries <= 0.045, f"stray words pressed a destructive key {destroyed} times"
 
 
 @needs_talk
@@ -311,7 +329,11 @@ def test_ordinary_talk_rarely_fires_commands():
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud, heard as {utterances} utterances "
           f"in {took:.0f} s with {WORKERS} at once")
 
-    for app in ("Logic Pro", "Pro Tools"):
+    # Most commands an hour of reading aloud may fire. Measured: Logic Pro 1.9 an hour, Pro Tools
+    # 4.7 (2.8 and 5.7 in a first run with shorter pauses between sentences), none destructive.
+    ceiling = {"Logic Pro": 6, "Pro Tools": 10}
+    too_many = []
+    for app, most in ceiling.items():
         fired = []
         for _, heard in streams:
             # Each reader is a fresh session: "again" repeats only that reader's last command.
@@ -333,5 +355,6 @@ def test_ordinary_talk_rarely_fires_commands():
             print(f"  {n:>3} × {message!r:<28} e.g. heard “{c}” / “{o}” {list(acts)[:3]}  (reading about “{said.get(utt, '')[:70]}”)")
         for utt, c, o, message, acts in bad:
             print(f"  DESTRUCTIVE: {message!r} {list(acts)} heard “{c}” / “{o}” (reading about “{said.get(utt, '')[:70]}”)")
-
-    assert hours > 0
+        if len(fired) / hours > most or len(bad) / hours > 1:
+            too_many.append(f"{app}: {len(fired) / hours:.1f} an hour (most {most}), {len(bad) / hours:.1f} destructive (most 1)")
+    assert not too_many, too_many

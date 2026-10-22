@@ -72,7 +72,9 @@ def test_stray_words_do_not_zoom():
           f"Zoom acted on {n} ({n / len(clips):.1%})")
     for (word, text, action), k in fired.most_common(15):
         print(f"  {k:>3} × “{word}” heard as “{text}” → {action}")
-    assert clips
+    # Measured on CI: 2.3% (2.1% with 150 clips a word), mostly "bed" heard as "fit" and
+    # "follow" as "taller". The ceiling leaves a margin.
+    assert n / len(clips) <= 0.04, f"Zoom acted on {n / len(clips):.1%} of stray words"
 
 
 @pytest.mark.skipif(not (MODEL and TALK_DIR), reason="set VOSK_MODEL and LIBRISPEECH_DIR")
@@ -123,5 +125,7 @@ def test_ordinary_talk_rarely_zooms():
           f"Zoom acted {len(fired)} times ({len(fired) / hours:.1f} an hour)")
     for action, k in Counter(f[1] for f in fired).most_common():
         utt, _, text = next(f for f in fired if f[1] == action)
-        print(f"  {k:>3} × {action:<10} e.g. heard “{text}” (reading “{said.get(utt, '')[:70]}”)")
-    assert hours > 0
+        print(f"  {k:>3} × {action:<10} e.g. heard “{text}” (reading about “{said.get(utt, '')[:70]}”)")
+    # Measured on CI: 17.9 an hour (15.1 in a first run with shorter pauses between sentences),
+    # a third of them "again". The ceiling leaves a margin.
+    assert len(fired) / hours <= 25, f"Zoom acted {len(fired) / hours:.1f} times an hour of talk"
