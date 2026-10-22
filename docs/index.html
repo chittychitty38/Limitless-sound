@@ -30,7 +30,7 @@
   --cream: #f3eee4;
   --muted: #bdb8ca;
   --crimson: #d2334c;
-  --crimson-hover: #e0405a;
+  --crimson-hover: #b92b42;   /* darker, not lighter: white on it stays readable (6:1) */
   --red: #ef4f5f;
   --lavender: #b4b0fa;
   --focus: #b4b0fa;
@@ -83,6 +83,7 @@ nav .pill:hover { border-color: var(--lavender); }
 .btn small { display: block; font-family: var(--body); font-weight: 500; font-size: .84rem; opacity: .9; }
 .btn .arrow { font-family: var(--body); font-weight: 400; font-size: 1.3em; line-height: 1; }
 .btn-primary { background: var(--crimson); color: #fff; }
+.btn-primary small { opacity: 1; }   /* the small line too meets 4.5:1 on the red */
 .btn-primary:hover { background: var(--crimson-hover); transform: translateY(-1px); }
 .btn-ghost { border: 2px solid var(--cream); color: var(--cream); }
 .btn-ghost:hover { border-color: var(--lavender); color: var(--lavender); }

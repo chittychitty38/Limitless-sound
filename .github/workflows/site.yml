@@ -1,0 +1,22 @@
+# The website must meet WCAG 2.2 AA: it's the front door for musicians with disabilities.
+name: Website
+
+on:
+  pull_request:
+    paths: ["docs/**", ".github/scripts/site-a11y.cjs", ".github/workflows/site.yml"]
+  push:
+    branches: [main]
+    paths: ["docs/**", ".github/scripts/site-a11y.cjs", ".github/workflows/site.yml"]
+
+jobs:
+  accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.3
+      - run: npx playwright install --with-deps chromium
+      - run: node .github/scripts/site-a11y.cjs
