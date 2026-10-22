@@ -1,7 +1,8 @@
 // End-to-end smoke test. Launches the app with a fake camera and microphone on a fresh
 // profile, walks the guided setup, plays a note, opens settings, and checks for page errors.
 // On macOS it also checks that GazeStage created its own virtual MIDI ports. Then it starts
-// GazeStage again on a slowed-down CPU and checks it answers every action and never freezes.
+// GazeStage again on a slowed-down CPU and checks it answers every action, never freezes, and
+// soon finds the face in front of the camera (face-camera.mjs).
 //   npm test                the source tree (on Linux: xvfb-run -a npm test)
 //   npm run test:packaged    the built app in dist/
 import { _electron as electron } from 'playwright';
@@ -12,6 +13,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { faceCamera } from './face-camera.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const packaged = process.argv.includes('--packaged');
@@ -24,7 +26,7 @@ const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
 
 // A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
 const hubHome = mkdtempSync(join(tmpdir(), 'gazestage-hub-'));
-const hub = { hello: null, sock: null, results: new Map(), dids: [] };
+const hub = { hello: null, sock: null, results: new Map(), dids: [], states: {} };
 const hubServer = createServer((sock) => {
   let buf = '';
   sock.on('data', (d) => {
@@ -34,6 +36,7 @@ const hubServer = createServer((sock) => {
       if (msg.op === 'hello') { hub.hello = msg; hub.sock = sock; sock.write(JSON.stringify({ op: 'welcome', protocol: 1, prefs: {}, actions: [], states: {} }) + '\n'); }
       if (msg.op === 'result') hub.results.set(msg.id, msg);
       if (msg.op === 'did') hub.dids.push(msg.action);
+      if (msg.op === 'state') hub.states[msg.key] = msg.value;
     }
   });
   sock.on('error', () => {});
@@ -46,9 +49,9 @@ const hubInvoke = async (id, action) => {
   return hub.results.get(id);
 };
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
-const launch = () => electron.launch(packaged
-  ? { executablePath: BUILT[process.platform], args: flags, env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
-  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
+const launch = (more = []) => electron.launch(packaged
+  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
 let app = await launch();
 
 const step = (name) => console.log('•', name);
@@ -154,16 +157,19 @@ try {
   assert.deepEqual(errors, []);
 
   step('starts again on a slow computer: answers every action within 3 seconds, never freezes');
-  // Same profile, so the camera and face model start at launch. The page is slowed 4x, like an
-  // older Intel Mac, and every action is pressed the moment GazeStage joins, like the Access
-  // Standard test kit does.
+  // Same profile, so the camera and face model start at launch, this time with a face in front
+  // of the camera. The page is slowed 4x, like an older Intel Mac, and every action is pressed
+  // the moment GazeStage joins, like the Access Standard test kit does.
+  const faceVideo = await faceCamera(win, hubHome);
   await win.evaluate(() => localStorage.setItem('gazestage.settings.v3', JSON.stringify({ ...window.__gs.S, mode: 'head' })));
   await app.close();
   hub.hello = null;
-  app = await launch();
+  app = await launch(faceVideo ? [`--use-file-for-fake-video-capture=${faceVideo}`] : []);
   const again = await app.firstWindow();
+  const tracking = [];
   again.on('pageerror', (e) => errors.push(e.message));
   again.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
+  again.on('console', (m) => { if (/^Face tracking:/.test(m.text())) tracking.push(m.text()); });
   const cdp = await again.context().newCDPSession(again);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   // The page's longest freeze: the slowest round trip to its thread while it starts.
@@ -184,12 +190,24 @@ try {
     const r = hub.results.get(id);
     if (!r || /didn’t answer|still starting/.test(r.message)) unanswered.push(`${action}: ${r ? r.message : 'no answer in 3 s'}`);
   }
-  await again.waitForFunction(() => window.__gs.state.cameraState === 'noface', null, { timeout: 90000 });   // tracking runs
+  // Tracking runs: a face is found (or, with the plain fake camera, reported missing).
+  await again.waitForFunction((face) => face ? window.__gs.state.sample?.face : window.__gs.state.cameraState === 'noface', !!faceVideo, { timeout: 90000 });
   watching = false; await watcher;
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  const first = (what) => +(tracking.find((t) => t.includes(`first ${what}`))?.match(/(\d+) ms/)?.[1] ?? NaN);
+  for (let t = 0; t < 30 && Number.isNaN(first(faceVideo ? 'face' : 'frame read')); t++) await new Promise((r) => setTimeout(r, 100));
+  const chosen = hub.states.faceTracking || '';
   step(`longest freeze while starting: ${freeze} ms`);
+  step(`face tracking: ${chosen.slice(0, 60)}…; first frame ${first('frame read')} ms, first face ${faceVideo ? first('face') + ' ms' : 'not tested (offline)'}`);
   assert.deepEqual(unanswered, [], 'every action answered within 3 seconds');
   assert.ok(freeze < 1500, `the window froze for ${freeze} ms`);
+  assert.match(chosen, /^(CPU|GPU), /, 'says which face tracking it runs');
+  if (/software graphics/.test(chosen)) {
+    // No graphics chip to speak of (as under xvfb): the CPU, straight away, and a quick first face.
+    assert.match(chosen, /^CPU, /);
+    const took = faceVideo ? first('face') : first('frame read');
+    assert.ok(took < 2000, `first ${faceVideo ? 'face' : 'frame'} after ${took} ms`);
+  }
   assert.deepEqual(errors, []);
   console.log('smoke test passed');
 } finally {

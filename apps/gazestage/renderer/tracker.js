@@ -3,11 +3,12 @@
 // hands the worker one frame at a time. Emits one sample per processed frame:
 //   { face: bool, yaw, pitch, ix, iy, blink, brightness, offCentre, size }
 // yaw/pitch are head angles in radians; ix/iy are iris positions within the eye (0..1).
+// store: GazeStage's settings, where the faster of MediaPipe's GPU and CPU delegates is kept.
 
 export class Tracker {
-  constructor(video) {
-    this.video = video;
-    this.worker = null; this.loading = null; this.busy = false;
+  constructor(video, store) {
+    this.video = video; this.store = store;
+    this.worker = null; this.loading = null; this.busy = false; this.delegate = null;
     this.running = false;
     this.lastTime = -1;
     this.onSample = () => {};
@@ -19,18 +20,37 @@ export class Tracker {
   // Starts the face model in its worker. Resolves when it's ready; can be tried again after a failure.
   load() {
     if (this.loading) return this.loading;
+    this.started = performance.now(); this.firstFrame = false;
     const worker = this.worker = new Worker(new URL('./face-worker.js', import.meta.url));
     this.loading = new Promise((resolve, reject) => {
       const fail = (message) => { worker.terminate(); this.worker = this.loading = null; reject(new Error(message)); };
       worker.onmessage = ({ data }) => {
-        if (data.type === 'ready') resolve();
+        if (data.type === 'ready') { this.use(data); resolve(); }
+        else if (data.type === 'delegate') this.use(data);
         else if (data.type === 'error') fail(data.message);
-        else if (data.type === 'sample') { this.busy = false; this.onSample({ ...data.sample, brightness: this.brightness }); }
+        else if (data.type === 'sample') { this.busy = false; this.timeFirst(data.sample); this.onSample({ ...data.sample, brightness: this.brightness }); }
       };
       worker.onerror = (e) => { e.preventDefault(); fail(e.message || 'Face tracking couldn’t start'); };
     });
-    worker.postMessage({ type: 'load' });
+    worker.postMessage({ type: 'load', remembered: this.store?.get('face.delegate', '') || '' });
     return this.loading;
+  }
+
+  // The delegate the worker now runs, and why (see face-worker.js): kept for next time when the
+  // worker asks, and logged here and by the main process, which also tells other apps.
+  use({ delegate, why, remember }) {
+    this.delegate = delegate;
+    if (remember !== undefined) this.store?.set('face.delegate', remember);
+    console.info(`Face tracking: ${delegate}, ${why}`);
+    window.gazestage?.media?.tracking(`${delegate}, ${why}`);
+  }
+
+  // Once per start: how long until the first frame was read, and the first face (in the log).
+  timeFirst(sample) {
+    if (!this.started) return;
+    const ms = Math.round(performance.now() - this.started);
+    if (!this.firstFrame) { this.firstFrame = true; console.info(`Face tracking: first frame read ${ms} ms after starting`); }
+    if (sample.face) { this.started = 0; console.info(`Face tracking: first face ${ms} ms after starting`); }
   }
 
   static async cameras() {

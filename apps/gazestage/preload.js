@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('gazestage', {
     status: () => ipcRenderer.invoke('media:status'),
     ask: (kind) => ipcRenderer.invoke('media:ask', kind),
     openSettings: (kind) => ipcRenderer.send('media:open-settings', kind),
+    tracking: (text) => ipcRenderer.send('media:tracking', text),
   },
   suite: {
     status: () => ipcRenderer.invoke('suite:status'),

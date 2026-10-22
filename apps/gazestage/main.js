@@ -77,7 +77,7 @@ const SUITE_ACTIONS = [
   { id: 'panic', label: 'All notes off' },
 ];
 const TRANSPORT = new Set(['play', 'stop', 'record']);
-const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [] };
+const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [], tracking: '' };
 
 // Actions from other apps are done by the page. While it loads (or reloads) they wait here
 // instead of getting lost; one that still waits after 2.5 s says so, and is never done late.
@@ -107,6 +107,8 @@ function startSuite() {
   });
   suite.link.on('connected', (on) => win?.webContents.send('suite:connected', on));
   suite.link.start();
+  // Which face tracking runs here (media:tracking), told again after every reconnect.
+  suite.link.on('connected', (on) => { if (on && suite.tracking) suite.link.state('faceTracking', suite.tracking); });
 }
 
 ipcMain.on('suite:result', (_e, id, result) => {
@@ -138,6 +140,13 @@ ipcMain.handle('media:ask', async (_e, kind) => {
 });
 ipcMain.on('media:open-settings', (_e, kind) => {
   if (isMac) shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?Privacy_${kind === 'microphone' ? 'Microphone' : 'Camera'}`);
+});
+// Which face tracking this computer runs, and why (tracker.js): in the log, and for other apps
+// as the state gaze.faceTracking, e.g. "CPU, software graphics (…)".
+ipcMain.on('media:tracking', (_e, text) => {
+  suite.tracking = String(text).slice(0, 200);
+  console.log(`GazeStage face tracking: ${suite.tracking}`);
+  suite.link?.state('faceTracking', suite.tracking);
 });
 ipcMain.on('window:on-top', (_e, on) => { win?.setAlwaysOnTop(!!on, 'floating'); buildMenu(); });
 ipcMain.on('open-external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
