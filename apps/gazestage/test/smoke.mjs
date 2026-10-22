@@ -253,8 +253,11 @@ try {
 
   step('starts again on a slow computer: answers every action within 3 seconds, never freezes');
   // Same profile, so the camera and face model start at launch, this time with a face in front
-  // of the camera. The page is slowed 4x, like an older Intel Mac, and every action is pressed
-  // the moment GazeStage joins, like the Access Standard test kit does.
+  // of the camera. The page is slowed to run like an older Intel Mac, and every action is pressed
+  // the moment GazeStage joins, like the Access Standard test kit does. That's 4x, except on an
+  // Intel Mac, which already is one: slowing the Intel Mac runner 4x on top made the same build
+  // find the first face in 1.7 s on one run and 3.2 s on the next.
+  const slowdown = process.platform === 'darwin' && process.arch === 'x64' ? 2 : 4;
   const faceVideo = await faceCamera(win, hubHome);
   await win.evaluate(() => localStorage.setItem('gazestage.settings.v3', JSON.stringify({ ...window.__gs.S, mode: 'head' })));
   await app.close();
@@ -266,7 +269,7 @@ try {
   again.on('console', (m) => { if (m.type() === 'error' && !/XNNPACK|GL Driver|WebGL/.test(m.text())) errors.push(m.text()); });
   again.on('console', (m) => { if (/^Face tracking:/.test(m.text())) tracking.push(m.text()); });
   const cdp = await again.context().newCDPSession(again);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: slowdown });
   // The page's longest freeze: the slowest round trip to its thread while it starts.
   let freeze = 0, watching = true;
   const watcher = (async () => {
@@ -292,15 +295,15 @@ try {
   const first = (what) => +(tracking.find((t) => t.includes(`first ${what}`))?.match(/(\d+) ms/)?.[1] ?? NaN);
   for (let t = 0; t < 30 && Number.isNaN(first(faceVideo ? 'face' : 'frame read')); t++) await new Promise((r) => setTimeout(r, 100));
   const chosen = hub.states.faceTracking || '';
-  step(`longest freeze while starting: ${freeze} ms`);
+  step(`longest freeze while starting, the page slowed ${slowdown}x: ${freeze} ms`);
   step(`face tracking: ${chosen.slice(0, 60)}…; first frame ${first('frame read')} ms, first face ${faceVideo ? first('face') + ' ms' : 'not tested (offline)'}`);
   assert.deepEqual(unanswered, [], 'every action answered within 3 seconds');
   assert.ok(freeze < 1500, `the window froze for ${freeze} ms`);
   assert.match(chosen, /^(CPU|GPU), /, 'says which face tracking it runs');
   if (/software graphics/.test(chosen)) {
     // No graphics chip to speak of (as under xvfb): the CPU, straight away, and a quick first face.
-    // About 1.2-1.4 s here and 2.05 s on the old Intel Mac runner, all with the page slowed 4x;
-    // the GPU delegate on software graphics took 4.4-6.4 s.
+    // About 1.2-1.4 s here with the page slowed 4x; the GPU delegate on software graphics
+    // took 4.4-6.4 s.
     assert.match(chosen, /^CPU, /);
     const took = faceVideo ? first('face') : first('frame read');
     assert.ok(took < 3000, `first ${faceVideo ? 'face' : 'frame'} after ${took} ms`);
