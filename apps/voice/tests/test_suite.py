@@ -3,7 +3,9 @@ import unittest
 
 from limitless_voice.engine import Engine
 from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs
+from limitless_voice.look import in_use
 from limitless_voice.platforms.dryrun import DryRunPlatform
+from limitless_voice.settings import Settings
 from limitless_voice.suite import INTENT_PHRASES, OWN_ACTIONS, Suite, spoken_forms
 
 PACKS = load_packs([DEFAULT_PACK_DIR], "mac")
@@ -195,6 +197,39 @@ class OtherAppsByVoice(unittest.TestCase):
     def test_spoken_forms(self):
         self.assertEqual(spoken_forms({"label": "Play (Pro Tools link)"}), {"play"})
         self.assertIn("one hand mode", spoken_forms({"label": "One-hand mode on or off"}))
+
+
+HUB_PREFS = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False,
+             "reduceMotion": False, "dwellMs": 800, "scanMs": 1200}
+
+
+class SharedSettings(unittest.TestCase):
+    def test_the_more_accessible_of_the_two_wins(self):
+        own = Settings(text_scale=1.3, high_contrast=False)
+        self.assertEqual(in_use(own, {**HUB_PREFS, "textScale": 1.5, "highContrast": True, "reduceMotion": True}),
+                         {"textScale": 1.5, "highContrast": True, "reduceMotion": True})
+        self.assertEqual(in_use(own, {**HUB_PREFS, "textScale": 1.2}),
+                         {"textScale": 1.3, "highContrast": False, "reduceMotion": False})
+        own.high_contrast = True
+        self.assertTrue(in_use(own, HUB_PREFS)["highContrast"])
+
+    def test_without_the_hub_only_voices_own_settings_count(self):
+        own = Settings(text_scale=0.8, high_contrast=True)
+        self.assertEqual(in_use(own, {}), {"textScale": 0.8, "highContrast": True, "reduceMotion": False})
+
+    def test_only_settings_voice_honors_are_reported(self):
+        look = in_use(Settings(), HUB_PREFS)
+        self.assertEqual(set(look), {"textScale", "highContrast", "reduceMotion"})   # no dwell, scan or speak
+
+    def test_hub_prefs_restyle_and_are_reported(self):
+        s, _, _ = make()
+        seen = []
+        s.on_look = lambda: seen.append(dict(s.prefs))
+        s.on_prefs({**HUB_PREFS, "textScale": 1.5})
+        self.assertEqual(seen[-1]["textScale"], 1.5)
+        s.report_look({"textScale": 1.5, "highContrast": False, "reduceMotion": False})
+        self.assertEqual(s.link.states, [("prefs.applied", {"textScale": 1.5, "highContrast": False,
+                                                            "reduceMotion": False})])
 
 
 if __name__ == "__main__":

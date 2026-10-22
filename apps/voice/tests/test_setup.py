@@ -1,4 +1,5 @@
-"""First launch: the setup guide, permissions, and the floating display (no mic, no real OS)."""
+"""First launch: the setup guide, permissions, the floating display, and the suite's
+shared text size, contrast and motion settings (no mic, no real OS, no hub)."""
 import os
 import tempfile
 import unittest
@@ -8,9 +9,12 @@ _home = tempfile.mkdtemp()
 os.environ["XDG_CONFIG_HOME"] = os.path.join(_home, "config")
 os.environ["XDG_DATA_HOME"] = os.path.join(_home, "data")
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtCore import QAbstractAnimation, Qt  # noqa: E402
+from PySide6.QtGui import QFont  # noqa: E402
+from PySide6.QtWidgets import QApplication, QLabel  # noqa: E402
 
-from limitless_voice.app import MainWindow  # noqa: E402
+from limitless_voice.app import HIGH_CONTRAST, MainWindow  # noqa: E402
+from limitless_voice.look import TEXT_SIZE  # noqa: E402
 from limitless_voice.onboarding import (  # noqa: E402
     ControlPermissionPage, MicCheckPage, MicPermissionPage, PreferencesPage, ReadyPage, WelcomePage)
 from limitless_voice.platforms.dryrun import DryRunPlatform  # noqa: E402
@@ -177,6 +181,116 @@ class Hud(unittest.TestCase):
         finally:
             w.shutdown()
             w.deleteLater()
+
+
+HUB_PREFS = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False,
+             "reduceMotion": False, "dwellMs": 800, "scanMs": 1200}
+
+
+class SharedSettings(unittest.TestCase):
+    """The hub's welcome and prefs messages go through the real link; only the socket is left out."""
+
+    def setUp(self):
+        self.font, self.effects = QFont(app.font()), QApplication.isEffectEnabled(Qt.UI_General)
+        QApplication.setEffectEnabled(Qt.UI_General, True)   # like a desktop with menu animations on
+        self.w, _, self.s = make(mic="granted", control=True)
+        self.base = app.font().pointSizeF()
+        self.sent = []
+        link = self.w.suite.link
+        link._send = lambda msg: link.connected and (self.sent.append(msg) or True)
+
+    def tearDown(self):
+        if self.w.wizard is not None:
+            self.w.wizard.reject()
+        self.w.shutdown()
+        self.w.deleteLater()
+        app.setStyleSheet("")
+        app.setFont(self.font)
+        QApplication.setEffectEnabled(Qt.UI_General, self.effects)
+
+    def hub(self, op, **prefs):
+        self.w.suite.link._handle({"op": op, "prefs": {**HUB_PREFS, **prefs}})
+
+    def applied(self):
+        return [m["value"] for m in self.sent if m.get("op") == "state" and m["key"] == "prefs.applied"]
+
+    def test_welcome_applies_them_to_the_window_and_the_card(self):
+        w = self.w
+        self.hub("welcome", textScale=1.5, highContrast=True, reduceMotion=True)
+        self.assertAlmostEqual(app.font().pointSizeF(), self.base * 1.5)
+        self.assertAlmostEqual(w.did_label.font().pointSizeF(), self.base * 1.5)
+        self.assertAlmostEqual(w.listen_btn.font().pointSizeF(), self.base * 1.5 * 1.6)
+        self.assertTrue(w.listen_btn.font().bold())
+        self.assertAlmostEqual(w.hud.heard.font().pointSizeF(), self.base * 1.5 * 1.5)
+        self.assertAlmostEqual(w.hud.state_label.font().pointSizeF(), self.base * 1.5)
+        self.assertEqual(w.hud.width(), 690)
+        self.assertEqual(app.styleSheet(), HIGH_CONTRAST)
+        w.hud.show_message("make me a sandwich", "Didn't catch a command", ok=False)
+        self.assertTrue(w.hud.high_contrast)
+        self.assertIn("#ffeb3b", w.hud.did.styleSheet())
+        self.assertFalse(QApplication.isEffectEnabled(Qt.UI_General))
+        self.assertEqual(self.applied(), [{"textScale": 1.5, "highContrast": True, "reduceMotion": True}])
+
+    def test_changes_apply_live_even_to_an_open_setup_guide(self):
+        w = self.w
+        self.hub("welcome")
+        w.show_setup()
+        title = next(lbl for lbl in w.wizard.pages[0].findChildren(QLabel) if lbl.property(TEXT_SIZE) == 1.8)
+        width = w.wizard.width()
+        self.assertAlmostEqual(title.font().pointSizeF(), self.base * 1.8)
+        self.hub("prefs", textScale=2.0)
+        self.assertAlmostEqual(title.font().pointSizeF(), self.base * 2.0 * 1.8)
+        self.assertGreater(w.wizard.width(), width)          # it grew to make room
+        self.hub("prefs", highContrast=True)
+        self.assertAlmostEqual(title.font().pointSizeF(), self.base * 1.8)
+        self.assertEqual(app.styleSheet(), HIGH_CONTRAST)
+        self.assertEqual(self.applied(), [{"textScale": 1.0, "highContrast": False, "reduceMotion": False},
+                                          {"textScale": 2.0, "highContrast": False, "reduceMotion": False},
+                                          {"textScale": 1.0, "highContrast": True, "reduceMotion": False}])
+
+    def test_reduced_motion_means_no_fading(self):
+        hud = self.w.hud
+        self.hub("welcome")
+        hud.show_message("solo track", "Solo track")
+        hud.fade_out()
+        self.assertEqual(hud.fade.state(), QAbstractAnimation.Running)    # fades, as it always has
+        self.hub("prefs", reduceMotion=True)
+        self.assertFalse(hud.isVisible())                                 # the fade under way ends at once
+        hud.show_message("mute track", "Mute track")
+        self.assertTrue(hud.isVisible())
+        hud.fade_out()                                                    # when its time is up
+        self.assertFalse(hud.isVisible())
+        self.assertNotEqual(hud.fade.state(), QAbstractAnimation.Running)
+        self.assertFalse(QApplication.isEffectEnabled(Qt.UI_General))
+        self.hub("prefs")
+        self.assertTrue(QApplication.isEffectEnabled(Qt.UI_General))
+
+    def test_voices_own_settings_combine_with_the_suites(self):
+        self.s.text_scale, self.s.high_contrast = 1.3, True
+        self.w.apply_settings()
+        self.assertEqual(self.sent, [])                      # nothing to tell without the hub
+        self.hub("welcome", textScale=1.2)
+        self.assertAlmostEqual(app.font().pointSizeF(), self.base * 1.3)     # Voice's larger text wins
+        self.assertEqual(app.styleSheet(), HIGH_CONTRAST)                    # on if either is on
+        self.hub("prefs", textScale=1.75)
+        self.assertAlmostEqual(app.font().pointSizeF(), self.base * 1.75)
+        self.s.high_contrast = False
+        self.w.apply_settings()                              # Voice's own setting changed: told again
+        self.assertEqual(app.styleSheet(), "")
+        self.assertEqual(self.applied(), [{"textScale": 1.3, "highContrast": True, "reduceMotion": False},
+                                          {"textScale": 1.75, "highContrast": True, "reduceMotion": False},
+                                          {"textScale": 1.75, "highContrast": False, "reduceMotion": False}])
+
+    def test_without_the_hub_nothing_changes(self):
+        w = self.w
+        self.assertEqual(w.suite.prefs, {})
+        self.assertEqual(app.styleSheet(), "")
+        self.assertAlmostEqual(w.listen_btn.font().pointSizeF(), self.base * 1.6)
+        self.assertTrue(QApplication.isEffectEnabled(Qt.UI_General))
+        w.hud.show_message("solo track", "Solo track")
+        w.hud.fade_out()
+        self.assertEqual(w.hud.fade.state(), QAbstractAnimation.Running)
+        self.assertEqual(self.sent, [])
 
 
 if __name__ == "__main__":
