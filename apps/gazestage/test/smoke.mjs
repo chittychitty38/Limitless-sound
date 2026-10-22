@@ -5,7 +5,8 @@
 //   npm run test:packaged    the built app in dist/
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -19,10 +20,34 @@ const BUILT = {
   linux: join(root, 'dist', 'linux-unpacked', 'gazestage'),
 };
 const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
+
+// A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
+const hubHome = mkdtempSync(join(tmpdir(), 'gazestage-hub-'));
+const hub = { hello: null, sock: null, results: new Map(), dids: [] };
+const hubServer = createServer((sock) => {
+  let buf = '';
+  sock.on('data', (d) => {
+    buf += d; let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const msg = JSON.parse(buf.slice(0, i)); buf = buf.slice(i + 1);
+      if (msg.op === 'hello') { hub.hello = msg; hub.sock = sock; sock.write(JSON.stringify({ op: 'welcome', protocol: 1, prefs: {}, actions: [], states: {} }) + '\n'); }
+      if (msg.op === 'result') hub.results.set(msg.id, msg);
+      if (msg.op === 'did') hub.dids.push(msg.action);
+    }
+  });
+  sock.on('error', () => {});
+});
+await new Promise((r) => hubServer.listen(0, '127.0.0.1', r));
+writeFileSync(join(hubHome, 'link.json'), JSON.stringify({ port: hubServer.address().port, token: 'test' }));
+const hubInvoke = async (id, action) => {
+  hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args: {}, source: 'voice', depth: 0 }) + '\n');
+  for (let t = 0; t < 50 && !hub.results.has(id); t++) await new Promise((r) => setTimeout(r, 100));
+  return hub.results.get(id);
+};
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
 const app = await electron.launch(packaged
-  ? { executablePath: BUILT[process.platform], args: flags }
-  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags] });
+  ? { executablePath: BUILT[process.platform], args: flags, env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags], env: { ...process.env, LIMITLESS_SOUND_HOME: hubHome } });
 
 const step = (name) => console.log('•', name);
 try {
@@ -90,6 +115,21 @@ try {
   await win.evaluate(() => { window.__gs.S.mode = 'head'; window.__gs.S.select = 'dwell'; });
   await win.mouse.move(5, 5);
 
+  step('joins Limitless Sound and takes actions from other apps');
+  await win.waitForFunction(() => window.__gs.suite(), null, { timeout: 10000 });
+  assert.equal(hub.hello.tool, 'gaze');
+  assert.ok(hub.hello.actions.some((a) => a.id === 'record' && a.intent === 'daw.record'));
+  const octave = await win.evaluate(() => +window.__gs.S.octave);
+  const up = await hubInvoke(1, 'octaveUp');
+  assert.equal(up?.ok, true, JSON.stringify(up));
+  assert.equal(await win.evaluate(() => +window.__gs.S.octave), Math.min(7, octave + 1));
+  const nope = await hubInvoke(2, 'fly');
+  assert.equal(nope?.ok, false);
+  const shown = await hubInvoke(3, 'transport');
+  assert.equal(shown?.ok, true);
+  assert.equal(await win.evaluate(() => window.__gs.state.page), 'transport');
+  await hubInvoke(4, 'pads');
+
   step('settings open and close');
   await win.click('#settingsBtn');
   await win.waitForSelector('#settings.open');
@@ -107,5 +147,7 @@ try {
   console.log('smoke test passed');
 } finally {
   await app.close();
+  hubServer.close();
   rmSync(profile, { recursive: true, force: true });
+  rmSync(hubHome, { recursive: true, force: true });
 }

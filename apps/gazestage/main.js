@@ -11,6 +11,7 @@ const {
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { Link } = require('./limitless-link');
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
@@ -59,6 +60,57 @@ ipcMain.on('midi:send', (_e, port, bytes) => {
     o.sendMessage(bytes.slice(i, i + len)); i += len;
   }
 });
+
+// ---------- Limitless Sound ----------
+// Joins the suite hub when it runs: Voice, the controller or a Stream Deck can drive
+// GazeStage, and GazeStage's transport presses tell the other apps (the take guard).
+const SUITE_ACTIONS = [
+  { id: 'play', label: 'Play (Pro Tools link)', intent: 'daw.play' },
+  { id: 'stop', label: 'Stop (Pro Tools link)', intent: 'daw.stop' },
+  { id: 'record', label: 'Record (Pro Tools link)', intent: 'daw.record' },
+  { id: 'pads', label: 'Show the note pads' },
+  { id: 'transport', label: 'Show the transport page' },
+  { id: 'octaveUp', label: 'Octave up' },
+  { id: 'octaveDown', label: 'Octave down' },
+  { id: 'scale', label: 'Next scale' },
+  { id: 'latch', label: 'Hold notes on or off' },
+  { id: 'panic', label: 'All notes off' },
+];
+const TRANSPORT = new Set(['play', 'stop', 'record']);
+const suite = { link: null, ids: 1, waiting: new Map() };
+
+function askPage(action, args, source) {
+  if (!win) return [false, 'GazeStage has no window open.'];
+  return new Promise((resolve) => {
+    const id = suite.ids++;
+    const timer = setTimeout(() => { suite.waiting.delete(id); resolve([false, 'GazeStage didn’t answer.']); }, 2500);
+    suite.waiting.set(id, (r) => { clearTimeout(timer); resolve([!!r?.ok, String(r?.message || '')]); });
+    win.webContents.send('suite:invoke', { id, action, args, source });
+  });
+}
+
+function startSuite() {
+  suite.link = new Link({
+    tool: 'gaze', name: 'GazeStage', version: app.getVersion(), actions: SUITE_ACTIONS, subscribe: [],
+    onInvoke: async (action, args, source) => {
+      const r = await askPage(action, args, source);
+      if (r[0] && TRANSPORT.has(action)) suite.link.did(action);
+      return r;
+    },
+  });
+  suite.link.on('connected', (on) => win?.webContents.send('suite:connected', on));
+  suite.link.start();
+}
+
+ipcMain.on('suite:result', (_e, id, result) => {
+  const done = suite.waiting.get(id);
+  if (done) { suite.waiting.delete(id); done(result); }
+});
+ipcMain.on('suite:did', (_e, action) => { if (TRANSPORT.has(action)) suite.link?.did(action); });
+ipcMain.handle('suite:invoke', (_e, action, args) => suite.link
+  ? suite.link.invoke(String(action), args && typeof args === 'object' ? args : {})
+  : { ok: false, message: 'Limitless Sound isn’t running.' });
+ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected }));
 
 // ---------- permissions ----------
 ipcMain.handle('media:status', () => {
@@ -170,9 +222,10 @@ app.whenReady().then(() => {
   });
   openVirtualPorts();
   createWindow();
+  startSuite();
   buildMenu();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('will-quit', closeVirtualPorts);
+app.on('will-quit', () => { closeVirtualPorts(); suite.link?.stop(); });
