@@ -273,6 +273,12 @@ def test_setup_sits_still_while_a_permission_stays_missing(qapp, tmp_path):
     count = Count(w, app.panel)
     qapp.installEventFilter(count)
     try:
+        # Let Setup finish appearing first: on a Mac it repaints a few times after it shows.
+        for _ in range(50):
+            count.seen.clear()
+            QTest.qWait(300)
+            if not count.seen:
+                break
         for _ in range(5):
             app._check_permissions()   # what the permission timer does each second
             QTest.qWait(40)
