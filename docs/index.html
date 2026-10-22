@@ -3,165 +3,189 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Limitless Sound</title>
-<meta name="description" content="Free music software for musicians with disabilities. Play, record and mix with your voice, one hand, your eyes, a switch or an adaptive controller. No one left behind.">
-<meta property="og:title" content="Limitless Sound">
-<meta property="og:description" content="Free music software for musicians with disabilities. No one left behind.">
+<title>Limitless Sound Software</title>
+<meta name="description" content="Free music software for musicians with disabilities. Play, record and mix with your voice, one hand, your eyes, a switch or an adaptive controller. Music is for every body.">
+<meta name="theme-color" content="#13121f">
+<meta property="og:title" content="Limitless Sound Software">
+<meta property="og:description" content="Free music software for musicians with disabilities. Music is for every body.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5a36'/%3E%3Cpath d='M7 20c3 0 3-8 6-8s3 8 6 8 3-8 6-8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:image" content="https://chittychitty38.github.io/Limitless-sound/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+@font-face { font-family: "Bricolage"; src: url("fonts/BricolageGrotesque-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Bricolage"; src: url("fonts/BricolageGrotesque-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
 @font-face { font-family: "Atkinson Next"; src: url("fonts/AtkinsonHyperlegibleNext.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
-@font-face { font-family: "Atkinson Mono"; src: url("fonts/AtkinsonHyperlegibleMono.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
 
+/* Limitless Sound brand: night navy, cream, crimson, lavender. The brand is dark, so the page is dark in both modes. */
 :root {
-  --ink: #0d0e1a;
-  --paper: #fbf8f3;
-  --card: #ffffff;
-  --soft: #f3eee6;
-  --line: #e6e0d6;
-  --muted: #55576b;
-  --coral: #ff5a36;
-  --coral-ink: #b8340f;
-  --amber: #ffb627;
-  --teal: #12857b;
-  --violet: #6a4ff0;
-  --blue: #2a76c4;
-  --focus: #6a4ff0;
-  --on-coral: #ffffff;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #f4f1ea;
-    --paper: #0f1020;
-    --card: #181a2e;
-    --soft: #1d1f36;
-    --line: #2c2f4a;
-    --muted: #b4b6c9;
-    --coral-ink: #ff8a6b;
-    --teal: #3cd0c2;
-    --violet: #a594ff;
-    --blue: #7ab8f5;
-    --focus: #ffb627;
-  }
+  color-scheme: dark;
+  --night: #13121f;
+  --night-2: #1a1929;
+  --card: #1f1e30;
+  --line: #34324a;
+  --cream: #f3eee4;
+  --muted: #bdb8ca;
+  --crimson: #d2334c;
+  --crimson-hover: #e0405a;
+  --red: #ef4f5f;
+  --lavender: #b4b0fa;
+  --focus: #b4b0fa;
+  --display: "Bricolage", "Atkinson Next", system-ui, sans-serif;
+  --body: "Atkinson Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Instrument Serif", Georgia, serif;
 }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before { transition: none !important; animation: none !important; } }
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font-family: "Atkinson Next", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 1.125rem;
+  background: var(--night);
+  color: var(--cream);
+  font-family: var(--body);
+  font-size: 1.15rem;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-a { color: var(--blue); text-underline-offset: 3px; }
+a { color: var(--lavender); text-underline-offset: 3px; }
 a:hover { text-decoration-thickness: 2px; }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
-code, .mono { font-family: "Atkinson Mono", ui-monospace, monospace; font-size: .92em; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+.label { font-family: var(--mono); font-size: .88rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.accent { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--lavender); letter-spacing: 0; }
 
-.skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; z-index: 10; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--cream); color: var(--night); padding: 10px 16px; border-radius: 999px; z-index: 10; font-weight: 700; }
 .skip:focus { left: 16px; }
 
-.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
 
-header.top { border-bottom: 1px solid var(--line); }
-header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; padding-bottom: 16px; flex-wrap: wrap; }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; color: var(--ink); text-decoration: none; }
-.brand svg { flex: none; }
-nav ul { list-style: none; display: flex; gap: 6px 20px; margin: 0; padding: 0; flex-wrap: wrap; }
-nav a { color: var(--ink); text-decoration: none; font-weight: 600; font-size: 1rem; }
-nav a:hover { text-decoration: underline; }
+/* Header */
+header.top { position: sticky; top: 0; z-index: 5; background: rgba(19,18,31,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--cream); text-decoration: none; }
+.brand img { width: 46px; height: 46px; }
+.brand b { display: block; font-family: var(--display); font-weight: 800; font-size: 1.2rem; line-height: 1.1; letter-spacing: -.01em; }
+.brand span { display: block; font-family: var(--mono); font-size: .74rem; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; }
+nav ul { list-style: none; display: flex; gap: 6px 22px; margin: 0; padding: 0; flex-wrap: wrap; align-items: center; }
+nav a { color: var(--cream); text-decoration: none; font-family: var(--mono); font-size: .85rem; letter-spacing: .14em; text-transform: uppercase; }
+nav a:hover { color: var(--lavender); }
+nav .pill { border: 2px solid var(--cream); border-radius: 999px; padding: 8px 16px; }
+nav .pill:hover { border-color: var(--lavender); }
+@media (max-width: 720px) { nav li.hide-sm { display: none; } }
+
+/* Buttons */
+.btns { display: flex; flex-wrap: wrap; gap: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 999px; font-family: var(--display); font-weight: 800; font-size: 1.12rem; text-decoration: none; line-height: 1.15; min-height: 58px; transition: background .15s, border-color .15s, transform .15s; }
+.btn small { display: block; font-family: var(--body); font-weight: 500; font-size: .84rem; opacity: .9; }
+.btn .arrow { font-family: var(--body); font-weight: 400; font-size: 1.3em; line-height: 1; }
+.btn-primary { background: var(--crimson); color: #fff; }
+.btn-primary:hover { background: var(--crimson-hover); transform: translateY(-1px); }
+.btn-ghost { border: 2px solid var(--cream); color: var(--cream); }
+.btn-ghost:hover { border-color: var(--lavender); color: var(--lavender); }
 
 /* Hero */
-.hero { padding: 72px 0 56px; position: relative; overflow: hidden; }
-.eyebrow { display: inline-block; font-weight: 700; font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; color: var(--coral-ink); margin-bottom: 14px; }
-h1 { font-size: clamp(2.4rem, 6vw, 4.3rem); line-height: 1.04; letter-spacing: -.02em; margin: 0 0 22px; font-weight: 800; max-width: 15ch; }
-h1 em { font-style: normal; color: var(--coral-ink); }
-.lede { font-size: clamp(1.15rem, 2.2vw, 1.4rem); color: var(--muted); max-width: 40ch; margin: 0 0 34px; }
-.wave { position: absolute; right: -40px; top: 40px; width: 460px; max-width: 55vw; opacity: .9; pointer-events: none; }
-@media (max-width: 760px) { .wave { display: none; } }
+.hero { position: relative; overflow: hidden; padding: 84px 0 0; background:
+  radial-gradient(900px 520px at 85% 10%, rgba(180,176,250,.13), transparent 60%),
+  radial-gradient(700px 480px at 0% 100%, rgba(210,51,76,.14), transparent 60%),
+  var(--night); }
+.hero-mark { position: absolute; right: -60px; top: 40px; width: 520px; max-width: 60vw; opacity: .07; pointer-events: none; }
+.meta { margin: 0 0 10px; line-height: 1.9; }
+.live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
+h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
+.lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
+.lede strong { color: var(--cream); }
 
-.download { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; max-width: 640px; box-shadow: 0 1px 0 var(--line), 0 18px 40px -24px rgba(13,14,26,.25); position: relative; }
-.download h2 { font-size: 1.2rem; margin: 0 0 4px; }
-.download p { margin: 0 0 16px; color: var(--muted); font-size: 1rem; }
-.btns { display: flex; flex-wrap: wrap; gap: 12px; }
-.btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 14px; font-weight: 700; text-decoration: none; font-size: 1.05rem; line-height: 1.2; min-height: 52px; }
-.btn small { display: block; font-weight: 500; font-size: .85rem; opacity: .85; }
-.btn-primary { background: var(--coral); color: var(--on-coral); }
-.btn-primary:hover { background: #ec4520; }
-.btn-secondary { background: var(--soft); color: var(--ink); border: 1px solid var(--line); }
-.btn-secondary:hover { border-color: var(--muted); }
-.fine { font-size: .95rem; color: var(--muted); margin-top: 14px !important; margin-bottom: 0 !important; }
+.download { margin-top: 8px; max-width: 760px; }
+.fine { font-size: .98rem; color: var(--muted); margin: 18px 0 0; max-width: 60ch; }
 
-/* Honesty strip */
-.honest { background: var(--soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.honest .wrap { padding-top: 22px; padding-bottom: 22px; display: flex; gap: 16px; align-items: flex-start; }
-.honest .dot { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--amber); margin-top: 9px; box-shadow: 0 0 0 5px rgba(255,182,39,.25); }
+.flex { margin-top: 64px; padding: 14px 0 26px; }
+.flex .label { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
+.flex .label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+.flexline { display: block; width: 100%; height: 90px; }
+.flexline path { fill: none; stroke: var(--lavender); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1800; stroke-dashoffset: 1800; animation: draw 2.6s ease-out .3s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Honest note */
+.honest { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--night-2); }
+.honest .wrap { padding-top: 24px; padding-bottom: 24px; display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: start; }
+.honest .label { color: var(--lavender); padding-top: 3px; }
 .honest p { margin: 0; }
+@media (max-width: 640px) { .honest .wrap { grid-template-columns: 1fr; } }
 
-section { padding: 72px 0; }
-section > .wrap > h2 { font-size: clamp(1.8rem, 3.6vw, 2.5rem); line-height: 1.15; margin: 0 0 12px; letter-spacing: -.01em; }
-.section-lede { color: var(--muted); max-width: 60ch; margin: 0 0 36px; }
+section { padding: 88px 0; }
+.kicker { margin: 0 0 12px; }
+section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1rem, 4.6vw, 3.4rem); line-height: 1.02; letter-spacing: -.035em; margin: 0 0 18px; max-width: 18ch; }
+.section-lede { color: var(--muted); max-width: 60ch; margin: 0 0 40px; }
+
+/* Inputs */
+.inputs { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; padding: 0; margin: 0 0 40px; }
+.inputs li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-family: var(--mono); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--cream); }
 
 /* Apps */
-.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
-.app { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 22px 20px; display: flex; flex-direction: column; border-top: 6px solid var(--accent, var(--coral)); }
-.app h3 { margin: 0 0 2px; font-size: 1.3rem; }
-.app .tag { font-size: .9rem; font-weight: 700; color: var(--accent-ink, var(--coral-ink)); margin: 0 0 10px; }
-.app p { margin: 0 0 12px; font-size: 1.02rem; }
-.app .for { font-size: .95rem; color: var(--muted); }
-.app .links { margin-top: auto; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .98rem; font-weight: 600; }
-.ver { font-family: "Atkinson Mono", ui-monospace, monospace; font-size: .85rem; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; color: var(--muted); font-weight: 500; }
-.hubcard { margin-top: 18px; background: #0d0e1a; color: #fbf8f3; border: 1px solid var(--line); border-radius: 18px; padding: 26px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; }
-.hubcard h3 { margin: 0 0 8px; font-size: 1.35rem; }
-.hubcard p { margin: 0 0 10px; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.app { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.app:hover { border-color: #4a4766; }
+.app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 18px; display: flex; justify-content: space-between; }
+.app h3 { font-family: var(--display); font-weight: 800; font-size: 1.55rem; letter-spacing: -.02em; line-height: 1.1; margin: 0 0 4px; }
+.app .tag { font-family: var(--serif); font-style: italic; font-size: 1.35rem; color: var(--lavender); margin: 0 0 12px; line-height: 1.2; }
+.app p { margin: 0 0 12px; font-size: 1.04rem; }
+.app .for { font-size: .98rem; color: var(--muted); }
+.app .links { margin-top: auto; padding-top: 12px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-weight: 700; font-size: 1rem; }
+.ver { font-family: var(--mono); font-size: .8rem; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+.hubcard { margin-top: 18px; border-radius: 22px; padding: 30px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 28px; background: linear-gradient(135deg, rgba(180,176,250,.16), rgba(210,51,76,.12)); border: 1px solid var(--line); }
+.hubcard h3 { font-family: var(--display); font-weight: 800; font-size: 1.7rem; letter-spacing: -.02em; line-height: 1.1; margin: 8px 0 10px; }
+.hubcard p { margin: 0; color: var(--muted); }
 .hubcard ul { margin: 0; padding-left: 1.1em; }
-.hubcard li { margin-bottom: 6px; }
-.hubcard a { color: var(--amber); }
+.hubcard li { margin-bottom: 8px; }
+.hubcard li::marker { color: var(--red); }
 @media (max-width: 760px) { .hubcard { grid-template-columns: 1fr; } }
 
-/* Inputs strip */
-.inputs { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; padding: 0; margin: 0 0 36px; }
-.inputs li { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 16px; font-weight: 600; font-size: 1rem; }
-
-/* Steps */
+/* Install */
+.alt { background: var(--night-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
-.steps li { counter-increment: s; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 20px 18px 20px; position: relative; }
-.steps li::before { content: counter(s); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--coral); color: var(--on-coral); font-weight: 800; margin-bottom: 10px; }
-.steps strong { display: block; margin-bottom: 4px; }
-.split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; }
+.steps li { counter-increment: s; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
+.steps li::before { content: "0" counter(s); display: block; font-family: var(--mono); font-size: .85rem; letter-spacing: .18em; color: var(--red); margin-bottom: 12px; }
+.steps strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.01em; line-height: 1.2; margin-bottom: 6px; }
+.steps em, .panel em { font-style: normal; font-weight: 700; color: var(--cream); }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
-.panel { background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; }
-.panel h3 { margin: 0 0 8px; font-size: 1.15rem; }
-.panel p, .panel ul { margin: 0 0 8px; }
+.panel { border: 1px solid var(--line); border-radius: 20px; padding: 22px 24px; }
+.panel h3 { font-family: var(--display); font-weight: 800; font-size: 1.25rem; margin: 0 0 8px; }
+.panel p, .panel ul { margin: 0; color: var(--muted); }
 .panel ul { padding-left: 1.1em; }
+.panel li { margin-bottom: 4px; }
 
 /* Vision */
-.alt { background: var(--soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 760px) { .docs { grid-template-columns: 1fr; } }
-.doc { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; }
-.doc .kicker { font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; color: var(--violet); margin: 0 0 6px; }
-.doc h3 { margin: 0 0 10px; font-size: 1.45rem; line-height: 1.2; }
-.doc p { margin: 0 0 12px; }
-.doc ul { margin: 0 0 16px; padding-left: 1.1em; }
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; }
+.doc h3 { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 14px; }
+.doc p { margin: 0 0 14px; }
+.doc ul { margin: 0 0 22px; padding-left: 1.1em; }
+.doc li { margin-bottom: 6px; }
+.doc li::marker { color: var(--red); }
 .doc .btns { margin-top: auto; }
-
 .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 16px; padding: 0; list-style: none; }
-.levels li { background: var(--soft); border-radius: 10px; padding: 8px 10px; font-size: .9rem; line-height: 1.3; }
-.levels b { display: block; font-size: .8rem; color: var(--muted); font-weight: 600; }
+.levels li { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-weight: 700; font-size: .98rem; line-height: 1.25; }
+.levels b { display: block; font-family: var(--mono); font-weight: 400; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
+.doc .note { font-size: .98rem; color: var(--muted); margin-bottom: 22px; }
 
-/* Involve */
-.involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
-.involve li { border-left: 4px solid var(--teal); padding: 4px 0 4px 16px; }
-.involve strong { display: block; font-size: 1.1rem; margin-bottom: 2px; }
+/* Involved */
+.involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
+.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; }
+.involve strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.01em; margin-bottom: 4px; }
+.involve span { color: var(--muted); }
 
-footer { border-top: 1px solid var(--line); padding: 36px 0 48px; color: var(--muted); font-size: .98rem; }
-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+footer { border-top: 1px solid var(--line); padding: 40px 0 56px; color: var(--muted); font-size: 1rem; }
+footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; }
+footer .brand img { width: 38px; height: 38px; }
 footer p { margin: 0; }
 </style>
 </head>
@@ -170,16 +194,16 @@ footer p { margin: 0; }
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Limitless Sound, home">
-      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff5a36"/><path d="M7 20c3 0 3-8 6-8s3 8 6 8 3-8 6-8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
-      Limitless Sound
+    <a class="brand" href="#top" aria-label="Limitless Sound Foundation, back to top">
+      <img src="logo.png" alt="" width="46" height="46">
+      <span style="all:unset"><b>Limitless Sound</b><span>Foundation</span></span>
     </a>
     <nav aria-label="Sections">
       <ul>
-        <li><a href="#apps">The apps</a></li>
-        <li><a href="#install">Install</a></li>
-        <li><a href="#vision">The plan</a></li>
-        <li><a href="#involved">Get involved</a></li>
+        <li class="hide-sm"><a href="#apps">Apps</a></li>
+        <li class="hide-sm"><a href="#install">Install</a></li>
+        <li class="hide-sm"><a href="#vision">The plan</a></li>
+        <li><a class="pill" href="#download">Download</a></li>
       </ul>
     </nav>
   </div>
@@ -187,102 +211,106 @@ footer p { margin: 0; }
 
 <main id="main">
   <div class="hero" id="top">
-    <svg class="wave" viewBox="0 0 460 300" aria-hidden="true">
-      <g fill="none" stroke-linecap="round" stroke-width="6">
-        <path d="M10 150c40 0 40-90 80-90s40 180 80 180 40-140 80-140 40 100 80 100 40-60 80-60" stroke="#ff5a36"/>
-        <path d="M10 180c40 0 40-60 80-60s40 120 80 120 40-90 80-90 40 70 80 70 40-40 80-40" stroke="#ffb627" opacity=".8"/>
-        <path d="M10 120c40 0 40-40 80-40s40 90 80 90 40-60 80-60 40 40 80 40 40-30 80-30" stroke="#19b3a6" opacity=".7"/>
-        <path d="M10 210c40 0 40-30 80-30s40 60 80 60 40-40 80-40 40 30 80 30 40-20 80-20" stroke="#7b61ff" opacity=".55"/>
-      </g>
-    </svg>
+    <img class="hero-mark" src="logo.png" alt="" aria-hidden="true">
     <div class="wrap">
-      <span class="eyebrow">Free music software &middot; Mac and Windows</span>
-      <h1>Make music with the body you have. <em>No one left behind.</em></h1>
-      <p class="lede">Limitless Sound is a free suite of apps that lets musicians with disabilities play, record and mix in Logic Pro, Pro Tools and Ableton Live with their voice, one hand, their eyes, a single switch or an adaptive controller.</p>
+      <p class="meta label"><span class="live" aria-hidden="true"></span> Free software &middot; Mac &amp; Windows &middot; Works offline</p>
+      <h1>Music software for <span class="accent">every</span> body.</h1>
+      <p class="lede">Six free apps that let musicians with disabilities play, record and mix in Logic Pro, Pro Tools and Ableton Live with <strong>their voice, one hand, their eyes, a single switch or an adaptive controller.</strong> From the Limitless Sound Foundation. <strong>Free to every musician.</strong></p>
 
-      <div class="download" aria-labelledby="dl-title">
-        <h2 id="dl-title">Get the whole suite for Mac</h2>
-        <p>One download with all six apps and the hub that joins them. Version 0.1.0.</p>
+      <div class="download" id="download">
         <div class="btns">
           <a class="btn btn-primary" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.dmg">
-            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Download for Apple Silicon<small>M1, M2, M3, M4 and newer Macs</small></span>
+            <span>Download for Mac<small>Apple Silicon: M1 and newer</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
-          <a class="btn btn-secondary" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-intel.dmg">
-            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Download for Intel Mac<small>Older Macs, before late 2020</small></span>
+          <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-intel.dmg">
+            <span>Intel Mac<small>Older Macs, before late 2020</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p class="fine">Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. On Windows, each app has its own installer: see <a href="#apps">the apps</a> below.</p>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version 0.1.0. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. On Windows, each app has its own installer in <a href="#apps">the apps</a> below.</p>
+      </div>
+
+      <div class="flex" aria-hidden="true">
+        <p class="label">Any input. Any app.</p>
+        <svg class="flexline" viewBox="0 0 1080 90" preserveAspectRatio="none">
+          <path d="M0 45 H300 L330 45 L350 12 L372 78 L392 30 L410 58 L428 45 H560 C600 45 610 20 640 20 S680 70 710 70 S750 45 780 45 H1080"/>
+        </svg>
       </div>
     </div>
   </div>
 
   <div class="honest" role="note" aria-label="Project status">
     <div class="wrap">
-      <span class="dot" aria-hidden="true"></span>
-      <p><strong>Early and honest about it.</strong> These apps were built in October 2026 and pass their automated tests, but they have not yet been tested by disabled musicians in real sessions. That is the next step, and the reason for this page. Expect rough edges, and please tell us what breaks.</p>
+      <span class="label">Early days</span>
+      <p><strong>Honest about where this is.</strong> These apps were built in October 2026 and pass their automated tests, but they have not yet been tested by disabled musicians in real sessions. That&rsquo;s the next step, and the reason for this page. Expect rough edges, and please tell us what breaks.</p>
     </div>
   </div>
 
   <section id="apps" aria-labelledby="apps-title">
     <div class="wrap">
-      <h2 id="apps-title">Six apps. Any input can do anything.</h2>
-      <p class="section-lede">Each app solves one barrier on its own. Together they share one action bus, so a button, a glance or a word can reach any of them. Everything runs offline on the musician&rsquo;s own computer, with the mic, webcam, keyboard or controller they already own.</p>
+      <p class="kicker label">The suite</p>
+      <h2 id="apps-title">Six apps. Any input can do <span class="accent">anything.</span></h2>
+      <p class="section-lede">Each app takes down one barrier on its own. Together they share one action bus, so a button, a glance or a word can reach any of them. Everything runs on the musician&rsquo;s own computer, with the mic, webcam, keyboard or controller they already own.</p>
 
       <ul class="inputs" aria-label="Ways to play">
-        <li>Voice</li><li>One hand</li><li>Eyes and head</li><li>A single switch</li><li>Foot pedal</li><li>Xbox Adaptive Controller</li><li>A short sound</li><li>Color vision</li>
+        <li>Voice</li><li>One hand</li><li>Eyes &amp; head</li><li>Single switch</li><li>Foot pedal</li><li>Xbox Adaptive Controller</li><li>A short sound</li><li>Color vision</li>
       </ul>
 
       <ul class="apps">
-        <li class="app" style="--accent:#ff5a36">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>01</span><span>Voice</span></p>
           <h3>Limitless Voice</h3>
           <p class="tag">Run the DAW by speaking</p>
-          <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools or anywhere on the computer. Recognition is fully offline: your voice never leaves the machine.</p>
+          <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools or anywhere on the computer. Fully offline: your voice never leaves the machine.</p>
           <p class="for">For musicians who can&rsquo;t use, or can&rsquo;t always use, a mouse and keyboard.</p>
-          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.3.1">Download <span class="ver">0.3.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
+          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.3.1">Download<span class="ver">0.3.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
         </li>
-        <li class="app" style="--accent:#ffb627">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>02</span><span>One hand</span></p>
           <h3>Limitless One-Hand</h3>
           <p class="tag">The whole studio under one hand</p>
           <p>Switch on one-hand mode and the keys under your hand become the commands you use most: play, record, undo, split, mute, solo, zoom, save. Switch it off and the keyboard is normal again.</p>
           <p class="for">For musicians with the use of one hand, left or right.</p>
-          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.0">Download <span class="ver">0.2.0</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme">How it works</a></div>
+          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.0">Download<span class="ver">0.2.0</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme">How it works</a></div>
         </li>
-        <li class="app" style="--accent:#19b3a6; --accent-ink: var(--teal)">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>03</span><span>Vision</span></p>
           <h3>Limitless Zoom</h3>
           <p class="tag">See the session at any size</p>
           <p>Zoom the DAW or the whole screen by voice, a one-hand key layer, resting your pointer on big buttons, or a single switch. Every action is shown in large text and said out loud.</p>
           <p class="for">For low-vision musicians, and anyone who can&rsquo;t pinch, scroll or hold modifier keys.</p>
-          <div class="links"><a href="#top">In the Mac suite</a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
+          <div class="links"><a href="#download">In the Mac suite</a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
         </li>
-        <li class="app" style="--accent:#2f86d6; --accent-ink: var(--blue)">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
           <h3>Limitless Color</h3>
           <p class="tag">A screen tuned to your eyes</p>
           <p>Describe what looks wrong (&ldquo;the red meters look yellow&rdquo;) and it recolors the whole screen, asking what you see now until it&rsquo;s right. Pin Solo, Mute or the meters to an exact color.</p>
           <p class="for">For colorblind musicians, in any app and any plug-in.</p>
-          <div class="links"><a href="#top">In the Mac suite</a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/color#readme">How it works</a></div>
+          <div class="links"><a href="#download">In the Mac suite</a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/color#readme">How it works</a></div>
         </li>
-        <li class="app" style="--accent:#7b61ff; --accent-ink: var(--violet)">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>05</span><span>Switches</span></p>
           <h3>Limitless Control</h3>
-          <p class="tag">Switches and controllers become key commands</p>
+          <p class="tag">Switches become key commands</p>
           <p>Every button and switch jack on an Xbox Adaptive Controller, or any gamepad, becomes a DAW command. It follows the app in front, filters tremor and double hits, and puts Record on a hold so it never starts by accident.</p>
           <p class="for">For musicians who play with switches, buttons, feet or limited movement.</p>
-          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.1">Download <span class="ver">0.2.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme">How it works</a></div>
+          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.1">Download<span class="ver">0.2.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme">How it works</a></div>
         </li>
-        <li class="app" style="--accent: var(--ink); --accent-ink: var(--ink)">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>06</span><span>Eyes</span></p>
           <h3>GazeStage</h3>
           <p class="tag">Play with your eyes or head</p>
           <p>Play instruments and run the transport by looking, turning your head, making a short sound or pressing a switch. Uses the built-in camera or any webcam. Video never leaves the computer and nothing is recorded.</p>
           <p class="for">For musicians who move mostly or only with their eyes and head.</p>
-          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/gazestage-v0.3.1">Download <span class="ver">0.3.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/gazestage#readme">How it works</a></div>
+          <div class="links"><a href="https://github.com/chittychitty38/limitless-sound/releases/tag/gazestage-v0.3.1">Download<span class="ver">0.3.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/gazestage#readme">How it works</a></div>
         </li>
       </ul>
 
       <div class="hubcard">
         <div>
-          <h3>The Limitless Sound hub joins them</h3>
-          <p>A small background app that works like a sidechain between the six. Each app still works on its own; with the hub, they work as one.</p>
+          <p class="label">The hub</p>
+          <h3>One suite, joined like a sidechain</h3>
+          <p>A small background app links the six. Each still works on its own; with the hub, they work as one.</p>
         </div>
         <ul>
           <li>A controller button can zoom. A glance in GazeStage can turn on screen colors. A spoken phrase can start one-hand mode.</li>
@@ -296,13 +324,14 @@ footer p { margin: 0; }
 
   <section id="install" class="alt" aria-labelledby="install-title">
     <div class="wrap">
-      <h2 id="install-title">Opening it the first time</h2>
-      <p class="section-lede">The apps aren&rsquo;t signed with a paid Apple or Microsoft certificate yet, so the computer asks once before it trusts them. This takes about a minute.</p>
+      <p class="kicker label">First open</p>
+      <h2 id="install-title">One minute, <span class="accent">once.</span></h2>
+      <p class="section-lede">The apps aren&rsquo;t signed with a paid Apple or Microsoft certificate yet, so the computer asks once before it trusts them.</p>
       <ol class="steps">
         <li><strong>Open the download</strong>Double-click the .dmg file, then double-click <em>Install Limitless Sound</em>.</li>
-        <li><strong>macOS says it can&rsquo;t check the developer</strong>That&rsquo;s expected. Click <em>Done</em> (or <em>OK</em>).</li>
+        <li><strong>macOS can&rsquo;t check the developer</strong>That&rsquo;s expected. Click <em>Done</em> (or <em>OK</em>).</li>
         <li><strong>Allow it once</strong>Open System Settings &rsaquo; Privacy &amp; Security, scroll down and click <em>Open Anyway</em>. On older macOS you can instead right-click the installer and choose <em>Open</em>.</li>
-        <li><strong>You&rsquo;re in</strong>Every app is copied into Applications and Limitless Sound opens in your web browser, where you choose which apps start together.</li>
+        <li><strong>You&rsquo;re in</strong>Every app is copied into Applications and Limitless Sound opens in your browser, where you choose which apps start together.</li>
       </ol>
       <div class="split">
         <div class="panel">
@@ -313,8 +342,8 @@ footer p { margin: 0; }
           <h3>What you need</h3>
           <ul>
             <li>A Mac from roughly the last ten years (macOS 12 or newer for most apps), or Windows 10 or 11.</li>
-            <li>Whatever you already have: the built-in mic and camera, any USB webcam, a keyboard, switch or controller.</li>
-            <li>No account and no internet once installed. Free.</li>
+            <li>Whatever you already have: the built-in mic and camera, any webcam, a keyboard, switch or controller.</li>
+            <li>No account, no internet once installed. Free.</li>
           </ul>
         </div>
       </div>
@@ -323,11 +352,12 @@ footer p { margin: 0; }
 
   <section id="vision" aria-labelledby="vision-title">
     <div class="wrap">
-      <h2 id="vision-title">Where this is going</h2>
-      <p class="section-lede">Software is the start. The goal is a program that puts working setups in the hands of disabled musicians, a song series that shows what they make, and an open standard so every instrument and plug-in fits them out of the box.</p>
+      <p class="kicker label">Where this is going</p>
+      <h2 id="vision-title">Software is the <span class="accent">start.</span></h2>
+      <p class="section-lede">The goal is a program that puts working setups in the hands of disabled musicians, a song series that shows what they make, and an open standard so every instrument and plug-in fits them out of the box.</p>
       <div class="docs">
         <article class="doc" aria-labelledby="plan-title">
-          <p class="kicker">The plan</p>
+          <p class="label">The plan</p>
           <h3 id="plan-title">Limitless Sound: the 38x plan</h3>
           <ul>
             <li>Ongoing interviews and outreach with disabled musicians, as a ready-to-run program.</li>
@@ -336,11 +366,11 @@ footer p { margin: 0; }
             <li>Partners for gear, reamping, drums and accessible plug-ins.</li>
           </ul>
           <div class="btns">
-            <a class="btn btn-primary" href="Limitless-Sound-38x-Plan.pdf">Read the plan <small>PDF, 9 pages</small></a>
+            <a class="btn btn-primary" href="Limitless-Sound-38x-Plan.pdf"><span>Read the plan<small>PDF, 9 pages</small></span><span class="arrow" aria-hidden="true">&rarr;</span></a>
           </div>
         </article>
         <article class="doc" aria-labelledby="std-title">
-          <p class="kicker">The standard &middot; draft 0.1</p>
+          <p class="label">The standard &middot; draft 0.1</p>
           <h3 id="std-title">The Limitless Access Standard</h3>
           <p>MIDI let any keyboard play any synth. This does the same for access: any input a musician can use can drive any instrument, plug-in, amp modeler or recording app that carries the mark. Free to implement, with an open test kit.</p>
           <ol class="levels" aria-label="The four levels">
@@ -349,9 +379,9 @@ footer p { margin: 0; }
             <li><b>Level 3</b>Hands-free</li>
             <li><b>Level 4</b>Co-designed</li>
           </ol>
-          <p class="fine" style="margin-top:0!important;margin-bottom:16px!important">A voluntary, compassionate standard written with disabled musicians. Not a legal accessibility certification.</p>
+          <p class="note">A voluntary, compassionate standard written with disabled musicians. Not a legal accessibility certification.</p>
           <div class="btns">
-            <a class="btn btn-secondary" href="https://github.com/chittychitty38/limitless-sound/blob/main/standard/README.md">Read the standard</a>
+            <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/blob/main/standard/README.md"><span>Read the standard</span><span class="arrow" aria-hidden="true">&rarr;</span></a>
           </div>
         </article>
       </div>
@@ -360,22 +390,22 @@ footer p { margin: 0; }
 
   <section id="involved" class="alt" aria-labelledby="inv-title">
     <div class="wrap">
-      <h2 id="inv-title">Get involved</h2>
-      <p class="section-lede">This only works if it&rsquo;s built with the people it&rsquo;s for.</p>
+      <p class="kicker label">Get involved</p>
+      <h2 id="inv-title">Built <span class="accent">with</span> the people it&rsquo;s for.</h2>
       <ul class="involve">
-        <li><strong>Musicians</strong>Try an app and tell us what works and what doesn&rsquo;t. Your setup shapes what gets built next.</li>
-        <li><strong>Brands and sponsors</strong>Help fund a pilot, put gear in an artist&rsquo;s hands, or carry the Access Standard in your products.</li>
-        <li><strong>Developers</strong>Everything is open source. Build on the protocol or add your instrument to the suite.</li>
+        <li><strong>Musicians</strong><span>Try an app and tell us what works and what doesn&rsquo;t. Your setup shapes what gets built next.</span></li>
+        <li><strong>Brands &amp; sponsors</strong><span>Help fund a pilot, put gear in an artist&rsquo;s hands, or carry the Access Standard in your products.</span></li>
+        <li><strong>Developers</strong><span>Everything is open source. Build on the protocol or add your instrument to the suite.</span></li>
       </ul>
-      <p style="margin-top:32px"><a class="btn btn-secondary" href="https://github.com/chittychitty38/limitless-sound/issues/new">Send feedback or say hello</a></p>
+      <div class="btns"><a class="btn btn-primary" href="https://github.com/chittychitty38/limitless-sound/issues/new"><span>Send feedback or say hello</span><span class="arrow" aria-hidden="true">&rarr;</span></a></div>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <p>Limitless Sound &middot; free and open source &middot; <a href="https://github.com/chittychitty38/limitless-sound">Source on GitHub</a></p>
-    <p>Set in Atkinson Hyperlegible, a typeface made for low-vision readers.</p>
+    <a class="brand" href="#top" aria-label="Back to top"><img src="logo.png" alt="" width="38" height="38"><span style="all:unset"><b>Limitless Sound</b><span>Music is for every body</span></span></a>
+    <p>Limitless Sound Foundation &middot; 501(c)(3) &middot; Conyers, Georgia &middot; Founded by Jason Barnes<br>Software free and open source &middot; <a href="https://github.com/chittychitty38/limitless-sound">Source on GitHub</a></p>
   </div>
 </footer>
 </body>
