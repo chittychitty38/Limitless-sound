@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Downloads every app's newest successful build on main for one platform, for the suite:
+#
+#   .github/scripts/newest-builds.sh <platform> <folder> [--list]
+#
+# <platform> is the end of the build's artifact name: mac-apple-silicon, mac-intel or windows.
+# --list only prints what it would download. Stops with an error if any app has no build, so
+# a suite is never made with an app missing.
+#
+# Runs are listed unfiltered and chosen here. GitHub's runs API sometimes answers a branch= or
+# status= query with no runs at all (on 2026-10-22 the same query gave 6 runs, then 0), which
+# once left Limitless Sound and four apps out of a suite build.
+set -euo pipefail
+
+platform=$1
+out=$2
+list_only=${3:-}
+repo=${GITHUB_REPOSITORY:?}
+
+api() {  # gh api, asked again after a network hiccup
+  local i
+  for i in 1 2 3; do
+    gh api "$@" && return 0
+    sleep $((i * 5))
+  done
+  return 1
+}
+
+mkdir -p "$out"
+for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
+  found=""
+  for page in 1 2 3 4 5; do
+    # Newest first: this repository's own pushes to main (and manual runs) that succeeded,
+    # then "end" when this was the last page.
+    runs=$(api "repos/$repo/actions/workflows/$wf/runs?per_page=100&page=$page" -q "
+      (.workflow_runs[]
+        | select(.head_branch == \"main\" and (.event == \"push\" or .event == \"workflow_dispatch\")
+                 and (.head_repository.full_name | ascii_downcase) == (\"$repo\" | ascii_downcase)
+                 and .conclusion == \"success\")
+        | .id),
+      (if (.workflow_runs | length) < 100 then \"end\" else empty end)")
+    for run in $runs; do
+      [ "$run" = end ] && break 2
+      name=$(api "repos/$repo/actions/runs/$run/artifacts?per_page=100" -q \
+        "[.artifacts[] | select((.expired | not) and (.name | endswith(\"-$platform\"))) | .name] | first // empty")
+      if [ -n "$name" ]; then
+        found="$run $name"
+        break 2
+      fi
+    done
+  done
+  if [ -z "$found" ]; then
+    echo "::error::No successful $wf build on main has a $platform download"
+    exit 1
+  fi
+  read -r run name <<<"$found"
+  echo "$wf: $name (run $run)"
+  [ "$list_only" = --list ] || gh run download "$run" -R "$repo" -n "$name" -D "$out/$wf"
+done
