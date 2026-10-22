@@ -24,13 +24,14 @@ import itertools
 import json
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
 
-__all__ = ["Link", "config_dir"]
+__all__ = ["Link", "config_dir", "launch_hub"]
 PROTOCOL = 1
 
 
@@ -45,6 +46,37 @@ def config_dir() -> Path:
     return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "Limitless Sound"
 
 
+def hub_app() -> Optional[Path]:
+    """The installed Limitless Sound hub, if there is one."""
+    if sys.platform == "darwin":
+        for root in (Path("/Applications"), Path.home() / "Applications"):
+            if (root / "Limitless Sound.app").exists():
+                return root / "Limitless Sound.app"
+    elif sys.platform.startswith("win"):
+        base = os.environ.get("LOCALAPPDATA")
+        if base and (Path(base) / "Programs" / "Limitless Sound" / "Limitless Sound.exe").exists():
+            return Path(base) / "Programs" / "Limitless Sound" / "Limitless Sound.exe"
+    return None
+
+
+def launch_hub() -> bool:
+    """Start the installed hub in the background. True if it was found."""
+    app = hub_app()
+    if app is None:
+        return False
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", "-g", "-j", str(app), "--args", "--background"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            subprocess.Popen([str(app), "--background"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             close_fds=True, creationflags=flags)
+        return True
+    except OSError:
+        return False
+
+
 class Link:
     def __init__(self, tool: str, name: str, version: str = "", *, actions: list[dict] | None = None,
                  on_invoke: Optional[Callable[[str, dict, str], object]] = None,
@@ -53,7 +85,7 @@ class Link:
                  on_actions: Optional[Callable[[list[dict]], None]] = None,
                  on_connected: Optional[Callable[[bool], None]] = None,
                  dispatch: Optional[Callable[[Callable[[], None]], None]] = None,
-                 subscribe: list[str] | None = None, retry: float = 2.0):
+                 subscribe: list[str] | None = None, retry: float = 2.0, start_hub: bool = True):
         self.tool, self.name, self.version = tool, name, version
         self._actions = list(actions or [])
         self.on_invoke, self.on_event, self.on_prefs = on_invoke, on_event, on_prefs
@@ -61,6 +93,8 @@ class Link:
         self.dispatch = dispatch or (lambda fn: fn())
         self.subscribe = subscribe or ["*"]
         self.retry = retry
+        self.start_hub = start_hub   # open the installed hub once if it isn't running
+        self._tried_hub = False
         self.connected = False
         self.prefs: dict = {}
         self.suite_actions: list[dict] = []
@@ -161,12 +195,18 @@ class Link:
     def _run(self) -> None:
         while not self._stop.is_set():
             info = self._read_link()
+            reached = False
             if info:
                 try:
                     self._session(info)
+                    reached = True
                 except OSError:
                     pass
                 self._close()
+            if not reached and self.start_hub and not self._tried_hub:
+                # Every app brings the suite up with it: open the hub if it's installed.
+                self._tried_hub = True
+                launch_hub()
             self._stop.wait(self.retry)
 
     def _session(self, info: dict) -> None:
@@ -231,6 +271,10 @@ class Link:
             cb = self._waiting.pop(msg.get("id"), None)
             if cb:
                 self.dispatch(lambda: cb(msg))
+        elif op == "error" and msg.get("code") == "replaced":
+            # A newer copy of this app took over: step aside for good instead of fighting it.
+            self._stop.set()
+            self._close()
         elif op == "error" and not self.connected:
             self._close()
 
