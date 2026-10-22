@@ -4,3 +4,5 @@ preview/
 render/
 __pycache__/
 art/_work/
+promo/
+.venv/

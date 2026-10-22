@@ -43,6 +43,11 @@ jobs:
           ffmpeg -loglevel error -y -framerate 30 -i render/frames/%04d.png -i render/groove.wav \
             -c:v libx264 -pix_fmt yuv420p -crf 20 -c:a aac -b:a 192k -shortest preview/panda-drums-demo.mp4
           cp render/groove.wav preview/
+      - name: Promo video
+        run: |
+          python3 -m venv .venv && .venv/bin/pip install --quiet numpy pillow
+          xvfb-run -a build/PandaDrumsRender_artefacts/Release/PandaDrumsRender promo promo
+          .venv/bin/python art/promo.py promo docs/panda3d.jpg preview/Purafied-Panda-Drums-promo.mp4
       - uses: actions/upload-artifact@v4
         with:
           name: Panda-Drums-preview

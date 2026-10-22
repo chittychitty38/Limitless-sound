@@ -45,3 +45,20 @@ was rendered lines up with everything else. The stage then moves layers from the
 
 `neutral`, `happy`, `open_mouth`, `smile`, `focused`, `excited`, `wink`, `laugh`, `surprised`,
 `tongue_out`, `angry`, `sad` (the reference sheet's twelve) and `blink`.
+
+## Promo video
+
+`promo.py` cuts the 46-second "Purafied – Panda Drums" promo:
+
+```
+PandaDrumsRender promo promo/                                  # the performance, from the plugin
+python promo.py promo/ ../docs/panda3d.jpg Purafied-Panda-Drums-promo.mp4
+```
+
+The render tool plays a groove through D minor, C minor, E major, F# minor and A major (the kit
+retunes to each and the floor tom sings a line in the key), tours the Lab, Mixer and Mapping
+pages and ends on the panda's cheer. It writes the window's frames at 1.5x, the drums, and
+`timeline.json` (when each key starts, what every drum is tuned to, where the kicks land).
+`promo.py` adds the titles, captions and key cards, and a pad and bass that follow the same
+keys and duck under the kick, so you hear the drums sit in each key. CI builds it with every
+run (the Panda-Drums-preview artifact) and a release tag publishes it.

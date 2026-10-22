@@ -88,6 +88,28 @@ def text(s, face, size, fill, stroke=0, stroke_fill=INK, shadow=True, tracking=0
     return img
 
 
+def wrap(s, face, size, width):
+    """Split s into lines no wider than width."""
+    f = font(face, size)
+    lines, line = [], ""
+    for word in s.split():
+        trial = (line + " " + word).strip()
+        if f.getlength(trial) > width and line:
+            lines.append(line)
+            line = word
+        else:
+            line = trial
+    return lines + [line] if line else lines
+
+
+def paragraph(canvas, s, x, y, alpha=1.0, size=34, colour=CREAM, gap=1.25):
+    """Left-aligned wrapped text in the caption column; returns the y under it."""
+    for line in wrap(s, "body", size, CAPTION_W):
+        place(canvas, text(line, "body", size, colour), x, y, 1.0, alpha, "l")
+        y += size * gap
+    return y
+
+
 def place(canvas, img, cx, cy, scale=1.0, alpha=1.0, anchor="c"):
     """Composite img centred (or left-aligned with anchor 'l') at (cx, cy)."""
     if alpha <= 0.01 or scale <= 0.01:
@@ -257,7 +279,8 @@ def mix_audio(d, tl, out_wav):
 # ---------------------------------------------------------------------------- the picture
 EDITOR = (1920, 1290)                       # the window at 1.5x
 FULL = ((0, 90, 1920, 1080), (0, 0, 1920, 1080))
-WINDOW = ((0, 0, 1920, 1290), (560, 110, 1300, 873))
+WINDOW = ((0, 0, 1920, 1290), (610, 120, 1260, 847))
+CAPTION_W = 500                             # the caption column left of the window
 
 
 def zoom(cx, cy, z):
@@ -337,8 +360,7 @@ def captions(tl, t, canvas):
                     row = text("%s  %s" % (drum.upper(), spell(pitch, s["root"], s["major"])), "title", 34, CREAM, stroke=4)
                     place(canvas, row, 66, y, 1.0, a * clamp((t - s["time"] - 0.15 - 0.06 * (y - 640) / 46) / 0.25), "l")
                     y += 46
-                cap = text(lines[i], "body", 34, CREAM, stroke=0)
-                place(canvas, cap, 66, 900, 1.0, a * clamp((t - s["time"] - 0.3) / 0.3), "l")
+                paragraph(canvas, lines[i], 66, 900, a * clamp((t - s["time"] - 0.3) / 0.3))
 
     titles = {"lab": ("THE LAB", "Velocity zones and round robins.", "Find the weird hit. Take it out."),
               "mixer": ("THE MIXER", "A channel for every real mic.", "Open the rooms. Panda FX on every fader."),
@@ -349,8 +371,8 @@ def captions(tl, t, canvas):
             a = min(ease_out(k), ease_out((s["end"] - t) / 0.2) if s["caption"] == "mapping" else 1.0)
             big, l1, l2 = titles[s["caption"]]
             place(canvas, text(big, "display", 104, HOT, stroke=8), 60 - 40 * (1 - ease_out(k)), 400, 1.0, a, "l")
-            place(canvas, text(l1, "body", 36, CREAM), 66, 520, 1.0, a * clamp(k * 2 - 0.3), "l")
-            place(canvas, text(l2, "body", 36, CREAM), 66, 570, 1.0, a * clamp(k * 2 - 0.6), "l")
+            y = paragraph(canvas, l1, 66, 520, a * clamp(k * 2 - 0.3), size=36)
+            paragraph(canvas, l2, 66, y + 10, a * clamp(k * 2 - 0.6), size=36)
 
 
 def outro(tl, t, canvas):
@@ -428,7 +450,7 @@ def main(d, hero_path, out):
             pic = src.crop((int(sx), int(sy), int(sx + sw), int(sy + sh))).resize((int(dw), int(dh)), Image.LANCZOS)
             card = dw < W - 2
             if card:
-                radius = int(26 * (1 - dw / W) / (1 - 1300 / W))
+                radius = int(26 * (1 - dw / W) / (1 - WINDOW[1][2] / W))
                 sh_img, pad = shadow_for((int(dw), int(dh)), radius)
                 canvas.alpha_composite(sh_img, (int(dx) - pad, int(dy) - pad))
                 canvas.alpha_composite(rounded(pic, radius), (int(dx), int(dy)))
