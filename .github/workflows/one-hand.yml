@@ -8,6 +8,11 @@ on:
   pull_request:
     paths: ["apps/one-hand/**", ".github/workflows/one-hand.yml"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release with this version (for example 0.2.0). Leave empty to just build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -35,7 +40,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -r requirements.txt pyinstaller==6.22.3 pytest
+        run: pip install -r requirements.txt pyinstaller==6.22.3 pillow==11.3.0 pytest
       - name: Test
         run: python -m pytest -q
       - name: Check the keyboard code from source
@@ -43,23 +48,33 @@ jobs:
       - name: Build app
         run: pyinstaller --noconfirm onehand.spec
 
-      - name: Smoke test and disk image (macOS)
+      - name: Smoke test the built app (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 3
         run: |
           "dist/Limitless One-Hand.app/Contents/MacOS/Limitless One-Hand" --self-test
+          "dist/Limitless One-Hand.app/Contents/MacOS/Limitless One-Hand" --ui-smoke
+          codesign --verify --deep --strict "dist/Limitless One-Hand.app" && echo "signature ok"
+      - name: Disk image (macOS)
+        if: runner.os == 'macOS'
+        run: |
           mkdir dmg
           cp -R "dist/Limitless One-Hand.app" dmg/
+          cp "assets/How to open One-Hand.txt" dmg/
           ln -s /Applications dmg/Applications
           hdiutil create -volname "Limitless One-Hand" -srcfolder dmg -ov -format UDZO "dist/${{ matrix.artifact }}.dmg"
 
       - name: Smoke test and installer (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 5
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\LimitlessOneHand.exe -ArgumentList "--self-test" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "self-test failed with exit code $($p.ExitCode)" }
+          foreach ($arg in "--self-test", "--ui-smoke") {
+            $p = Start-Process -FilePath dist\LimitlessOneHand.exe -ArgumentList $arg -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "$arg failed with exit code $($p.ExitCode)" }
+          }
           $ref = "${{ github.ref_name }}"
-          $env:APP_VERSION = if ($ref -like "one-hand-v*") { $ref.Substring(10) } else { "0.1.0" }
+          $env:APP_VERSION = if ("${{ inputs.release }}") { "${{ inputs.release }}" } elseif ($ref -like "one-hand-v*") { $ref.Substring(10) } else { (Select-String -Path onehand/__init__.py -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
           if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
 
@@ -70,10 +85,67 @@ jobs:
             apps/one-hand/dist/${{ matrix.artifact }}.dmg
             apps/one-hand/dist/${{ matrix.artifact }}.exe
           if-no-files-found: error
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/one-hand-v')
+
+  # One job publishes after every build passed, so the builds never race.
+  # On main it releases the version in onehand/__init__.py once (skipped if
+  # that release exists); a one-hand-v* tag or a manual run with a version
+  # also publishes.
+  release:
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/one-hand-v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.release != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          version="${{ inputs.release }}"
+          if [ -z "$version" ]; then
+            version=$(sed -n 's/^__version__ = "\([^"]*\)".*/\1/p' apps/one-hand/onehand/__init__.py)
+          fi
+          case "$GITHUB_REF" in refs/tags/one-hand-v*) version="${GITHUB_REF#refs/tags/one-hand-v}";; esac
+          tag="one-hand-v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF" != "refs/tags/$tag" ] && gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "One-Hand $version is already released"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - if: steps.version.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Limitless One-Hand ${{ steps.version.outputs.version }}
+          fail_on_unmatched_files: true
+          make_latest: "false"   # the repo's Latest release is the whole-suite download
           files: |
-            apps/one-hand/dist/${{ matrix.artifact }}.dmg
-            apps/one-hand/dist/${{ matrix.artifact }}.exe
+            out/*.dmg
+            out/*.exe
+          body: |
+            Run Logic Pro and Pro Tools with one hand. Switch one-hand mode on and the keys under your hand become the DAW commands you use most.
+
+            | Computer | Download |
+            | --- | --- |
+            | Mac with Apple Silicon (M1 or later) | `Limitless-One-Hand-mac-apple-silicon.dmg` |
+            | Mac with Intel | `Limitless-One-Hand-mac-intel.dmg` |
+            | Windows 10 or 11 | `Limitless-One-Hand-windows.exe` (installer) |
+
+            **Mac, first launch:** open the .dmg, drag Limitless One-Hand to Applications and open it. If macOS says it can't check the app, go to System Settings › Privacy & Security and click **Open Anyway**. This happens once. A welcome page then walks you through the two keyboard permissions.
+
+            **Windows, first launch:** if SmartScreen appears, choose More info › Run anyway.
+
+            The [guide](https://github.com/${{ github.repository }}/tree/main/apps/one-hand#readme) covers every option.

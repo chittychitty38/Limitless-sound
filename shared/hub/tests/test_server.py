@@ -224,3 +224,44 @@ def test_cli_do_against_running_hub(hub, capsys):
     assert "did in" in capsys.readouterr().out
     assert cli.main(["do", "voice.do", "solo", "track"]) == 1  # voice not open, not installed here
     zoom.stop()
+
+
+def test_cli_autostart(tmp_path, monkeypatch, capsys):
+    from limitless_hub import cli, launcher
+    monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))
+    calls = []
+    monkeypatch.setattr(launcher, "set_autostart", calls.append)
+    assert cli.main(["autostart", "on"]) == 0
+    assert calls == [True]
+    assert json.loads(paths.settings_file().read_text())["autostart"] is True
+    assert cli.main(["autostart", "off"]) == 0 and calls == [True, False]
+
+
+def test_two_copies_of_one_app_do_not_fight(hub):
+    first, _ = tool("zoom")
+    second, _ = tool("zoom")
+    flips = []
+    deadline = time.time() + 1.0
+    while time.time() < deadline:
+        flips.append(hub.bus.tools.get("zoom"))
+        time.sleep(0.01)
+    assert second.connected and not first.connected
+    assert len({id(c) for c in flips}) == 1, "the two copies kept kicking each other off"
+    first.stop()
+    second.stop()
+
+
+def test_answers_are_never_dropped_behind_a_burst_of_events():
+    from limitless_hub.server import Outbox
+    box = Outbox()
+    for i in range(3000):
+        box.put(f"event {i}", True)
+        if i % 150 == 0:
+            box.put(f"result {i}", False)
+    lines = []
+    box.close()
+    while (line := box.get()) is not None:
+        lines.append(line)
+    assert len([x for x in lines if x.startswith("result")]) == 20
+    assert len([x for x in lines if x.startswith("event")]) == Outbox.MAX_EVENTS
+    assert lines[-1] == "event 2999"

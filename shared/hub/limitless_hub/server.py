@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import os
-import queue
+from collections import deque
 import secrets
 import socket
 import socketserver
@@ -49,6 +49,51 @@ class _HTTPServer(ThreadingHTTPServer):
     allow_reuse_address = not os.name == "nt"
 
 
+class Outbox:
+    """What the hub has to send one app. Sending never blocks the suite: when an app
+    falls behind, its oldest events are dropped, but never an answer, a request or settings."""
+
+    MAX_EVENTS = 1000
+    MAX_OTHER = 5000  # past this the app has stopped reading altogether
+
+    def __init__(self):
+        self._items: deque = deque()
+        self._events = 0
+        self._cond = threading.Condition()
+        self._closed = False
+
+    def put(self, line: str, is_event: bool) -> None:
+        with self._cond:
+            if self._closed:
+                return
+            if is_event and self._events >= self.MAX_EVENTS:
+                for i, (_, ev) in enumerate(self._items):
+                    if ev:
+                        del self._items[i]
+                        self._events -= 1
+                        break
+            elif not is_event and len(self._items) - self._events >= self.MAX_OTHER:
+                return
+            self._items.append((line, is_event))
+            self._events += is_event
+            self._cond.notify()
+
+    def get(self):
+        with self._cond:
+            while not self._items and not self._closed:
+                self._cond.wait()
+            if not self._items:
+                return None
+            line, ev = self._items.popleft()
+            self._events -= ev
+            return line
+
+    def close(self) -> None:
+        with self._cond:
+            self._closed = True  # what's already queued (a last error) still goes out
+            self._cond.notify_all()
+
+
 class Hub:
     def __init__(self, settings: dict | None = None, *, token: str | None = None, port: int = paths.DEFAULT_PORT,
                  http_port: int = paths.DEFAULT_HTTP_PORT, speaker=None, launcher=None, write_link: bool = True,
@@ -67,6 +112,7 @@ class Hub:
         self.port = self.tcp.server_address[1]
         self.http_port = self.http.server_address[1]
         self._stop = threading.Event()
+        self.quit = threading.Event()  # set by the page's Quit button
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -131,15 +177,12 @@ class Hub:
 
         class Handler(socketserver.StreamRequestHandler):
             def handle(self):
-                out: queue.Queue = queue.Queue(maxsize=1000)
+                out = Outbox()
                 sock = self.request
                 socks.add(sock)
 
                 def send(msg: dict) -> None:
-                    try:
-                        out.put_nowait(json.dumps(msg, separators=(",", ":")) + "\n")
-                    except queue.Full:
-                        pass  # a stuck tool must never block the whole suite
+                    out.put(json.dumps(msg, separators=(",", ":")) + "\n", msg.get("op") == "event")
 
                 def writer():
                     while True:
@@ -177,7 +220,7 @@ class Hub:
                 finally:
                     socks.discard(sock)
                     bus.detach(conn)
-                    out.put(None)
+                    out.close()
 
         return Handler
 
@@ -222,6 +265,8 @@ class Hub:
                 query = parse_qs(url.query)
                 if not self._host_ok():
                     return self._text("Wrong host.", 403)
+                if url.path == "/favicon.ico":
+                    return self._send(204, b"", "image/x-icon")
                 authed = secrets.compare_digest(self._token(query), hub.token)
                 if url.path in ("/", "/index.html"):
                     if not authed:
@@ -280,6 +325,9 @@ class Hub:
                             hub._save(hub.settings)
                     except OSError as e:
                         return self._json({"ok": False, "message": str(e)}, 500)
+                    return self._json({"ok": True})
+                if p == "/api/quit":
+                    hub.quit.set()
                     return self._json({"ok": True})
                 if p == "/api/open":
                     tool = str(body.get("tool") or "")

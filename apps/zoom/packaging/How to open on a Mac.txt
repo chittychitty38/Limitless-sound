@@ -1,0 +1,27 @@
+LIMITLESS ZOOM: HOW TO OPEN IT
+
+1. Drag "Limitless Zoom" onto the Applications folder in this window.
+
+2. Open Applications and double-click Limitless Zoom.
+   This early version isn't signed by Apple yet, so macOS may say it
+   "cannot be opened" or "can't check it for malicious software".
+   If it does:
+     - Click Done (or OK).
+     - Open System Settings > Privacy & Security.
+     - Scroll down and click "Open Anyway" next to Limitless Zoom.
+     - Click Open Anyway again and enter your Mac password.
+   You only have to do this once.
+
+3. The setup window walks you through the rest. Click each "Allow…" button:
+     - Accessibility: lets it press zoom keys in Logic and Pro Tools.
+     - Input Monitoring: lets your zoom key work everywhere.
+     - Microphone: for voice. Audio stays on your Mac.
+   Each line turns into a green tick as soon as it's allowed.
+
+4. Try it: open Logic Pro or Pro Tools, then
+     - say "zoom in", "zoom out", "taller", "fit", or
+     - tap Right Option, then press E (in), Q (out), S (taller), W (shorter), A (fit),
+     - or rest your pointer on the big buttons in the floating panel.
+
+The magnifier icon in the menu bar has everything else: voice on/off,
+microphone, your keys, Open at login, and Setup.

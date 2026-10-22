@@ -25,7 +25,6 @@ from limitless_link import Link  # noqa: E402
 
 # Known hub bugs, fixed on the hub's own pull request. strict=True: once the fix lands these
 # pass, the run turns red, and the marker must come off so they guard against regressions.
-KNOWN_BUG = pytest.mark.xfail(strict=True, reason="known hub bug, being fixed in PR #7")
 
 TOOLS = ["voice", "onehand", "zoom", "color", "control", "gaze"]
 ACTIONS = [{"id": f"a{i}", "label": f"Action {i}"} for i in range(6)]
@@ -193,7 +192,6 @@ def test_a_hung_app_does_not_hold_up_the_others(hub):
     b.stop()
 
 
-@KNOWN_BUG
 def test_answers_are_never_dropped_behind_a_burst_of_events(hub):
     """A slow app (an older Intel Mac, a busy Qt window) gets a burst of events, then asks for something.
 
@@ -227,7 +225,6 @@ def test_answers_are_never_dropped_behind_a_burst_of_events(hub):
     assert wait_for(lambda: len(answered) == 20, 30), f"only {len(answered)} of 20 answers arrived"
 
 
-@KNOWN_BUG
 def test_a_closed_app_launching_from_its_command_line_does_not_freeze_the_suite(tmp_path, monkeypatch):
     """Zoom is closed, so the hub runs it from its command line. That must not stall everyone else."""
     monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))
@@ -299,7 +296,6 @@ def test_garbage_on_the_wire_never_takes_the_hub_down(hub):
     assert good.connected
 
 
-@KNOWN_BUG
 def test_a_bad_depth_cannot_switch_off_the_loop_guard(hub):
     """A negative depth on a message must not let a chain of links run past the 4-step limit."""
     hits = {"voice": 0, "zoom": 0}
@@ -347,7 +343,6 @@ def test_link_loops_switch_themselves_off(hub):
     z.stop()
 
 
-@KNOWN_BUG
 def test_two_copies_of_one_app_do_not_fight(hub):
     """A musician double-clicks an app and two copies open. The suite settles on one, it doesn't flap."""
     first = connect("zoom")

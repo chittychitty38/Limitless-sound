@@ -4,8 +4,9 @@
 class SimBackend:
     platform = "mac"
 
-    def __init__(self, front_app=None, error=None):
+    def __init__(self, front_app=None, error=None, permissions=None):
         self.engine = None
+        self._perms = permissions or {}
         self._front = front_app
         self._fail = error
         self.error = None
@@ -30,7 +31,32 @@ class SimBackend:
     def permission_help(self):
         return "This computer is not supported yet. The window works, but keys are not changed."
 
-    def open_permission_settings(self):
+    def open_permission_settings(self, which=None):
+        pass
+
+    def permission_status(self):
+        return dict(self._perms)
+
+    @property
+    def running(self):
+        return self.engine is not None and not self._fail
+
+    def relaunch(self):
+        pass
+
+    def own_app_id(self):
+        return "limitless.sim"
+
+    def login_item_supported(self):
+        return False
+
+    def set_login_item(self, on):
+        pass
+
+    def float_window(self, widget):
+        pass
+
+    def announce(self, text):
         pass
 
 

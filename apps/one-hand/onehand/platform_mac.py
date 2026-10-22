@@ -1,10 +1,13 @@
 """macOS backend: a Quartz event tap, using pyobjc."""
+import plistlib
 import subprocess
+import sys
 import threading
 import time
+from pathlib import Path
 
 import Quartz
-from AppKit import NSWorkspace
+from AppKit import NSRunningApplication, NSWorkspace
 
 from .engine import PASS, SUPPRESS, Tap
 from .keys import MAC_CODES
@@ -42,13 +45,17 @@ class MacBackend:
         self._thread = None
         self._source = Quartz.CGEventSourceCreate(Quartz.kCGEventSourceStatePrivate)
         self._app = (0.0, None)
+        self._asked = False
+        self._stopping = None
         self.error = None
 
     # ---- lifecycle ----------------------------------------------------
 
     def start(self, engine):
         self.engine = engine
-        self.request_permission()
+        if not self._asked:
+            self._asked = True
+            self.request_permission()
         ready = threading.Event()
         self._thread = threading.Thread(target=self._run, args=(ready,), daemon=True)
         self._thread.start()
@@ -60,28 +67,49 @@ class MacBackend:
         mask = (Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown)
                 | Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp)
                 | Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged))
-        self._tap = Quartz.CGEventTapCreate(Quartz.kCGSessionEventTap, Quartz.kCGHeadInsertEventTap,
-                                            Quartz.kCGEventTapOptionDefault, mask, self._callback, None)
-        if not self._tap:
+        tap = Quartz.CGEventTapCreate(Quartz.kCGSessionEventTap, Quartz.kCGHeadInsertEventTap,
+                                      Quartz.kCGEventTapOptionDefault, mask, self._callback, None)
+        if not tap:
             self.error = "macOS has not given Limitless One-Hand permission to use the keyboard yet."
             ready.set()
             return
-        source = Quartz.CFMachPortCreateRunLoopSource(None, self._tap, 0)
-        self._loop = Quartz.CFRunLoopGetCurrent()
-        Quartz.CFRunLoopAddSource(self._loop, source, Quartz.kCFRunLoopCommonModes)
-        Quartz.CGEventTapEnable(self._tap, True)
+        source = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
+        loop = Quartz.CFRunLoopGetCurrent()
+        Quartz.CFRunLoopAddSource(loop, source, Quartz.kCFRunLoopCommonModes)
+        Quartz.CGEventTapEnable(tap, True)
+        self._tap, self._loop = tap, loop
+        stopping = self._stopping = threading.Event()
         ready.set()
-        Quartz.CFRunLoopRun()
+        while not stopping.is_set():   # wakes at least twice a second to notice stop()
+            Quartz.CFRunLoopRunInMode(Quartz.kCFRunLoopDefaultMode, 0.5, False)
+        # Tear down on this thread, after the run loop has stopped, so no
+        # callback can be running while the tap goes away.
+        Quartz.CGEventTapEnable(tap, False)
+        Quartz.CFRunLoopRemoveSource(loop, source, Quartz.kCFRunLoopCommonModes)
+        Quartz.CFMachPortInvalidate(tap)
 
     def stop(self):
-        if self._loop:
-            Quartz.CFRunLoopStop(self._loop)
+        loop, thread = self._loop, self._thread
+        self._tap = self._loop = None
+        if self._stopping is not None:
+            self._stopping.set()
+        if loop is not None:
+            Quartz.CFRunLoopStop(loop)
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(2)
+        self._thread = None
+
+    @property
+    def running(self):
+        return self._tap is not None
 
     # ---- the tap ------------------------------------------------------
 
     def _callback(self, proxy, etype, event, refcon):
         if etype in (Quartz.kCGEventTapDisabledByTimeout, Quartz.kCGEventTapDisabledByUserInput):
-            Quartz.CGEventTapEnable(self._tap, True)
+            tap = self._tap
+            if tap is not None:
+                Quartz.CGEventTapEnable(tap, True)
             return event
         if Quartz.CGEventGetIntegerValueField(event, Quartz.kCGEventSourceUserData) == MAGIC:
             return event
@@ -125,6 +153,11 @@ class MacBackend:
             Quartz.CGEventSetIntegerValueField(ev, Quartz.kCGEventSourceUserData, MAGIC)
             Quartz.CGEventPost(Quartz.kCGHIDEventTap, ev)
 
+    def inject(self, key, up):
+        """Type a key as if from another program (the tap will see it). Used by --self-test."""
+        ev = Quartz.CGEventCreateKeyboardEvent(None, MAC_CODES[key], not up)
+        Quartz.CGEventPost(Quartz.kCGHIDEventTap, ev)
+
     # ---- which app is in front ---------------------------------------
 
     def front_app(self):
@@ -147,12 +180,90 @@ class MacBackend:
         if hasattr(Quartz, "CGRequestListenEventAccess"):
             Quartz.CGRequestListenEventAccess()
 
+    def permission_status(self):
+        """{"Accessibility": bool, "Input Monitoring": bool} as macOS reports them now."""
+        try:
+            from ApplicationServices import AXIsProcessTrusted
+            ax = bool(AXIsProcessTrusted())
+        except Exception:
+            ax = self.running
+        listen = bool(Quartz.CGPreflightListenEventAccess()) if hasattr(Quartz, "CGPreflightListenEventAccess") else ax
+        return {"Accessibility": ax, "Input Monitoring": listen}
+
     def permission_help(self):
         return ("Open System Settings → Privacy & Security, then turn on Limitless One-Hand under "
-                "both Accessibility and Input Monitoring. Then press Try again.")
+                "both Accessibility and Input Monitoring.")
 
-    def open_permission_settings(self):
-        subprocess.Popen(["open", ACCESSIBILITY_URL])
+    def open_permission_settings(self, which="Accessibility"):
+        url = INPUT_MONITORING_URL if which == "Input Monitoring" else ACCESSIBILITY_URL
+        subprocess.Popen(["open", url])
+
+    def relaunch(self):
+        """Start a fresh copy of the app (macOS applies some permissions only to new processes)."""
+        bundle = self.bundle_path()
+        if bundle:
+            subprocess.Popen(["/bin/sh", "-c", f'sleep 1; open -n "{bundle}"'])
+        else:
+            subprocess.Popen([sys.executable, *sys.argv])
+
+    # ---- about this app -----------------------------------------------
+
+    @staticmethod
+    def bundle_path():
+        if getattr(sys, "frozen", False):
+            p = Path(sys.executable).resolve()
+            for parent in p.parents:
+                if parent.suffix == ".app":
+                    return str(parent)
+        return None
+
+    def own_app_id(self):
+        return NSRunningApplication.currentApplication().bundleIdentifier()
+
+    LOGIN_PLIST = Path.home() / "Library" / "LaunchAgents" / "org.limitlesssound.onehand.plist"
+
+    def login_item_supported(self):
+        return self.bundle_path() is not None
+
+    def set_login_item(self, on):
+        if not on:
+            self.LOGIN_PLIST.unlink(missing_ok=True)
+            return
+        self.LOGIN_PLIST.parent.mkdir(parents=True, exist_ok=True)
+        self.LOGIN_PLIST.write_bytes(plistlib.dumps({
+            "Label": "org.limitlesssound.onehand",
+            "ProgramArguments": ["/usr/bin/open", "-a", self.bundle_path(), "--args", "--hidden"],
+            "RunAtLoad": True,
+        }))
+
+    def float_window(self, widget):
+        """Keep a small window above full-screen apps on every Space."""
+        try:
+            import objc
+            from AppKit import (NSStatusWindowLevel, NSWindowCollectionBehaviorCanJoinAllSpaces,
+                                NSWindowCollectionBehaviorFullScreenAuxiliary,
+                                NSWindowCollectionBehaviorStationary)
+            view = objc.objc_object(c_void_p=int(widget.winId()))
+            win = view.window()
+            win.setLevel_(NSStatusWindowLevel)
+            win.setCollectionBehavior_(NSWindowCollectionBehaviorCanJoinAllSpaces
+                                       | NSWindowCollectionBehaviorFullScreenAuxiliary
+                                       | NSWindowCollectionBehaviorStationary)
+            win.setIgnoresMouseEvents_(True)
+            win.setHidesOnDeactivate_(False)
+        except Exception:
+            pass
+
+    def announce(self, text):
+        """Have VoiceOver read text out, if it is running."""
+        try:
+            from AppKit import (NSAccessibilityAnnouncementKey, NSAccessibilityAnnouncementRequestedNotification,
+                                NSAccessibilityPostNotificationWithUserInfo, NSAccessibilityPriorityKey, NSApp)
+            NSAccessibilityPostNotificationWithUserInfo(
+                NSApp, NSAccessibilityAnnouncementRequestedNotification,
+                {NSAccessibilityAnnouncementKey: text, NSAccessibilityPriorityKey: 90})
+        except Exception:
+            pass
 
     # ---- feedback -----------------------------------------------------
 

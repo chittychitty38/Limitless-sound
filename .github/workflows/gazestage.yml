@@ -1,0 +1,114 @@
+name: GazeStage
+
+on:
+  push:
+    branches: [main]
+    tags: ["gazestage-v*"]
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
+  pull_request:
+    paths: ["apps/gazestage/**", ".github/workflows/gazestage.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/gazestage
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+      - run: npm ci
+      - run: xvfb-run -a npm test
+
+  package:
+    name: package (${{ matrix.artifact }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, script: dist:mac-arm64, artifact: GazeStage-mac-apple-silicon, files: "dist/*.dmg" }
+          - { os: macos-15-intel, script: dist:mac-x64, artifact: GazeStage-mac-intel, files: "dist/*.dmg" }
+          - { os: windows-latest, script: dist:win, artifact: GazeStage-windows, files: "dist/*.exe" }
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder skips signing on pull requests by default, which leaves the Mac app
+      # with a broken signature. Ours is an ad-hoc signature with no secrets, so it is safe here.
+      CSC_FOR_PULL_REQUEST: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+      # Ad-hoc signed until the project has an Apple Developer ID; check the signature holds.
+      - if: runner.os == 'macOS'
+        run: codesign --verify --deep --strict --verbose=2 dist/mac*/GazeStage.app
+      - run: npm run test:packaged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: apps/gazestage/${{ matrix.files }}
+          if-no-files-found: error
+
+  # Publishes the installers once per version. A merge to main that brings a new version in
+  # package.json releases it as gazestage-v<version>; later merges at the same version skip.
+  # Pushing a gazestage-v* tag by hand still works too.
+  release:
+    needs: package
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/gazestage-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="gazestage-v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF" != "refs/tags/$tag" ] && gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GazeStage $version is already released"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: apps/gazestage/release
+          merge-multiple: true
+      - if: steps.version.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: GazeStage ${{ steps.version.outputs.version }}
+          # The repo's Latest release stays the whole-suite download.
+          make_latest: "false"
+          files: apps/gazestage/release/*
+          body: |
+            Play music and run Pro Tools with your head, your eyes, a short sound or a switch.
+
+            | Computer | Download |
+            | --- | --- |
+            | Mac with Apple Silicon (M1 or later) | `GazeStage-${{ steps.version.outputs.version }}-mac-arm64.dmg` |
+            | Mac with Intel | `GazeStage-${{ steps.version.outputs.version }}-mac-x64.dmg` |
+            | Windows PC | `GazeStage-${{ steps.version.outputs.version }}-win-x64.exe` |
+
+            **Mac, first launch:** open the .dmg, drag GazeStage to Applications and open it. If macOS says it can't check the developer, go to System Settings › Privacy & Security and click **Open Anyway**. This happens once.
+
+            The [setup guide](https://github.com/${{ github.repository }}/tree/main/apps/gazestage#readme) covers connecting Pro Tools.

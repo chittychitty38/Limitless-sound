@@ -22,3 +22,5 @@ apps/color/app/src-tauri/gen
 # OS
 .DS_Store
 Thumbs.db
+shared/clients/rust/target/
+shared/clients/rust/Cargo.lock

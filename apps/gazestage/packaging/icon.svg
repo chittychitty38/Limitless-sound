@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26324a"/><stop offset="1" stop-color="#0d1118"/>
+    </linearGradient>
+    <radialGradient id="iris" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#ffe08a"/><stop offset="0.6" stop-color="#ffc233"/><stop offset="1" stop-color="#e08a00"/>
+    </radialGradient>
+  </defs>
+  <!-- macOS icon grid: 824px body inside the 1024px canvas -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="4"/>
+  <!-- eye -->
+  <path d="M232 520 C322 372 414 312 512 312 C610 312 702 372 792 520 C702 668 610 728 512 728 C414 728 322 668 232 520 Z" fill="#f3f4f6"/>
+  <circle cx="512" cy="520" r="150" fill="url(#iris)"/>
+  <circle cx="512" cy="520" r="62" fill="#10141c"/>
+  <circle cx="478" cy="484" r="22" fill="#ffffff" opacity=".9"/>
+  <!-- sound waves -->
+  <path d="M830 410 Q880 520 830 630" fill="none" stroke="#6ea8ff" stroke-width="26" stroke-linecap="round"/>
+  <path d="M194 410 Q144 520 194 630" fill="none" stroke="#6ea8ff" stroke-width="26" stroke-linecap="round"/>
+</svg>
