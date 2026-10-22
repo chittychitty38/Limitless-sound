@@ -77,15 +77,22 @@ const SUITE_ACTIONS = [
   { id: 'panic', label: 'All notes off' },
 ];
 const TRANSPORT = new Set(['play', 'stop', 'record']);
-const suite = { link: null, ids: 1, waiting: new Map() };
+const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [], tracking: '' };
 
+// Actions from other apps are done by the page. While it loads (or reloads) they wait here
+// instead of getting lost; one that still waits after 2.5 s says so, and is never done late.
 function askPage(action, args, source) {
   if (!win) return [false, 'GazeStage has no window open.'];
   return new Promise((resolve) => {
-    const id = suite.ids++;
-    const timer = setTimeout(() => { suite.waiting.delete(id); resolve([false, 'GazeStage didn’t answer.']); }, 2500);
+    const id = suite.ids++, req = { id, action, args, source };
+    const timer = setTimeout(() => {
+      suite.waiting.delete(id);
+      const queued = suite.queue.indexOf(req);
+      if (queued >= 0) suite.queue.splice(queued, 1);
+      resolve([false, queued >= 0 ? 'GazeStage is still starting. Try again in a moment.' : 'GazeStage didn’t answer.']);
+    }, 2500);
     suite.waiting.set(id, (r) => { clearTimeout(timer); resolve([!!r?.ok, String(r?.message || '')]); });
-    win.webContents.send('suite:invoke', { id, action, args, source });
+    if (suite.ready) win.webContents.send('suite:invoke', req); else suite.queue.push(req);
   });
 }
 
@@ -99,18 +106,32 @@ function startSuite() {
     },
   });
   suite.link.on('connected', (on) => win?.webContents.send('suite:connected', on));
+  // The musician's shared settings: the page applies text size, contrast and motion.
+  suite.link.on('prefs', (prefs) => win?.webContents.send('suite:prefs', prefs));
   suite.link.start();
+  // Which face tracking runs here (media:tracking), told again after every reconnect.
+  suite.link.on('connected', (on) => { if (on && suite.tracking) suite.link.state('faceTracking', suite.tracking); });
 }
 
 ipcMain.on('suite:result', (_e, id, result) => {
   const done = suite.waiting.get(id);
   if (done) { suite.waiting.delete(id); done(result); }
 });
+// The page now listens for actions (preload.js). The first time, join Limitless Sound, so other
+// apps only see GazeStage once it can answer; after a reload, pass on what waited meanwhile.
+ipcMain.on('suite:ready', (e) => {
+  if (e.sender !== win?.webContents) return;
+  suite.ready = true;
+  if (!suite.link) startSuite();
+  for (const req of suite.queue.splice(0)) win.webContents.send('suite:invoke', req);
+});
 ipcMain.on('suite:did', (_e, action) => { if (TRANSPORT.has(action)) suite.link?.did(action); });
 ipcMain.handle('suite:invoke', (_e, action, args) => suite.link
   ? suite.link.invoke(String(action), args && typeof args === 'object' ? args : {})
   : { ok: false, message: 'Limitless Sound isn’t running.' });
-ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected }));
+ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected, prefs: suite.link?.connected ? suite.link.prefs : null }));
+// What the page is now showing, so the settings page (and the Access Standard test) can see it.
+ipcMain.on('suite:applied', (_e, applied) => { if (applied && typeof applied === 'object') suite.link?.state('prefs.applied', applied); });
 
 // ---------- permissions ----------
 ipcMain.handle('media:status', () => {
@@ -123,6 +144,13 @@ ipcMain.handle('media:ask', async (_e, kind) => {
 });
 ipcMain.on('media:open-settings', (_e, kind) => {
   if (isMac) shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?Privacy_${kind === 'microphone' ? 'Microphone' : 'Camera'}`);
+});
+// Which face tracking this computer runs, and why (tracker.js): in the log, and for other apps
+// as the state gaze.faceTracking, e.g. "CPU, software graphics (…)".
+ipcMain.on('media:tracking', (_e, text) => {
+  suite.tracking = String(text).slice(0, 200);
+  console.log(`GazeStage face tracking: ${suite.tracking}`);
+  suite.link?.state('faceTracking', suite.tracking);
 });
 ipcMain.on('window:on-top', (_e, on) => { win?.setAlwaysOnTop(!!on, 'floating'); buildMenu(); });
 ipcMain.on('open-external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
@@ -155,6 +183,7 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   win.on('close', saveBounds);
   win.on('closed', () => { win = null; });
+  win.webContents.on('did-start-loading', () => { suite.ready = false; });   // until the page listens again
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('app://')) e.preventDefault(); });
   win.loadURL('app://gazestage/index.html');
@@ -221,8 +250,7 @@ app.whenReady().then(() => {
     copyright: 'Limitless Sound', credits: 'Eye, head and sound control for music.',
   });
   openVirtualPorts();
-  createWindow();
-  startSuite();
+  createWindow();   // joins Limitless Sound once the page is ready (suite:ready)
   buildMenu();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });

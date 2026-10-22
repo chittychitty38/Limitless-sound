@@ -131,6 +131,18 @@ class ForOtherApps(unittest.TestCase):
         self.assertTrue(ok)
         self.assertFalse(s.invoke("do", {"phrase": "make me a sandwich"}, "x")[0])
 
+    def test_a_refusal_always_says_why(self):
+        # Limitless Access Standard C4: a refusal says why, in words a person can hear.
+        s, e, p = make("Finder")
+        for args in ({}, {"phrase": ""}, {"phrase": "   "}):
+            ok, msg = s.invoke("do", args, "x")
+            self.assertFalse(ok)
+            self.assertIn("Which command", msg)
+        ok, msg = s.invoke("play", {}, "gaze")         # no DAW in front
+        self.assertFalse(ok)
+        self.assertEqual(msg, "Play works when Logic Pro or Pro Tools is in front.")
+        self.assertEqual(pressed(p), [])
+
     def test_commands_that_need_a_yes_are_refused(self):
         s, e, p = make()
         ok, _ = s.invoke("do", {"phrase": "quit the app"}, "streamdeck")
