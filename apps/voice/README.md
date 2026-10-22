@@ -158,6 +158,7 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 | `app.py` | The window, menu bar icon, settings, permission checks |
 | `onboarding.py` | The first-launch setup guide |
 | `hud.py` | The floating card showing what was heard, and the state icons |
+| `look.py` | Text size, high contrast and reduced motion for every window, from Voice's settings and the suite's |
 | `audio.py` | Microphone (any device, any rate, survives unplugging) and recognition. Each utterance goes to two recognizers: one limited to command phrases (accurate on poor mics) and one open (for dictation and free text) |
 | `engine.py` | Sleep/wake, dictation, confirm, repeat, picks the command for the app in front |
 | `grammar.py` | Loads command files, matches phrases, builds the recognizer's phrase list |
@@ -193,6 +194,12 @@ When the Limitless Sound hub is running, Limitless Voice joins the suite by itse
   record, undo, save, mute and more, and anything can run a spoken command (`voice.do`).
 - **One voice.** With that setting on, Voice's spoken replies go through the suite's one
   voice, and Voice stops listening while any app is being spoken for.
+- **Set them once.** The suite's text size, high contrast and reduced motion settings change
+  every Voice window, the setup guide and the floating card straight away. Where Voice has a
+  setting of its own too, the more accessible one wins: the larger text, and high contrast if
+  either is on. Reduced motion makes the floating card disappear at once instead of fading,
+  and menus and lists open without animating. Voice tells the suite what it's using
+  (`voice.prefs.applied`).
 
 Without the hub nothing changes. The link is `limitless_voice/suite.py`, using a copy of
 `shared/clients/python/limitless_link.py`.

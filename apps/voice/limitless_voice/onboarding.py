@@ -14,13 +14,13 @@ keyboard and with a screen reader, and every page is read out.
 """
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton,
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from .audio import list_input_devices
+from .look import grow, sized
 from .settings import APP_NAME
 
 STARTER_COMMANDS = [
@@ -36,11 +36,7 @@ STARTER_COMMANDS = [
 
 
 def _title(text):
-    lbl = QLabel(text)
-    f = QFont()
-    f.setPointSizeF(f.pointSizeF() * 1.8)
-    f.setBold(True)
-    lbl.setFont(f)
+    lbl = sized(QLabel(text), 1.8, bold=True)
     lbl.setWordWrap(True)
     return lbl
 
@@ -50,19 +46,12 @@ def _body(text):
     lbl.setWordWrap(True)
     lbl.setTextFormat(Qt.RichText)
     lbl.setTextInteractionFlags(Qt.TextSelectableByKeyboard | Qt.TextSelectableByMouse)
-    f = QFont()
-    f.setPointSizeF(f.pointSizeF() * 1.15)
-    lbl.setFont(f)
-    return lbl
+    return sized(lbl, 1.15)
 
 
 def _status(text=""):
-    lbl = QLabel(text)
+    lbl = sized(QLabel(text), 1.15, bold=True)
     lbl.setWordWrap(True)
-    f = QFont()
-    f.setPointSizeF(f.pointSizeF() * 1.15)
-    f.setBold(True)
-    lbl.setFont(f)
     return lbl
 
 
@@ -97,6 +86,7 @@ class SetupWizard(QDialog):
         self.setWindowTitle(f"Set up {APP_NAME}")
         self.setModal(True)
         self.setMinimumSize(620, 520)
+        grow(self, window.look["textScale"])   # room for larger text
 
         self.stack = QStackedWidget()
         self.back_btn = QPushButton("Back")
@@ -429,9 +419,7 @@ class ReadyPage(Page):
         for say, what in STARTER_COMMANDS:
             row = QLabel(f"<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>")
             row.setTextFormat(Qt.RichText)
-            f = QFont()
-            f.setPointSizeF(f.pointSizeF() * 1.15)
-            row.setFont(f)
-            grid.addWidget(row)
+            row.setWordWrap(True)
+            grid.addWidget(sized(row, 1.15))
         self.box.addLayout(grid)
         self.box.addStretch(1)
