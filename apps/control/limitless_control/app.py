@@ -134,7 +134,9 @@ class App:
         self.restart = False
         self.menu = None
         self.engine.on_fire = self._fired
-        from .suite import Suite
+        from .suite import OWN_LOOK, Suite
+        # Text size, high contrast and reduced motion for the settings page; the suite can change them.
+        self.look = dict(OWN_LOOK)
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
 
@@ -210,6 +212,7 @@ class App:
                 "setupDone": bool(self.config.get("setupDone")),
                 "startAtLogin": login.is_enabled(),
                 "menuBar": self.menu is not None,
+                "look": dict(self.look),
                 "log": list(self.output.log.lines)[-12:],
             }
 

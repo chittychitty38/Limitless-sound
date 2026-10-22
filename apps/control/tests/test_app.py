@@ -1,4 +1,6 @@
+import json
 import sys
+import urllib.request
 
 import pytest
 
@@ -62,3 +64,41 @@ def test_default_timing_is_the_steady_preset():
     steady = profiles.TIMING_PRESETS["steady"]
     assert config["timing"] == steady["timing"]
     assert config["analogThreshold"] == steady["analogThreshold"]
+
+
+def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
+    from limitless_control import app as app_module
+    monkeypatch.setattr(app_module, "PORT", 0)
+    sent = []
+    link = app.suite.link
+    monkeypatch.setattr(link, "_send", lambda msg: sent.append(msg) or True)
+    server = app._serve()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+
+    def served_look():
+        req = urllib.request.Request(base + "/api/state", headers={"X-Token": app.token})
+        return json.loads(urllib.request.urlopen(req, timeout=5).read())["look"]
+
+    def applied():
+        return [m["value"] for m in sent if m.get("op") == "state" and m.get("key") == "prefs.applied"]
+
+    try:
+        # On its own, the page looks as it always did.
+        assert served_look() == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+        prefs = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False, "reduceMotion": False,
+                 "dwellMs": 800, "scanMs": 1200}
+        link._handle({"op": "welcome", "prefs": prefs, "actions": [], "states": {}})
+        assert applied() == [{"textScale": 1.0, "highContrast": False, "reduceMotion": False}]
+
+        link._handle({"op": "prefs", "prefs": {**prefs, "textScale": 1.5, "highContrast": True, "reduceMotion": True}})
+        look = {"textScale": 1.5, "highContrast": True, "reduceMotion": True}
+        assert served_look() == look
+        assert applied()[-1] == look
+
+        page = urllib.request.urlopen(base + "/", timeout=5).read().decode()
+        assert "applyLook(st.look)" in page
+        assert ":root.high-contrast {" in page and ".reduce-motion *" in page
+        assert "font: calc(18px * var(--scale))" in page
+    finally:
+        server.shutdown()
+        server.server_close()
