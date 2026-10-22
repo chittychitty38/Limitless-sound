@@ -81,6 +81,7 @@ void Mixer::process (juce::AudioBuffer<float>& buses, int numMics, const std::ve
     auto* outL = out.getWritePointer (0);
     auto* outR = out.getWritePointer (out.getNumChannels() > 1 ? 1 : 0);
 
+    numMics = std::min (numMics, maxMics);
     bool anySolo = false;
     for (int m = 0; m < numMics; ++m)
         anySolo = anySolo || p.channels[(size_t) m].solo;

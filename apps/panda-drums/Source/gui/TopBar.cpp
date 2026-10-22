@@ -29,7 +29,7 @@ public:
         tuneNow.onClick = [this] { proc.tuneKitToKey(); proc.sendChangeMessage(); sync(); };
         tuneNow.setTooltip ("Retune the kick, snare and toms to the nearest notes of this key, keeping their order");
         autoTune.setToggleState (proc.autoTuneToKey, juce::dontSendNotification);
-        autoTune.onClick = [this] { proc.autoTuneToKey = autoTune.getToggleState(); };
+        autoTune.onClick = [this] { proc.setAutoTuneToKey (autoTune.getToggleState()); };
         addAndMakeVisible (tuneNow);
         addAndMakeVisible (autoTune);
         setSize (560, 430);

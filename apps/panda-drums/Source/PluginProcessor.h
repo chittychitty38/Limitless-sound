@@ -13,7 +13,8 @@
 
 class PandaDrumsProcessor : public juce::AudioProcessor,
                             public juce::ChangeBroadcaster,
-                            private juce::AsyncUpdater
+                            private juce::AsyncUpdater,
+                            private juce::Timer
 {
 public:
     PandaDrumsProcessor();
@@ -54,7 +55,7 @@ public:
     void loadFactoryKit();
     void loadKitFolder (const juce::File&);
     void reloadKit();
-    bool isLoading() const { return pendingLoads.load() > 0; }
+    bool isLoading() const { return pendingLoads->load() > 0; }
     juce::String getLoadMessage() const;
     juce::File getKitFolder() const { return kitFolder; }
 
@@ -126,17 +127,25 @@ public:
     int getBlockSize() const { return currentBlock; }
     int getActiveVoices() const { return activeVoices.load(); }
 
-    juce::ValueTree uiState { "UI" };          // window size, page, toggles
+    juce::ValueTree uiState { "UI" };          // window size, page (read freely; write with setUiProperty)
+    void setUiProperty (const juce::Identifier&, const juce::var&);
     bool showHitInfo = true;
     bool comicFx = true;
+    void setShowHitInfo (bool);
+    void setComicFx (bool);
+    void setAutoTuneToKey (bool);
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void handleAsyncUpdate() override;
+    void timerCallback() override;
     void rebuildSnapshot();
+    void markStateDirty();
+    juce::ValueTree buildExtraState() const;
+    void resetForNewKit();
     void setKit (std::shared_ptr<pd::Kit>, const std::map<juce::String, juce::String>& variantNames = {});
     void requestLoad (int piece, int variant);
-    std::shared_ptr<const pd::VariantData> loadNow (const pd::Kit&, int piece, int variant);
+    static std::shared_ptr<const pd::VariantData> loadNow (const pd::Kit&, int piece, int variant, std::shared_ptr<std::atomic<bool>> keepGoing);
     void updateEngineParams();
     std::vector<std::shared_ptr<const pd::VariantData>> selectedData() const;
 
@@ -154,9 +163,14 @@ private:
     std::array<std::array<std::atomic<float>, pd::maxMics>, pd::maxPieces> bleed;
     juce::ValueTree pendingState;
 
-    juce::ThreadPool loaderPool { 2 };
     std::shared_ptr<std::atomic<bool>> alive = std::make_shared<std::atomic<bool>> (true);
-    std::atomic<int> pendingLoads { 0 };
+    std::shared_ptr<std::atomic<int>> pendingLoads = std::make_shared<std::atomic<int>> (0);
+    std::atomic<int> scanRequest { 0 };        // only the newest kit scan is applied
+    bool retunePending = false;                // put the kit in key once the new drum has loaded
+
+    // Saved state, rebuilt on the message thread so hosts can save from any thread.
+    juce::ValueTree cachedState;
+    juce::CriticalSection stateLock;
     juce::String loadMessage;
     mutable juce::CriticalSection messageLock;
 
@@ -167,6 +181,8 @@ private:
     pd::MixParams mixParams;
     juce::AudioBuffer<float> micBuses, mixBuffer, delayBuffer;
     int delayWrite = 0;
+    std::atomic<int> delayLatency { 0 };       // set by the message thread, applied by the audio thread
+    int audioLatency = 0;
     juce::int64 clock = 0;
     double currentSampleRate = 44100.0;
     int currentBlock = 512;
@@ -189,6 +205,9 @@ private:
     struct PiecePtrs { std::atomic<float> *vol, *tune, *decay; };
     std::array<ChannelPtrs, pd::maxMics> chPtr {};
     std::array<PiecePtrs, pd::maxPieces> pcPtr {};
+
+    // Last, so it's destroyed first: its jobs finish while everything they touch still exists.
+    juce::ThreadPool loaderPool { 2 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PandaDrumsProcessor)
 };

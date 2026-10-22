@@ -50,7 +50,7 @@ void PandaDrumsEditor::resized()
 {
     auto s = (float) getWidth() / (float) designW;
     content.setTransform (juce::AffineTransform::scale (s));
-    proc.uiState.setProperty ("width", getWidth(), nullptr);
+    proc.setUiProperty ("width", getWidth());
 }
 
 void PandaDrumsEditor::showPage (int i)
@@ -61,7 +61,7 @@ void PandaDrumsEditor::showPage (int i)
     labPage->setVisible (page == 2);
     mappingPage->setVisible (page == 3);
     topBar->setPage (page);
-    proc.uiState.setProperty ("page", page, nullptr);
+    proc.setUiProperty ("page", page);
     if (page == 1) mixerPage->refresh();
     if (page == 2) labPage->refresh();
     if (page == 3) mappingPage->refresh();

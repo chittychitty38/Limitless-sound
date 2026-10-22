@@ -437,9 +437,9 @@ void PandaStage::hit (const HitEvent& e, double strikeTime)
     s.scheduled = now;
     if (v->type == PieceType::Kick)
         s.hand = -1;
-    else if (v->type == PieceType::HiHat && proc.getSnapshot() != nullptr)
+    else if (auto snap = proc.getSnapshot(); v->type == PieceType::HiHat && snap != nullptr
+                                              && juce::isPositiveAndBelow ((int) e.piece, (int) snap->pieces.size()))
     {
-        auto snap = proc.getSnapshot();
         auto& rt = snap->pieces[(size_t) e.piece];
         auto pedal = rt.data != nullptr && juce::isPositiveAndBelow ((int) e.artic, (int) rt.data->artics.size())
                      && rt.data->artics[(size_t) e.artic].id == "pedal";
@@ -540,7 +540,7 @@ void PandaStage::advanceTo (double t)
         v->pulse.v += 9.0f * vel;
 
         juce::String articId;
-        if (auto snap = proc.getSnapshot())
+        if (auto snap = proc.getSnapshot(); snap != nullptr && juce::isPositiveAndBelow (s.piece, (int) snap->pieces.size()))
             if (auto& rt = snap->pieces[(size_t) s.piece]; rt.data != nullptr && juce::isPositiveAndBelow (s.artic, (int) rt.data->artics.size()))
                 articId = rt.data->artics[(size_t) s.artic].id;
 
@@ -1001,7 +1001,7 @@ void PandaStage::mouseDown (const juce::MouseEvent& e)
     else if (e.mods.isPopupMenu())
     {
         auto snap = proc.getSnapshot();
-        if (snap == nullptr || snap->pieces[(size_t) piece].data == nullptr)
+        if (snap == nullptr || ! juce::isPositiveAndBelow (piece, (int) snap->pieces.size()) || snap->pieces[(size_t) piece].data == nullptr)
             return;
         juce::PopupMenu m;
         auto& artics = snap->pieces[(size_t) piece].data->artics;

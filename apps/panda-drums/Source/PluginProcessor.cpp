@@ -102,13 +102,21 @@ PandaDrumsProcessor::PandaDrumsProcessor()
     map = presetMaps().front();
     key = Key { 0, 0 };   // off until the song's key is chosen
     loadFactoryKit();
+    startTimerHz (2);
 }
 
 PandaDrumsProcessor::~PandaDrumsProcessor()
 {
+    stopTimer();
     alive->store (false);
     cancelPendingUpdate();
-    loaderPool.removeAllJobs (true, 20000);
+    loaderPool.removeAllJobs (true, 10000);
+}
+
+void PandaDrumsProcessor::timerCallback()
+{
+    // Frees kits and snapshots the audio thread has moved on from.
+    exchange.collectGarbage();
 }
 
 //==============================================================================
@@ -128,6 +136,8 @@ void PandaDrumsProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     delayBuffer.setSize (2, (int) (0.2 * sampleRate) + capacity);
     delayBuffer.clear();
     delayWrite = 0;
+    delayLatency.store (getShowtimeLatency());
+    audioLatency = delayLatency.load();
     sampler.prepare (sampleRate, samplesPerBlock);
     mixer.prepare (sampleRate, samplesPerBlock);
     setLatencySamples (getShowtimeLatency());
@@ -180,9 +190,9 @@ void PandaDrumsProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     if (learnArmed.load())
         for (const auto meta : midi)
-            if (meta.getMessage().isNoteOn())
+            if (meta.numBytes == 3 && (meta.data[0] & 0xf0) == 0x90 && meta.data[2] > 0)   // note on, read in place
             {
-                learnedNote.store (meta.getMessage().getNoteNumber());
+                learnedNote.store (meta.data[1]);
                 learnArmed.store (false);
                 break;
             }
@@ -204,19 +214,29 @@ void PandaDrumsProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     else
         mixBuffer.clear (0, num);
 
-    // Showtime delay.
-    auto latency = getLatencySamples();
+    // A mono output gets both sides, before anything else happens to it.
     auto outChans = buffer.getNumChannels();
+    if (outChans == 1)
+    {
+        mixBuffer.addFrom (0, 0, mixBuffer, 1, 0, num);
+        mixBuffer.applyGain (0, 0, num, 0.5f);
+    }
+
+    // Showtime delay. The latency changes on the message thread; the line is reset here.
+    auto latency = delayLatency.load();
+    if (latency != audioLatency)
+    {
+        delayBuffer.clear();
+        delayWrite = 0;
+        audioLatency = latency;
+    }
     for (int c = 0; c < outChans; ++c)
     {
         auto* src = mixBuffer.getReadPointer (std::min (c, 1));
         auto* dst = buffer.getWritePointer (c);
         if (latency <= 0)
         {
-            if (outChans == 1)
-                for (int i = 0; i < num; ++i) dst[i] = 0.5f * (mixBuffer.getSample (0, i) + mixBuffer.getSample (1, i));
-            else
-                juce::FloatVectorOperations::copy (dst, src, num);
+            juce::FloatVectorOperations::copy (dst, src, num);
             continue;
         }
         auto size = delayBuffer.getNumSamples();
@@ -285,15 +305,44 @@ PandaDrumsProcessor::Transport PandaDrumsProcessor::getTransport() const
 void PandaDrumsProcessor::setShowtime (bool on)
 {
     showtime = on;
+    delayLatency.store (getShowtimeLatency());
     setLatencySamples (getShowtimeLatency());
-    delayBuffer.clear();
+    markStateDirty();
+}
+
+void PandaDrumsProcessor::setShowHitInfo (bool on)   { showHitInfo = on; markStateDirty(); }
+void PandaDrumsProcessor::setComicFx (bool on)       { comicFx = on; markStateDirty(); }
+void PandaDrumsProcessor::setAutoTuneToKey (bool on) { autoTuneToKey = on; markStateDirty(); }
+
+void PandaDrumsProcessor::setUiProperty (const juce::Identifier& name, const juce::var& value)
+{
+    uiState.setProperty (name, value, nullptr);
+    markStateDirty();
 }
 
 //==============================================================================
 void PandaDrumsProcessor::loadFactoryKit()
 {
+    ++scanRequest;   // a folder still being read is no longer wanted
+    auto changing = kit != nullptr && ! kit->isFactory;
     kitFolder = juce::File();
+    if (changing)
+        resetForNewKit();
     setKit (sharedFactoryKit());
+}
+
+void PandaDrumsProcessor::resetForNewKit()
+{
+    // Settings belong to a kit's drums and mics by position; a different kit starts clean.
+    for (auto& row : bleed)
+        for (auto& b : row)
+            b.store (1.0f);
+    for (int p = 0; p < maxPieces; ++p)
+        for (auto* id : { "Vol", "Tune", "Decay" })
+            if (auto* prm = params.getParameter (pieceParam (p, id)))
+                prm->setValueNotifyingHost (prm->getDefaultValue());
+    if (! key.isOff())
+        retunePending = true;
 }
 
 void PandaDrumsProcessor::loadKitFolder (const juce::File& folder)
@@ -302,18 +351,20 @@ void PandaDrumsProcessor::loadKitFolder (const juce::File& folder)
         const juce::ScopedLock sl (messageLock);
         loadMessage = "Reading " + folder.getFileName() + "...";
     }
-    ++pendingLoads;
+    ++*pendingLoads;
+    auto request = ++scanRequest;
     sendChangeMessage();
     auto token = alive;
-    loaderPool.addJob ([this, token, folder]
+    auto pending = pendingLoads;
+    loaderPool.addJob ([this, token, pending, folder, request]
     {
         juce::String error;
         auto k = KitLoader::scan (folder, error);
-        juce::MessageManager::callAsync ([this, token, k, folder, error]
+        --*pending;
+        juce::MessageManager::callAsync ([this, token, k, folder, error, request]
         {
-            if (! token->load())
-                return;
-            --pendingLoads;
+            if (! token->load() || request != scanRequest.load())
+                return;   // closed, or another kit was picked since
             {
                 const juce::ScopedLock sl (messageLock);
                 loadMessage = error;
@@ -321,6 +372,7 @@ void PandaDrumsProcessor::loadKitFolder (const juce::File& folder)
             if (k != nullptr)
             {
                 kitFolder = folder;
+                resetForNewKit();
                 setKit (k);
             }
             sendChangeMessage();
@@ -343,6 +395,13 @@ juce::String PandaDrumsProcessor::getLoadMessage() const
 void PandaDrumsProcessor::setKit (std::shared_ptr<Kit> k, const std::map<juce::String, juce::String>& variantNames)
 {
     kit = std::move (k);
+    if (! kit->isFactory && kit->pieces.size() > (size_t) maxPieces)
+    {
+        const juce::ScopedLock sl (messageLock);
+        loadMessage = "This kit has " + juce::String ((int) kit->pieces.size()) + " drums; Panda Drums plays the first "
+                    + juce::String (maxPieces) + ".";
+        kit->pieces.resize ((size_t) maxPieces);
+    }
     selected.assign (kit->pieces.size(), 0);
     for (size_t p = 0; p < kit->pieces.size(); ++p)
     {
@@ -362,24 +421,28 @@ void PandaDrumsProcessor::setKit (std::shared_ptr<Kit> k, const std::map<juce::S
     sendChangeMessage();
 }
 
-std::shared_ptr<const VariantData> PandaDrumsProcessor::loadNow (const Kit& k, int piece, int variant)
+std::shared_ptr<const VariantData> PandaDrumsProcessor::loadNow (const Kit& k, int piece, int variant, std::shared_ptr<std::atomic<bool>> keepGoing)
 {
-    return k.isFactory ? FactoryKit::render (k, piece, variant) : KitLoader::loadVariant (k, piece, variant);
+    if (k.isFactory)
+        return FactoryKit::render (k, piece, variant);
+    // Stops early (and loads nothing) when the plugin is closed mid-load.
+    return KitLoader::loadVariant (k, piece, variant, [keepGoing] (float) { return keepGoing->load(); });
 }
 
 void PandaDrumsProcessor::requestLoad (int piece, int variant)
 {
     if (kit == nullptr || kit->getLoaded (piece, variant) != nullptr)
         return;
-    ++pendingLoads;
+    ++*pendingLoads;
     auto token = alive;
+    auto pending = pendingLoads;
     auto k = kit;
-    loaderPool.addJob ([this, token, k, piece, variant]
+    loaderPool.addJob ([this, token, pending, k, piece, variant]
     {
-        if (k->getLoaded (piece, variant) == nullptr)
-            if (auto data = loadNow (*k, piece, variant))
+        if (k->getLoaded (piece, variant) == nullptr && token->load())
+            if (auto data = loadNow (*k, piece, variant, token))
                 k->setLoaded (piece, variant, data);
-        --pendingLoads;
+        --*pending;
         if (token->load())
             triggerAsyncUpdate();
     });
@@ -389,14 +452,28 @@ void PandaDrumsProcessor::loadSelectedVariantsNow()
 {
     for (size_t p = 0; p < selected.size(); ++p)
         if (kit->getLoaded ((int) p, selected[p]) == nullptr)
-            if (auto data = loadNow (*kit, (int) p, selected[p]))
+            if (auto data = loadNow (*kit, (int) p, selected[p], alive))
                 kit->setLoaded ((int) p, selected[p], data);
     rebuildSnapshot();
+    handleAsyncUpdate();
 }
 
 void PandaDrumsProcessor::handleAsyncUpdate()
 {
     rebuildSnapshot();
+    if (retunePending && ! key.isOff() && kit != nullptr)
+    {
+        // Retune once every selected drum has loaded, so detected pitches are known.
+        bool allLoaded = true;
+        for (size_t p = 0; p < selected.size(); ++p)
+            allLoaded = allLoaded && kit->getLoaded ((int) p, selected[p]) != nullptr;
+        if (allLoaded)
+        {
+            retunePending = false;
+            if (autoTuneToKey)
+                tuneKitToKey();
+        }
+    }
     sendChangeMessage();
 }
 
@@ -420,7 +497,9 @@ void PandaDrumsProcessor::selectVariant (int piece, int variant)
     // drum still sounds bigger).
     if (isTunable (kit->pieces[(size_t) piece].type) && ! key.isOff())
     {
-        if (autoTuneToKey)
+        if (kit->getLoaded (piece, variant) == nullptr && ! kit->isFactory)
+            retunePending = true;   // its pitch is only known once it has loaded
+        else if (autoTuneToKey)
             tuneKitToKey();
         else
             setTune (piece, (float) nearestInKey (key, getNaturalMidi (piece)) - getNaturalMidi (piece));
@@ -499,6 +578,7 @@ void PandaDrumsProcessor::rebuildSnapshot()
 
     s->prepareCounters();
     exchange.publish (s);
+    markStateDirty();
 }
 
 //==============================================================================
@@ -698,14 +778,42 @@ void PandaDrumsProcessor::setBleedDb (int piece, int mic, float db)
     if (! juce::isPositiveAndBelow (piece, maxPieces) || ! juce::isPositiveAndBelow (mic, maxMics))
         return;
     bleed[(size_t) piece][(size_t) mic].store (db <= -59.9f ? 0.0f : juce::Decibels::decibelsToGain (db));
+    markStateDirty();
 }
 
 //==============================================================================
+void PandaDrumsProcessor::markStateDirty()
+{
+    auto fresh = buildExtraState();
+    const juce::ScopedLock sl (stateLock);
+    cachedState = fresh;
+}
+
 void PandaDrumsProcessor::getStateInformation (juce::MemoryBlock& dest)
 {
+    // Hosts may save from any thread: everything but the parameters comes from a copy the
+    // message thread keeps up to date.
     juce::ValueTree root ("PandaDrums");
     root.setProperty ("version", PANDA_VERSION_STRING, nullptr);
     root.appendChild (params.copyState(), nullptr);
+    juce::ValueTree extra;
+    if (juce::MessageManager::existsAndIsCurrentThread())
+        extra = buildExtraState();
+    else
+    {
+        const juce::ScopedLock sl (stateLock);
+        extra = cachedState.createCopy();
+    }
+    for (int i = 0; i < extra.getNumChildren(); ++i)
+        root.appendChild (extra.getChild (i).createCopy(), nullptr);
+
+    if (auto xml = root.createXml())
+        copyXmlToBinary (*xml, dest);
+}
+
+juce::ValueTree PandaDrumsProcessor::buildExtraState() const
+{
+    juce::ValueTree root ("Extra");
 
     juce::ValueTree k ("Kit");
     k.setProperty ("path", kitFolder.getFullPathName(), nullptr);
@@ -773,9 +881,7 @@ void PandaDrumsProcessor::getStateInformation (juce::MemoryBlock& dest)
     prefs.setProperty ("comicFx", comicFx, nullptr);
     root.appendChild (prefs, nullptr);
     root.appendChild (uiState.createCopy(), nullptr);
-
-    if (auto xml = root.createXml())
-        copyXmlToBinary (*xml, dest);
+    return root;
 }
 
 void PandaDrumsProcessor::setStateInformation (const void* data, int size)
@@ -789,6 +895,7 @@ void PandaDrumsProcessor::setStateInformation (const void* data, int size)
 
     auto apply = [this, root]
     {
+        ++scanRequest;   // a kit folder still being read is replaced by this state
         if (auto p = root.getChildWithName (params.state.getType()); p.isValid())
             params.replaceState (p);
 

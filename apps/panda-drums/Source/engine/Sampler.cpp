@@ -201,16 +201,19 @@ void Sampler::startHit (const EngineSnapshot& snap, const EngineParams& params, 
                 }
                 else
                 {
-                    int options[64];
-                    int count = 0;
-                    for (int k = 0; k < n && count < 64; ++k)
-                        if (enabled (hits[(size_t) k]) && (params.rrMode == 2 || k != last[(size_t) zz] || n == 1))
-                            options[count++] = k;
-                    if (count == 0)
-                        for (int k = 0; k < n && count < 64; ++k)
-                            if (enabled (hits[(size_t) k])) options[count++] = k;
-                    if (count > 0)
-                        pick = options[random.nextInt (count)];
+                    // One pass, any number of hits: each allowed hit has an equal chance (reservoir sampling).
+                    auto choose = [&] (bool avoidLast)
+                    {
+                        int seen = 0, result = -1;
+                        for (int k = 0; k < n; ++k)
+                            if (enabled (hits[(size_t) k]) && ! (avoidLast && k == last[(size_t) zz] && n > 1))
+                                if (random.nextInt (++seen) == 0)
+                                    result = k;
+                        return result;
+                    };
+                    pick = choose (params.rrMode == 1);
+                    if (pick < 0)
+                        pick = choose (false);
                 }
                 if (pick >= 0)
                 {
@@ -401,6 +404,8 @@ void Sampler::process (const EngineSnapshot& snap, const EngineParams& params, c
         auto t = juce::jlimit (0, numSamples, meta.samplePosition);
         renderAll (pos, t - pos);
         pos = std::max (pos, t);
+        if (meta.numBytes > 3)
+            continue;   // SysEx and the like: nothing for drums, and building it would allocate
         auto msg = meta.getMessage();
 
         if (msg.isNoteOn())

@@ -417,9 +417,9 @@ public:
         popups.setTooltip ("A little pop-up on each drum with its round robin, velocity and zone");
         showtime.setTooltip ("Delays the sound by 75 ms (your DAW compensates on playback) so the panda winds up and lands every hit dead on time. Turn off when playing live.");
         comic.setTooltip ("BOOM! CRASH! on the big hits");
-        popups.onClick = [this] { proc.showHitInfo = popups.getToggleState(); };
+        popups.onClick = [this] { proc.setShowHitInfo (popups.getToggleState()); };
         showtime.onClick = [this] { proc.setShowtime (showtime.getToggleState()); };
-        comic.onClick = [this] { proc.comicFx = comic.getToggleState(); };
+        comic.onClick = [this] { proc.setComicFx (comic.getToggleState()); };
         for (auto* b : { &popups, &showtime, &comic })
             addAndMakeVisible (*b);
     }
@@ -523,7 +523,7 @@ void KitPage::cycleRounds()
 {
     auto p = panel->piece;
     auto snap = proc.getSnapshot();
-    if (p < 0 || snap == nullptr || snap->pieces[(size_t) p].layouts.empty())
+    if (snap == nullptr || ! juce::isPositiveAndBelow (p, (int) snap->pieces.size()) || snap->pieces[(size_t) p].layouts.empty())
         return;
     auto& lay = snap->pieces[(size_t) p].layouts.front();
     auto zone = zoneForVelocity (lay, 100);
