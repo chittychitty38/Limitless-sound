@@ -435,6 +435,14 @@ void PandaStage::updateLabels()
     }
 }
 
+float PandaStage::sideReach (int piece) const
+{
+    for (auto& v : views)
+        if (v.piece == piece)
+            return std::abs (v.pos.x - centreX);
+    return 0.0f;
+}
+
 PandaStage::PieceView* PandaStage::viewFor (int piece)
 {
     return juce::isPositiveAndBelow (piece, (int) views.size()) ? &views[(size_t) piece] : nullptr;
@@ -585,7 +593,7 @@ int PandaStage::chooseHand (const PieceView& v, double time)
             auto check = [&] (const Strike& s)
             {
                 return s.piece >= 0 && (views[(size_t) s.piece].type == PieceType::HiHat || views[(size_t) s.piece].type == PieceType::Ride)
-                    && std::abs (time - s.time) < 0.3;
+                    && std::abs (time - s.time) < 0.4;
             };
             if (check (H.last) || check (H.next))
                 return true;
@@ -1000,13 +1008,15 @@ void PandaStage::advanceTo (double t)
     // A rocker's head-bang: down hard into the beat (the last quarter of it), lowest on the beat,
     // then up slower; a smooth curve, still at the top and the bottom. Fast songs bang on every
     // other beat (the way a drummer's head goes at 165).
+    // (it eases in when the song starts and out when it stops, the beat keeping its time)
+    hostPlaying += ((tPlaying ? 1.0f : 0.0f) - hostPlaying) * (1.0f - std::exp (-dt / 0.25f));
     float beat = 0.0f;
-    if (tPlaying)
+    if (hostPlaying > 1.0e-3f)
     {
         auto beats = tBpm > 130.0 ? tPpq * 0.5 : tPpq;
         auto frac = (float) (beats - std::floor (beats));
         auto warped = frac < 0.75f ? frac / 0.75f * 0.5f : 0.5f + (frac - 0.75f) / 0.25f * 0.5f;
-        beat = 0.5f * (1.0f + std::cos (juce::MathConstants<float>::twoPi * warped));
+        beat = hostPlaying * 0.5f * (1.0f + std::cos (juce::MathConstants<float>::twoPi * warped));
     }
     pose.torso = headBase;
     // How much he's into it: all the way while he's playing, a gentle nod while the song goes on
@@ -2585,6 +2595,36 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
         pitchNow += (80.0f * degrees - pitchNow) * k;
     }
     a.pivot = pivotNow;
+
+    // Nor does the stick's tip go up into his face: a stick waiting up under his face goes up and
+    // out beside his head, turning out and leaning back from upright as little as it takes (found
+    // smoothly, so it slides round his face as it rises rather than jumping).
+    if (w < 0.999f && t >= cheerUntil)       // (at rest it's the picture's own pose: it fades out going there)
+    {
+        auto c = (headEllipse.size() == 4 ? P ((float) (double) headEllipse[0], (float) (double) headEllipse[1]) : P (centreX, 180.0f))
+                     .transformedBy (headTransform());
+        auto margin = 8.0f * ps;
+        auto inFace = [&] (float hh, float pp)
+        {
+            auto tip = pivotNow + onScreen (hh, pp) * L3;
+            return juce::square ((tip.x - c.x) / (headRadii.x + margin)) + juce::square ((tip.y - c.y) / (headRadii.y + margin)) < 1.0f;
+        };
+        auto outHeading = outward * 75.0f * degrees, outPitch = std::min (pitchNow, 35.0f * degrees);
+        auto turned = [&] (float k) { return std::pair<float, float> (headingNow + (outHeading - headingNow) * k, pitchNow + (outPitch - pitchNow) * k); };
+        if (inFace (headingNow, pitchNow) && ! inFace (outHeading, outPitch))
+        {
+            float lo = 0.0f, hi = 1.0f;          // lo: in his face ... hi: clear
+            for (int i = 0; i < 16; ++i)
+            {
+                auto mid = 0.5f * (lo + hi);
+                auto [hh, pp] = turned (mid);
+                (inFace (hh, pp) ? lo : hi) = mid;
+            }
+            auto [hh, pp] = turned (hi);
+            headingNow += (hh - headingNow) * (1.0f - w);
+            pitchNow += (pp - pitchNow) * (1.0f - w);
+        }
+    }
 
     auto dir = onScreen (headingNow, pitchNow);
     a.angle = std::atan2 (dir.y, dir.x);

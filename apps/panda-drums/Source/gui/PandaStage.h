@@ -31,6 +31,11 @@ public:
     void setTransport (double bpm, double ppq, bool playing) { tBpm = bpm; tPpq = ppq; tPlaying = playing; }
     void refreshKit();                            // kit, variants or tuning changed
 
+    // How far out to one side a piece is (stage units from his middle): of hits heard together the
+    // one furthest out takes the hand on its side first, so the rest go to the other hand and his
+    // arms never cross.
+    float sideReach (int piece) const;
+
     int getSelectedPiece() const { return selected; }
     void setSelectedPiece (int p) { selected = p; repaint(); }
     std::function<void (int)> onSelect;
@@ -251,6 +256,7 @@ private:
     Spring headLean, headDip;       // the head on its own: leaning toward a hit (radians), dipping with it (stage units)
     Spring bodyLean;                // the rigged panda leaning toward a far reach (stage units)
     float grooving = 0.25f;         // how much he's into the song: 1 playing, less while it goes on without him
+    float hostPlaying = 0.0f;       // the host playing, eased (his head-bang comes and goes with it)
     std::array<Arm, 2> shownArms;   // the arms as this frame draws them
     std::array<Arm, 2> lastArms;    // and as the frame before showed them (the motion blur runs between)
     std::array<bool, 2> haveLastArms { false, false };
