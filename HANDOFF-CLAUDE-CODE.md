@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-22, after the 0.2.1 release. Everything below is the state of the project then.
+Written 2026-10-22, after the 0.2.2 release. Everything below is the state of the project then.
 
 ---
 
@@ -57,8 +57,8 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 | Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.2 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.3 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.3 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports | gazestage-v0.3.4 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.1** (the repo's Latest release) |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports | gazestage-v0.3.5 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.2** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -128,11 +128,14 @@ and the website's Proof section (`proof-results-test` from a PR). It runs on a p
 changes the proof, and nightly (or with "Run workflow") once the default branch is `main` (open
 item 3).
 
-Its runs on 0.1.0 and 0.2.0 found every bug fixed in 0.2.0 and 0.2.1: Zoom crashing on Apple
+Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's idle CPU, and false crash logs on Windows. **0.2.1 passes it on all three
-computers**: every app ready in 1-8 s, every action answered, no timeouts (check P4), every suite
-check green (run 39827972884, on the website). To run it again before the default branch is
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.2 passes it
+on all three computers with nothing left to improve**: every app ready in 1-13 s, at Access
+Standard level 2, every action answered, no timeouts (check P4), every suite check green, and
+**every app under 3% of the CPU sitting idle** (GazeStage 1.0% on both Macs, from 7.5%; Zoom 1.1%
+on Intel; the busiest is Control at 2.8% on Intel). Run 39838823103, on the website. An app over
+the limit names its busiest processes (#62). To run it again before the default branch is
 `main`, open a PR that touches `packaging/proof/`.
 
 ## Public website and branding
@@ -202,14 +205,13 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    Voice's workflow already signs and notarizes when the `APPLE_*` secrets exist; the other
    apps and the suite `.pkg` need the same steps added.
 5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
-   merged, and `diag/control-startup`). Ask Bennet first; cloud sessions weren't allowed to
-   delete them.
-6. **Idle CPU still over 3% on the proof's Macs** (0.2.1): GazeStage 7.5% on Apple silicon and
-   3.4% on Intel (1.7% on Windows); Zoom 3.2% on Intel (0.3% on Apple silicon, from 6.8%). A
-   lead for GazeStage: the proof measures 5 s after its last action, and a transport click
-   starts the built-in instrument's audio, which rests only after a minute of silence, now in
-   its own process (#54). Measure what runs then the way the proof does (`usage()` in
-   `packaging/proof/prove_suite.py`) before changing anything; those Macs have no camera.
+   merged, and the throwaway `diag/control-startup`, `diag/gazestage-idle` and `diag/zoom-idle`).
+   Ask Bennet first; cloud sessions weren't allowed to delete them.
+6. **Control is the busiest app sitting idle** (0.2.2 proof: 2.8% on the Intel Mac, 1.3% on
+   Apple silicon, 0.1% on Windows), still under the 3% limit. If it creeps over, measure it the
+   way `diag/gazestage-idle` measured GazeStage before changing anything. GazeStage's built-in
+   instrument now rests 10 s after the last sound and wakes on hover (#60): check by ear on a
+   real Mac that the first note after a rest isn't late.
 
 ## Gotchas learned the hard way
 
@@ -244,6 +246,19 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - To find where an app hangs on a CI Mac, push a throwaway workflow that runs it with
   `faulthandler.dump_traceback_later(5, repeat=True)` and samples the built app with macOS's
   `sample` (branch `diag/control-startup` has the one that found #52).
+- To find what keeps an app busy while idle, measure each of its processes from CPU-time deltas,
+  then switch parts off one at a time and measure again (branch `diag/gazestage-idle` drives the
+  built GazeStage with Playwright that way; it found all three causes in #60). The proof now names
+  each app's busiest processes when it's over the limit (#62).
+- An Electron page sitting idle should change nothing and ask for no frames. Rewriting the same
+  DOM every second, or calling `requestAnimationFrame` from a timer, kept GazeStage's GPU process
+  and renderer busy (#60). Write only what changed, and run idle checks straight from the timer.
+- A running Web Audio context costs about 2.5% of a Mac's CPU even when silent. GazeStage suspends
+  its own 10 s after the last sound and wakes it as the pointer settles on something that will
+  sound (#60).
+- An app copied onto a fresh CI Mac shares the computer with Spotlight indexing it for the first
+  minutes. Zoom's idle CPU on Intel went from 0.9% to 5.2% between 15 s windows of the same run.
+  Before blaming a part of an app, measure with and without it at the same point in time.
 - GitHub's workflow-runs API sometimes answers a `branch=` or `status=` query with no runs at
   all. List runs unfiltered and pick on your side (`.github/scripts/newest-builds.sh`, #51).
 - On Windows, Python's faulthandler also reports exceptions that were handled (COM's
