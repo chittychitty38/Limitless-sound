@@ -12,11 +12,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { Link } = require('./limitless-link');
+const applog = require('./applog');
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 app.setName('GazeStage');
+// GazeStage.log in the suite's log folder: what went wrong, when nobody was watching a console.
+const log = applog.start('GazeStage', app.getVersion());
 
 const ROOT = path.join(__dirname, 'renderer');
 const ALLOWED = new Set(['media', 'midi', 'midiSysex']);
@@ -42,6 +45,7 @@ function openVirtualPorts() {
     midi.native = true;
   } catch (e) {
     midi.native = false; midi.error = String(e.message || e);
+    log.warn('No virtual MIDI ports:', midi.error);
     closeVirtualPorts();
   }
 }
@@ -149,7 +153,7 @@ ipcMain.on('media:open-settings', (_e, kind) => {
 // as the state gaze.faceTracking, e.g. "CPU, software graphics (…)".
 ipcMain.on('media:tracking', (_e, text) => {
   suite.tracking = String(text).slice(0, 200);
-  console.log(`GazeStage face tracking: ${suite.tracking}`);
+  log.info(`Face tracking: ${suite.tracking}`);
   suite.link?.state('faceTracking', suite.tracking);
 });
 ipcMain.on('window:on-top', (_e, on) => { win?.setAlwaysOnTop(!!on, 'floating'); buildMenu(); });
@@ -169,6 +173,17 @@ function saveBounds() {
   try { if (win && !win.isMinimized() && !win.isFullScreen()) fs.writeFileSync(stateFile(), JSON.stringify(win.getBounds())); } catch {}
 }
 
+// A message the page repeats (say, every frame) is written once, then counted.
+const repeat = { text: '', count: 0 };
+function pageMessage(e) {
+  if (e.level !== 'warning' && e.level !== 'error') return;
+  const text = `Page: ${e.message} (${String(e.sourceId).replace(/^app:\/\/gazestage\//, '')}:${e.lineNumber})`;
+  if (text === repeat.text) { repeat.count++; return; }
+  if (repeat.count) log.info(`(the last message ${repeat.count} more time${repeat.count > 1 ? 's' : ''})`);
+  Object.assign(repeat, { text, count: 0 });
+  log.write(e.level === 'error' ? 'ERROR' : 'WARNING', text);
+}
+
 function createWindow() {
   const area = screen.getPrimaryDisplay().workAreaSize;
   const saved = loadBounds();
@@ -184,6 +199,11 @@ function createWindow() {
   win.on('close', saveBounds);
   win.on('closed', () => { win = null; });
   win.webContents.on('did-start-loading', () => { suite.ready = false; });   // until the page listens again
+  // The page's warnings and errors, and a crash or hang, go in the log too.
+  win.webContents.on('console-message', pageMessage);
+  win.webContents.on('render-process-gone', (_e, d) => log.critical(`The page stopped: ${d.reason}, exit code ${d.exitCode}`));
+  win.on('unresponsive', () => log.warn('The window stopped answering'));
+  win.on('responsive', () => log.info('The window is answering again'));
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('app://')) e.preventDefault(); });
   win.loadURL('app://gazestage/index.html');
@@ -255,5 +275,12 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
+// A GPU or helper process that crashed takes face tracking or audio with it: say which.
+app.on('child-process-gone', (_e, d) => {
+  if (d.reason !== 'clean-exit') log.error(`The ${d.name || d.type} process stopped: ${d.reason}, exit code ${d.exitCode}`);
+});
 app.on('window-all-closed', () => app.quit());
-app.on('will-quit', () => { closeVirtualPorts(); suite.link?.stop(); });
+app.on('will-quit', () => {
+  closeVirtualPorts(); suite.link?.stop();
+  if (repeat.count) log.info(`(the last message ${repeat.count} more time${repeat.count > 1 ? 's' : ''})`);
+});
