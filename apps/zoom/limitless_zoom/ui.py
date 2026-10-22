@@ -1,6 +1,9 @@
 """On-screen parts: the big-text toast, the "zoom keys on" badge, the
 big-button panel (dwell and switch scanning), key capture, and the setup assistant."""
 
+import math
+from typing import NamedTuple
+
 from PySide6.QtCore import QElapsedTimer, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
@@ -11,9 +14,27 @@ from .actions import PANEL_BUTTONS
 
 HIGHLIGHT = "#ffcc00"
 DWELL = "#4fc3f7"
+# High contrast is black, white and pure yellow, with strong borders.
+HC_HIGHLIGHT = "#ffff00"
+HC_DWELL = "#00ffff"
 
 OVERLAY_FLAGS = (Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
                  | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus)
+
+
+class Look(NamedTuple):
+    """Text size, contrast and motion for everything on screen. The suite's shared
+    settings change it (see suite.py); on its own, Zoom looks as it always has."""
+
+    text_scale: float = 1.0
+    high_contrast: bool = False
+    reduce_motion: bool = False
+
+    def combined(self, other):
+        """The more accessible of two looks: the bigger text, and high contrast or
+        reduced motion on if either one has it on."""
+        return Look(max(self.text_scale, other.text_scale), self.high_contrast or other.high_contrast,
+                    self.reduce_motion or other.reduce_motion)
 
 
 class Toast(QWidget):
@@ -25,9 +46,9 @@ class Toast(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.persistent = persistent
+        self.colors = (color, background)
+        self.where = "center"
         self.label = QLabel(self)
-        self.label.setStyleSheet(
-            f"color:{color}; background:{background}; border-radius:18px; padding:14px 28px;")
         f = QFont()
         f.setPointSize(30)
         f.setBold(True)
@@ -36,20 +57,44 @@ class Toast(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self.label)
         self.timer = QTimer(self, singleShot=True, timeout=self.hide)
+        self.set_look(Look())
+
+    def set_look(self, look):
+        """Text size and contrast. A toast that's showing changes straight away."""
+        color, background = self.colors
+        border = ""
+        if look.high_contrast:
+            color, background, border = HC_HIGHLIGHT, "#000000", "border:4px solid #ffffff; "
+        self.label.setStyleSheet(
+            f"color:{color}; background:{background}; {border}border-radius:18px; padding:14px 28px;")
+        f = self.label.font()
+        f.setPointSizeF(30 * look.text_scale)
+        self.label.setFont(f)
+        if self.isVisible():
+            self._place()
 
     def show_text(self, text, ms=1200, where="center"):
         self.label.setText(text)
-        self.adjustSize()
-        screen = self.screen().availableGeometry()
-        if where == "corner":
-            self.move(screen.right() - self.width() - 24, screen.top() + 24)
-        else:
-            self.move(screen.center().x() - self.width() // 2,
-                      screen.bottom() - self.height() - 120)
+        self.where = where
+        self._place()
         self.show()
         self.raise_()
         if not self.persistent:
             self.timer.start(ms)
+
+    def _place(self):
+        screen = self.screen().availableGeometry()
+        # Very large text wraps rather than running off the screen.
+        room = screen.width() - 48
+        self.label.setWordWrap(False)
+        self.label.setWordWrap(self.label.sizeHint().width() > room)
+        self.label.setMaximumWidth(room)
+        self.adjustSize()
+        if self.where == "corner":
+            self.move(screen.right() - self.width() - 24, screen.top() + 24)
+        else:
+            self.move(screen.center().x() - self.width() // 2,
+                      screen.bottom() - self.height() - 120)
 
 
 class DwellButton(QPushButton):
@@ -64,6 +109,7 @@ class DwellButton(QPushButton):
         self.dwell_enabled = True
         self.scanned = False
         self.progress = 0.0
+        self.look = Look()
         # Measure real time, not timer ticks: macOS slows timers down for
         # apps in the background, which would stretch the dwell time.
         self._clock = QElapsedTimer()
@@ -93,19 +139,36 @@ class DwellButton(QPushButton):
             self.dwelled.emit()
         self.update()
 
+    def shown_progress(self):
+        """How much of the dwell bar to fill. With reduced motion it fills in four
+        steps instead of sliding."""
+        if self.look.reduce_motion:
+            return math.ceil(self.progress * 4) / 4
+        return self.progress
+
     def paintEvent(self, e):
         super().paintEvent(e)
         p = QPainter(self)
+        hc = self.look.high_contrast
         if self.scanned:
             pen = p.pen()
-            pen.setColor(QColor(HIGHLIGHT))
+            pen.setColor(QColor(HC_HIGHLIGHT if hc else HIGHLIGHT))
             pen.setWidth(8)
             p.setPen(pen)
             p.drawRoundedRect(QRectF(self.rect()).adjusted(4, 4, -4, -4), 14, 14)
-        if self.progress > 0:
-            p.fillRect(QRectF(0, self.height() - 10, self.width() * self.progress, 10),
-                       QColor(DWELL))
+        shown = self.shown_progress()
+        if shown > 0:
+            p.fillRect(QRectF(0, self.height() - 10, self.width() * shown, 10),
+                       QColor(HC_DWELL if hc else DWELL))
         p.end()
+
+
+PANEL_HIGH_CONTRAST = f"""
+    QWidget {{ background:#000; }}
+    QPushButton {{ background:#000; border-color:#fff; }}
+    QPushButton:hover {{ border-color:{HC_DWELL}; }}
+    QPushButton:pressed {{ background:#fff; color:#000; }}
+"""
 
 
 class Panel(QWidget):
@@ -119,16 +182,7 @@ class Panel(QWidget):
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.setWindowTitle("Limitless Zoom")
         self.setAccessibleName("Limitless Zoom panel")
-        px = int(22 * scale)
-        h = int(96 * scale)
-        self.setStyleSheet(f"""
-            QWidget {{ background:#111; color:#fff; font-size:{px}px; font-weight:600; }}
-            QPushButton {{ background:#2a2a2a; border:4px solid #555; border-radius:16px;
-                          min-height:{h}px; padding:6px; }}
-            QPushButton:hover {{ border-color:{DWELL}; }}
-            QPushButton:pressed {{ background:#444; }}
-            QPushButton#small {{ min-height:{int(h * 0.6)}px; font-size:{int(px * 0.8)}px; }}
-        """)
+        self.scale = scale   # button size; the text can grow bigger still (set_look)
 
         self.buttons = []
         grid = QGridLayout()
@@ -156,15 +210,12 @@ class Panel(QWidget):
         bar.addWidget(self.dwell_button)
         self.status = QLabel("")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet(f"font-size:{int(px * 0.7)}px; color:#bbb;")
 
         self.keys_label = QLabel("Zoom keys: off")
         self.voice_label = QLabel("Voice: starting…")
-        self.chip_px = int(px * 0.75)
+        self.keys_on = False
         for chip in (self.keys_label, self.voice_label):
             chip.setWordWrap(True)
-            chip.setStyleSheet(f"font-size:{self.chip_px}px; color:#ddd; background:#1d1d1d;"
-                               "border-radius:10px; padding:6px 10px;")
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(12, 12, 12, 12)
@@ -177,17 +228,61 @@ class Panel(QWidget):
         self.scan_index = -1
         self.scan_timer = QTimer(self, interval=scan_ms, timeout=self._advance)
         self.scan_timer.setTimerType(Qt.PreciseTimer)
+        self.look = Look(scale)
+        self.set_look(self.look)
         self.resize(int(440 * scale), int(700 * scale))
 
-    def set_keys_state(self, on, key_text):
+    def set_look(self, look):
+        """Text size and contrast, live. The buttons and the panel grow to fit the text,
+        and with reduced motion the dwell bar fills in steps instead of sliding."""
+        new_size = look.text_scale != self.look.text_scale
+        right = self.x() + self.width()
+        self.look = look
+        hc = look.high_contrast
+        px = int(22 * look.text_scale)
+        h = int(96 * self.scale)
+        self.setStyleSheet(f"""
+            QWidget {{ background:#111; color:#fff; font-size:{px}px; font-weight:600; }}
+            QPushButton {{ background:#2a2a2a; border:4px solid #555; border-radius:16px;
+                          min-height:{h}px; padding:6px; }}
+            QPushButton:hover {{ border-color:{DWELL}; }}
+            QPushButton:pressed {{ background:#444; }}
+            QPushButton#small {{ min-height:{int(h * 0.6)}px; font-size:{int(px * 0.8)}px; }}
+        """ + (PANEL_HIGH_CONTRAST if hc else ""))
+        self.status.setStyleSheet(f"font-size:{int(px * 0.7)}px; color:{'#fff' if hc else '#bbb'};")
+        self.chip_px = int(px * 0.75)
+        self.voice_label.setStyleSheet(self._chip_style(False))
+        self.keys_label.setStyleSheet(self._chip_style(self.keys_on))
+        for b in self.buttons:
+            b.look = look
+            b.update()
+        # Fit the text now (Qt grows the panel past its usual size if the text needs it).
+        self.layout().activate()
+        if new_size:
+            self.resize(int(440 * self.scale), int(700 * self.scale))
+        if self.isVisible():
+            # Keep the right edge where it was (it starts at the right of the screen), on screen.
+            area = self.screen().availableGeometry()
+            self.move(max(area.left(), min(right, area.right()) - self.width()),
+                      max(area.top(), min(self.y(), area.bottom() - self.height())))
+
+    def _chip_style(self, on):
         base = f"font-size:{self.chip_px}px; border-radius:10px; padding:6px 10px;"
+        if on:
+            lit = HC_HIGHLIGHT if self.look.high_contrast else HIGHLIGHT
+            return base + f"background:{lit}; color:#000; font-weight:800;"
+        if self.look.high_contrast:
+            return base + "background:#000; color:#fff; border:2px solid #fff;"
+        return base + "background:#1d1d1d; color:#ddd;"
+
+    def set_keys_state(self, on, key_text):
+        self.keys_on = on
         if on:
             self.keys_label.setText("Zoom keys ON: E in, Q out, S taller, W shorter, A fit. "
                                     f"Tap {key_text} to turn off.")
-            self.keys_label.setStyleSheet(base + f"background:{HIGHLIGHT}; color:#000; font-weight:800;")
         else:
             self.keys_label.setText(f"Zoom keys off. Tap {key_text} to turn on.")
-            self.keys_label.setStyleSheet(base + "background:#1d1d1d; color:#ddd;")
+        self.keys_label.setStyleSheet(self._chip_style(on))
 
     # Scanning: one switch steps through the buttons.
     def scanning(self):
@@ -235,10 +330,10 @@ class Panel(QWidget):
 class KeyCaptureDialog(QDialog):
     """Big, simple screen: press any key (or your switch) and it's saved."""
 
-    def __init__(self, title, prompt, start_capture, parent=None):
+    def __init__(self, title, prompt, start_capture, parent=None, look=Look()):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setStyleSheet("QWidget{background:#111;color:#fff;font-size:26px;font-weight:600;}")
+        self.set_look(look)
         self.key = None
         self.label = QLabel(prompt + "\n\nYou can also tap Right Option, Right Command, "
                                      "Right Control or Right Shift on its own.")
@@ -252,6 +347,14 @@ class KeyCaptureDialog(QDialog):
         lay.addWidget(cancel)
         self.resize(560, 280)
         start_capture(self.got_key)
+
+    def set_look(self, look):
+        px = int(26 * look.text_scale)
+        style = f"QWidget{{background:#111;color:#fff;font-size:{px}px;font-weight:600;}}"
+        if look.high_contrast:
+            style += ("QWidget{background:#000;} QPushButton{border:3px solid #fff;border-radius:12px;}"
+                      f"QPushButton:focus{{border-color:{HC_HIGHLIGHT};}}")
+        self.setStyleSheet(style)
 
     def got_key(self, name):
         self.key = name
@@ -270,24 +373,38 @@ class KeyCaptureDialog(QDialog):
 
 STATE_MARK = {"ok": ("✓", "#3ddc84"), "missing": ("!", "#ff9f43"), "unknown": ("?", "#9e9e9e")}
 
-SETUP_STYLE = """
-    QWidget { background:#111; color:#fff; font-size:19px; }
-    QLabel#h1 { font-size:32px; font-weight:800; }
-    QLabel#h2 { font-size:23px; font-weight:700; margin-top:10px; }
-    QLabel#muted { color:#bbb; }
-    QFrame#card { background:#1c1c1c; border-radius:16px; }
-    QFrame#card QLabel { background:transparent; }
-    QPushButton { background:#2a2a2a; border:3px solid #555; border-radius:12px;
-                  min-height:52px; padding:4px 18px; font-weight:600; }
-    QPushButton:hover, QPushButton:focus { border-color:#4fc3f7; }
-    QPushButton#primary { background:#ffcc00; color:#000; border-color:#ffcc00;
-                          min-height:68px; font-size:23px; }
-    QComboBox { min-height:46px; background:#2a2a2a; border:2px solid #555; border-radius:10px;
-                padding:0 10px; }
-    QProgressBar { background:#2a2a2a; border:none; border-radius:8px; height:16px; }
-    QProgressBar::chunk { background:#3ddc84; border-radius:8px; }
-    QCheckBox { spacing:12px; } QCheckBox::indicator { width:28px; height:28px; }
+SETUP_HIGH_CONTRAST = f"""
+    QWidget {{ background:#000; }}
+    QLabel#muted {{ color:#fff; }}
+    QFrame#card {{ background:#000; border:3px solid #fff; }}
+    QPushButton, QComboBox {{ background:#000; border-color:#fff; }}
+    QPushButton:hover, QPushButton:focus, QComboBox:focus {{ border-color:{HC_HIGHLIGHT}; }}
+    QPushButton#primary {{ background:{HC_HIGHLIGHT}; border-color:{HC_HIGHLIGHT}; }}
+    QPushButton#primary:focus {{ background:#000; color:{HC_HIGHLIGHT}; }}
+    QProgressBar {{ background:#000; border:2px solid #fff; }}
 """
+
+
+def setup_style(look):
+    s = look.text_scale
+    return f"""
+    QWidget {{ background:#111; color:#fff; font-size:{int(19 * s)}px; }}
+    QLabel#h1 {{ font-size:{int(32 * s)}px; font-weight:800; }}
+    QLabel#h2 {{ font-size:{int(23 * s)}px; font-weight:700; margin-top:10px; }}
+    QLabel#muted {{ color:#bbb; }}
+    QFrame#card {{ background:#1c1c1c; border-radius:16px; }}
+    QFrame#card QLabel {{ background:transparent; }}
+    QPushButton {{ background:#2a2a2a; border:3px solid #555; border-radius:12px;
+                  min-height:52px; padding:4px 18px; font-weight:600; }}
+    QPushButton:hover, QPushButton:focus {{ border-color:#4fc3f7; }}
+    QPushButton#primary {{ background:#ffcc00; color:#000; border-color:#ffcc00;
+                          min-height:68px; font-size:{int(23 * s)}px; }}
+    QComboBox {{ min-height:46px; background:#2a2a2a; border:2px solid #555; border-radius:10px;
+                padding:0 10px; }}
+    QProgressBar {{ background:#2a2a2a; border:none; border-radius:8px; height:16px; }}
+    QProgressBar::chunk {{ background:#3ddc84; border-radius:8px; }}
+    QCheckBox {{ spacing:12px; }} QCheckBox::indicator {{ width:28px; height:28px; }}
+""" + (SETUP_HIGH_CONTRAST if look.high_contrast else "")
 
 
 class Setup(QWidget):
@@ -301,11 +418,12 @@ class Setup(QWidget):
     login_changed = Signal(bool)
     finished = Signal()
 
-    def __init__(self, key_text, switch_text, mics, current_mic, login=None, parent=None):
+    def __init__(self, key_text, switch_text, mics, current_mic, login=None, parent=None, look=Look()):
         super().__init__(parent, Qt.Window)
         self.setWindowTitle("Set up Limitless Zoom")
         self.setAccessibleName("Limitless Zoom setup")
-        self.setStyleSheet(SETUP_STYLE)
+        self.look = look
+        self.setStyleSheet(setup_style(look))
 
         body = QWidget()
         lay = QVBoxLayout(body)
@@ -314,6 +432,7 @@ class Setup(QWidget):
 
         h1 = QLabel("Welcome to Limitless Zoom")
         h1.setObjectName("h1")
+        h1.setWordWrap(True)
         intro = QLabel("Zoom Logic, Pro Tools, Ableton or your whole screen with your voice, "
                        "one key, your eyes or a switch. This takes about a minute.")
         intro.setObjectName("muted")
@@ -326,6 +445,7 @@ class Setup(QWidget):
         self.perm_box = QVBoxLayout()
         lay.addLayout(self.perm_box)
         self.perm_rows = {}
+        self.perms = []
 
         # 2. Zoom key
         self._h2("2. Your zoom key", lay)
@@ -403,11 +523,20 @@ class Setup(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
-        self.resize(760, 860)
+        self.resize(int(760 * look.text_scale), int(860 * look.text_scale))
+
+    def set_look(self, look):
+        """Text size and contrast, live."""
+        self.look = look
+        self.setStyleSheet(setup_style(look))
+        if self.perms:
+            self.set_permissions(self.perms)
+        self.set_layer_state(self.layer_on)
 
     def _h2(self, text, lay):
         h = QLabel(text)
         h.setObjectName("h2")
+        h.setWordWrap(True)
         lay.addWidget(h)
         return h
 
@@ -421,6 +550,7 @@ class Setup(QWidget):
         return card, c
 
     def set_permissions(self, perms):
+        self.perms = perms
         self.perm_header.setVisible(bool(perms))
         for p in perms:
             row = self.perm_rows.get(p["key"])
@@ -444,9 +574,11 @@ class Setup(QWidget):
             mark, text, btn = row
             symbol, color = STATE_MARK.get(p["state"], STATE_MARK["unknown"])
             mark.setText(symbol)
-            mark.setStyleSheet(f"font-size:30px; font-weight:800; color:{color};")
+            mark.setStyleSheet(f"font-size:{int(30 * self.look.text_scale)}px; font-weight:800;"
+                               f"color:{color};")
             need = "" if p["required"] else " (optional)"
-            text.setText(f"<b>{p['title']}{need}</b><br><span style='color:#bbb'>{p['why']}</span>")
+            muted = "#fff" if self.look.high_contrast else "#bbb"
+            text.setText(f"<b>{p['title']}{need}</b><br><span style='color:{muted}'>{p['why']}</span>")
             btn.setVisible(p["state"] != "ok")
             btn.setText("Open Settings…" if p["state"] == "unknown" else "Allow…")
             btn.setAccessibleName(f"Allow {p['title']}")
@@ -461,14 +593,17 @@ class Setup(QWidget):
                                "<b>A</b> fit. Tap it again to turn them off. Try it now:")
 
     def set_layer_state(self, on):
+        self.layer_on = on
+        s, hc = self.look.text_scale, self.look.high_contrast
         if on:
             self.key_state.setText("ZOOM KEYS ON")
-            self.key_state.setStyleSheet("background:#ffcc00; color:#000; font-size:24px;"
-                                         "font-weight:800; border-radius:12px;")
+            self.key_state.setStyleSheet(f"background:{HC_HIGHLIGHT if hc else '#ffcc00'}; color:#000;"
+                                         f"font-size:{int(24 * s)}px; font-weight:800; border-radius:12px;")
         else:
             self.key_state.setText(f"Zoom keys off. Tap {self.key_text}.")
-            self.key_state.setStyleSheet("background:#2a2a2a; color:#ddd; font-size:20px;"
-                                         "border-radius:12px;")
+            colors = ("background:#000; color:#fff; border:3px solid #fff;" if hc
+                      else "background:#2a2a2a; color:#ddd;")
+            self.key_state.setStyleSheet(colors + f"font-size:{int(20 * s)}px; border-radius:12px;")
 
     def set_switch_text(self, switch_text):
         self.switch_label.setText(f"If you use a switch, it starts the big-button panel scanning, "

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 from limitless_zoom.app import ZoomApp
 from limitless_zoom.platforms import Backend
 from limitless_zoom.settings import Settings
-from limitless_zoom.ui import Panel
+from limitless_zoom.ui import Look, Panel, Toast
 
 
 @pytest.fixture(scope="module")
@@ -91,6 +91,53 @@ def test_switch_scanning(qapp):
     assert not p.scanning()
 
 
+def test_reduced_motion_dwell_bar_steps(qapp):
+    p = Panel(dwell_ms=150)
+    b = p.buttons[1]
+    b.progress = 0.3
+    assert b.shown_progress() == 0.3   # slides
+    p.set_look(Look(reduce_motion=True))
+    assert b.shown_progress() == 0.5   # a quarter at a time
+    b.progress = 0.8
+    assert b.shown_progress() == 1.0
+    b.progress = 0.0
+    got = []
+    p.action.connect(got.append)
+    p.show()
+    hover(b)
+    for _ in range(100):
+        if got:
+            break
+        QTest.qWait(20)
+    assert got and got[0] == "in"   # and dwelling still presses
+    QApplication.sendEvent(b, QEvent(QEvent.Leave))
+    p.hide()
+
+
+def test_big_text_fits_and_stays_on_screen(qapp):
+    p = Panel()
+    p.show()
+    area = p.screen().availableGeometry()
+    p.move(area.right() - p.width() - 20, area.top() + 80)
+    right = p.x() + p.width()
+    p.set_look(Look(2.0, high_contrast=True))
+    for b in p.buttons:   # every button is big enough for its text
+        assert b.width() >= b.sizeHint().width() and b.height() >= b.sizeHint().height()
+    assert p.x() >= area.left() and (p.x() + p.width() == right or p.x() == area.left())
+    p.set_look(Look())
+    assert p.width() == 440 and p.x() + p.width() == right   # back to its usual size
+    p.hide()
+
+    t = Toast()
+    t.set_look(Look(2.0))
+    t.show_text("Waveform bigger isn't available in Logic Pro")
+    assert t.label.wordWrap() and t.width() <= area.width()   # wraps instead of running off
+    t.set_look(Look())
+    t.show_text("Fit")
+    assert not t.label.wordWrap()
+    t.hide()
+
+
 def make_app(tmp_path, front="com.apple.logic10"):
     s = Settings(tmp_path / "s.json")
     s["first_run"] = False
@@ -115,6 +162,16 @@ def test_app_sends_logic_keys(qapp, tmp_path):
     wait_sent(b, 2)
     assert b.sent == [(("cmd",), "right"), ((), "z")]
     assert app.toast.label.text() == "Fit to window"
+
+
+def test_on_its_own_zoom_looks_as_before(qapp, tmp_path):
+    app, b = make_app(tmp_path)
+    assert app.look == Look() and app.panel.look == Look(1.0)
+    assert app.toast.label.font().pointSizeF() == 30
+    assert app.toast.label.styleSheet() == ("color:#000000; background:#ffcc00; "
+                                            "border-radius:18px; padding:14px 28px;")
+    assert "font-size:22px" in app.panel.styleSheet() and "min-height:96px" in app.panel.styleSheet()
+    assert "background:#000" not in app.panel.styleSheet()
 
 
 def test_again_repeats_last_action(qapp, tmp_path):
