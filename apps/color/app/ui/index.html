@@ -15,6 +15,7 @@
   --f-body:"Atkinson Hyperlegible Next",system-ui,sans-serif;
   --f-mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
   --r:10px;
+  --ts:1; /* text size from Limitless Sound, 1 to 2: everything with text grows with it */
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#121418; --panel:#1b1e24; --panel-2:#22262e; --ink:#eef1f6; --ink-2:#a9b0bd; --line:#30353f;
@@ -22,21 +23,34 @@
 :root[data-theme="dark"]{
   --bg:#121418; --panel:#1b1e24; --panel-2:#22262e; --ink:#eef1f6; --ink-2:#a9b0bd; --line:#30353f;
   --accent:#7fb0ff; --accent-ink:#0b1426; --focus:#9cc2ff; --warn:#f2b552; color-scheme:dark}
+/* High contrast from Limitless Sound: black, white and yellow with strong borders and focus.
+   Only the window's own colors change. Swatches, previews and the eye check keep theirs. */
+:root.high-contrast{
+  --bg:#000; --panel:#000; --panel-2:#000; --ink:#fff; --ink-2:#fff; --line:#fff;
+  --accent:#ffe14d; --accent-ink:#000; --focus:#ffe14d; --warn:#ffe14d; color-scheme:dark}
+:root.high-contrast :is(.card,.note,.badge,.msg.bot,.fader,.role,.pair,fieldset,dialog#setup){border-width:2px}
+:root.high-contrast button:hover{border-color:var(--focus)}
+:root.high-contrast :where(input[type=checkbox],input[type=radio]){accent-color:var(--accent);outline:2px solid var(--line);outline-offset:2px}
+:root.high-contrast :focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+:root.high-contrast .pair .bar{background:#000;outline:2px solid var(--line)}
+:root.high-contrast .pair .bar i{background:var(--accent)}
+/* Reduced motion from Limitless Sound or the computer: nothing slides, fades or blinks. */
+:root.reduce-motion *,:root.reduce-motion *::before,:root.reduce-motion *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:calc(17px*var(--ts));line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
-h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-family:var(--f-display);font-weight:800;font-size:calc(clamp(28px,4vw,40px)*var(--ts));line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
 .sub{color:var(--ink-2);margin:6px 0 0;max-width:70ch}
-h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;margin:0;color:var(--ink-2);font-weight:600}
-.top{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+h2{font-size:calc(15px*var(--ts));text-transform:uppercase;letter-spacing:.08em;margin:0;color:var(--ink-2);font-weight:600}
+.top{display:grid;grid-template-columns:minmax(0,1fr) min(calc(380px*var(--ts)),50%);gap:20px;align-items:start}
 @media (max-width:1050px){.top{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .stage canvas{width:100%;height:auto;display:block;border-radius:6px;background:#1c1d21;cursor:crosshair;touch-action:none}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .spacer{flex:1}
-button,.btn{font:inherit;font-size:16px;min-height:44px;padding:8px 16px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer}
+button,.btn{font:inherit;font-size:calc(16px*var(--ts));min-height:44px;padding:8px 16px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 button:hover{border-color:var(--ink-2)}
 button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
@@ -45,8 +59,8 @@ button:disabled{opacity:.5;cursor:default}
 select{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink)}
 label.inline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px;min-width:0;max-width:100%}
 select{max-width:100%}
-input[type=checkbox]{width:24px;height:24px}
-.hint{color:var(--ink-2);font-size:15px;margin:0}
+input[type=checkbox]{width:calc(24px*var(--ts));height:calc(24px*var(--ts))}
+.hint{color:var(--ink-2);font-size:calc(15px*var(--ts));margin:0}
 .split{display:flex;align-items:center;gap:10px}
 .split input{flex:1}
 
@@ -55,22 +69,22 @@ input[type=checkbox]{width:24px;height:24px}
 .msg{padding:10px 12px;border-radius:10px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere}
 .msg.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink)}
 .msg.bot{align-self:flex-start;background:var(--panel-2);border:1px solid var(--line)}
-.msg .chg{display:block;margin-top:6px;font-family:var(--f-mono);font-size:13px;color:var(--ink-2)}
+.msg .chg{display:block;margin-top:6px;font-family:var(--f-mono);font-size:calc(13px*var(--ts));color:var(--ink-2)}
 .msg .q{display:block;margin-top:6px;font-weight:600}
-textarea{font:inherit;width:100%;min-height:76px;padding:10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);resize:vertical}
+textarea{font:inherit;width:100%;min-height:calc(76px*var(--ts));padding:10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);resize:vertical}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chips button{font-size:14px;min-height:40px;padding:6px 10px;text-align:left}
-.badge{font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2)}
+.chips button{font-size:calc(14px*var(--ts));min-height:40px;padding:6px 10px;text-align:left}
+.badge{font-family:var(--f-mono);font-size:calc(12px*var(--ts));padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2)}
 
 /* desk */
 .desk{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
 @media (max-width:1050px){.desk{grid-template-columns:1fr}}
-.faders{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.faders{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(260px*var(--ts))),1fr));gap:12px}
 .fader{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
 .fader .top-l{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .fader label{font-weight:600}
-.fader output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:14px}
-.fader .ends{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2)}
+.fader output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:calc(14px*var(--ts))}
+.fader .ends{display:flex;justify-content:space-between;font-size:calc(13px*var(--ts));color:var(--ink-2)}
 input[type=range]{width:100%;height:44px;accent-color:var(--accent);cursor:pointer}
 .roles{display:flex;flex-direction:column;gap:6px;max-height:620px;overflow-y:auto}
 .role{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
@@ -80,14 +94,14 @@ input[type=range]{width:100%;height:44px;accent-color:var(--accent);cursor:point
 .sw{width:40px;height:40px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;font-size:12px}
 .arrow{color:var(--ink-2)}
 .role input[type=color]{width:44px;height:44px;border:none;background:none;padding:0;cursor:pointer}
-.role .pin{font-family:var(--f-mono);font-size:12px;color:var(--warn)}
+.role .pin{font-family:var(--f-mono);font-size:calc(12px*var(--ts));color:var(--warn)}
 .check-pair{display:flex;gap:16px;justify-content:center;padding:12px;background:#808080;border-radius:8px}
 .check-pair span{width:96px;height:96px;border-radius:50%;display:block}
-.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.plan h3{margin:0 0 4px;font-size:18px}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(280px*var(--ts))),1fr));gap:16px}
+.plan h3{margin:0 0 4px;font-size:calc(18px*var(--ts))}
 .plan p{margin:0;color:var(--ink-2);max-width:65ch}
-code,.mono{font-family:var(--f-mono);font-size:14px}
-.out{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px}
+code,.mono{font-family:var(--f-mono);font-size:calc(14px*var(--ts))}
+.out{width:100%;min-height:120px;font-family:var(--f-mono);font-size:calc(12px*var(--ts))}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 input[type=password]{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink);flex:1;min-width:0}
@@ -97,33 +111,33 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
 .note[hidden]{display:none}
 
 /* clarity check */
-.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(240px*var(--ts))),1fr));gap:10px}
 .pair{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center}
 .pair .sws{display:flex;gap:4px;grid-row:span 3}
 .pair .sws span{width:34px;height:44px;border-radius:6px;border:2px solid var(--line)}
 .pair b{font-weight:600;line-height:1.25}
 .pair .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
 .pair .bar i{display:block;height:100%;background:var(--ink);border-radius:99px}
-.pair small{color:var(--ink-2);font-size:14px}
+.pair small{color:var(--ink-2);font-size:calc(14px*var(--ts))}
 .pair small strong{color:var(--ink);font-weight:600}
 
 /* first-launch setup */
-dialog#setup{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:auto}
+dialog#setup{width:min(calc(760px*var(--ts)),calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:auto}
 dialog#setup::backdrop{background:rgba(10,12,16,.62)}
-#setup .setup-title{font-size:clamp(24px,3.4vw,32px);text-transform:none;letter-spacing:-.01em;color:var(--ink);font-weight:800;margin:6px 0 10px;line-height:1.15}
+#setup .setup-title{font-size:calc(clamp(24px,3.4vw,32px)*var(--ts));text-transform:none;letter-spacing:-.01em;color:var(--ink);font-weight:800;margin:6px 0 10px;line-height:1.15}
 #setupBody{display:flex;flex-direction:column;gap:14px}
 #setupBody p{margin:0;max-width:62ch}
 #setupBody ol,#setupBody ul{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
-#setupBody .big{font-size:18px;min-height:52px;padding:10px 22px}
+#setupBody .big{font-size:calc(18px*var(--ts));min-height:52px;padding:10px 22px}
 #setupBody canvas{width:100%;height:auto;border-radius:8px;display:block}
 .cmp{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:6px 14px;align-items:center}
-.cmp .hd{font-size:14px;color:var(--ink-2);font-weight:600}
+.cmp .hd{font-size:calc(14px*var(--ts));color:var(--ink-2);font-weight:600}
 .cmp .duo{display:flex;gap:4px}
 .cmp .duo span{width:40px;height:40px;border-radius:6px;border:2px solid var(--line)}
 fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:6px}
 legend{font-weight:600;padding:0 4px}
 .choice{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:6px 4px;cursor:pointer}
-.choice input{width:22px;height:22px;margin-top:2px;flex:none}
+.choice input{width:calc(22px*var(--ts));height:calc(22px*var(--ts));margin-top:2px;flex:none}
 .choice small{display:block;color:var(--ink-2)}
 .ok{font-weight:600}
 </style>
@@ -542,7 +556,7 @@ function renderRoles(sim){
     const row=document.createElement("div");row.className="role";
     row.innerHTML=`<div class="nm"><b></b><small></small></div><span class="sw" title="Original"></span><span class="sw" title="Yours"></span><span><input type="color" data-anchor="${it.id}" aria-label="Choose how ${it.label} should look"></span>`;
     row.querySelector("b").textContent=it.label;
-    row.querySelector("small").innerHTML=it.pinned?`<span class="pin">Pinned</span> · <button type="button" style="min-height:32px;padding:2px 8px;font-size:13px">Unpin</button>`:linToHex(outLin);
+    row.querySelector("small").innerHTML=it.pinned?`<span class="pin">Pinned</span> · <button type="button" style="min-height:32px;padding:2px 8px;font-size:calc(13px*var(--ts))">Unpin</button>`:linToHex(outLin);
     const sws=row.querySelectorAll(".sw");sws[0].style.background=linToHex(origShown);sws[1].style.background=linToHex(shown);
     const ci=row.querySelector("input");ci.value=linToHex(outLin);
     ci.addEventListener("focus",snapshot,{once:true});
@@ -791,7 +805,16 @@ function note(t,action){
   const sp=document.createElement("span");sp.textContent=t;n.appendChild(sp);
   if(action){const b=document.createElement("button");b.type="button";b.textContent=action.label;b.onclick=action.run;n.appendChild(b)}
 }
+/* Text size, high contrast and reduced motion from Limitless Sound, already combined with the
+   computer's own reduced motion by the app. They change the window, never the colors. */
+function applyWindowPrefs(p){
+  if(!p)return;const root=document.documentElement;
+  root.style.setProperty("--ts",String(clamp(+p.textScale||1,1,2)));
+  root.classList.toggle("high-contrast",!!p.highContrast);
+  root.classList.toggle("reduce-motion",!!p.reduceMotion);
+}
 function applyStatus(st){
+  applyWindowPrefs(st.windowPrefs);
   if(!bypass)screenOn=st.filterOn;platform=st.platform;
   const b=$("#screenBtn");b.setAttribute("aria-pressed",String(st.filterOn||bypass));b.textContent="Screen colors: "+(st.filterOn||bypass?"On":"Off");
   $("#bypassBtn").hidden=!(st.filterOn||bypass);
@@ -1011,6 +1034,10 @@ if(desktop){
   document.querySelector('#e-h').closest(".card").querySelector(".hint").textContent="Your settings are saved automatically. You can also save them as a .cube color profile in Documents › Limitless Color, to share or back up.";
   $("#dlCube").textContent="Save .cube profile";
   TAURI.event.listen("status",e=>applyStatus(e.payload));
+  TAURI.event.listen("window-prefs",e=>applyWindowPrefs(e.payload));
+  const osMotion=matchMedia("(prefers-reduced-motion: reduce)");
+  const tellMotion=()=>invoke("set_system_motion",{reduce:osMotion.matches}).catch(()=>{});
+  osMotion.addEventListener("change",tellMotion);tellMotion();
   TAURI.event.listen("filter-error",e=>note(e.payload));
   TAURI.event.listen("permission-needed",()=>{if(setup.open&&su.step==="permission")return;su.fix=!setup.open;go("permission")});
   TAURI.event.listen("filter-stopped",()=>note("The screen filter stopped unexpectedly.",{label:"Restart it",run:()=>invoke("restart_filter").then(applyStatus).catch(e=>note(String(e)))}));

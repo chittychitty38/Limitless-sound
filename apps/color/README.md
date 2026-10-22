@@ -50,6 +50,7 @@ You can run the guide again from the bottom of the window.
 - **Quick eye check.** Six pairs of circles, about a minute. It works out which kind of color vision difference you have and tunes your colors for it.
 - **Use a screenshot of my session.** Tunes against a picture of your real session instead of the sample.
 - **Save .cube profile.** Saves your profile to Documents › Limitless Color as a standard color lookup file, to back up or share.
+- **Limitless Sound settings.** When the Limitless Sound hub runs, the tuner window follows the text size, high contrast and reduced motion you set there, the moment you change them. They change only the window around your colors, never the swatches, the preview or the screen filter. If your computer is set to reduce motion, the window reduces motion too.
 
 ## How it's built
 
