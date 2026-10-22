@@ -73,7 +73,7 @@ jobs:
         run: |
           set -o pipefail
           start=$(date +%s)
-          pkg=$(ls dl/*.pkg 2>/dev/null | head -1)
+          pkg=$(find dl -maxdepth 1 -name "*.pkg" | head -1)
           if [ -n "$pkg" ]; then
             # What the Mac installer does after Continue, Install and the password. (The one
             # "Open Anyway" click before it is a person's job; this Mac can't click System Settings.)
