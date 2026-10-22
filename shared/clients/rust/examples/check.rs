@@ -7,6 +7,12 @@ fn main() {
         vec![Action::new("on", "Screen colors on"), Action::new("off", "Screen colors off")]);
     let l2 = link.clone();
     link.state("ready", true.into()); // before connecting: the hub still hears it
+    let l3 = link.clone();
+    link.on_prefs(move |prefs| {
+        // Honor the shared text size, and say so (Limitless Access Standard level 2).
+        let scale = prefs.get("textScale").cloned().unwrap_or(1.0.into());
+        l3.state("prefs.applied", serde_json::json!({"textScale": scale}));
+    });
     link.start(
         move |action, _args, _src| {
             l2.state("filter", (action == "on").into());
