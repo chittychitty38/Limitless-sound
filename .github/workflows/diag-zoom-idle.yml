@@ -23,23 +23,21 @@ jobs:
       - name: Measure, as the proof starts it
         timeout-minutes: 8
         run: |
+          pip3 install --break-system-packages py-spy >/dev/null 2>&1 || pip3 install py-spy >/dev/null
+          spy="$(python3 -c 'import sysconfig; print(sysconfig.get_path("scripts"))')/py-spy"
           export LIMITLESS_SOUND_LOGS="$RUNNER_TEMP/logs"
           "$RUNNER_TEMP/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" > zoom.log 2>&1 &
           pid=$!
           sleep 25
-          threads() { ps -M -p "$pid" | tail -n +2 | awk 'NR==1 { print $7, $8; next } { print $(NF-1), $NF }'; }
-          for w in 1 2 3 4; do
-            threads > a.txt; sleep 15; threads > b.txt
-            paste a.txt b.txt | awk -v w=$w '
-              function s(t,  n, p, i, x) { n = split(t, p, ":"); x = 0; for (i = 1; i <= n; i++) x = x * 60 + p[i]; return x }
-              { d = (s($3) + s($4)) - (s($1) + s($2)); tot += d; if (d >= 0.01) line = line sprintf(" t%d:%.2fs", NR, d) }
-              END { printf "window %d: %.1f%%  busy threads:%s\n", w, tot / 15 * 100, line }'
-          done
-          echo "== spindump, 15 s:"
-          sudo spindump "$pid" 15 10 -file sp.txt >/dev/null 2>&1 || true
-          python3 .github/diag/spin.py sp.txt || head -100 sp.txt
+          a=$(ps -o time= -p "$pid")
+          sudo "$spy" record -p "$pid" -d 60 -r 100 -f raw --threads -o spy.txt --nonblocking >/dev/null 2>&1 || true
+          b=$(ps -o time= -p "$pid")
+          echo "$a $b" | awk 'function s(t, n, p, i, x) { n = split(t, p, ":"); x = 0; for (i = 1; i <= n; i++) x = x * 60 + p[i]; return x }
+            { printf "== Zoom over the 60 s: %.1f%%\n", (s($2) - s($1)) / 60 * 100 }'
+          echo "== Busiest Python stacks (samples at 100 a second, waiting ones left out):"
+          awk '{ c = $NF; $NF = ""; print c "\t" $0 }' spy.txt | sort -nr | grep -v "wait (threading\|get (queue\|select (selectors\|_run (darwin.py:241)\|main (app.py:643) *$" | head -30 | cut -c1-700
           kill "$pid" || true
-          echo "== Log"; cat zoom.log; cat "$LIMITLESS_SOUND_LOGS"/*.log 2>/dev/null | tail -20
+          echo "== Log"; cat "$LIMITLESS_SOUND_LOGS"/*.log 2>/dev/null | tail -20
       - name: Measure with voice off
         timeout-minutes: 5
         run: |
