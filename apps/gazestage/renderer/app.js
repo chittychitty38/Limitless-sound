@@ -35,7 +35,7 @@ const state = {
   onboardStep: null, practiceDone: new Set(),
 };
 const filterX = new OneEuro(S.smooth), filterY = new OneEuro(S.smooth);
-const tracker = new Tracker($('cam'));
+const tracker = new Tracker($('cam'), store);
 const synth = new Synth(); synth.setPreset(S.preset);
 const midi = new MidiRouter(store);
 const onset = new OnsetDetector();
@@ -100,8 +100,7 @@ async function startCamera() {
       const ok = await bridge.media.ask('camera');
       if (!ok) throw Object.assign(new Error('Camera access is turned off for GazeStage'), { name: 'NotAllowedError' });
     }
-    await tracker.load();
-    await tracker.open(S.camera);
+    await Promise.all([tracker.load(), tracker.open(S.camera)]);   // the face model loads in its worker meanwhile
     tracker.onSample = onSample;
     tracker.start();
     state.cameraOn = true; state.cameraState = 'tracking'; state.autoCentre = [];
@@ -109,7 +108,7 @@ async function startCamera() {
     for (const v of document.querySelectorAll('video[data-mirror]')) v.srcObject = tracker.stream;
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(e); tracker.close();   // never leave the camera on when tracking can't start
     state.cameraState = 'error'; refreshChips();
     state.cameraError = e.name === 'NotAllowedError' || /denied|turned off/i.test(e.message) ? 'denied' : (e.message || String(e));
     return false;
