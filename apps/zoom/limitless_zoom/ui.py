@@ -257,6 +257,9 @@ class Panel(QWidget):
             b.look = look
             b.update()
         # Fit the text now (Qt grows the panel past its usual size if the text needs it).
+        # invalidate() first: the layout keeps each button's size from the old text until
+        # told, and on Windows that kept the panel at its big-text width after shrinking.
+        self.layout().invalidate()
         self.layout().activate()
         if new_size:
             self.resize(int(440 * self.scale), int(700 * self.scale))
