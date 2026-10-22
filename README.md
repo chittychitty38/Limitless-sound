@@ -68,7 +68,8 @@ MIDI let any keyboard play any synth. The [Limitless Access Standard](standard) 
 access: a musician sets up their access once, and every instrument, plug-in, amp modeler or
 recording app that carries the mark already fits them. It's open and free, built on the
 [Limitless Link protocol](shared/PROTOCOL.md): JSON over a local socket, with ready clients for
-[Python, JavaScript and Rust](shared/clients).
+[Python, JavaScript, Rust and C++](shared/clients). The C++ client is one header with no
+dependencies, made to drop into a JUCE, iPlug2, VST3, AU or CLAP plug-in or a hardware editor.
 
 ```sh
 # Test your product against the standard (Python 3.10+, nothing to install):
