@@ -356,7 +356,7 @@ dependencies = [
 
 [[package]]
 name = "color-core"
-version = "0.1.1"
+version = "0.1.3"
 dependencies = [
  "regex",
  "serde",
@@ -1906,7 +1906,7 @@ dependencies = [
 
 [[package]]
 name = "limitless-color"
-version = "0.1.1"
+version = "0.1.3"
 dependencies = [
  "color-core",
  "keyring",

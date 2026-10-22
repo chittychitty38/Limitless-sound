@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Limitless Sound installer: the standard Mac installer, which VoiceOver reads and
+     every Mac user has seen. @VERSION@ and @ARCH@ are filled in by build-suite-dmg.sh. -->
+<installer-gui-script minSpecVersion="2">
+    <title>Limitless Sound</title>
+    <organization>org.limitlesssound</organization>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+    <domains enable_localSystem="true"/>
+    <allowed-os-versions>
+        <os-version min="12.0"/>
+    </allowed-os-versions>
+    <installation-check script="rightMac()"/>
+    <script><![CDATA[
+    // Catch the wrong download before anything is installed, and say which one to get.
+    function rightMac() {
+        var appleSilicon = system.sysctl('hw.optional.arm64') == 1;
+        if ('@ARCH@' == 'mac-apple-silicon' && !appleSilicon) {
+            my.result.type = 'Fatal';
+            my.result.title = 'This Mac needs the Intel download';
+            my.result.message = 'This installer is for Macs with Apple silicon (M1 and newer). ' +
+                'Download "Limitless-Sound-Suite-mac-intel" from chittychitty38.github.io/Limitless-sound instead.';
+            return false;
+        }
+        if ('@ARCH@' == 'mac-intel' && appleSilicon) {
+            my.result.type = 'Warning';
+            my.result.title = 'There is a faster version for this Mac';
+            my.result.message = 'This installer is for Intel Macs. It works on this Mac too, but the Apple silicon ' +
+                'download runs faster. Get it from chittychitty38.github.io/Limitless-sound, or click Continue to use this one.';
+            return false;
+        }
+        return true;
+    }
+    ]]></script>
+    <choices-outline>
+        <line choice="suite"/>
+    </choices-outline>
+    <choice id="suite" title="Limitless Sound" description="All six apps and the hub that joins them.">
+        <pkg-ref id="org.limitlesssound.suite"/>
+    </choice>
+    <pkg-ref id="org.limitlesssound.suite" version="@VERSION@" onConclusion="none">apps.pkg</pkg-ref>
+</installer-gui-script>

@@ -1,6 +1,7 @@
 //! Limitless Color desktop app: the Color Tuner window, a menu bar / tray
 //! switch, and the screen filter that applies the person's profile everywhere.
 
+mod applog;
 mod assistant;
 mod filter;
 #[allow(dead_code)]
@@ -14,7 +15,7 @@ use color_core::helper::{offline_reply, HelperState, Suggestion};
 use color_core::lut::{Lut3D, DEFAULT_SIZE};
 use color_core::prompt::{self, Turn};
 use color_core::tune::{auto_tune, TuneResult};
-use color_core::{CvdType, Profile};
+use color_core::{CvdType, Profile, WindowPrefs};
 use serde::Serialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -38,6 +39,10 @@ struct Inner {
     tray_check: Option<CheckMenuItem<Wry>>,
     /// First-launch progress: "" (not started), a step name, or "done".
     onboarding: String,
+    /// Text size, contrast and motion from the musician's shared settings (the hub).
+    suite_prefs: WindowPrefs,
+    /// The computer's own reduced-motion setting, which the window honored before the hub.
+    system_prefs: WindowPrefs,
 }
 
 pub struct AppState(Mutex<Inner>);
@@ -54,6 +59,7 @@ pub struct Status {
     shortcut: &'static str,
     onboarding: String,
     autostart: bool,
+    window_prefs: WindowPrefs,
 }
 
 fn platform() -> &'static str {
@@ -77,6 +83,22 @@ fn status(inner: &Inner) -> Status {
         shortcut: TOGGLE_SHORTCUT,
         onboarding: inner.onboarding.clone(),
         autostart: false,
+        window_prefs: window_prefs(inner),
+    }
+}
+
+/// What the tuner window uses: the more accessible of the shared settings and the computer's own.
+fn window_prefs(inner: &Inner) -> WindowPrefs {
+    inner.suite_prefs.more_accessible(inner.system_prefs)
+}
+
+/// Sends the window prefs to the tuner window (hidden or not, so it's ready when shown)
+/// and tells the suite which are in use.
+fn show_window_prefs(app: &AppHandle, inner: &Inner) {
+    let prefs = window_prefs(inner);
+    let _ = app.emit("window-prefs", prefs);
+    if let Some(link) = SUITE.get() {
+        link.state("prefs.applied", prefs.applied());
     }
 }
 
@@ -91,6 +113,9 @@ fn sync(app: &AppHandle, inner: &mut Inner) {
     match inner.filter.apply(&inner.profile, inner.filter_on) {
         Ok(note) => inner.filter_note = note,
         Err(e) => {
+            if e != inner.filter_note {
+                applog::error(&format!("The screen filter couldn't be applied: {e}"));
+            }
             inner.filter_note = e;
         }
     }
@@ -120,10 +145,18 @@ fn start_suite(app: &AppHandle) {
         ],
     );
     let handle = app.clone();
-    link.start(move |action, _args, _source| suite_invoke(&handle, action), |_name, _value, _source| {});
+    link.on_prefs(move |prefs| {
+        let state = handle.state::<AppState>();
+        let mut inner = state.0.lock().unwrap();
+        inner.suite_prefs = WindowPrefs::from_prefs(prefs);
+        show_window_prefs(&handle, &inner);
+    });
     let on = app.state::<AppState>().0.lock().unwrap().filter_on;
     link.state("on", on.into());
-    let _ = SUITE.set(link);
+    // Set before starting, so the first prefs from the hub can be answered.
+    let _ = SUITE.set(link.clone());
+    let handle = app.clone();
+    link.start(move |action, _args, _source| suite_invoke(&handle, action), |_name, _value, _source| {});
 }
 
 /// Runs a suite action on the main thread, where the screen filter lives.
@@ -255,6 +288,14 @@ fn set_onboarding(app: AppHandle, state: State<AppState>, step: String) -> Statu
     inner.onboarding = step;
     store::save(&app, &inner.profile, inner.filter_on, &inner.onboarding);
     full_status(&app, &inner)
+}
+
+/// The computer's own reduced-motion setting, as the window sees it.
+#[tauri::command]
+fn set_system_motion(app: AppHandle, state: State<AppState>, reduce: bool) {
+    let mut inner = state.0.lock().unwrap();
+    inner.system_prefs.reduce_motion = reduce;
+    show_window_prefs(&app, &inner);
 }
 
 #[tauri::command]
@@ -403,6 +444,8 @@ fn hide_tuner(window: &tauri::Window) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Limitless Color.log in the suite's log folder: what went wrong, when nobody was watching.
+    applog::start("Limitless Color", env!("CARGO_PKG_VERSION"));
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
@@ -429,13 +472,15 @@ pub fn run() {
                 history: vec![],
                 tray_check: None,
                 onboarding: saved.onboarding,
+                suite_prefs: WindowPrefs::default(),
+                system_prefs: WindowPrefs::default(),
             };
             inner.tray_check = Some(build_tray(&handle, filter_on)?);
             sync(&handle, &mut inner);
             app.manage(AppState(Mutex::new(inner)));
             start_suite(&handle);
             if let Err(e) = app.global_shortcut().register(TOGGLE_SHORTCUT) {
-                eprintln!("could not register {TOGGLE_SHORTCUT}: {e}");
+                applog::warn(&format!("Couldn't register the shortcut {TOGGLE_SHORTCUT}: {e}"));
             }
             // Started at login: stay in the menu bar / tray with the filter running.
             // Before first-launch setup is finished, always show the window.
@@ -466,6 +511,7 @@ pub fn run() {
             start_dictation,
             auto_tune_profile,
             set_onboarding,
+            set_system_motion,
             set_autostart,
             screen_permission,
             open_screen_settings,

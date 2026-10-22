@@ -101,6 +101,7 @@ pub fn launch_hub() -> bool {
 
 type InvokeFn = dyn Fn(&str, &Value, &str) -> (bool, String) + Send + Sync;
 type EventFn = dyn Fn(&str, &Value, &str) + Send + Sync;
+type PrefsFn = dyn Fn(&Value) + Send + Sync;
 
 struct Inner {
     tool: String,
@@ -111,6 +112,7 @@ struct Inner {
     connected: AtomicBool,
     stopped: AtomicBool,
     one_voice: AtomicBool,
+    on_prefs: Mutex<Option<Arc<PrefsFn>>>,
     /// The last value of each state, sent again whenever the link (re)connects.
     states: Mutex<Map<String, Value>>,
     depth: AtomicU64,
@@ -135,6 +137,7 @@ impl Link {
                 connected: AtomicBool::new(false),
                 stopped: AtomicBool::new(false),
                 one_voice: AtomicBool::new(true),
+                on_prefs: Mutex::new(None),
                 states: Mutex::new(Map::new()),
                 depth: AtomicU64::new(0),
                 ids: AtomicU64::new(1),
@@ -172,6 +175,15 @@ impl Link {
                 }
             })
             .expect("spawn limitless-link thread");
+    }
+
+    /// Hear the musician's shared settings (text size, contrast, motion…): on connecting
+    /// and whenever they change. Then report what you honor as the state `prefs.applied`.
+    pub fn on_prefs<P>(&self, on_prefs: P)
+    where
+        P: Fn(&Value) + Send + Sync + 'static,
+    {
+        *self.inner.on_prefs.lock().unwrap() = Some(Arc::new(on_prefs));
     }
 
     pub fn stop(&self) {
@@ -260,6 +272,10 @@ fn session(inner: &Inner, port: u16, token: &str, on_invoke: &InvokeFn, on_event
                     for (key, value) in states {
                         send(inner, &json!({"op": "state", "key": key, "value": value, "depth": 0}));
                     }
+                }
+                let on_prefs = inner.on_prefs.lock().unwrap().clone();
+                if let (Some(on_prefs), Some(prefs)) = (on_prefs, msg.get("prefs")) {
+                    on_prefs(prefs);
                 }
             }
             "invoke" => {

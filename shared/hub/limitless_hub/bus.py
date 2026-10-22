@@ -23,7 +23,7 @@ from collections import deque
 from fnmatch import fnmatchcase
 from typing import Callable, Optional
 
-from . import catalog, routes as routes_mod
+from . import catalog, routes as routes_mod, setup as setup_mod
 
 PROTOCOL = 1
 TOOL_ID = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
@@ -545,6 +545,9 @@ class Bus:
                 "routes": self.settings["routes"], "prefs": self.settings["prefs"],
                 "intentOrder": self.settings["intentOrder"], "states": dict(self.states),
                 "startTools": self.settings.get("startTools", []),
+                "setupDone": bool(self.settings.get("setupDone")),
+                "setupInputs": self.settings.get("setupInputs", []),
+                "setupChoices": setup_mod.choices(),
                 "autostart": bool(self.settings.get("autostart")),
                 "log": [e for e in self.log if e["seq"] > since],
             }

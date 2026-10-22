@@ -8,7 +8,7 @@
   :root {
     --bg: #ffffff; --fg: #111111; --muted: #4a4a4a; --panel: #f3f4f6; --line: #c9ccd1;
     --accent: #0b57d0; --accent-fg: #ffffff; --on: #0a7a33; --off: #b3261e; --hl: #fff3b0;
-    --focus: #0b57d0;
+    --focus: #0b57d0; --scale: 1;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -17,11 +17,24 @@
       --focus: #8ab4f8;
     }
   }
+  /* High contrast (Limitless Sound's shared setting or the browser's own): white and yellow on black. */
+  :root.high-contrast {
+    --bg: #000000; --fg: #ffffff; --muted: #ffffff; --panel: #000000; --line: #ffffff;
+    --accent: #ffff00; --accent-fg: #000000; --on: #00ff66; --off: #ff6666; --hl: #ffff00;
+    --focus: #00ffff; color-scheme: dark; accent-color: var(--accent);
+  }
+  .high-contrast :is(section, .status-grid div, th, td) { border-width: 2px; }
+  .high-contrast tr.hit, .high-contrast tr.hit th, .high-contrast tr.hit td::before { color: var(--accent-fg); }
+  .high-contrast .pad .btn .shape { stroke-width: 3; }
+  /* Reduced motion (shared setting or the browser's own): changes show at once, nothing slides or fades. */
+  .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+    transition: none !important; animation: none !important; scroll-behavior: auto !important; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
+  html { font-size: calc(100% * var(--scale)); }
   body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 18px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+         font: calc(18px * var(--scale))/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: calc(980px * var(--scale)); margin: 0 auto; padding: 16px; }
   h1 { font-size: 1.8rem; margin: 8px 0 4px; }
   h2 { font-size: 1.3rem; margin: 0 0 12px; }
   p { margin: 0 0 8px; }
@@ -37,12 +50,15 @@
   .power { font-size: 1.4rem; font-weight: 700; padding: 16px 24px; min-width: 260px; }
   .power[aria-pressed=true] { border-color: var(--on); color: var(--on); }
   .power[aria-pressed=false] { border-color: var(--off); color: var(--off); }
-  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(200px * var(--scale))), 1fr));
+                 gap: 12px; margin-top: 12px; }
   .status-grid div { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
   .status-grid b { display: block; font-size: .85rem; color: var(--muted); font-weight: 600; }
   .warn { border: 2px solid var(--off); border-radius: 8px; padding: 12px; margin-top: 12px; }
   .row-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
-  label.stack { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+  label.stack { display: flex; flex-direction: column; gap: 4px; font-weight: 600; max-width: 100%; }
+  label.stack select { max-width: 100%; }
+  #path { overflow-wrap: anywhere; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-size: .9rem; color: var(--muted); }
@@ -50,26 +66,26 @@
   td select, td input[type=text] { width: 100%; }
   td .custom { margin-top: 6px; }
   .check { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; }
-  .check input { width: 24px; height: 24px; }
+  .check input { width: calc(24px * var(--scale)); height: calc(24px * var(--scale)); }
   .slider { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin-bottom: 14px; }
   .slider input { grid-column: 1 / -1; width: 100%; height: 32px; }
   .slider output { font-variant-numeric: tabular-nums; font-weight: 700; }
   .slider .muted { grid-column: 1 / -1; font-size: .9rem; }
-  pre { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 240px; overflow: auto; }
+  pre { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 8px; border-radius: 8px; max-height: calc(240px * var(--scale)); overflow: auto; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .errors { color: var(--off); font-weight: 600; }
   .ok { color: var(--on); font-weight: 700; }
   .steps { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: step; }
-  .steps li { display: grid; grid-template-columns: 44px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .steps li { display: grid; grid-template-columns: calc(44px * var(--scale)) 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .steps li:last-child { border-bottom: 0; }
   .steps h3 { margin: 0 0 4px; font-size: 1.1rem; }
-  .tick { counter-increment: step; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line);
+  .tick { counter-increment: step; width: calc(36px * var(--scale)); height: calc(36px * var(--scale)); border-radius: 50%; border: 2px solid var(--line);
           display: grid; place-items: center; font-weight: 700; background: var(--bg); }
   .tick::before { content: counter(step); }
   li.done .tick { background: var(--on); border-color: var(--on); color: var(--bg); }
   li.done .tick::before { content: "✓"; }
   .now { font-size: 1.4rem; font-weight: 700; margin: 12px 0 0; min-height: 2.1rem; }
-  .pad { width: 100%; max-width: 760px; height: auto; display: block; margin: 8px auto 0; }
+  .pad { width: 100%; max-width: calc(760px * var(--scale)); height: auto; display: block; margin: 8px auto 0; }
   .pad .body { fill: var(--bg); stroke: var(--line); stroke-width: 3; }
   .pad .btn { cursor: pointer; }
   .pad .btn .shape { fill: var(--panel); stroke: var(--fg); stroke-width: 2; transition: fill .08s; }
@@ -83,12 +99,11 @@
   .pad .btn.down text { fill: var(--accent-fg); }
   .pad .btn:focus-visible .shape { stroke: var(--focus); stroke-width: 5; }
   .pad .btn:focus { outline: none; }
-  @media (max-width: 640px) {
-    thead { display: none; }
-    tr { display: block; border-bottom: 2px solid var(--line); padding: 8px 0; }
-    td { display: block; border: 0; padding: 4px 0; }
-    td[data-label]::before { content: attr(data-label); display: block; font-size: .85rem; color: var(--muted); }
-  }
+  /* A narrow window (640px, wider for bigger text): one switch per line. */
+  .narrow thead { display: none; }
+  .narrow tr { display: block; border-bottom: 2px solid var(--line); padding: 8px 0; }
+  .narrow td { display: block; border: 0; padding: 4px 0; }
+  .narrow td[data-label]::before { content: attr(data-label); display: block; font-size: .85rem; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -268,6 +283,23 @@ async function api(path, body) {
   if (!res.ok && !data.problems) throw new Error(data.error || res.statusText);
   return data;
 }
+
+// Text size, high contrast and reduced motion: Limitless Sound's shared settings (the app sends
+// them with its state) or this browser's own, whichever is more accessible.
+const browserContrast = matchMedia("(prefers-contrast: more)");
+const browserStill = matchMedia("(prefers-reduced-motion: reduce)");
+let look = {};
+function applyLook(next) {
+  look = next || look;
+  const root = document.documentElement, scale = String(look.textScale || 1);
+  if (root.style.getPropertyValue("--scale") !== scale) root.style.setProperty("--scale", scale);
+  root.classList.toggle("high-contrast", !!look.highContrast || browserContrast.matches);
+  root.classList.toggle("reduce-motion", !!look.reduceMotion || browserStill.matches);
+  // Bigger text moves the narrow layout's breakpoint the way the browser's own zoom does.
+  root.classList.toggle("narrow", matchMedia(`(max-width: ${640 * Number(scale)}px)`).matches);
+}
+addEventListener("resize", () => applyLook());
+function scrollMotion() { return document.documentElement.classList.contains("reduce-motion") ? "auto" : "smooth"; }
 
 function say(text) { $("announce").textContent = ""; setTimeout(() => $("announce").textContent = text, 50); }
 
@@ -458,7 +490,7 @@ function renderPad() {
     const go = () => {
       const row = $("row-" + b.input);
       if (!row) return;
-      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.scrollIntoView({ block: "center", behavior: scrollMotion() });
       const target = row.querySelector("select, button"); if (target) target.focus({ preventScroll: true });
     };
     g.addEventListener("click", go);
@@ -567,6 +599,7 @@ async function poll() {
   try {
     const st = await api("/api/state");
     $("conn-lost").hidden = true;
+    applyLook(st.look);
     const power = $("power");
     power.setAttribute("aria-pressed", String(st.enabled));
     power.textContent = st.enabled ? "Controller is on" : "Controller is off";
@@ -593,7 +626,7 @@ async function poll() {
       if (row) {
         row.classList.add("hit");
         if ($("follow").checked && !row.contains(document.activeElement)) {
-          row.scrollIntoView({ block: "center", behavior: "smooth" });
+          row.scrollIntoView({ block: "center", behavior: scrollMotion() });
           say("Pressed " + label);
         }
       }
@@ -626,7 +659,7 @@ $("setup-done").addEventListener("click", async () => {
   $("power").focus();
 });
 $("show-setup").addEventListener("click", () => {
-  setupShown = true; $("setup").hidden = false; $("setup").scrollIntoView({ behavior: "smooth" });
+  setupShown = true; $("setup").hidden = false; $("setup").scrollIntoView({ behavior: scrollMotion() });
   $("setup-h").setAttribute("tabindex", "-1"); $("setup-h").focus();
 });
 $("login").addEventListener("change", async () => {
@@ -657,6 +690,7 @@ $("quit").addEventListener("click", async () => {
   document.body.innerHTML = "<main><h1>Limitless Control has quit.</h1><p>Open it again from your Applications or Start menu.</p></main>";
 });
 
+applyLook();
 if (!token) {
   $("conn-lost").hidden = false;
   $("conn-lost").textContent = "Open this page from the Limitless Control app.";

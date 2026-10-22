@@ -112,6 +112,11 @@ class Engine:
         if b.get("hold") and not press.hold_fired and held >= self._t("minPressSeconds", 0.05) and b.get("tap"):
             self._fire(b["tap"], name, now)
 
+    @property
+    def busy(self) -> bool:
+        """A switch is held down, so tick() has long presses or repeats to time."""
+        return bool(self._pressed)
+
     def tick(self, now: float) -> None:
         """Call every 10 to 20 ms so long presses and repeats fire while a switch is held."""
         min_press = self._t("minPressSeconds", 0.05)

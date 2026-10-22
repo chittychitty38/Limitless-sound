@@ -202,14 +202,23 @@ class MacBackend(Backend):
         except Exception:
             return "unknown"
 
+    @staticmethod
+    def read_pref(domain, key):
+        """Another app's setting, read in this process, as `defaults read` would see it.
+        (Running `defaults` every second while Setup was open cost a few percent of the CPU.)"""
+        from Foundation import CFPreferencesAppSynchronize, CFPreferencesCopyAppValue
+
+        CFPreferencesAppSynchronize(domain)  # see changes made since by System Settings
+        return CFPreferencesCopyAppValue(key, domain)
+
     def _zoom_shortcuts(self):
         try:
-            out = subprocess.run(["defaults", "read", "com.apple.universalaccess",
-                                  "closeViewHotkeysEnabled"], capture_output=True, text=True,
-                                 timeout=2).stdout.strip()
+            value = self.read_pref("com.apple.universalaccess", "closeViewHotkeysEnabled")
         except Exception:
             return "unknown"
-        return {"1": "ok", "0": "missing"}.get(out, "unknown")
+        if value is None:
+            return "unknown"
+        return "ok" if bool(value) else "missing"
 
     def permissions(self):
         mic = self._microphone()

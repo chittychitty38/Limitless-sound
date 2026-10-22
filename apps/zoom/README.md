@@ -106,6 +106,12 @@ When the Limitless Sound hub is running, Zoom joins the suite by itself:
   round, so the two never fight over the same keys.
 - The panel follows the suite's shared dwell time and scanning speed, and spoken feedback goes
   through the suite's one voice when that setting is on.
+- Every window (the panel, the big-text messages, the "ZOOM KEYS ON" badge, setup) follows the
+  suite's text size, high contrast and reduced motion settings straight away, with no restart.
+  If the panel's own `button_scale` makes its text bigger, the bigger one wins. With reduced
+  motion the dwell bar fills in steps instead of sliding, and menus and tooltips don't animate.
+  Zoom tells the suite which of these settings it's using (Limitless Access Standard level 2,
+  Adaptive).
 
 Without the hub nothing changes. The link is `limitless_zoom/suite.py`, using a copy of
 `shared/clients/python/limitless_link.py`.

@@ -9,6 +9,11 @@ on:
     paths: ["apps/zoom/**", ".github/workflows/zoom.yml"]
   workflow_dispatch:
 
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: zoom-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   MODEL: vosk-model-small-en-us-0.15
 
@@ -86,7 +91,7 @@ jobs:
           cp -R "dist/Limitless Zoom.app" dmg/
           ln -s /Applications dmg/Applications
           cp "packaging/How to open on a Mac.txt" dmg/
-          hdiutil create -volname "Limitless Zoom" -srcfolder dmg \
+          "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Zoom" -srcfolder dmg \
             -ov -format UDZO "dist/Limitless-Zoom-${{ matrix.name }}.dmg"
       - name: Self test and package (Windows)
         if: runner.os == 'Windows'
