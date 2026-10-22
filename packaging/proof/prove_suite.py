@@ -120,8 +120,19 @@ def windows_processes() -> dict[int, tuple[str, float, int]]:
     return {r["Id"]: (r.get("Path") or "", float(r.get("CPU") or 0), int(r.get("WorkingSet64") or 0)) for r in rows}
 
 
+def process_name(command: str) -> str:
+    """A process's short name from its command line or path: "GazeStage Helper (GPU)" or
+    "GazeStage Helper (audio)" on a Mac, "GazeStage.exe" on Windows."""
+    if "/Contents/MacOS/" in command:
+        name = command.split("/Contents/MacOS/", 1)[1].split(" --", 1)[0]
+        kind = re.search(r"--utility-sub-type=(\w+)", command)
+        return f"{name} ({kind.group(1)})" if kind else name
+    return command.replace("\\", "/").rsplit("/", 1)[-1]
+
+
 def usage(bundles: dict[str, str]) -> dict[str, dict]:
-    """CPU and memory of each app (all its helper processes together) while everything sits idle.
+    """CPU and memory of each app (all its helper processes together) while everything sits idle,
+    and its busiest processes, so an app over the limit shows where to look.
 
     CPU comes from two readings of each app's CPU time IDLE_SECONDS apart. (A Mac's own
     %cpu is a decaying average of the last minute, so it would count the test kit's work.)
@@ -142,8 +153,11 @@ def usage(bundles: dict[str, str]) -> dict[str, dict]:
     for key, mark in marks.items():
         mine = [pid for pid, (path, _, _) in after.items() if mark in path.lower()]
         if mine:
-            cpu = sum(after[p][1] - before.get(p, after[p])[1] for p in mine) / took * 100
-            out[key] = {"cpuPercent": round(max(cpu, 0.0), 1), "memoryMB": round(sum(after[p][2] for p in mine) / 2**20)}
+            each = sorted(((after[p][1] - before.get(p, after[p])[1]) / took * 100, p) for p in mine)[::-1]
+            out[key] = {"cpuPercent": round(max(sum(c for c, _ in each), 0.0), 1),
+                        "memoryMB": round(sum(after[p][2] for p in mine) / 2**20),
+                        "busiest": [{"process": process_name(after[p][0]), "cpuPercent": round(c, 1)}
+                                    for c, p in each[:3] if c >= 0.1]}
     return out
 
 
@@ -311,9 +325,12 @@ def main(argv=None) -> int:
     for a in proof["apps"]:
         a["idle"] = idle.get(a["tool"], {})
         cpu = a["idle"].get("cpuPercent")
-        a["proof"].append({"id": "P3", "ok": cpu is not None and cpu <= IDLE_CPU_LIMIT, "warn": True,
+        ok = cpu is not None and cpu <= IDLE_CPU_LIMIT
+        busiest = ", ".join(f"{b['process']} {b['cpuPercent']}%" for b in a["idle"].get("busiest", []))
+        a["proof"].append({"id": "P3", "ok": ok, "warn": True,
                            "check": f"Uses under {IDLE_CPU_LIMIT:.0f}% CPU sitting idle",
-                           "detail": f"{cpu}%" if cpu is not None else "not running"})
+                           "detail": "not running" if cpu is None
+                           else f"{cpu}%" + (f": {busiest}" if busiest and not ok else "")})
     proof["hubIdle"] = idle.get("hub", {})
     screenshot(out / "shots" / "all.png")
 
