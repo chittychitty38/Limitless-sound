@@ -140,6 +140,22 @@ try {
   const whileAsking = (await pressAll(300)).filter((a) => !a.result || a.ms > 1000 || /didn’t answer|still starting/.test(a.result.message));
   assert.deepEqual(whileAsking.map((a) => a.action), [], 'every action answered within a second while the question is open');
   await app.evaluate(() => globalThis.answerQuestion({ response: 1 }));   // Cancel
+
+  step('sitting idle, the window neither lays itself out nor asks to be drawn');
+  // Rewriting the status chips every second and asking for a frame 4 times a second kept a
+  // Mac's CPU busy (about 2.2%) while nothing changed on screen.
+  await sleep(4000);   // the toasts and flashes from the actions above are over
+  const metrics = await bare.context().newCDPSession(bare);
+  await metrics.send('Performance.enable');
+  const layouts = async () => (await metrics.send('Performance.getMetrics')).metrics.find((m) => m.name === 'LayoutCount').value;
+  await bare.evaluate(() => {
+    const ask = window.requestAnimationFrame.bind(window);
+    window.__frames = 0; window.requestAnimationFrame = (f) => { window.__frames++; return ask(f); };
+  });
+  const laidOut = await layouts();
+  await sleep(3000);
+  const idle = { layouts: await layouts() - laidOut, frames: await bare.evaluate(() => window.__frames) };
+  assert.deepEqual(idle, { layouts: 0, frames: 0 }, `in 3 s sitting idle: ${JSON.stringify(idle)}`);
   await app.close();
   hub.hello = null;
 
@@ -205,7 +221,7 @@ try {
   assert.ok(await voices() > 0, 'a note is sounding');
   await win.mouse.up();
   // After a while of silence the audio rests (a running audio context kept the computer busy
-  // while idle); the next note wakes it and still plays. A minute in use, 0.3 s here.
+  // while idle); the next note wakes it and still plays. 10 s in use, 0.3 s here.
   await sounding(false);
   await sound.evaluate(() => { const s = window.__synth; s.allOff(); s.restMs = 300; s.restLater(); });
   await sound.waitForFunction(() => window.__synth.ctx.state === 'suspended', null, { timeout: 5000 });
@@ -213,7 +229,7 @@ try {
   await sound.waitForFunction(() => window.__synth.ctx.state === 'running' && window.__synth.voices.size > 0,
     null, { timeout: 3000 });
   await win.mouse.up();
-  await sound.evaluate(() => { window.__synth.restMs = 60000; window.__synth.restLater(); });
+  await sound.evaluate(() => { window.__synth.restMs = 10000; window.__synth.restLater(); });
   await win.click('[data-action=chords]');
   assert.match(await win.locator('#pads .target').first().textContent(), /^[A-G][♯]?(m|°|\+)?/);
 
@@ -223,9 +239,17 @@ try {
   const padId = await target.getAttribute('data-pad');
   const box = await target.boundingBox();
   await win.evaluate(() => document.activeElement?.blur());
+  // With the sound resting, the pointer settling on a pad wakes it before anything is pressed,
+  // so the first note after a rest isn't late.
+  await win.mouse.move(5, 5);
+  await sound.evaluate(() => { window.__synth.restMs = 300; window.__synth.restLater(); });
+  await sound.waitForFunction(() => window.__synth.ctx.state === 'suspended', null, { timeout: 5000 });
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   // Wait until the pointer has settled on the pad (slower on CI runners than locally).
   await win.waitForFunction((id) => window.__gs.state.current?.dataset.pad === id, padId, { timeout: 5000 });
+  await sound.waitForFunction(() => window.__synth.ctx.state === 'running', null, { timeout: 3000 });
+  assert.equal(await voices(), 0, 'woken by the pointer alone: nothing is sounding yet');
+  await sound.evaluate(() => { window.__synth.restMs = 10000; window.__synth.restLater(); });
   await win.keyboard.down('Space');
   await sounding(true);
   assert.ok(await voices() > 0, 'the switch plays the pad');
