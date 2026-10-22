@@ -107,6 +107,28 @@ private:
         double smearUntil = -10.0;
         P smearPaw, smearTip;
         double twirlAt = -10.0;
+        // The rigged arm: where the last move began (the fist at the stroke, the stick's heading
+        // and pitch there), the stroke height it has been playing at, and its rhythm.
+        float fromHeading = 0.0f, fromPitch = 0.0f;
+        float ready = 0.45f;        // the stroke height it has been playing at
+        double nextFromT = -10.0;   // when the next stroke was known, and how high the stick was then
+        float nextFromH = 0.0f;
+        float home = 1.0f;          // 1: resting in the picture's pose, sticks up
+    };
+
+    // The rigged panda's arm at a moment. The stick turns in 3D about the fulcrum in his fist:
+    // heading is its direction across the floor (0 toward us, + to screen right), pitch its angle
+    // above the floor; on screen it shows foreshortened.
+    struct Arm
+    {
+        P shoulder, wrist, pivot;   // the fist is drawn about the pivot (the stick's fulcrum)
+        P tip, butt;                // the stick's two ends, on screen
+        P contact;                  // the part of the stick that meets what it plays (the tip, or a crash's shoulder)
+        float angle = 0.0f;         // the stick's direction on screen (radians)
+        float fistTurn = 0.0f;      // how far the fist is turned from the picture's
+        P strikePivot;              // where the fist is when the stick is on the head
+        float heading = 0.0f, pitch = 0.0f;   // the stick's heading and pitch on the head
+        float height = 0.0f;        // the stroke: 0 on the head ... 1 all the way up
     };
 
     struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; int variant = 0; };
@@ -130,6 +152,13 @@ private:
     void paintVector (juce::Graphics&);
     void drawSelection (juce::Graphics&);
     void paintSkin (juce::Graphics&);
+    Arm armPose (const Hand&, double t) const;
+    float strokeAt (const Hand&, double t) const;
+    P rigStrikePoint (const PieceView&, int hand) const;
+    juce::AffineTransform torsoTransform() const;
+    juce::AffineTransform headTransform() const;
+    void paintRig (juce::Graphics&, bool arms);
+    void drawArm (juce::Graphics&, const Arm&, int side);
     juce::String skinKind (const PieceView&) const;        // which picture of the art a piece uses
     juce::String poseFor (const PieceView&) const;         // the panda's pose for hitting it
     void strikeFx (const PieceView&, int hand, float vel);
@@ -170,6 +199,9 @@ private:
     float energy = 0.0f;
     Spring bounce, nod, earL, earR, lookX, lookY, shake;
     Spring headLean, headDip;       // the head on its own: leaning toward a hit (radians), dipping with it (stage units)
+    Spring bodyLean;                // the rigged panda leaning toward a far reach (stage units)
+    bool rig = false;               // the art is the rigged hero panda
+    float centreX = 640.0f;         // the panda's middle: pieces left of it are his right hand's
     double tBpm = 120.0, tPpq = 0.0;
     bool tPlaying = false;
     bool live = true;

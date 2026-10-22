@@ -382,47 +382,55 @@ public:
 class ArtTests : public juce::UnitTest
 {
 public:
-    ArtTests() : UnitTest ("3D art", "Panda") {}
+    ArtTests() : UnitTest ("Hero art", "Panda") {}
     void runTest() override
     {
         auto& skin = Skin::get();
         beginTest ("the manifest loads");
         expect (skin.isLoaded());
+        expect (skin.at ("panda/mode").toString() == "rig");
 
         beginTest ("every layer the stage draws is there, at 1x and 2x");
-        juce::StringArray names { "stage", skin.at ("kit/hihat/top_file").toString(), skin.at ("kit/hihat/bottom_file").toString(),
-                                  skin.at ("kit/hihat/stand_file").toString(), skin.at ("kit/snare/stand_file").toString(),
-                                  skin.at ("kit/kick/pedal_file").toString() };
+        juce::StringArray names { "stage", skin.at ("kit/hihat/top_file").toString(), skin.at ("kit/hihat/bottom_file").toString() };
         for (auto* kind : { "kick", "tom", "tom_alt", "floor", "snare" })
             for (auto* wrap : { "purple", "brass", "maple", "chrome", "walnut", "black" })
                 names.add (skin.at (juce::String ("kit/") + kind + "/wraps/" + wrap).toString());
         for (auto* kind : { "crash", "crash_alt", "ride", "china", "splash" })
             names.add (skin.at (juce::String ("kit/") + kind + "/file").toString());
-        for (auto* kind : { "crash", "ride", "china", "splash" })
-        {
-            auto stands = skin.at (juce::String ("kit/stands/") + kind);
-            expect (stands.size() >= 2, kind);
-            for (int i = 0; i < stands.size(); ++i)
-                names.add (stands[i].getProperty ("file", {}).toString());
-        }
-        for (auto* pose : { "idle", "blink", "kick", "snare", "hi_hat", "tom_left", "tom_right", "crash_left", "crash_right", "fill", "cheer" })
-        {
-            names.add (skin.at (juce::String ("panda/poses/") + pose + "/head_file").toString());
-            names.add (skin.at (juce::String ("panda/poses/") + pose + "/body_file").toString());
-            expect (Skin::point (skin.at (juce::String ("panda/poses/") + pose + "/neck")).y > 250.0f, pose);
-            expect (skin.at (juce::String ("panda/poses/") + pose + "/own_face") || skin.at (juce::String ("panda/poses/") + pose + "/face").size() == 3, pose);
-        }
+        // The china hangs in front of the floor tom on a stand of its own.
+        expect ((bool) skin.at ("kit/china/front"));
+        expect (skin.at ("kit/stands/china").size() == 1);
+        names.add (skin.at ("kit/stands/china")[0].getProperty ("file", {}).toString());
+        // The rig: torso, head, both sleeves, the fist, the stick and the arm.
+        for (auto* path : { "panda/torso", "panda/head_file", "panda/fist/file", "panda/stick/file", "panda/limb/file" })
+            names.add (skin.at (path).toString());
+        expect (skin.at ("panda/sleeves").size() == 2);
+        for (int i = 0; i < skin.at ("panda/sleeves").size(); ++i)
+            names.add (skin.at ("panda/sleeves")[i].toString());
         for (auto* face : { "neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh",
                             "surprised", "tongue_out", "angry", "sad", "blink" })
-            names.add (skin.at (juce::String ("panda/faces/") + face + "/file").toString());
+            if (! (bool) skin.at (juce::String ("panda/faces/") + face + "/own"))
+                names.add (skin.at (juce::String ("panda/faces/") + face + "/file").toString());
         for (auto* fx : { "blur_1", "blur_2", "blur_3", "hit_spark", "heart_red", "heart_pink", "heart_yellow", "glow_particles" })
             names.add (skin.at (juce::String ("panda/fx/") + fx).toString());
-        expect (skin.at ("stage/beams").size() == 3);
-        for (int i = 0; i < skin.at ("stage/beams").size(); ++i)
-            names.add (skin.at ("stage/beams")[i].getProperty ("file", {}).toString());
-        expect (Skin::ellipse (skin.at ("stage/rug")).getWidth() > 400.0f);
         for (auto& n : names)
             expect (skin.imagesLoad (skin.sprite (n)), "missing layer: " + n);
+
+        beginTest ("the rig's points make a drummer");
+        auto centre = Skin::number (skin.at ("stage/centre_x"));
+        auto shoulders = skin.at ("panda/shoulders");
+        expect (shoulders.size() == 2);
+        auto right = Skin::point (shoulders[0]), left = Skin::point (shoulders[1]);
+        expect (right.x < centre && left.x > centre, "a shoulder each side of his middle");
+        auto pivot = Skin::point (skin.at ("panda/fist/pivot")), wrist = Skin::point (skin.at ("panda/fist/wrist"));
+        expect (skin.sprite (skin.at ("panda/fist/file").toString()).bounds.contains (pivot), "the stick turns inside the fist");
+        expect (pivot.getDistanceFrom (wrist) < 80.0f && wrist.getDistanceFrom (right) < 120.0f);
+        auto length = Skin::number (skin.at ("panda/stick/length")), butt = Skin::number (skin.at ("panda/stick/butt"));
+        auto stick = skin.sprite (skin.at ("panda/stick/file").toString()).bounds;
+        expect (length > 80.0f && butt > 10.0f && butt < length);
+        expectWithinAbsoluteError (Skin::number (skin.at ("panda/stick/pivot_y")) + butt, stick.getHeight(), 3.0f);
+        expect (Skin::number (skin.at ("panda/limb/radius")) > 10.0f);
+        expect (Skin::point (skin.at ("panda/neck")).y > Skin::point (skin.at ("panda/head/anchor")).y);
 
         beginTest ("slots and anchors for every kind of drum");
         for (auto* kind : { "kick", "rack1", "rack2", "rack3", "rack4", "floor", "snare", "hihat", "crash", "ride", "china", "splash", "perc" })

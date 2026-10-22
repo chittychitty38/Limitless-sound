@@ -17,7 +17,7 @@ namespace
 {
 constexpr double sampleRate = 48000.0;
 constexpr int blockSize = 480;
-constexpr int fps = 30;
+const int fps = juce::jlimit (10, 120, juce::SystemStats::getEnvironmentVariable ("PD_FPS", "30").getIntValue());
 
 bool writePng (const juce::Image& img, const juce::File& f)
 {
