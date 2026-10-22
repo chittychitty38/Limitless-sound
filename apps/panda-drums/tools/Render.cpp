@@ -447,6 +447,155 @@ int levels()
 }
 } // namespace
 
+// How long the stage takes to draw a frame while the panda plays, at 1x and 2x (a retina screen):
+// the whole stage, and only what changed (as the plugin draws it). And a check that drawing only
+// what changed gives the same picture as drawing it all.
+int bench()
+{
+    Session s;
+    s.proc.setShowtime (true);
+    s.proc.setShowHitInfo (false);
+    s.editor->refreshAll();
+    auto bpm = 128.0;
+    auto notes = groove (bpm, 4, 0.3);
+    auto& stage = s.editor->getKitPage().stage;
+    int failures = 0;
+    for (auto scale : { 1.0f, 2.0f })
+    {
+        double fullMs = 0.0, partMs = 0.0, worstPart = 0.0, area = 0.0;
+        int n = 0;
+        juce::Image shown;
+        for (int f = 0; f < 240; ++f)
+        {
+            s.run ((int) (sampleRate / 60), notes, nullptr);
+            auto t = (double) s.clock / sampleRate;
+            s.pump (t);
+            stage.advanceTo (t);
+            auto changed = stage.changedArea();
+            auto t0 = juce::Time::getMillisecondCounterHiRes();
+            auto full = stage.createComponentSnapshot (stage.getLocalBounds(), true, scale);
+            auto t1 = juce::Time::getMillisecondCounterHiRes();
+            if (shown.isNull())
+            {
+                shown = full.createCopy();
+                continue;
+            }
+            {
+                juce::Graphics g (shown);
+                g.addTransform (juce::AffineTransform::scale (scale));
+                g.reduceClipRegion (changed);
+                stage.paintEntireComponent (g, true);
+            }
+            auto t2 = juce::Time::getMillisecondCounterHiRes();
+            // The partly redrawn frame must be the fully drawn one.
+            juce::Image::BitmapData a (shown, juce::Image::BitmapData::readOnly), b (full, juce::Image::BitmapData::readOnly);
+            int bad = 0, bx = -1, by = -1;
+            for (int y = 0; y < full.getHeight(); y += 2)
+                for (int x = 0; x < full.getWidth(); x += 2)
+                {
+                    auto p = a.getPixelColour (x, y), q = b.getPixelColour (x, y);
+                    if (std::abs (p.getRed() - q.getRed()) + std::abs (p.getGreen() - q.getGreen()) + std::abs (p.getBlue() - q.getBlue()) > 24)
+                        if (++bad == 1) { bx = x; by = y; }
+                }
+            if (f < 5)
+            {
+                // (just after the scale changed: a layer first copied from its cache sits a
+                // fraction of a pixel off; start the comparison from here)
+                bad = 0;
+                shown = full.createCopy();
+            }
+            if (bad > 0 && f > 5 && juce::SystemStats::getEnvironmentVariable ("PD_BENCH_DUMP", {}).isNotEmpty())
+            {
+                // The miss: the full frame, dimmed where it was redrawn, red where it wasn't.
+                juce::Image out = full.createCopy();
+                {
+                    juce::Graphics g (out);
+                    g.addTransform (juce::AffineTransform::scale (scale));
+                    g.setColour (juce::Colours::black.withAlpha (0.45f));
+                    for (auto& r : changed)
+                        g.fillRect (r);
+                }
+                for (int y = 0; y < full.getHeight(); ++y)
+                    for (int x = 0; x < full.getWidth(); ++x)
+                    {
+                        auto p = a.getPixelColour (x, y), q = b.getPixelColour (x, y);
+                        if (std::abs (p.getRed() - q.getRed()) + std::abs (p.getGreen() - q.getGreen()) + std::abs (p.getBlue() - q.getBlue()) > 24)
+                            out.setPixelAt (x, y, juce::Colours::red);
+                    }
+                writePng (out, juce::File::getCurrentWorkingDirectory().getChildFile ("redraw_miss.png"));
+            }
+            if (bad > 0)
+            {
+                ++failures;
+                std::printf ("frame %d at %.0fx: %d pixels not redrawn (first at %d, %d)\n", f, (double) scale, bad, bx, by);
+                shown = full.createCopy();
+            }
+            if (f >= 30)
+            {
+                fullMs += t1 - t0;
+                partMs += t2 - t1;
+                worstPart = std::max (worstPart, t2 - t1);
+                double px = 0.0;
+                for (auto& r : changed)
+                    px += (double) r.getWidth() * r.getHeight();
+                area += px / ((double) stage.getWidth() * stage.getHeight());
+                ++n;
+            }
+        }
+        std::printf ("scale %.0fx: whole stage %.2f ms; what changed %.2f ms (worst %.2f), %.0f%% of the stage\n",
+                     (double) scale, fullMs / n, partMs / n, worstPart, 100.0 * area / n);
+    }
+    std::printf ("%s\n", failures == 0 ? "redraw check: every frame matches" : "redraw check: FAILED");
+    return failures == 0 ? 0 : 1;
+}
+
+// His hands traced at 240 frames a second through the groove: any step much bigger than the
+// ones either side of it (a jump no hand could make between two frames) is reported.
+int motion (bool showtime)
+{
+    Session s;
+    s.proc.setShowtime (showtime);
+    s.editor->refreshAll();
+    auto notes = groove (128.0, 4, 0.3);
+    auto& stage = s.editor->getKitPage().stage;
+    const int rate = 240;
+    std::vector<std::array<juce::Point<float>, 4>> trace;
+    std::vector<double> times;
+    for (int f = 0; f < rate * 10; ++f)
+    {
+        s.run ((int) (sampleRate / rate), notes, nullptr);
+        auto t = (double) s.clock / sampleRate;
+        s.pump (t);
+        stage.advanceTo (t);
+        trace.push_back (stage.handPoints());
+        times.push_back (t);
+    }
+    const char* names[] = { "his right fist", "his left fist", "his right stick's tip", "his left stick's tip" };
+    int pops = 0;
+    for (int k = 0; k < 4; ++k)
+    {
+        double fastest = 0.0;
+        for (size_t i = 3; i + 2 < trace.size(); ++i)
+        {
+            auto step = trace[i][(size_t) k].getDistanceFrom (trace[i - 1][(size_t) k]);
+            auto before = std::max (trace[i - 1][(size_t) k].getDistanceFrom (trace[i - 2][(size_t) k]),
+                                    trace[i - 2][(size_t) k].getDistanceFrom (trace[i - 3][(size_t) k]));
+            auto after = trace[i + 1][(size_t) k].getDistanceFrom (trace[i][(size_t) k]);
+            fastest = std::max (fastest, (double) step * rate);
+            // A jump: over 12 px in a 240th of a second, and over four times the steps either side.
+            if (step > 12.0f && step > 4.0f * std::max (before, after) + 2.0f)
+            {
+                if (++pops <= 25)
+                    std::printf ("%7.3f s  %-22s jumps %5.1f px (steps either side %4.1f, %4.1f)\n",
+                                 times[i], names[k], (double) step, (double) before, (double) after);
+            }
+        }
+        std::printf ("%-22s fastest %6.0f px/s\n", names[k], fastest);
+    }
+    std::printf ("%d jumps (%s)\n", pops, showtime ? "Showtime on" : "Showtime off");
+    return 0;
+}
+
 int main (int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -454,6 +603,10 @@ int main (int argc, char** argv)
     auto target = juce::File::getCurrentWorkingDirectory().getChildFile (argc > 2 ? argv[2] : "render");
     if (mode == "screenshots")
         return screenshots (target);
+    if (mode == "bench")
+        return bench();
+    if (mode == "motion")
+        return motion (argc <= 2 || juce::String (argv[2]) != "live");
     if (mode == "video")
         return video (target, argc > 3 ? juce::String (argv[3]).getDoubleValue() : 12.0);
     if (mode == "levels")

@@ -99,8 +99,13 @@ and pitches (`pitchHz`), edit and reload. Missing pitches are found by pitch det
 With Showtime on, the plugin reports 150 ms of latency, which the DAW compensates on playback,
 so the panda knows every hit 150 ms before you hear it: he moves to the drum, winds up and
 lands the stroke exactly as it sounds. Turn it off when
-playing live from pads or a keyboard. Without it, the sticks snap down the moment a hit
-sounds (with a motion smear), with no latency at all.
+playing live from pads or a keyboard: there's no latency at all, and each stick still makes a
+whole stroke, a fast one, landing 35 ms (two frames) after the sound.
+
+The stage draws in step with the display's refresh (60 Hz or 120 Hz), timed to when the frame
+will be seen. Every move eases in and out, the elbows and shoulders follow the hands a little
+behind, and nothing jumps between frames. Each frame repaints only what moved, from art cached
+at the screen's own resolution.
 
 ## For developers
 
@@ -113,6 +118,9 @@ cmake --build build --target PandaDrumsTests && build/PandaDrumsTests_artefacts/
 `PandaDrumsRender screenshots <dir>` draws every page; `PandaDrumsRender video <dir> 18` films
 the panda playing a groove frame by frame with the matching audio (join with ffmpeg, as the
 workflow does); `PandaDrumsRender levels` prints each drum's level through the mix.
+`PandaDrumsRender bench` times the stage's paint (whole, and only what changed) and checks that
+the part redraw is pixel for pixel the whole one; `PandaDrumsRender motion` (or `motion live`,
+Showtime off) traces his fists and stick tips at 240 Hz and reports any jump.
 
 Layout: `Source/engine` (kit model, folder loader, velocity zones, keys, maps, sampler, mixer,
 factory kit), `Source/gui` (the stage animation, the art loader, the pages), `art` (the

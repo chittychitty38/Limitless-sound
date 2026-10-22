@@ -10,6 +10,9 @@ PandaDrumsEditor::PandaDrumsEditor (PandaDrumsProcessor& p) : AudioProcessorEdit
 
     topBar = std::make_unique<TopBar> (p);
     kitPage = std::make_unique<KitPage> (p);
+    // The stage's frame (on the display's refresh) takes the hits first, so a hit heard just
+    // before a frame shows in it.
+    kitPage->stage.onFrame = [this] (double now) { pumpEvents (now); };
     mixerPage = std::make_unique<MixerPage> (p);
     labPage = std::make_unique<LabPage> (p);
     mappingPage = std::make_unique<MappingPage> (p);
