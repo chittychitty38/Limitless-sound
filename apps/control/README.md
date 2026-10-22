@@ -89,6 +89,11 @@ When the Limitless Sound hub is running, Limitless Control joins the suite by it
   in front, so links can react. For example, a recording started with the big B button puts
   Limitless Voice into take mode.
 - Spoken confirmations go through the suite's one voice when that setting is on.
+- The suite's shared **text size**, **high contrast** and **reduced motion** settings reach the
+  settings page within a moment, with no reload: bigger text (the controller picture grows with
+  it), white and yellow on black, and nothing that slides or fades. The browser's own
+  high-contrast and reduce-motion settings count too; whichever asks for more wins. Control
+  reports what it applied as the state `prefs.applied`.
 
 Without the hub nothing changes. The link is `limitless_control/suite.py`, using a copy of
 `shared/clients/python/limitless_link.py`.

@@ -147,7 +147,9 @@ class App:
         self.restart = False
         self.menu = None
         self.engine.on_fire = self._fired
-        from .suite import Suite
+        from .suite import OWN_LOOK, Suite
+        # Text size, high contrast and reduced motion for the settings page; the suite can change them.
+        self.look = dict(OWN_LOOK)
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
 
@@ -223,6 +225,7 @@ class App:
                 "setupDone": bool(self.config.get("setupDone")),
                 "startAtLogin": login.is_enabled(),
                 "menuBar": self.menu is not None,
+                "look": dict(self.look),
                 "log": list(self.output.log.lines)[-12:],
             }
 
@@ -299,7 +302,9 @@ class App:
                             p = self.engine.profile or {}
                             state = (self.engine.enabled, self.engine.layer + 1, p.get("name"))
                         self.menu.update(*state, self.reader.connected)
-                time.sleep(0.01)
+                # Every 10 ms while a controller is plugged in or a switch is held. With
+                # nothing connected, 20 times a second still notices one being plugged in.
+                time.sleep(0.01 if self.reader.connected or self.engine.busy else 0.05)
         except KeyboardInterrupt:
             pass
         finally:

@@ -8,6 +8,8 @@ With the Limitless Sound hub running:
   uses this to reach the keyboard.
 - The controller reports what it did, its on/off state, its layer and the app
   in front, so links can react ("while recording, Voice only hears stop").
+- The shared text size, high contrast and reduced motion settings change how
+  the settings page looks, and the controller reports them as prefs.applied.
 Without the hub, none of this does anything.
 """
 
@@ -36,6 +38,25 @@ OWN = [
     {"id": "announce", "label": "Controller: say profile and layer"},
 ]
 
+# The shared settings Limitless Control honors, as its settings page looks on its own.
+OWN_LOOK = {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+
+
+def combine(own: dict, shared: dict) -> dict:
+    """The more accessible of two looks: the larger text, and contrast or less motion if either asks."""
+    out = {}
+    for key, mine in own.items():
+        theirs = shared.get(key, mine)
+        if key == "textScale":
+            try:
+                theirs = float(theirs)
+            except (TypeError, ValueError):
+                theirs = mine
+            out[key] = min(max(float(mine), theirs), 2.0)
+        else:
+            out[key] = bool(mine) or bool(theirs)
+    return out
+
 
 def actions() -> list[dict]:
     intents = sorted(set(INTENT_FOR_ID.values()))
@@ -56,7 +77,8 @@ class Suite:
         self.app = app
         self._sent_state: dict = {}
         self.link = Link("control", "Limitless Control", __version__, actions=actions(),
-                         on_invoke=self.invoke, on_connected=self.on_connected, subscribe=["hub.*"])
+                         on_invoke=self.invoke, on_connected=self.on_connected, on_prefs=self.on_prefs,
+                         subscribe=["hub.*"])
         engine = app.engine
         engine.on_suite = self.trigger
         engine.on_fired = self.fired
@@ -132,6 +154,16 @@ class Suite:
             self._sent_state = {}
             with self.app.lock:
                 self.report_state()
+
+    def on_prefs(self, prefs: dict) -> None:
+        """Shared settings (on joining and on every change): the settings page shows them
+        on its next update, and the suite hears which ones are now in use."""
+        with self.app.lock:
+            look = combine(OWN_LOOK, prefs)
+            self.app.look = look
+            if self._sent_state.get("prefs.applied") != look:
+                self._sent_state["prefs.applied"] = look
+                self.link.state("prefs.applied", look)
 
     def say(self, text: str) -> bool:
         return self.link.say(text)
