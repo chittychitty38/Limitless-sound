@@ -22,7 +22,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from . import __version__, applog, frontmost, keys, login, mac_keys, profiles
 from .engine import Engine
@@ -108,11 +108,13 @@ def validate(config: dict) -> list[str]:
 class Log:
     def __init__(self):
         self.lines = collections.deque(maxlen=50)
+        self.on_line = lambda: None
 
     def __call__(self, text: str) -> None:
         stamp = time.strftime("%H:%M:%S")
         self.lines.append(f"{stamp}  {text}")
         print(text, flush=True)
+        self.on_line()
 
 
 class Output:
@@ -159,11 +161,32 @@ class App:
         self.restart = False
         self.menu = None
         self.engine.on_fire = self._fired
+        # The settings page waits for news instead of asking 6 times a second (which kept Control
+        # at about 3% of an Intel Mac's CPU with the page open): anything it shows that changes
+        # calls changed(). The suite link wraps on_change after this, so set it first.
+        self.version = 0
+        self._news = threading.Condition()
+        self.engine.on_change = self.changed
+        self.log.on_line = self.changed
         from .suite import OWN_LOOK, Suite
         # Text size, high contrast and reduced motion for the settings page; the suite can change them.
         self.look = dict(OWN_LOOK)
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
+
+    # What the settings page shows
+
+    def changed(self) -> None:
+        """Something the settings page shows has changed: wake any page waiting for news."""
+        with self._news:
+            self.version += 1
+            self._news.notify_all()
+
+    def wait_for_news(self, since: int, timeout: float) -> int:
+        """Wait until something changes after version `since`, or `timeout` seconds pass."""
+        with self._news:
+            self._news.wait_for(lambda: self.version != since, timeout)
+            return self.version
 
     # Controller callbacks (main thread)
 
@@ -171,13 +194,16 @@ class App:
         with self.lock:
             self.last_input = {"name": name, "at": time.time()}
             self.engine.press(name, time.monotonic())
+        self.changed()
 
     def _release(self, name: str) -> None:
         with self.lock:
             self.engine.release(name, time.monotonic())
+        self.changed()
 
     def _fired(self, name: str, action: dict) -> None:
         self.last_action = {"input": name, "label": self.action_label(action), "at": time.time()}
+        self.changed()
 
     def action_label(self, action: dict) -> str:
         """The name a person would use for an action: "Record", "Layer 2 for the next switch"."""
@@ -268,6 +294,7 @@ class App:
             self.engine.reload(config, self.front_app)
             if self.reader:
                 self.reader.threshold = float(config.get("analogThreshold", 0.6))
+        self.changed()
         return []
 
     # Main loop
@@ -309,6 +336,7 @@ class App:
                             self.front_app = app
                             self.engine.app_changed(app)
                             self.suite.report_state()
+                        self.changed()
                     if self.menu:
                         with self.lock:
                             p = self.engine.profile or {}
@@ -367,7 +395,11 @@ class App:
                 if not self._authorized():
                     return self._json({"error": "Open settings from the Limitless Control app."}, 403)
                 if path == "/api/state":
-                    return self._json(app.state())
+                    # With ?since=<version>, wait (up to 2 s) until there's news. Permissions and
+                    # the login item change outside the app, so 2 s is as stale as they get.
+                    since = parse_qs(urlparse(self.path).query).get("since", [""])[0]
+                    version = app.wait_for_news(int(since), 2.0) if since.lstrip("-").isdigit() else app.version
+                    return self._json({**app.state(), "version": version})
                 if path == "/api/settings":
                     return self._json(app.settings())
                 self._send(404, b"Not found", "text/plain")

@@ -31,9 +31,13 @@ class FakeApp:
         self.front_app = app_id
         self.engine.app_changed(app_id)
         self.logged = []
+        self.news = 0
 
     def log(self, text):
         self.logged.append(text)
+
+    def changed(self):
+        self.news += 1
 
 
 class Link:
@@ -146,6 +150,7 @@ def test_shared_settings_are_applied_and_reported(setup):
     s.on_prefs(prefs)
     look = {"textScale": 1.5, "highContrast": True, "reduceMotion": False}
     assert app.look == look
+    assert app.news, "a settings page waiting for news hears about the new look"
     assert s.link.log == [("state", "prefs.applied", look)]   # only the settings it really honors
 
     s.on_prefs({**prefs, "dwellMs": 1500})                     # nothing it uses changed: nothing to say

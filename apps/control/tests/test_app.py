@@ -83,6 +83,43 @@ def test_settings_page_starts_without_looking_up_the_computers_name(app, monkeyp
         server.server_close()
 
 
+def test_settings_page_waits_for_news_instead_of_asking_again_and_again(app, monkeypatch):
+    """The page asked for the app's state about 6 times a second, which kept Control at about 3%
+    of an Intel Mac's CPU while the page was open. It now asks with the version it has: the
+    answer comes as soon as something changes (a press shows at once), or after 2 s."""
+    import threading
+    import time
+    from limitless_control import app as app_module
+    monkeypatch.setattr(app_module, "PORT", 0)
+    server = app._serve()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+
+    def state(since=None):
+        url = base + "/api/state" + ("" if since is None else f"?since={since}")
+        t = time.monotonic()
+        st = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Token": app.token}), timeout=10).read())
+        return st, time.monotonic() - t
+
+    try:
+        first, took = state()
+        assert took < 1 and isinstance(first["version"], int)
+        same, took = state(first["version"])
+        assert 1.8 <= took < 3, f"nothing new: the answer waits about 2 s ({took:.2f} s)"
+        assert same["version"] == first["version"]
+        threading.Timer(0.3, app._press, ["a"]).start()
+        pressed, took = state(first["version"])
+        assert took < 1.5, f"a press is news at once ({took:.2f} s)"
+        assert pressed["lastInput"]["name"] == "a"
+        app._release("a")
+        _, took = state(first["version"])
+        assert took < 0.5, "a page behind the times is answered at once"
+        page = urllib.request.urlopen(base + "/", timeout=5).read().decode()
+        assert 'api("/api/state?since=" + version)' in page
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
     from limitless_control import app as app_module
     monkeypatch.setattr(app_module, "PORT", 0)

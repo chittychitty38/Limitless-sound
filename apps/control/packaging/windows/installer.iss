@@ -2,7 +2,7 @@
 ; Built by CI:  iscc /DMyVersion=<version> packaging\windows\installer.iss
 
 #ifndef MyVersion
-  #define MyVersion "0.2.3"
+  #define MyVersion "0.2.4"
 #endif
 
 [Setup]
