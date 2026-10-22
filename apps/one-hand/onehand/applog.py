@@ -18,6 +18,7 @@ Standard library only.
 
 from __future__ import annotations
 
+import atexit
 import faulthandler
 import logging
 import logging.handlers
@@ -66,6 +67,16 @@ class _ToLog:
         return False
 
 
+def _keep_only_crashes(crash_file, size: int) -> None:
+    """The app is closing normally, so nothing written to the crash log this run was fatal.
+    On Windows, faulthandler also reports exceptions that were handled (Windows' own COM
+    raises 0x8001010d and carries on), which read like crashes: drop this run's lines."""
+    try:
+        crash_file.truncate(size)
+    except (OSError, ValueError):
+        pass
+
+
 def start(app: str, version: str = "") -> Path | None:
     """Start logging for this app. Returns the log file, or None if it can't be written."""
     global _crash_file
@@ -90,6 +101,7 @@ def start(app: str, version: str = "") -> Path | None:
             crash.unlink()
         _crash_file = open(crash, "a", encoding="utf-8")
         faulthandler.enable(_crash_file, all_threads=True)
+        atexit.register(_keep_only_crashes, _crash_file, _crash_file.tell())
     except OSError:
         pass
 
