@@ -176,9 +176,12 @@ jobs:
       - if: steps.has.outputs.voice == 'yes'
         shell: bash
         run: |
+          # The recognizer warns about every command word the small model doesn't know each time
+          # it's built, thousands of times here; each warning is shown once.
           VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
             LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
-            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py -v -s --durations=5
+            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py -v -s --durations=5 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print }'
 
   gazestage:
     name: GazeStage soak and focus (${{ matrix.os }})

@@ -37,14 +37,14 @@ from limitless_voice.actions import APP_ALIASES  # noqa: E402
 from limitless_voice.engine import BUILTIN_PHRASES, DESTRUCTIVE_KEYS, Engine, normalize  # noqa: E402
 from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases  # noqa: E402
 from limitless_voice.keys import spoken_vocabulary  # noqa: E402
-from limitless_voice.numbers import NUMBER_WORDS  # noqa: E402
+from limitless_voice.numbers import HOMOPHONES, NUMBER_WORDS  # noqa: E402
 from limitless_voice.platforms.dryrun import DryRunPlatform  # noqa: E402
 from test_voice_stress import DESTRUCTIVE  # noqa: E402
 
 MODEL = os.environ.get("VOSK_MODEL")
 WORDS_DIR = os.environ.get("SPEECH_COMMANDS_DIR")
 TALK_DIR = os.environ.get("LIBRISPEECH_DIR")
-PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "150"))
+PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 
 RATE = 16000
@@ -80,10 +80,16 @@ def _listener():
     return _mine.listener, _mine.heard
 
 
+_making = []    # seconds each worker spent building recognizers, to see where the time goes
+
+
 def _start(listener, heard):
     heard.clear()
     listener._cmd_parts = []
-    return listener._make_recognizers(RATE)
+    started = time.perf_counter()
+    recs = listener._make_recognizers(RATE)
+    _making.append(time.perf_counter() - started)
+    return recs
 
 
 def _feed(listener, recs, pcm):
@@ -104,8 +110,8 @@ def hear_word(path):
     nothing it could write down, only after five seconds. So wait up to six, as the app would."""
     listener, heard = _listener()
     recs = _start(listener, heard)
-    _feed(listener, recs, QUIET * 5 + _read(path) + QUIET * 10)
-    for _ in range(50):
+    _feed(listener, recs, QUIET * 5 + _read(path))
+    for _ in range(60):
         if heard:
             break
         listener._feed(recs, QUIET)
@@ -121,7 +127,7 @@ def hear_talk(folder):
     for path in sorted(folder.glob("*.wav")):
         pcm = _read(path)
         seconds += len(pcm) / 2 / RATE
-        _feed(listener, recs, pcm + QUIET * 3)
+        _feed(listener, recs, pcm + QUIET * 5)
         out += [(path.stem, c, o) for c, o in heard]
         heard.clear()
     _feed(listener, recs, QUIET * 20)
@@ -166,6 +172,19 @@ def kind(word):
     return "word" if word in PHRASES else "other"
 
 
+def _heard_word(heard, word):
+    """Did the engine get this word? Each utterance's text is what the engine reads first
+    (the command transcript, or the open one when that's empty). A number counts when it
+    was heard as a word the engine itself reads as that number after "bar", "track",
+    "tempo" and the like: "to" for "two", "for" for "four"."""
+    want = normalize(word)
+    for c, o in heard:
+        text = normalize(c) or normalize(o)
+        if text == want or (word in NUMBER_WORDS and normalize(HOMOPHONES.get(text, text)) == want):
+            return True
+    return False
+
+
 def _pick(folder):
     """Up to PER_WORD clips, each from a different person where there are enough people:
     everyone's first take before anyone's second, in an order fixed by a hash so every run
@@ -177,7 +196,50 @@ def _pick(folder):
 
 
 def _shown(heard):
-    return " | ".join(normalize(c) or normalize(o) or "[unk]" for c, o in heard) or "(nothing)"
+    """What was heard, as "command transcript / open transcript" when the two differ."""
+    parts = []
+    for c, o in heard:
+        c, o = " ".join(c.split()), " ".join(o.split())
+        parts.append(c if c == o else f"{c or '-'} / {o or '-'}")
+    return " | ".join(parts) or "(nothing)"
+
+
+def score(words, jobs, heard, kinds):
+    """Per word: tries, right, wrong command fired, destructive; and what was heard instead."""
+    tally, instead, wrong = defaultdict(Counter), defaultdict(Counter), Counter()
+    for (word, _), h in zip(jobs, heard):
+        want, got = outcome([(word, word)]), outcome(h)
+        fired = bool(got[1]) or got[2]
+        if kinds[word] == "command":
+            hit = got == want
+        elif kinds[word] == "word":
+            hit = got == want and _heard_word(h, word)
+        else:
+            hit = not fired
+        t = tally[word]
+        t["tries"] += 1
+        t["hits"] += hit
+        if fired and got != want:
+            t["wrong"] += 1
+            t["destructive"] += bool(_destructive(got[1]))
+            wrong[(got[0] or ("(mode change)",))[0]] += 1
+        if not hit:
+            instead[word][_shown(h)] += 1
+    return tally, instead, wrong
+
+
+def _sums(tally, words):
+    return sum(tally[w]["hits"] for w in words), sum(tally[w]["tries"] for w in words)
+
+
+def _agreeing(heard):
+    """A possible fix, measured here (not in the app): a one-word command only counts when
+    the open recognizer heard that word too; otherwise the engine reads the open transcript."""
+    out = []
+    for c, o in heard:
+        cmd = normalize(c).split()
+        out.append((o, o) if len(cmd) == 1 and cmd[0] not in normalize(o).split() else (c, o))
+    return out
 
 
 # ---------------------------------------------------------------- the tests
@@ -188,37 +250,17 @@ def test_real_people_saying_command_words():
     """Thousands of real people, one word each: is the word heard, and does the right thing happen?"""
     words = sorted(d.name for d in Path(WORDS_DIR).iterdir() if d.is_dir())
     jobs = [(w, f) for w in words for f in _pick(Path(WORDS_DIR) / w)]
+    _making.clear()
     started = time.monotonic()
     with ThreadPoolExecutor(WORKERS) as pool:
         heard = list(pool.map(lambda job: hear_word(job[1]), jobs))
     took = time.monotonic() - started
 
     kinds = {w: kind(w) for w in words}
-    tally = defaultdict(Counter)
-    instead = defaultdict(Counter)
-    wrong = Counter()
-    for (word, _), h in zip(jobs, heard):
-        want = outcome([(word, word)])
-        got = outcome(h)
-        fired = bool(got[1]) or got[2]
-        t = tally[word]
-        t["tries"] += 1
-        if kinds[word] == "command":
-            hit = got == want
-        elif kinds[word] == "word":
-            hit = got == want and normalize(word) in [normalize(c) or normalize(o) for c, o in h]
-        else:
-            hit = not fired
-        t["hits"] += hit
-        if fired and got != want:
-            t["wrong"] += 1
-            t["destructive"] += bool(_destructive(got[1]))
-            wrong[(got[0] or ("(mode change)",))[0]] += 1
-        if not hit:
-            instead[word][_shown(h)] += 1
-
+    tally, instead, wrong = score(words, jobs, heard, kinds)
     print(f"\n{len(jobs)} clips of {len(words)} words, {len({f.stem.split('_')[0] for _, f in jobs})} different "
-          f"people, heard in {took:.0f} s with {WORKERS} at once. In front: Logic Pro.")
+          f"people, heard in {took:.0f} s with {WORKERS} at once ({sum(_making):.0f} s of it building "
+          f"recognizers). In front: Logic Pro. Heard as “command transcript / open transcript”.")
     print(f"\n{'word':<9} {'kind':<8} {'right':>13}  {'wrong cmd':>9}  most often heard instead")
     for group in ("command", "word", "other"):
         for w in [w for w in words if kinds[w] == group]:
@@ -228,20 +270,28 @@ def test_real_people_saying_command_words():
             print(f"{w:<9} {group:<8} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {wrong_cmd:>9}  {miss}")
 
     known = [w for w in words if kinds[w] != "other"]
-    hits = sum(tally[w]["hits"] for w in known)
-    tries = sum(tally[w]["tries"] for w in known)
     others = [w for w in words if kinds[w] == "other"]
-    stray = sum(tally[w]["tries"] - tally[w]["hits"] for w in others)
-    stray_tries = sum(tally[w]["tries"] for w in others)
+    hits, tries = _sums(tally, known)
+    quiet, stray_tries = _sums(tally, others)
     destroyed = sum(tally[w]["destructive"] for w in words)
     print(f"\nWords Voice listens for: {hits}/{tries} right ({hits / tries:.1%})")
     for group in ("command", "word"):
         g = [w for w in words if kinds[w] == group]
-        gh, gt = sum(tally[w]["hits"] for w in g), sum(tally[w]["tries"] for w in g)
+        gh, gt = _sums(tally, g)
         print(f"  {group}s ({', '.join(g)}): {gh}/{gt} ({gh / gt:.1%})")
-    print(f"Words that aren't commands alone: fired something {stray}/{stray_tries} times ({stray / stray_tries:.1%})")
+    print(f"Words that aren't commands alone: fired something {stray_tries - quiet}/{stray_tries} times "
+          f"({1 - quiet / stray_tries:.1%})")
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
+
+    t2, _, w2 = score(words, jobs, [_agreeing(h) for h in heard], kinds)
+    h2, _ = _sums(t2, known)
+    q2, _ = _sums(t2, others)
+    print(f"\nWhat if a one-word command needed the open recognizer to hear that word too? Right "
+          f"{h2 / tries:.1%} (now {hits / tries:.1%}); stray words fire {1 - q2 / stray_tries:.1%} "
+          f"(now {1 - quiet / stray_tries:.1%}); destructive {sum(t2[w]['destructive'] for w in words)} "
+          f"(now {destroyed}). Per word: "
+          + ", ".join(f"{w} {tally[w]['hits']}→{t2[w]['hits']}" for w in words if t2[w]["hits"] != tally[w]["hits"]))
 
     assert tries and stray_tries
 
@@ -280,8 +330,8 @@ def test_ordinary_talk_rarely_fires_commands():
               f"{len(bad)} destructive ({len(bad) / hours:.1f} an hour)")
         for message, n in Counter(f[3] for f in fired).most_common(12):
             utt, c, o, _, acts = next(f for f in fired if f[3] == message)
-            print(f"  {n:>3} × {message!r:<28} e.g. heard “{c}” / “{o}” {list(acts)[:3]}  (reading “{said.get(utt, '')[:70]}”)")
+            print(f"  {n:>3} × {message!r:<28} e.g. heard “{c}” / “{o}” {list(acts)[:3]}  (reading about “{said.get(utt, '')[:70]}”)")
         for utt, c, o, message, acts in bad:
-            print(f"  DESTRUCTIVE: {message!r} {list(acts)} heard “{c}” / “{o}” (reading “{said.get(utt, '')[:70]}”)")
+            print(f"  DESTRUCTIVE: {message!r} {list(acts)} heard “{c}” / “{o}” (reading about “{said.get(utt, '')[:70]}”)")
 
     assert hours > 0

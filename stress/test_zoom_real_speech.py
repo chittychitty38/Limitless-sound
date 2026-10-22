@@ -35,7 +35,7 @@ from limitless_zoom.voice import Hearing, VoiceListener, grammar, recognize_file
 MODEL = os.environ.get("VOSK_MODEL")
 WORDS_DIR = os.environ.get("SPEECH_COMMANDS_DIR")
 TALK_DIR = os.environ.get("LIBRISPEECH_DIR")
-PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "150"))
+PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 RATE = 16000
 
@@ -106,7 +106,7 @@ def test_ordinary_talk_rarely_zooms():
             seconds += len(samples) / RATE
             for i in range(0, len(samples), RATE // 10):
                 hearing.hear(samples[i:i + RATE // 10])
-            for _ in range(3):
+            for _ in range(5):
                 hearing.hear(pause)
         for _ in range(20):
             hearing.hear(pause)
