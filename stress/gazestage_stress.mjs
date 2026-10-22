@@ -70,8 +70,15 @@ const sounding = (win) => win.evaluate(() => ({
 async function hoverPad(win, i) {
   const box = await win.locator('#pads .target').nth(i).boundingBox();
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 3 });
-  await win.waitForTimeout(200);  // let sticky targeting settle on it
+  // Let sticky targeting settle on it: usually ~50 ms, longer on a busy test machine just after launch.
+  await win.waitForFunction((n) => window.__gs.state.current === document.querySelectorAll('#pads .target')[n],
+    i, { timeout: 5000 }).catch(() => {});
+  await win.waitForTimeout(200);  // and let whatever that started or stopped finish
 }
+
+// Whether a note starts sounding within 2 s (a fixed short wait failed on busy test machines).
+const plays = (win) => win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 })
+  .then(() => true, () => false);
 
 // 1. The musician holds a note with a switch, then clicks into Pro Tools. The key-up goes to
 //    Pro Tools, never to GazeStage. The note must stop and the switch must keep working.
@@ -81,8 +88,7 @@ async function focusLoss() {
     await ready(win, { select: 'switch' });
     await hoverPad(win, 0);
     await win.keyboard.down('Space');
-    await win.waitForTimeout(200);
-    check((await sounding(win)).voices > 0, 'a switch press on a gazed pad plays the note');
+    check(await plays(win), 'a switch press on a gazed pad plays the note');
     // What the window sees when another app takes focus.
     await win.evaluate(() => { window.dispatchEvent(new Event('blur')); });
     await win.waitForTimeout(700);
@@ -96,8 +102,7 @@ async function focusLoss() {
     await win.evaluate(() => { window.dispatchEvent(new Event('focus')); window.__gs.synth.allOff(); });
     await hoverPad(win, 2);
     await win.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' })));
-    await win.waitForTimeout(250);
-    check((await sounding(win)).voices > 0, 'the switch still works after its key-up was lost to another app');
+    check(await plays(win), 'the switch still works after its key-up was lost to another app');
   } finally {
     await close();
   }
