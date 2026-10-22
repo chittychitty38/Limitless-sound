@@ -40,7 +40,17 @@ async function launch() {
   await win.waitForLoadState();
   await win.setViewportSize({ width: 1280, height: 800 });
   const close = async () => { await app.close(); rmSync(profile, { recursive: true, force: true }); };
-  return { app, win, errors, close };
+  return { app, win, sound: await synthPage(app), errors, close };
+}
+
+// The built-in instrument plays in a hidden page of its own (synth.html): its notes are counted there.
+async function synthPage(app) {
+  for (let t = 0; t < 100; t++) {
+    const page = app.windows().find((p) => p.url().endsWith('/synth.html'));
+    if (page) return page;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('the built-in instrument has no page');
 }
 
 // Go through the guided setup quickly, then put the app on the note pads with the mouse as pointer.
@@ -62,10 +72,10 @@ async function ready(win, { select = 'switch', camera = false } = {}) {
   await win.waitForFunction(() => document.querySelectorAll('#pads .target').length > 0 && window.__gs.state.page === 'play', null, { timeout: 5000 });
 }
 
-const sounding = (win) => win.evaluate(() => ({
-  voices: window.__gs.synth.voices.size, lit: document.querySelectorAll('#pads .target.on').length,
-  held: !!window.__gs.state.heldHui,
-}));
+const sounding = async (win, sound) => ({
+  voices: await sound.evaluate(() => window.__synth.voices.size),
+  ...(await win.evaluate(() => ({ lit: document.querySelectorAll('#pads .target.on').length, held: !!window.__gs.state.heldHui }))),
+});
 
 async function hoverPad(win, i) {
   const box = await win.locator('#pads .target').nth(i).boundingBox();
@@ -77,32 +87,32 @@ async function hoverPad(win, i) {
 }
 
 // Whether a note starts sounding within 2 s (a fixed short wait failed on busy test machines).
-const plays = (win) => win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 })
+const plays = (sound) => sound.waitForFunction(() => window.__synth.voices.size > 0, null, { timeout: 2000 })
   .then(() => true, () => false);
 
 // 1. The musician holds a note with a switch, then clicks into Pro Tools. The key-up goes to
 //    Pro Tools, never to GazeStage. The note must stop and the switch must keep working.
 async function focusLoss() {
-  const { win, close } = await launch();
+  const { win, sound, close } = await launch();
   try {
     await ready(win, { select: 'switch' });
     await hoverPad(win, 0);
     await win.keyboard.down('Space');
-    check(await plays(win), 'a switch press on a gazed pad plays the note');
+    check(await plays(sound), 'a switch press on a gazed pad plays the note');
     // What the window sees when another app takes focus.
     await win.evaluate(() => { window.dispatchEvent(new Event('blur')); });
     await win.waitForTimeout(700);
-    const after = await sounding(win);
+    const after = await sounding(win, sound);
     check(after.voices === 0 && after.lit === 0,
       `the note stops when GazeStage loses focus with the switch held (voices ${after.voices}, lit pads ${after.lit})`);
     await hoverPad(win, 3);
-    const moved = await sounding(win);
+    const moved = await sounding(win, sound);
     check(moved.voices === 0, `looking away from the pad after focus came back releases it (voices ${moved.voices})`);
     // Back in GazeStage: the key-up was lost to the other app. The next press must still play.
     await win.evaluate(() => { window.dispatchEvent(new Event('focus')); window.__gs.synth.allOff(); });
     await hoverPad(win, 2);
     await win.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' })));
-    check(await plays(win), 'the switch still works after its key-up was lost to another app');
+    check(await plays(sound), 'the switch still works after its key-up was lost to another app');
   } finally {
     await close();
   }
@@ -111,7 +121,7 @@ async function focusLoss() {
 // 2. A tremor on a switch: hundreds of fast presses while the pointer wanders across the pads.
 //    Afterwards nothing may be left sounding.
 async function switchFlood() {
-  const { win, errors, close } = await launch();
+  const { win, sound, errors, close } = await launch();
   try {
     await ready(win, { select: 'switch' });
     const count = await win.locator('#pads .target').count();
@@ -123,7 +133,7 @@ async function switchFlood() {
     }
     await win.mouse.move(5, 5);
     await win.waitForTimeout(800);
-    const s = await sounding(win);
+    const s = await sounding(win, sound);
     check(s.voices === 0 && s.lit === 0, `nothing left sounding after 300 shaky switch presses (voices ${s.voices}, lit pads ${s.lit})`);
     check(errors.length === 0, `no errors during the switch flood (${errors.slice(0, 3).join(' | ')})`);
   } finally {
@@ -133,7 +143,7 @@ async function switchFlood() {
 
 // 3. Dwell across the targets as fast as the settings allow, changing scale and octave as it goes.
 async function dwellFlood() {
-  const { win, errors, close } = await launch();
+  const { win, sound, errors, close } = await launch();
   try {
     await ready(win, { select: 'dwell' });
     await win.evaluate(() => Object.assign(window.__gs.S, { dwell: 300, padDwell: 0 }));
@@ -148,7 +158,7 @@ async function dwellFlood() {
     }
     await win.mouse.move(5, 5);
     await win.waitForTimeout(800);
-    const s = await sounding(win);
+    const s = await sounding(win, sound);
     check(s.voices === 0 && s.lit === 0, `nothing left sounding after 120 fast dwell selections (voices ${s.voices}, lit ${s.lit})`);
     check(await win.locator('#pads .target').count() >= 6, 'the pads are still there after flipping scales and octaves');
     check(errors.length === 0, `no errors during the dwell flood (${errors.slice(0, 3).join(' | ')})`);

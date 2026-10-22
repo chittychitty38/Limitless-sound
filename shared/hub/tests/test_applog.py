@@ -54,6 +54,22 @@ def test_writes_errors_nothing_caught_including_in_threads(tmp_path):
     assert (tmp_path / "Test App crash.log").exists()
 
 
+def test_crash_log_keeps_crashes_and_forgets_what_a_normal_run_survived(tmp_path):
+    env = {**os.environ, "LIMITLESS_SOUND_LOGS": str(tmp_path)}
+    crash = tmp_path / "Test App crash.log"
+    start = f"import sys, faulthandler; sys.path.insert(0, {str(CANONICAL.parent)!r}); import applog; applog.start('Test App')"
+    # On Windows, faulthandler also reports exceptions that were handled (COM's 0x8001010d);
+    # a run that then closes normally leaves none of it behind.
+    subprocess.run([sys.executable, "-c", start + "; faulthandler.dump_traceback(applog._crash_file)"],
+                   check=True, env=env)
+    assert crash.read_text() == ""
+    # A native crash ends the run before it can close, so where it was stays written down.
+    r = subprocess.run([sys.executable, "-c", start + "; faulthandler._sigsegv()"], capture_output=True, env=env)
+    assert r.returncode != 0
+    text = crash.read_text()
+    assert "fatal" in text.lower() and "<module>" in text, text
+
+
 def test_a_folder_it_cannot_write_is_not_fatal(tmp_path, monkeypatch):
     sys.path.insert(0, str(CANONICAL.parent))
     import applog

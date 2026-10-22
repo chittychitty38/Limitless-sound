@@ -179,11 +179,15 @@ class MacBackend(Backend):
             return "unknown"
 
     def _iokit(self):
-        lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/IOKit.framework/IOKit")
-        lib.IOHIDCheckAccess.restype = ctypes.c_int
-        lib.IOHIDCheckAccess.argtypes = [ctypes.c_int]
-        lib.IOHIDRequestAccess.restype = ctypes.c_bool
-        lib.IOHIDRequestAccess.argtypes = [ctypes.c_int]
+        # Loaded once: permissions are checked every second while one is missing.
+        lib = getattr(self, "_iokit_lib", None)
+        if lib is None:
+            lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/IOKit.framework/IOKit")
+            lib.IOHIDCheckAccess.restype = ctypes.c_int
+            lib.IOHIDCheckAccess.argtypes = [ctypes.c_int]
+            lib.IOHIDRequestAccess.restype = ctypes.c_bool
+            lib.IOHIDRequestAccess.argtypes = [ctypes.c_int]
+            self._iokit_lib = lib
         return lib
 
     def _input_monitoring(self):

@@ -1,10 +1,15 @@
 #!/bin/bash
-# Builds Limitless-Sound-Suite-<arch>.dmg from the per-app downloads in $1.
+# Builds the suite installer from the per-app downloads in $1:
+#   Limitless-Sound-Suite-<arch>.pkg  the standard Mac installer, with every app
+#   Limitless-Sound-Suite-<arch>.dmg  the same installer in a disk image ($3)
 # Each app arrives as a .dmg (or .zip / .app); every .app inside is copied in.
 set -euo pipefail
 IN="$1"; ARCH="$2"; OUT="$3"
+PKG="${OUT%.dmg}.pkg"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-STAGE="$(mktemp -d)/Limitless Sound"
+VERSION="$(tr -d '[:space:]' < "$HERE/../VERSION")"
+WORK="$(mktemp -d)"
+STAGE="$WORK/apps"
 mkdir -p "$STAGE"
 
 # hdiutil on the hosted Mac runners sometimes fails with "Resource busy"; try again.
@@ -47,7 +52,24 @@ for app in "$STAGE"/*.app; do
   codesign --verify "$app" 2>/dev/null || codesign --force --deep --sign - "$app"
 done
 
-cp "$HERE/Install Limitless Sound.command" "$HERE/READ-ME-FIRST.txt" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-retry hdiutil create -volname "Limitless Sound" -srcfolder "$STAGE" -ov -format UDZO "$OUT"
+# The installer package. Its apps always go to /Applications: Installer's default is to
+# "relocate" an app to wherever another copy of it already is (an old download, say).
+pkgbuild --analyze --root "$STAGE" "$WORK/components.plist"
+n=$(plutil -convert json -o - "$WORK/components.plist" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))')
+for ((i = 0; i < n; i++)); do
+  plutil -replace "$i.BundleIsRelocatable" -bool NO "$WORK/components.plist"
+done
+pkgbuild --root "$STAGE" --component-plist "$WORK/components.plist" --install-location /Applications \
+  --identifier org.limitlesssound.suite --version "$VERSION" --scripts "$HERE/installer/scripts" "$WORK/apps.pkg"
+sed -e "s/@VERSION@/$VERSION/g" -e "s/@ARCH@/$ARCH/g" "$HERE/installer/distribution.xml" > "$WORK/distribution.xml"
+productbuild --distribution "$WORK/distribution.xml" --resources "$HERE/installer/resources" \
+  --package-path "$WORK" "$PKG"
+echo "Built $PKG"
+
+# The same installer in a disk image, for the download links that point at the .dmg.
+DMG_STAGE="$WORK/Limitless Sound"
+mkdir -p "$DMG_STAGE"
+cp "$PKG" "$DMG_STAGE/Install Limitless Sound.pkg"
+cp "$HERE/READ-ME-FIRST.txt" "$DMG_STAGE/"
+retry hdiutil create -volname "Limitless Sound" -srcfolder "$DMG_STAGE" -ov -format UDZO "$OUT"
 echo "Built $OUT"

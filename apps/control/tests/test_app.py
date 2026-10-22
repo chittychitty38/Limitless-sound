@@ -66,6 +66,23 @@ def test_default_timing_is_the_steady_preset():
     assert config["analogThreshold"] == steady["analogThreshold"]
 
 
+def test_settings_page_starts_without_looking_up_the_computers_name(app, monkeypatch):
+    """http.server looks up the computer's full name as it starts (socket.getfqdn). On an
+    Intel Mac that waited 35 s on multicast DNS, and the whole app waited with it."""
+    import socket
+    from limitless_control import app as app_module
+    monkeypatch.setattr(app_module, "PORT", 0)
+    monkeypatch.setattr(socket, "getfqdn", lambda *a: pytest.fail("looked up the computer's name"))
+    server = app._serve()
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{server.server_address[1]}/api/state",
+                                     headers={"X-Token": app.token})
+        assert urllib.request.urlopen(req, timeout=5).status == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
     from limitless_control import app as app_module
     monkeypatch.setattr(app_module, "PORT", 0)

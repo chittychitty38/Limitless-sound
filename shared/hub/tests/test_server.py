@@ -78,6 +78,19 @@ def test_link_file_is_written_and_private(hub, tmp_path):
     assert running_hub()["token"] == hub.token
 
 
+def test_settings_page_starts_without_looking_up_the_computers_name(tmp_path, monkeypatch):
+    """http.server looks up the computer's full name as it starts (socket.getfqdn), which can
+    wait half a minute on a Mac's multicast DNS (Limitless Control took 35 s to start that way)."""
+    import socket
+    monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))
+    monkeypatch.setattr(socket, "getfqdn", lambda *a: pytest.fail("looked up the computer's name"))
+    h = Hub({}, port=0, http_port=0, speaker=Speaker()).start()
+    try:
+        assert http(h, "GET", "/api/state")[0] == 200
+    finally:
+        h.stop()
+
+
 def test_tools_trigger_each_other_through_the_hub(hub):
     zoom, zseen = tool("zoom", [{"id": "in", "label": "Zoom in", "intent": "daw.zoomIn"}])
     control, _ = tool("control", [{"id": "record", "label": "Record", "intent": "daw.record"}])

@@ -10,7 +10,7 @@ export const SYNTH_PRESETS = Object.fromEntries(Object.entries(PRESETS).map(([k,
 export class Synth {
   constructor() {
     this.ctx = null; this.voices = new Map(); this.preset = 'keys'; this.volume = 0.9;
-    this.restMs = 60000; this.keepAwake = false;   // keepAwake: the sound switch listens through it
+    this.restMs = 60000;
   }
 
   // A minute after the last sound the audio context is suspended: a running one keeps the
@@ -18,7 +18,7 @@ export class Synth {
   restLater() {
     clearTimeout(this.restTimer);
     this.restTimer = setTimeout(() => {
-      if (this.voices.size || this.keepAwake) this.restLater();
+      if (this.voices.size) this.restLater();
       else this.ctx?.suspend();
     }, this.restMs);
   }

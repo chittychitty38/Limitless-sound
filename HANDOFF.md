@@ -45,8 +45,8 @@ Every app and the hub are on `main`, and the whole suite is one released Mac dow
 
 ```sh
 mkdir -p downloads && cd downloads
-curl -fLO https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.dmg
-# Intel Mac: Limitless-Sound-Suite-mac-intel.dmg
+curl -fLO https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
+# Intel Mac: Limitless-Sound-Suite-mac-intel.pkg
 cd ..
 ```
 
@@ -71,11 +71,12 @@ gh run download "$RUN" -D "downloads/$WF"     # artifact names end in -mac-apple
 
 If the artifact names differ, list them with `gh api repos/chittychitty38/Limitless-sound/actions/runs/$RUN/artifacts -q '.artifacts[].name'`.
 
-Open the suite `.dmg` and have Bennet double-click **Install Limitless Sound**; it copies every
-app into Applications (a single app's `.dmg` from a workflow build is dragged there instead).
-The apps aren't signed yet, so the first time macOS refuses: he goes to **System Settings →
-Privacy & Security**, scrolls down and clicks **Open Anyway**. Record how many clicks that took and whether anything
-was confusing; that is what every musician will meet.
+Have Bennet double-click the suite `.pkg`: the standard Mac installer puts every app in
+Applications and starts Limitless Sound (a single app's `.dmg` from a workflow build is dragged
+there instead). The installer isn't signed yet, so the first time macOS refuses: he clicks
+**Done**, goes to **System Settings → Privacy & Security**, scrolls down, clicks **Open Anyway**
+and confirms; then **Continue**, **Install** and his Mac password. Record how many clicks that
+took and whether anything was confusing; that is what every musician will meet.
 
 ### 3. Run the automated stress tests on this Mac
 
@@ -114,10 +115,29 @@ Record each result. GazeStage prints its frame rate: on a real Mac it should be 
 
 ### 4. Hands-on checks
 
+The nightly proof run (`.github/workflows/proof.yml`, results on the website's Proof section)
+already installs the public download on fresh Apple silicon and Intel Macs and a Windows PC,
+opens every app and presses every one of its actions. So these checks are only what a build
+machine can't do: a real microphone, camera, controller and DAW, the permission prompts, and
+how it feels.
+
 Do them app by app, in this order (each builds on the last). Before each app, tell Bennet in two
 sentences what it does and what he'll be checking. If something fails: write down exactly what
-he did and saw, collect the app's log (each README says where) and a screenshot, then continue.
-At the end, fix what you can on a branch and open a pull request per app, or open an issue.
+he did and saw, attach the app's log (Limitless Sound's page › Activity › **Open the log folder**,
+or `~/Library/Logs/Limitless Sound/`: one file per app, plus a `crash.log` if a Python app died) and any crash report from Console.app › Crash Reports, take a
+screenshot, then continue. At the end, fix what you can on a branch and open a pull request per
+app, or open an issue.
+
+#### First: the guided setup (everything else builds on it)
+- [ ] Right after installing, the Limitless Sound page opens and asks **How do you like to play?**
+      Bennet picks what fits him, then a text size. The page previews the size as he picks.
+- [ ] **Set up my apps** opens the chosen apps. Each card on My apps says "✓ Uses your text size,
+      contrast and motion settings" within a few seconds.
+- [ ] Settings › change text size to **Largest** and turn on **High contrast**: every open app
+      (Voice's window, One-Hand's window and badge, Zoom's panel, Control's settings page,
+      Color's tuner, GazeStage) grows and turns high contrast within about 3 seconds, without
+      restarting any of them. Turn both off again: they all go back.
+- [ ] Each app opens in under 5 seconds (Control used to take 37).
 
 #### Limitless One-Hand (needs Logic Pro or Pro Tools)
 - [ ] First launch: macOS asks for **Accessibility** and **Input Monitoring**. After turning both
@@ -154,6 +174,9 @@ At the end, fix what you can on a branch and open a pull request per app, or ope
 
 #### Limitless Zoom (Logic, Pro Tools, any app)
 - [ ] Permissions as asked. The panel appears and stays on top.
+- [ ] **On an Apple silicon Mac:** press Zoom in on the panel, then turn on the zoom key layer.
+      Zoom must keep running. (It used to quit on the first zoom: a macOS trap when the keyboard
+      layout was read off the main thread.)
 - [ ] In Logic and Pro Tools: zoom in, zoom out, fit, taller/shorter tracks from the panel, from
       the zoom key layer, and by voice if Voice is on.
 - [ ] Dwell on a panel button with the mouse: it fires once after the dwell time, not again
@@ -171,6 +194,8 @@ At the end, fix what you can on a branch and open a pull request per app, or ope
 - [ ] **Crash safety:** with colors on, Force Quit Limitless Color (⌘⌥Esc). The screen must go
       back to normal within a couple of seconds. If it stays recolored, that's a top-priority bug.
 - [ ] Log out and back in with colors on: no stuck overlay.
+- [ ] With the tuner open and nothing changing, Activity Monitor shows Limitless Color near 0% CPU.
+      (It used to re-save its profile five times a second.)
 
 #### Limitless Control (Xbox Adaptive Controller)
 - [ ] Plug in by USB-C, then pair by Bluetooth: the app shows it connected both ways.

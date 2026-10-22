@@ -1,0 +1,8 @@
+#!/bin/bash
+# Close any Limitless Sound app that's running, so the new versions replace it cleanly.
+for app in "Limitless Sound" "Limitless Voice" "Limitless One-Hand" "Limitless Zoom" \
+           "Limitless Color" "Limitless Control" "GazeStage"; do
+  pkill -f "/Applications/$app.app/" 2>/dev/null
+done
+sleep 1
+exit 0

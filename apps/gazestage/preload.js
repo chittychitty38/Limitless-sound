@@ -1,10 +1,16 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// The channel to the built-in instrument's own page (main.js), handed on to the page itself.
+ipcRenderer.on('synth:port', (e) => window.postMessage('gazestage:synth-port', '*', e.ports));
+
 contextBridge.exposeInMainWorld('gazestage', {
   platform: process.platform,
   setAlwaysOnTop: (on) => ipcRenderer.send('window:on-top', on),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   onCommand: (cb) => ipcRenderer.on('command', (_e, cmd) => cb(cmd)),
+  // Asked by the main process, so the page keeps answering other apps while it's on screen.
+  confirm: (message, yes) => ipcRenderer.invoke('dialog:confirm', message, yes),
+  synth: { connect: () => ipcRenderer.send('synth:connect') },
   media: {
     status: () => ipcRenderer.invoke('media:status'),
     ask: (kind) => ipcRenderer.invoke('media:ask', kind),

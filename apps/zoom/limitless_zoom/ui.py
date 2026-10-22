@@ -125,10 +125,19 @@ class DwellButton(QPushButton):
         super().enterEvent(e)
 
     def leaveEvent(self, e):
+        self._stop_dwell()
+        super().leaveEvent(e)
+
+    def hideEvent(self, e):
+        # Hidden under the pointer ("hide panel" said while resting on a button) there may be
+        # no leave event: the 30 ms tick would run on, pressing the hidden button again and again.
+        self._stop_dwell()
+        super().hideEvent(e)
+
+    def _stop_dwell(self):
         self._tick.stop()
         self.progress = 0.0
         self.update()
-        super().leaveEvent(e)
 
     def _step(self):
         self.progress = min(1.0, self._clock.elapsed() / max(1, self.dwell_ms))
@@ -291,6 +300,14 @@ class Panel(QWidget):
         else:
             self.keys_label.setText(f"Zoom keys off. Tap {key_text} to turn on.")
         self.keys_label.setStyleSheet(self._chip_style(on))
+
+    def hideEvent(self, e):
+        # Scanning stops with the panel: a hidden panel kept stepping through its buttons, and
+        # the next switch press picked one nobody could see. Now that press shows the panel and
+        # starts scanning from the first button.
+        if self.scanning() and not e.spontaneous():
+            self.toggle_scan()
+        super().hideEvent(e)
 
     # Scanning: one switch steps through the buttons.
     def scanning(self):
