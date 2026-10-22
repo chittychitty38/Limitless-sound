@@ -3,9 +3,12 @@
 
 mod assistant;
 mod filter;
+#[allow(dead_code)]
+mod limitless_link;
 mod store;
 
-use std::sync::Mutex;
+use std::sync::{mpsc, Mutex, OnceLock};
+use std::time::Duration;
 
 use color_core::helper::{offline_reply, HelperState, Suggestion};
 use color_core::lut::{Lut3D, DEFAULT_SIZE};
@@ -21,6 +24,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 /// Toggles the screen filter from anywhere, with one hand.
 const TOGGLE_SHORTCUT: &str = "CommandOrControl+Alt+C";
+
+/// The link to the Limitless Sound hub, once it has started.
+static SUITE: OnceLock<limitless_link::Link> = OnceLock::new();
 
 struct Inner {
     profile: Profile,
@@ -92,7 +98,66 @@ fn sync(app: &AppHandle, inner: &mut Inner) {
         let _ = c.set_checked(inner.filter_on);
     }
     store::save(app, &inner.profile, inner.filter_on, &inner.onboarding);
+    if let Some(link) = SUITE.get() {
+        link.state("on", inner.filter_on.into());
+    }
     let _ = app.emit("status", full_status(app, inner));
+}
+
+/// Joins the Limitless Sound hub when it runs, so Voice, the controller, a Stream Deck
+/// or a link ("colors follow the DAW") can switch the screen colors.
+fn start_suite(app: &AppHandle) {
+    use limitless_link::{Action, Link};
+    let link = Link::new(
+        "color",
+        "Limitless Color",
+        &app.package_info().version.to_string(),
+        vec![
+            Action::new("on", "Screen colors on"),
+            Action::new("off", "Screen colors off"),
+            Action::new("toggle", "Screen colors on or off"),
+            Action::new("tuner", "Open the color tuner"),
+        ],
+    );
+    let handle = app.clone();
+    link.start(move |action, _args, _source| suite_invoke(&handle, action), |_name, _value, _source| {});
+    let on = app.state::<AppState>().0.lock().unwrap().filter_on;
+    link.state("on", on.into());
+    let _ = SUITE.set(link);
+}
+
+/// Runs a suite action on the main thread, where the screen filter lives.
+fn suite_invoke(app: &AppHandle, action: &str) -> (bool, String) {
+    let (tx, rx) = mpsc::channel();
+    let handle = app.clone();
+    let action = action.to_string();
+    let queued = app.run_on_main_thread(move || {
+        let result = match action.as_str() {
+            "on" | "off" | "toggle" => {
+                let state = handle.state::<AppState>();
+                let mut inner = state.0.lock().unwrap();
+                inner.filter_on = match action.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    _ => !inner.filter_on,
+                };
+                sync(&handle, &mut inner);
+                let said = if inner.filter_on { "Screen colors on" } else { "Screen colors off" };
+                (true, said.to_string())
+            }
+            "tuner" => {
+                show_tuner(&handle);
+                (true, "Opened the color tuner".to_string())
+            }
+            other => (false, format!("Limitless Color has no action '{other}'.")),
+        };
+        let _ = tx.send(result);
+    });
+    if queued.is_err() {
+        return (false, "Limitless Color is closing.".into());
+    }
+    rx.recv_timeout(Duration::from_secs(3))
+        .unwrap_or_else(|_| (false, "Limitless Color didn't answer.".into()))
 }
 
 fn toggle(app: &AppHandle) {
@@ -303,6 +368,9 @@ fn build_tray(app: &AppHandle, filter_on: bool) -> tauri::Result<CheckMenuItem<W
                 let mut inner = state.0.lock().unwrap();
                 let profile = inner.profile.clone();
                 let _ = inner.filter.apply(&profile, false);
+                if let Some(link) = SUITE.get() {
+                    link.stop();
+                }
                 app.exit(0);
             }
             _ => {}
@@ -361,6 +429,7 @@ pub fn run() {
             inner.tray_check = Some(build_tray(&handle, filter_on)?);
             sync(&handle, &mut inner);
             app.manage(AppState(Mutex::new(inner)));
+            start_suite(&handle);
             if let Err(e) = app.global_shortcut().register(TOGGLE_SHORTCUT) {
                 eprintln!("could not register {TOGGLE_SHORTCUT}: {e}");
             }
