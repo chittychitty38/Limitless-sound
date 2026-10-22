@@ -80,6 +80,18 @@ def test_slow_and_silent_actions_fail(hub):
     assert "too slow" in c4["detail"] and "without saying why" in c4["detail"]
 
 
+def test_refusals_with_a_reason_pass_and_are_listed(hub):
+    link = product(actions=[{"id": "play", "label": "Play"}],
+                   on_invoke=lambda action, a, src: (False, "Play works when a DAW is in front."))
+    try:
+        rep = las_check.check(hub, args())
+    finally:
+        link.stop()
+    c4 = next(c for c in rep.checks if c["id"] == "C4")
+    assert c4["ok"] and "with a reason" in c4["detail"]
+    assert rep.refused == [("demo.play", "Play works when a DAW is in front.")]
+
+
 def test_bad_intent_and_long_label_fail(hub):
     link = product(actions=[{"id": "x", "label": "L" * 61}, {"id": "y", "label": "Y", "intent": "daw.launchRockets"}])
     try:
