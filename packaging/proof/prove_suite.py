@@ -254,6 +254,10 @@ def main(argv=None) -> int:
     p.add_argument("--install-seconds", type=float, default=None)
     p.add_argument("--tools", default=",".join(TOOLS), help="comma-separated tool ids to test")
     args = p.parse_args(argv)
+    # Windows writes to a pipe in its old code page, which has no ✅: the first Windows proof
+    # stopped there, after every app had passed.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8")
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     tools = [t for t in args.tools.split(",") if t in TOOLS]
@@ -305,9 +309,9 @@ def main(argv=None) -> int:
     proof["hubIdle"] = idle.get("hub", {})
     screenshot(out / "shots" / "all.png")
 
-    (out / "proof.json").write_text(json.dumps(proof, indent=2))
+    (out / "proof.json").write_text(json.dumps(proof, indent=2), encoding="utf-8")
     text = summary(proof)
-    (out / "summary.md").write_text(text)
+    (out / "summary.md").write_text(text, encoding="utf-8")
     print("\n" + text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
