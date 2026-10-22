@@ -93,7 +93,7 @@ npm run test:packaged    # smoke test the built app in dist/
 | `renderer/tracker.js` | The camera, and face and iris samples for the pointer |
 | `renderer/face-worker.js` | MediaPipe face tracking, in its own thread so the window never freezes while it loads or works. It runs on the graphics chip or the CPU, whichever is faster on this computer, and says which (`gaze.faceTracking`) |
 | `renderer/lib.js` | Pure logic covered by the unit tests: filter, calibration fit, head mapping, scales and chords, the HUI protocol, sound onsets |
-| `renderer/synth.js` | The built-in instrument |
+| `renderer/synth.js` | The built-in instrument. It plays in a hidden page and process of its own (`renderer/synth.html` and `synth-page.js`; `synth-link.js` is the window's side, `synth-preload.js` its bridge), because starting the computer's audio can hold up the page that starts it for seconds |
 | `renderer/midi.js` | Native or Web MIDI routing and the HUI link |
 
 CI (`.github/workflows/gazestage.yml`) runs the tests on every pull request. It then builds the Mac .dmg files and the Windows installer, smoke tests each built app, and checks that the macOS build creates its own MIDI ports. A `gazestage-v*` tag attaches the installers to a release.

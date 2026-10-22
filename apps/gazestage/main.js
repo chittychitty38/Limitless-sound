@@ -5,8 +5,10 @@
 //   see "GazeStage" with no IAC or loopback setup. Windows falls back to Web MIDI in the page.
 // - Builds the native menu, remembers the window, and asks for camera/mic access when the
 //   guided setup reaches that step.
+// - Plays the built-in instrument in a hidden page of its own, so starting the computer's audio
+//   never holds up the window.
 const {
-  app, BrowserWindow, Menu, protocol, net, session, systemPreferences, ipcMain, shell, screen,
+  app, BrowserWindow, Menu, protocol, net, session, systemPreferences, ipcMain, shell, screen, dialog, MessageChannelMain,
 } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -25,7 +27,7 @@ const ROOT = path.join(__dirname, 'renderer');
 const ALLOWED = new Set(['media', 'midi', 'midiSysex']);
 const isMac = process.platform === 'darwin';
 const testMode = app.commandLine.hasSwitch('use-fake-device-for-media-stream');
-let win = null;
+let win = null, quitting = false;
 
 // ---------- virtual MIDI ports ----------
 // Port names other apps will see. Pro Tools: Setup > Peripherals > MIDI Controllers > HUI,
@@ -137,6 +139,55 @@ ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected, pref
 // What the page is now showing, so the settings page (and the Access Standard test) can see it.
 ipcMain.on('suite:applied', (_e, applied) => { if (applied && typeof applied === 'object') suite.link?.state('prefs.applied', applied); });
 
+// ---------- the built-in instrument ----------
+// It plays in a hidden page of its own (renderer/synth.html), in a process of its own. Making an
+// audio context holds up the page that makes it until the computer's audio device answers, and
+// Chromium waits for that twice, up to 10 s each time: on a Mac with no working sound output the
+// window froze for 20 s at the first note or transport click, and every action other apps
+// pressed meanwhile went unanswered. Here that can only hold up the sound. The window and the
+// instrument talk directly, through a MessagePort (renderer/synth-link.js).
+let synthWin = null, synthRestarts = 0;
+function synthWindow() {
+  if (synthWin && !synthWin.isDestroyed()) return synthWin;
+  const sw = synthWin = new BrowserWindow({
+    show: false, width: 200, height: 200, skipTaskbar: true, focusable: false, title: 'GazeStage sound',
+    // Never throttled or lowered in priority for being hidden, so notes start on time.
+    webPreferences: { preload: path.join(__dirname, 'synth-preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false },
+  });
+  sw.webContents.on('console-message', pageMessage);
+  sw.webContents.on('render-process-gone', (_e, d) => {
+    log.error(`The built-in sound stopped: ${d.reason}, exit code ${d.exitCode}`);
+    setImmediate(() => {
+      if (!sw.isDestroyed()) sw.destroy();
+      if (!quitting && win && synthRestarts++ < 3) connectSynth();   // a fresh one
+    });
+  });
+  sw.on('closed', () => { if (synthWin === sw) synthWin = null; });
+  // A host of its own (app://synth), so it is never put in the window's process.
+  sw.loadURL('app://synth/synth.html');
+  return sw;
+}
+// A new channel between the window and the instrument: when the page starts (or reloads), and
+// after the instrument's page is replaced.
+function connectSynth() {
+  if (!win) return;
+  const sw = synthWindow(), { port1, port2 } = new MessageChannelMain();
+  win.webContents.postMessage('synth:port', null, [port1]);
+  const give = () => { if (!sw.isDestroyed()) sw.webContents.postMessage('synth:port', null, [port2]); };
+  if (sw.webContents.isLoading()) sw.webContents.once('did-finish-load', give); else give();
+}
+ipcMain.on('synth:connect', (e) => { if (e.sender === win?.webContents) connectSynth(); });
+
+// A question for the musician or a helper, asked here: a confirm() in the page would stop it
+// answering other apps until someone answers.
+ipcMain.handle('dialog:confirm', async (_e, message, yes) => {
+  if (!win) return false;
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question', message: String(message), buttons: [String(yes || 'OK'), 'Cancel'], defaultId: 1, cancelId: 1,
+  });
+  return response === 0;
+});
+
 // ---------- permissions ----------
 ipcMain.handle('media:status', () => {
   if (!isMac) return { camera: 'granted', microphone: 'granted' };
@@ -177,7 +228,7 @@ function saveBounds() {
 const repeat = { text: '', count: 0 };
 function pageMessage(e) {
   if (e.level !== 'warning' && e.level !== 'error') return;
-  const text = `Page: ${e.message} (${String(e.sourceId).replace(/^app:\/\/gazestage\//, '')}:${e.lineNumber})`;
+  const text = `Page: ${e.message} (${String(e.sourceId).replace(/^app:\/\/[a-z]+\//, '')}:${e.lineNumber})`;
   if (text === repeat.text) { repeat.count++; return; }
   if (repeat.count) log.info(`(the last message ${repeat.count} more time${repeat.count > 1 ? 's' : ''})`);
   Object.assign(repeat, { text, count: 0 });
@@ -197,7 +248,7 @@ function createWindow() {
   });
   win.once('ready-to-show', () => win.show());
   win.on('close', saveBounds);
-  win.on('closed', () => { win = null; });
+  win.on('closed', () => { win = null; synthWin?.destroy(); });   // then the app quits (window-all-closed)
   win.webContents.on('did-start-loading', () => { suite.ready = false; });   // until the page listens again
   // The page's warnings and errors, and a crash or hang, go in the log too.
   win.webContents.on('console-message', pageMessage);
@@ -272,7 +323,7 @@ app.whenReady().then(() => {
   openVirtualPorts();
   createWindow();   // joins Limitless Sound once the page is ready (suite:ready)
   buildMenu();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  app.on('activate', () => { if (!win) createWindow(); });
 });
 
 // A GPU or helper process that crashed takes face tracking or audio with it: say which.
@@ -280,6 +331,7 @@ app.on('child-process-gone', (_e, d) => {
   if (d.reason !== 'clean-exit') log.error(`The ${d.name || d.type} process stopped: ${d.reason}, exit code ${d.exitCode}`);
 });
 app.on('window-all-closed', () => app.quit());
+app.on('before-quit', () => { quitting = true; });
 app.on('will-quit', () => {
   closeVirtualPorts(); suite.link?.stop();
   if (repeat.count) log.info(`(the last message ${repeat.count} more time${repeat.count > 1 ? 's' : ''})`);

@@ -5,6 +5,7 @@ import {
 } from './lib.js';
 import { Tracker } from './tracker.js';
 import { Synth, SYNTH_PRESETS } from './synth.js';
+import { SynthLink } from './synth-link.js';
 import { MidiRouter } from './midi.js';
 
 const $ = (id) => document.getElementById(id);
@@ -36,7 +37,9 @@ const state = {
 };
 const filterX = new OneEuro(S.smooth), filterY = new OneEuro(S.smooth);
 const tracker = new Tracker($('cam'), store);
-const synth = new Synth(); synth.setPreset(S.preset);
+// The built-in instrument plays in a hidden page of its own (synth-link.js), so starting the
+// computer's audio never holds up this page; in a plain browser, here.
+const synth = bridge?.synth ? new SynthLink(bridge.synth) : new Synth(); synth.setPreset(S.preset);
 const midi = new MidiRouter(store);
 const onset = new OnsetDetector();
 window.__gs = { state, S, synth, midi, suite: () => suiteOn, listening: () => !!mic };   // for the smoke test
@@ -243,27 +246,39 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 // Open only while the sound switch is chosen: a Mac shows its microphone light for as long as
 // an app listens, and listening keeps the audio and a meter running. Trying the sound switch in
 // the guided setup and then choosing dwell used to leave the microphone on all session.
-let mic = null;   // { stream, source, raf } while listening
+// The samples are read straight from the microphone, with no audio context: making one here
+// waits for the computer's sound output, which froze this page for 20 s on a Mac without one.
+let mic = null;   // { stream, reader, raf } while listening
 async function startMic() {
   if (mic) return true;
   try {
     if (bridge && !(await bridge.media.ask('microphone'))) throw new Error('denied');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
     if (mic || S.select !== 'sound') { stream.getTracks().forEach((t) => t.stop()); return !!mic; }   // changed meanwhile
-    const ctx = synth.ensure(); synth.keepAwake = true;
-    const an = ctx.createAnalyser(); an.fftSize = 512;
-    const source = ctx.createMediaStreamSource(stream); source.connect(an);
-    const buf = new Float32Array(an.fftSize);
-    mic = { stream, source, raf: 0 };
+    const reader = new MediaStreamTrackProcessor({ track: stream.getAudioTracks()[0] }).readable.getReader();
+    const recent = new Float32Array(512);   // the latest 512 samples, round and round
+    const listening = mic = { stream, reader, raf: 0 };
+    (async () => {
+      let at = 0, chunk = new Float32Array(1024);
+      for (;;) {
+        const { value, done } = await reader.read().catch(() => ({ done: true }));
+        if (done || mic !== listening) { value?.close(); return; }
+        try {
+          const n = value.numberOfFrames;
+          if (n > chunk.length) chunk = new Float32Array(n);
+          value.copyTo(chunk, { planeIndex: 0, format: 'f32-planar' });
+          for (let i = 0; i < n; i++) { recent[at] = chunk[i]; at = (at + 1) & 511; }
+        } catch {} finally { value.close(); }
+      }
+    })();
     const tick = () => {
-      if (!mic) return;
-      an.getFloatTimeDomainData(buf);
-      let sum = 0; for (const v of buf) sum += v * v;
-      const r = onset.push(Math.sqrt(sum / buf.length), performance.now(), +S.mic);
+      if (mic !== listening) return;
+      let sum = 0; for (const v of recent) sum += v * v;
+      const r = onset.push(Math.sqrt(sum / recent.length), performance.now(), +S.mic);
       $('micMeter').value = r.level;
       const m = $('obMicMeter'); if (m) m.value = r.level;
       if (r.hit) onSwitch('sound');
-      mic.raf = requestAnimationFrame(tick);
+      listening.raf = requestAnimationFrame(tick);
     };
     tick(); return true;
   } catch {
@@ -274,10 +289,9 @@ async function startMic() {
 function stopMic() {
   if (!mic) return;
   cancelAnimationFrame(mic.raf);
-  mic.source.disconnect();
+  mic.reader.cancel().catch(() => {});
   mic.stream.getTracks().forEach((t) => t.stop());
   mic = null;
-  synth.keepAwake = false; synth.restLater();
   $('micMeter').value = 0;
 }
 
@@ -538,8 +552,9 @@ function suiteInvoke(name) {
     const port = HUI.PORT[name];
     if (!midi.transport(port, true)) return { ok: false, message: 'GazeStage isn’t linked to Pro Tools.' };
     setTimeout(() => midi.transport(port, false), 90);
+    // The flash and click come after the answer has gone back.
     const t = document.querySelector(`[data-hui="${name}"]`);
-    if (t) feedback(t);
+    if (t) setTimeout(() => feedback(t));
     return { ok: true, message: SUITE_TRANSPORT[name] };
   }
   const run = SUITE_DO[name];
@@ -700,8 +715,10 @@ async function onSettingChanged(key) {
   applyDisplay(); refreshChips();
 }
 $('clearCal').onclick = () => { S.cal = { ...S.cal, [S.mode]: undefined }; delete S.cal[S.mode]; save(); state.offset = { x: 0, y: 0 }; refreshCalInfo(); toast('Calibration cleared'); };
-$('resetAll').onclick = () => {
-  if (!confirm('Reset every GazeStage setting, including calibration?')) return;
+$('resetAll').onclick = async () => {
+  // Asked by the main process: a confirm() here would stop this page answering other apps until someone answers it.
+  const question = 'Reset every GazeStage setting, including calibration?';
+  if (!(bridge ? await bridge.confirm(question, 'Reset') : confirm(question))) return;
   try { localStorage.removeItem(KEY); } catch {}
   location.reload();
 };
