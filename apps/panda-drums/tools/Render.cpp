@@ -106,8 +106,48 @@ struct Session
 
 juce::MidiMessage on (int note, int vel) { return juce::MidiMessage::noteOn (10, note, (juce::uint8) vel); }
 
-// A groove that shows everything off: hats and backbeat, ghost notes, a tom fill, crashes,
-// and a melody on the chromatic floor tom in the song's key.
+// One bar of rock: driving eighths on the hats (or the ride's bow), the kick on the one and the
+// "and" of three, a rimshot backbeat on two and four, a crash and kick to open a phrase, and a
+// fill down the toms into the next one.
+void rockBar (const std::function<void (double step, int note, int vel)>& add, int bar, bool phraseStart, bool fill,
+              bool ride, bool melody, juce::Random& r)
+{
+    for (int st = 0; st < 16; ++st)
+    {
+        if (fill && st >= 8)
+            break;
+        if (st == 0 && phraseStart)
+        {
+            add (0, bar % 2 == 0 ? 49 : 57, 125);
+            add (0, 36, 125);
+            continue;
+        }
+        if (st % 2 == 0)
+            add (st, ride ? 51 : 42, st % 4 == 0 ? 118 : 96 + r.nextInt (12));
+        if (st == 0 || st == 8 || st == 10 || (st == 6 && bar % 2 == 1))
+            add (st, 36, st == 0 || st == 8 ? 122 : 108);
+        if (st == 4 || st == 12)
+            add (st, 38, 120 + r.nextInt (8));
+        if (st == 14 && ! ride && bar % 4 == 1)
+            add (st, 46, 112);                         // the hat opens into the next bar
+        if (st == 15 && ! melody && bar % 2 == 0)
+            add (st, 38, 42 + r.nextInt (16));         // one ghost to push the backbeat
+    }
+    if (fill)
+    {
+        // Sixteenths: snare, snare, then down the toms, hard, the kick under each beat.
+        int notes[] = { 38, 38, 48, 48, 45, 45, 43, 43 };
+        for (int st = 0; st < 8; ++st)
+        {
+            add (8 + st, notes[st], 108 + st * 2);
+            if (st % 4 == 0)
+                add (8 + st, 36, 118);
+        }
+    }
+}
+
+// A rock groove that shows everything off: hats then the ride, the backbeat, fills down the
+// toms, crashes, and a melody on the chromatic floor tom in the song's key.
 std::vector<std::pair<juce::int64, juce::MidiMessage>> groove (double bpm, int bars, double startSec)
 {
     std::vector<std::pair<juce::int64, juce::MidiMessage>> out;
@@ -116,41 +156,15 @@ std::vector<std::pair<juce::int64, juce::MidiMessage>> groove (double bpm, int b
     juce::Random r (42);
     for (int bar = 0; bar < bars; ++bar)
     {
-        auto fill = bar % 4 == 3;
         auto melody = bar == 5;
-        if (bar % 4 == 0)
-        {
-            out.push_back ({ at (bar, 0), on (bar == 0 ? 49 : 57, 122) });
-            out.push_back ({ at (bar, 0), on (36, 125) });
-        }
-        for (int s = 0; s < 16; ++s)
-        {
-            if (fill && s >= 8)
-                break;
-            if (s % 2 == 0 && ! (bar % 4 == 0 && s == 0))
-                out.push_back ({ at (bar, s), on (bar >= 4 ? 51 : 42, s % 4 == 0 ? 112 : 78 + r.nextInt (16)) });
-            if (s == 0 || s == 7 || s == 10)
-                if (! (bar % 4 == 0 && s == 0))
-                    out.push_back ({ at (bar, s), on (36, s == 0 ? 118 : 100) });
-            if (s == 4 || s == 12)
-                out.push_back ({ at (bar, s), on (38, 108 + r.nextInt (19)) });
-            if ((s == 6 || s == 15) && ! melody)
-                out.push_back ({ at (bar, s), on (38, 28 + r.nextInt (20)) });
-        }
-        if (fill)
-        {
-            int toms[] = { 48, 48, 45, 45, 43, 43, 41, 41 };
-            for (int s = 0; s < 8; ++s)
-                out.push_back ({ at (bar, 8 + s), on (toms[s], 100 + s * 3) });
-        }
-        if (bar % 4 == 1)
-            out.push_back ({ at (bar, 14), on (46, 100) });
+        rockBar ([&] (double st, int note, int vel) { out.push_back ({ at (bar, st), on (note, vel) }); },
+                 bar, bar % 4 == 0, bar % 4 == 3, bar >= 4, melody, r);
         if (melody)
         {
             // Chromatic floor tom: D F A G F E D C# D in the song's key.
             int line[] = { 74, 77, 81, 79, 77, 76, 74, 73 };
             for (int i = 0; i < 8; ++i)
-                out.push_back ({ at (bar, i * 2 + 1), on (line[i], 112) });
+                out.push_back ({ at (bar, i * 2 + 1), on (line[i], 116) });
         }
     }
     out.push_back ({ at (bars, 0), on (49, 127) });
@@ -166,7 +180,7 @@ int screenshots (const juce::File& dir)
     s.proc.setKey ({ 2, 2 });   // D minor
     s.proc.setShowtime (true);
     s.editor->refreshAll();
-    auto notes = groove (100.0, 2, 0.1);
+    auto notes = groove (128.0, 2, 0.1);
     auto stopAt = (juce::int64) (1.32 * sampleRate);
     std::vector<std::pair<juce::int64, juce::MidiMessage>> part;
     for (auto& n : notes)
@@ -203,9 +217,15 @@ int video (const juce::File& dir, double seconds)
     s.proc.setKey ({ 2, 2 });   // D minor: the kit tunes itself, the chromatic tom melody lands in key
     s.proc.setShowtime (true);  // hits are known 150 ms early, so the panda winds up and lands on time
     s.editor->refreshAll();
-    auto bpm = 100.0;
+    auto bpm = 128.0;
     auto bars = std::max (1, (int) ((seconds - 1.5) / (240.0 / bpm)));
     auto notes = groove (bpm, bars, 0.3);
+    auto stageOnly = juce::SystemStats::getEnvironmentVariable ("PD_STAGE", {}).isNotEmpty();
+    if (stageOnly)
+    {
+        s.proc.setShowHitInfo (false);
+        s.editor->refreshAll();
+    }
     juce::AudioBuffer<float> audio (2, 0);
     auto frames = (int) (seconds * fps);
     auto framesDir = dir.getChildFile ("frames");
@@ -216,8 +236,12 @@ int video (const juce::File& dir, double seconds)
         s.run ((int) (sampleRate / fps), notes, &audio);
         auto t = (double) s.clock / sampleRate;
         s.pump (t);
-        s.editor->getKitPage().stage.advanceTo (t);
-        writePng (snapshot (*s.editor, frameScale), framesDir.getChildFile (juce::String (f + 1).paddedLeft ('0', 4) + ".png"));
+        auto& stage = s.editor->getKitPage().stage;
+        stage.setTransport (bpm, std::max (0.0, (t - 0.3) / 60.0 * bpm), t > 0.3 && t < 0.3 + (bars + 0.5) * 240.0 / bpm);
+        stage.advanceTo (t);
+        // PD_STAGE=1: just the stage, no controls over it (the hit pop-ups off), for showing him play.
+        writePng (stageOnly ? snapshot (stage, frameScale) : snapshot (*s.editor, frameScale),
+                  framesDir.getChildFile (juce::String (f + 1).paddedLeft ('0', 4) + ".png"));
     }
     juce::WavAudioFormat wav;
     auto out = dir.getChildFile ("groove.wav");
@@ -240,7 +264,7 @@ int promo (const juce::File& dir)
 {
     Session s;
     s.proc.setShowtime (true);
-    const double bpm = 100.0, bar = 240.0 / bpm, sixteenth = bar / 16.0, intro = 3.6;
+    const double bpm = 124.0, bar = 240.0 / bpm, sixteenth = bar / 16.0, intro = 3.6;
     struct Section { int firstBar, bars; pd::Key key; int page; const char* caption; };
     const std::vector<Section> sections {
         { 0, 4,  { 2, 2 }, 0, "groove" },     // D minor
@@ -275,30 +299,8 @@ int promo (const juce::File& dir)
             juce::String kind (sec.caption);
             auto melody = kind == "key" && last;
             auto fill = (kind == "groove" && last) || kind == "fill";
-            if (b == sec.firstBar)
-            {
-                add (at (b, 0), b % 2 == 0 ? 49 : 57, 120);
-                add (at (b, 0), 36, 125);
-            }
-            for (int st = 0; st < 16; ++st)
-            {
-                if (fill && st >= 8)
-                    break;
-                if (st % 2 == 0 && ! (b == sec.firstBar && st == 0))
-                    add (at (b, st), b >= 8 ? 51 : 42, st % 4 == 0 ? 112 : 76 + r.nextInt (18));
-                if ((st == 0 || st == 7 || st == 10) && ! (b == sec.firstBar && st == 0))
-                    add (at (b, st), 36, st == 0 ? 118 : 100);
-                if (st == 4 || st == 12)
-                    add (at (b, st), 38, 108 + r.nextInt (19));
-                if ((st == 6 || st == 15) && ! melody)
-                    add (at (b, st), 38, 28 + r.nextInt (20));
-            }
-            if (fill)
-            {
-                int toms[] = { 48, 48, 45, 45, 43, 43, 41, 41 };
-                for (int st = 0; st < 8; ++st)
-                    add (at (b, 8 + st), toms[st], 100 + st * 3);
-            }
+            rockBar ([&] (double st, int note, int vel) { add (at (b, st), note, vel); },
+                     b, b == sec.firstBar, fill, b >= 8, melody, r);
             if (melody)
             {
                 // The floor tom sings the key: 1 3 5 6 5 3 2 1 in major, 1 b3 5 4 b3 2 1 b7 in minor.

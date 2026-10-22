@@ -87,6 +87,10 @@ RIG = dict(grip=(526, 200), tip=(549, 100),
            neck=(720, 262), head=(720, 160, 137, 105), seat=(712, 430))
 FACES = ["neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh", "surprised", "tongue_out",
          "angry", "sad"]
+# A rock kit, big around him: every drum and cymbal a size up on the picture's, and the panda a
+# little smaller on his throne, so he sits behind the kit the way a drummer does.
+KIT_GROW = 1.12
+PANDA_SCALE = 0.86
 OWN_FACES = ("excited", "happy", "open_mouth", "neutral", "smile", "surprised", "tongue_out")
 EYES = [(658, 146), (789, 166)]        # a point on the white of each eye (his right, his left), hero px
 SCALES = (1, 2)
@@ -153,7 +157,7 @@ def main(src, pieces, outdir):
     # ---- slots
     for kind, slots in SLOTS.items():
         sizes = DEFAULT_SIZE[kind]
-        man["slots"][kind] = [dict(at=S(*at), ppi=round(R(r) / sizes[min(i, len(sizes) - 1)], 4)) for i, (at, r) in enumerate(slots)]
+        man["slots"][kind] = [dict(at=S(*at), ppi=round(R(r) * KIT_GROW / sizes[min(i, len(sizes) - 1)], 4)) for i, (at, r) in enumerate(slots)]
 
     # ---- drums
     wraps = ["purple", "brass", "maple", "chrome", "walnut", "black"]
@@ -223,6 +227,7 @@ def main(src, pieces, outdir):
         stick=dict(file="stick", length=R(grip_len + pin), butt=R(butt_in - pin), pivot_y=R(4 + grip_len + pin),
                    real=round(real, 2)),
         fur=dict(file="fur", radius=R(rig["fur_r"])),
+        scale=PANDA_SCALE,
     )
 
     # ---- faces, from the sheet, on the picture's glasses

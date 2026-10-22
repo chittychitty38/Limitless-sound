@@ -15,11 +15,11 @@ float stickLength()
     return skin.isLoaded() ? pd::Skin::number (skin.at ("panda/stick/length"), 132.0f) : 108.0f;
 }
 
-// How high a stroke starts for a velocity: a ghost note is a tap an inch off the head, a
-// full-volume stroke starts with the stick standing up.
+// How high a stroke starts for a velocity: a ghost note is a tap an inch off the head; a rock
+// backbeat or crash starts with the stick up past vertical, the whole arm in it.
 float strokeHeightFor (float vel)
 {
-    return 0.12f + 0.7f * std::pow (juce::jlimit (0.0f, 1.0f, vel / 127.0f), 1.6f);
+    return 0.12f + 0.98f * std::pow (juce::jlimit (0.0f, 1.0f, vel / 127.0f), 1.8f);
 }
 
 
@@ -82,6 +82,7 @@ PandaStage::PandaStage (PandaDrumsProcessor& p) : proc (p)
         // The panda sits where it was rendered; the arms leave the sleeves where they were.
         headBase = Skin::point (skin.at ("panda/head/anchor"));
         rig = skin.at ("panda/mode").toString() == "rig";
+        pandaScale = Skin::number (skin.at ("panda/scale"), 1.0f);
         centreX = Skin::number (skin.at ("stage/centre_x"), 640.0f);
         pose.radius = Skin::number (skin.at ("panda/head/radius"), pose.radius);
         if (auto* sh = skin.at ("panda/shoulders").getArray(); sh != nullptr && sh->size() == 2)
@@ -815,12 +816,21 @@ void PandaStage::advanceTo (double t)
         if (s.hand >= -1 && Skin::get().isLoaded())
             strikeFx (*v, s.hand, vel);
 
-        if (proc.comicFx && now - lastBurst > 0.6)
+        // Comic words for the big moments; with the panda playing a whole kit, not every kick, and
+        // never over his hands: beside the kick, outside a cymbal, off to the snare's side.
+        if (proc.comicFx && now - lastBurst > (rig ? 1.6 : 0.6) && (! rig || v->type != PieceType::Kick || s.vel >= 126.0f))
             if (auto* text = comicFor (v->type, articId, s.vel))
             {
                 Burst b;
                 b.text = text;
                 b.pos = v->type == PieceType::Kick ? v->pos.translated (0.0f, -v->radius - 40.0f) : v->pos.translated (0.0f, -70.0f);
+                if (rig)
+                {
+                    auto out = v->pos.x < centreX ? -1.0f : 1.0f;
+                    b.pos = v->type == PieceType::Kick  ? v->pos.translated (-v->radius * 0.95f, v->radius * 0.35f)
+                          : isCymbal (v->type)          ? v->pos.translated (out * v->radius * 0.55f, -v->radius * v->squash - 46.0f)
+                                                        : v->pos.translated (-v->radius * 1.25f, v->radius * 0.6f + 30.0f);
+                }
                 b.pos.x = juce::jlimit (150.0f, designW - 150.0f, b.pos.x);
                 b.pos.y = juce::jlimit (80.0f, designH - 120.0f, b.pos.y);
                 b.at = now;
@@ -874,7 +884,7 @@ void PandaStage::advanceTo (double t)
                 if (len > 95.0f)
                     lean += d.x / len * (len - 95.0f) * 0.55f;
             }
-        bodyLean.target = juce::jlimit (-30.0f, 30.0f, lean);
+        bodyLean.target = juce::jlimit (-45.0f, 45.0f, lean);
         bodyLean.step (dt, 7.0f, 0.85f);
     }
     earL.step (dt, 22.0f, 0.15f);
@@ -903,7 +913,8 @@ void PandaStage::advanceTo (double t)
         beat = std::exp (-frac * 5.0f);
     }
     pose.torso = headBase;
-    pose.head = headBase.translated (0.0f, beat * 5.0f + nod.x * 3.0f);
+    // A rocker's head goes down with every beat, hard, and comes back up slower.
+    pose.head = headBase.translated (0.0f, beat * (rig ? 11.0f : 5.0f) + nod.x * (rig ? 4.0f : 3.0f));
     pose.bodyBounce = bounce.x * 0.08f;
     pose.tilt = 0.03f * std::sin ((float) now * 1.3f) * (tPlaying ? 0.4f : 1.0f) + nod.x * 0.012f + beat * 0.025f;
     pose.squash = 1.0f - juce::jlimit (-0.05f, 0.06f, bounce.x * 0.0035f);
@@ -923,15 +934,17 @@ void PandaStage::advanceTo (double t)
     auto bt = (float) (now - blinkAt) / 0.14f;
     pose.blink = bt < 1.0f ? 1.0f - std::abs (bt * 2.0f - 1.0f) : 0.0f;
 
-    // The song stopped after a good run: both sticks up.
+    // The song stopped after a good run: both sticks up, once the last hits have landed.
     if (tPlaying && ! wasPlaying)
         playingSince = now;
-    if (! tPlaying && wasPlaying && now - playingSince > 4.0 && now - lastAnyHit < 1.5)
+    auto stopped = ! tPlaying && wasPlaying;
+    if (stopped && pending.empty() && now - playingSince > 4.0 && now - lastAnyHit < 1.5)
     {
         cheerUntil = now + 1.6;
         spawnHearts (5.0f);
     }
-    wasPlaying = tPlaying;
+    if (! stopped || pending.empty())
+        wasPlaying = tPlaying;
 
     // Marking a hit bad makes him sad for a moment; taking the mark off cheers him up.
     if (auto bad = proc.countBad(); bad != lastBadCount)
@@ -1866,8 +1879,8 @@ juce::AffineTransform PandaStage::torsoTransform() const
     auto seat = Skin::point (Skin::get().at ("panda/seat"));
     auto nodBy = pose.head - pose.torso;
     return juce::AffineTransform::translation (-seat.x, -seat.y)
-        .scaled (1.0f + (1.0f - pose.squash) * 0.6f, pose.squash * (1.0f + 0.006f * pose.breath))
-        .rotated (pose.tilt * 0.25f + bodyLean.x * 0.0011f)
+        .scaled ((1.0f + (1.0f - pose.squash) * 0.6f) * pandaScale, pose.squash * (1.0f + 0.006f * pose.breath) * pandaScale)
+        .rotated (pose.tilt * 0.25f + bodyLean.x * 0.0022f)
         .translated (seat.x + bodyLean.x + nodBy.x * 0.3f, seat.y + pose.bodyBounce + nodBy.y * 0.3f + std::abs (bodyLean.x) * 0.12f);
 }
 
@@ -1876,7 +1889,7 @@ juce::AffineTransform PandaStage::headTransform() const
     auto neck = Skin::point (Skin::get().at ("panda/neck"));
     auto nodBy = pose.head - pose.torso;
     return juce::AffineTransform::rotation (pose.tilt * 1.2f + juce::jlimit (-0.14f, 0.14f, headLean.x * 0.09f), neck.x, neck.y)
-        .translated (nodBy.x * 0.7f, nodBy.y * 0.7f + juce::jlimit (-4.0f, 9.0f, headDip.x * 0.09f))
+        .translated (nodBy.x * 0.7f, nodBy.y * 0.7f + juce::jlimit (-4.0f, 18.0f, headDip.x * 0.12f))
         .followedBy (torsoTransform());
 }
 
@@ -1973,8 +1986,10 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     if (auto* arr = skin.at ("panda/shoulders").getArray(); arr != nullptr && arr->size() > h.side)
         a.shoulder = Skin::point ((*arr)[h.side]).transformedBy (T);
 
-    auto L3 = Skin::number (skin.at ("panda/stick/real"), 150.0f);   // the stick's real length, fulcrum to tip
-    auto lift = [] (float H) { return 9.0f * H + 13.0f * H * H; };   // the hand rises with the stroke (the forearm, for the loud ones)
+    auto ps = pandaScale;
+    auto L3 = Skin::number (skin.at ("panda/stick/real"), 150.0f) * ps;   // the stick's real length, fulcrum to tip
+    // The hand rises with the stroke: the wrist for a tap, the forearm and shoulder for the loud ones.
+    auto lift = [ps] (float H) { return ps * (9.0f * H + 30.0f * H * H); };
     // Going up, the forearm turns the stick out (the sticks open into a V), away from his face.
     constexpr float rise = 22.0f * degrees;
 
@@ -2008,7 +2023,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
         if (t < h.moveEnd && h.moveEnd > h.moveStart)
         {
             auto u = easeInOut (juce::jlimit (0.0f, 1.0f, (float) ((t - h.moveStart) / (h.moveEnd - h.moveStart))));
-            auto arc = std::min (26.0f, h.from.getDistanceFrom (hitPivot) * 0.18f) * std::sin (u * juce::MathConstants<float>::pi);
+            auto arc = std::min (34.0f, h.from.getDistanceFrom (hitPivot) * 0.22f) * std::sin (u * juce::MathConstants<float>::pi);
             hitPivot = h.from + (hitPivot - h.from) * u - P (0.0f, arc);
             hd = h.fromHeading + (hd - h.fromHeading) * u;
             hp = h.fromPitch + (hp - h.fromPitch) * u;
@@ -2056,7 +2071,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     {
         auto wave = std::sin ((float) t * 13.0f + (float) h.side * 1.6f);
         auto k = easeOutCubic ((float) (1.6 - (cheerUntil - t)) / 0.2f) * std::min (1.0f, (float) (cheerUntil - t) / 0.2f);
-        auto up = a.shoulder + P (-inward * (72.0f + 10.0f * wave), -125.0f);
+        auto up = a.shoulder + P (-inward * (72.0f + 10.0f * wave), -125.0f) * ps;
         pivotNow += (up - pivotNow) * k;
         headingNow += (-inward * (25.0f + 12.0f * wave) * degrees - headingNow) * k;
         pitchNow += (80.0f * degrees - pitchNow) * k;
@@ -2072,6 +2087,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     auto unit = P (std::cos (a.angle), std::sin (a.angle));
     a.tip = a.pivot + unit * (L3 * shown);
     a.butt = a.pivot - unit * (Skin::number (skin.at ("panda/stick/butt"), 46.0f) * L3 / Skin::number (skin.at ("panda/stick/length"), 138.0f) * shown);
+    a.scale = ps;
     a.contact = a.pivot + (a.tip - a.pivot) * contact;
     a.atRest = w > 0.999f && t >= cheerUntil && ! twirling;
 
@@ -2079,7 +2095,7 @@ PandaStage::Arm PandaStage::armPose (const Hand& h, double t) const
     auto fist = skin.at ("panda/fists")[h.side];
     a.fistTurn = juce::jlimit (-0.7f, 0.7f, 0.35f * (headingNow - homeHeading));
     auto wristOff = Skin::point (fist.getProperty ("wrist", {})) - Skin::point (fist.getProperty ("pivot", {}));
-    a.wrist = a.pivot + rotate (wristOff, a.fistTurn);
+    a.wrist = a.pivot + rotate (wristOff * ps, a.fistTurn);
     return a;
 }
 
@@ -2092,7 +2108,7 @@ void PandaStage::drawArm (juce::Graphics& g, const Arm& a, int side)
     auto pivotY = Skin::number (skin.at ("panda/stick/pivot_y"), 142.0f);
     auto picLen = Skin::number (skin.at ("panda/stick/length"), 138.0f);
     auto stickT = juce::AffineTransform::translation (-stick.bounds.getWidth() * 0.5f, -pivotY)
-                      .scaled (1.0f, a.tip.getDistanceFrom (a.pivot) / picLen)
+                      .scaled (a.scale, a.tip.getDistanceFrom (a.pivot) / picLen)
                       .rotated (a.angle + juce::MathConstants<float>::halfPi)
                       .translated (a.pivot.x, a.pivot.y);
     auto stickPart = [&] (bool tipEnd)
@@ -2111,13 +2127,13 @@ void PandaStage::drawArm (juce::Graphics& g, const Arm& a, int side)
     // of the bend goes back, away from us, where it doesn't show).
     if (auto fur = skin.sprite (skin.at ("panda/fur/file").toString()); fur.isValid())
     {
-        auto r = Skin::number (skin.at ("panda/fur/radius"), 32.0f);
+        auto r = Skin::number (skin.at ("panda/fur/radius"), 32.0f) * a.scale;
         auto span = a.wrist.getDistanceFrom (a.shoulder);
         auto along = (a.wrist - a.shoulder) / std::max (1.0f, span);
         auto across = P (-along.y, along.x);
         if (across.x * (side == 0 ? -1.0f : 1.0f) < 0.0f)
             across = -across;
-        auto bend = juce::jlimit (0.0f, 30.0f, (210.0f - span) * 0.2f);
+        auto bend = juce::jlimit (0.0f, 30.0f * a.scale, (210.0f * a.scale - span) * 0.2f);
         auto control = (a.shoulder + a.wrist) * 0.5f + (across + P (0.0f, 0.4f)) * (2.0f * bend);
         auto n = std::max (2, (int) std::ceil (span / (r * 0.3f)));
         auto c = fur.bounds.getCentre();
@@ -2125,7 +2141,7 @@ void PandaStage::drawArm (juce::Graphics& g, const Arm& a, int side)
         {
             auto u = (float) i / (float) n;
             auto p = a.shoulder * ((1.0f - u) * (1.0f - u)) + control * (2.0f * u * (1.0f - u)) + a.wrist * (u * u);
-            skin.draw (g, fur, juce::AffineTransform::translation (-c.x, -c.y).scaled (1.0f - 0.08f * u).translated (p.x, p.y));
+            skin.draw (g, fur, juce::AffineTransform::translation (-c.x, -c.y).scaled (a.scale * (1.0f - 0.08f * u)).translated (p.x, p.y));
         }
     }
     if (auto* sleeves = skin.at ("panda/sleeves").getArray(); sleeves != nullptr && sleeves->size() > side)
@@ -2137,7 +2153,7 @@ void PandaStage::drawArm (juce::Graphics& g, const Arm& a, int side)
     if (! buttFront)
         stickPart (false);
     skin.draw (g, skin.sprite (fist.getProperty ("file", {}).toString()),
-               juce::AffineTransform::translation (-picPivot.x, -picPivot.y).rotated (a.fistTurn).translated (a.pivot.x, a.pivot.y));
+               juce::AffineTransform::translation (-picPivot.x, -picPivot.y).scaled (a.scale).rotated (a.fistTurn).translated (a.pivot.x, a.pivot.y));
     stickPart (true);
     if (buttFront)
         stickPart (false);
@@ -2148,7 +2164,7 @@ void PandaStage::paintRig (juce::Graphics& g, bool arms)
     auto& skin = Skin::get();
     // An arm reaching up (for a crash, or cheering) goes behind his big head; the rest are drawn
     // after the drums, in front of everything of his.
-    auto high = [] (const Arm& a) { return ! a.atRest && a.shoulder.y - a.pivot.y > 95.0f; };
+    auto high = [] (const Arm& a) { return ! a.atRest && a.shoulder.y - a.pivot.y > 95.0f * a.scale; };
     auto drawSide = [&] (int side)
     {
         // At rest, the picture's own arm; otherwise the rig's.

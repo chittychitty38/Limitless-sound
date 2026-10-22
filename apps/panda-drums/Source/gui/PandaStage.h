@@ -132,6 +132,7 @@ private:
         float heading = 0.0f, pitch = 0.0f;   // the stick's heading and pitch on the head
         float height = 0.0f;        // the stroke: 0 on the head ... 1 all the way up
         bool atRest = false;        // exactly in the picture's pose
+        float scale = 1.0f;         // the panda's size against the picture's
     };
 
     struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; int variant = 0; };
@@ -207,6 +208,7 @@ private:
     std::array<Arm, 2> shownArms;   // the arms as this frame draws them
     bool rig = false;               // the art is the rigged hero panda
     float centreX = 640.0f;         // the panda's middle: pieces left of it are his right hand's
+    float pandaScale = 1.0f;        // the rigged panda against the picture: smaller behind a bigger kit
     double tBpm = 120.0, tPpq = 0.0;
     bool tPlaying = false;
     bool live = true;
