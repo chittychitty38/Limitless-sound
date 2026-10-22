@@ -24,4 +24,7 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 | Limitless Control | Turns the Xbox Adaptive Controller, switches and gamepads into DAW commands. |
 | GazeStage | Plays instruments and runs the transport with your eyes, head or a sound. |
 
-Each app also works on its own. Windows installers for every app are on each app's own release page.
+### Windows
+Download `Limitless-Sound-Suite-windows.exe` and run it. It installs every app and Limitless Sound for you, with no administrator needed, and Limitless Sound starts when you sign in. If SmartScreen appears, choose **More info › Run anyway**. Each app is listed in **Settings › Apps** under its own name, so any one can be removed by itself.
+
+Each app also works on its own, and each has its own release page with Mac and Windows downloads.
