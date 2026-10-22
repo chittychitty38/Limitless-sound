@@ -150,4 +150,6 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Limitless Control ${{ steps.v.outputs.version }}
           body_path: apps/control/RELEASE.md
+          # The repo's Latest release is the whole Limitless Sound suite download.
+          make_latest: "false"
           files: apps/control/release/*
