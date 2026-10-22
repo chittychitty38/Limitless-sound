@@ -68,9 +68,12 @@ function toast(msg, ms = 2600) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+// The chips are checked every second but written only when they change: rewriting them laid out
+// and redrew the window every second, about 1.4% of the CPU on a Mac sitting idle.
 function chip(id, level, html) {
-  const c = $(id); c.querySelector('.dot').className = 'dot ' + (level || '');
-  c.querySelector('span:last-child').innerHTML = html;
+  const c = $(id), dot = c.querySelector('.dot'), text = c.querySelector('span:last-child');
+  put(dot, '_level', level || '', (v) => { dot.className = 'dot ' + v; });
+  put(text, '_html', html, (v) => { text.innerHTML = v; });
 }
 const SELECT_NAMES = { dwell: 'Dwell', switch: 'Switch', sound: 'Sound', blink: 'Blink' };
 function refreshChips() {
@@ -88,9 +91,9 @@ function refreshChips() {
   else chip('chipMidi', 'bad', 'MIDI <b>off</b>');
   chip('chipPT', midi.proToolsConnected ? 'ok' : '', `Pro Tools <b>${midi.proToolsConnected ? 'linked' : 'not linked'}</b>`);
   const hint = $('transportHint');
-  if (midi.proToolsConnected) hint.textContent = 'Connected to Pro Tools.';
-  else if (midi.mode === 'native') hint.innerHTML = 'Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>. <button class="linkish" data-cmd="settings">How to connect</button>';
-  else hint.innerHTML = 'Not linked yet. <button class="linkish" data-cmd="settings">Choose the Pro Tools ports in Settings</button>';
+  put(hint, '_html', midi.proToolsConnected ? 'Connected to Pro Tools.'
+    : midi.mode === 'native' ? 'Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>. <button class="linkish" data-cmd="settings">How to connect</button>'
+    : 'Not linked yet. <button class="linkish" data-cmd="settings">Choose the Pro Tools ports in Settings</button>', (v) => { hint.innerHTML = v; });
 }
 setInterval(refreshChips, 1000);
 
@@ -326,7 +329,7 @@ function setCurrent(t, now) {
     if (state.fired && isHoldable(state.current) && !(S.select === 'switch' && switchDown)) release(state.current);
   }
   state.current = t; state.enteredAt = now; state.fired = false;
-  if (t) t.classList.add('gazed');
+  if (t) { t.classList.add('gazed'); if (isPad(t) ? S.builtIn : S.tick) synth.warm(); }
 }
 // Each frame writes to the page only what changed: rewriting the same values 60 times a second
 // kept the window redrawing (and the CPU busy) while nothing moved.
@@ -345,6 +348,8 @@ function setProgress(t, p) {
 // The frame loop runs every frame while something can change: the pointer or the head moving,
 // a target settling or filling up, the camera on, calibration. Sitting still it looks 4 times a
 // second: hit-testing every target 60 times a second for nothing kept the CPU busy (about 6%).
+// Those looks run straight from a timer: asking for an animation frame each time woke the
+// window's drawing (and the GPU process) 4 times a second, about 0.8% of the CPU on a Mac.
 let framePending = false, idleTimer = 0, lastAt = '';
 function wake() {
   if (framePending) return;
@@ -359,7 +364,7 @@ function frame(now) {
   const settling = state.candidate !== state.current;
   const filling = state.current && !state.fired && S.select !== 'switch';
   if (moved || settling || filling || state.cameraOn || state.calibrating) wake();
-  else if (!idleTimer) idleTimer = setTimeout(() => { idleTimer = 0; wake(); }, 250);
+  else if (!idleTimer) idleTimer = setTimeout(() => { idleTimer = 0; if (!framePending) frame(performance.now()); }, 250);
 }
 for (const type of ['mousemove', 'mousedown', 'keydown', 'wheel', 'resize', 'focus']) addEventListener(type, wake, { passive: true });
 

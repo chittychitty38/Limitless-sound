@@ -20,6 +20,7 @@ addEventListener('message', (e) => {
     switch (m.op) {
       case 'noteOn': if (!late(m, 250)) { synth.ensure(); if (!late(m, 1000)) synth.noteOn(m.note, m.velocity); } break;
       case 'tick': if (!late(m, 250)) { synth.ensure(); if (!late(m, 1000)) synth.tick(); } break;
+      case 'warm': synth.warm(); break;
       case 'noteOff': synth.noteOff(m.note); break;
       case 'allOff': synth.allOff(); break;
       case 'preset': synth.setPreset(m.name); break;

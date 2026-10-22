@@ -26,6 +26,7 @@ export class SynthLink {
   noteOff(note) { this.send({ op: 'noteOff', note }); }
   allOff() { this.send({ op: 'allOff' }); }
   tick() { this.send({ op: 'tick' }); }
+  warm() { this.send({ op: 'warm' }); }
   setPreset(name) { this.preset = name; if (this.port) this.send({ op: 'preset', name }); }
   setVolume(value) { this.volume = value; if (this.port) this.send({ op: 'volume', value }); }
 }

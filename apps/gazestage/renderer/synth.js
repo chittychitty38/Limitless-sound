@@ -10,11 +10,12 @@ export const SYNTH_PRESETS = Object.fromEntries(Object.entries(PRESETS).map(([k,
 export class Synth {
   constructor() {
     this.ctx = null; this.voices = new Map(); this.preset = 'keys'; this.volume = 0.9;
-    this.restMs = 60000;
+    this.restMs = 10000;
   }
 
-  // A minute after the last sound the audio context is suspended: a running one keeps the
-  // computer's audio (and the reverb) busy while GazeStage sits idle. The next sound resumes it.
+  // 10 s after the last sound (its release and the reverb's tail are over by then) the audio
+  // context is suspended: a running one kept the computer's audio busy, about 2.5% of the CPU
+  // on a Mac, for as long as GazeStage sat idle. warm() starts it again ahead of the next note.
   restLater() {
     clearTimeout(this.restTimer);
     this.restTimer = setTimeout(() => {
@@ -22,6 +23,10 @@ export class Synth {
       else this.ctx?.suspend();
     }, this.restMs);
   }
+
+  // Ready to play at once: the window calls this as the pointer settles on something that will
+  // sound, a moment before it's chosen, so the first note after a rest isn't late.
+  warm() { this.ensure(); }
 
   ensure() {
     this.restLater();
@@ -96,7 +101,7 @@ export class Synth {
 
   noteOff(note, immediate = false) {
     const v = this.voices.get(note); if (!v) return;
-    this.voices.delete(note);
+    this.voices.delete(note); this.restLater();
     const t = this.ctx.currentTime, r = immediate ? 0.02 : v.release;
     v.amp.gain.cancelScheduledValues(t);
     v.amp.gain.setValueAtTime(v.amp.gain.value, t);
