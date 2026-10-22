@@ -127,8 +127,16 @@ def test_big_text_fits_and_stays_on_screen(qapp):
         assert b.width() >= b.sizeHint().width() and b.height() >= b.sizeHint().height()
     assert p.x() >= area.left() and (p.x() + p.width() == right or p.x() == area.left())
     p.set_look(Look())
-    assert p.width() == usual and p.x() + p.width() == right, (   # back to its usual size
-        f"usual {usual}, at 2x {big}, now {p.width()}, minimum {p.minimumSizeHint().width()}")
+    assert p.width() == usual and p.x() + p.width() == right, (   # back to its usual size and place
+        f"usual {usual}, at 2x {big}, now {p.width()} at x {p.x()}, minimum {p.minimumSizeHint().width()}")
+
+    # Too big to fit left of its right edge: it slides to the screen's edge, then comes back.
+    p.move(area.left() + 40, p.y())
+    right = p.x() + p.width()
+    p.set_look(Look(2.0))
+    assert p.x() == area.left()
+    p.set_look(Look())
+    assert p.x() + p.width() == right
     p.hide()
 
     t = Toast()

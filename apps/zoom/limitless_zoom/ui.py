@@ -228,6 +228,7 @@ class Panel(QWidget):
         self.scan_index = -1
         self.scan_timer = QTimer(self, interval=scan_ms, timeout=self._advance)
         self.scan_timer.setTimerType(Qt.PreciseTimer)
+        self._home_right, self._placed = None, None
         self.look = Look(scale)
         self.set_look(self.look)
         self.resize(int(440 * scale), int(700 * scale))
@@ -236,7 +237,10 @@ class Panel(QWidget):
         """Text size and contrast, live. The buttons and the panel grow to fit the text,
         and with reduced motion the dwell bar fills in steps instead of sliding."""
         new_size = look.text_scale != self.look.text_scale
-        right = self.x() + self.width()
+        # Where the panel belongs: its right edge, unless it had to slide left to fit very large
+        # text on screen; then where it was before that. If the musician moved it, there.
+        here = (self.x(), self.width())
+        right = self._home_right if here == self._placed else self.x() + self.width()
         self.look = look
         hc = look.high_contrast
         px = int(22 * look.text_scale)
@@ -268,6 +272,7 @@ class Panel(QWidget):
             area = self.screen().availableGeometry()
             self.move(max(area.left(), min(right, area.right()) - self.width()),
                       max(area.top(), min(self.y(), area.bottom() - self.height())))
+            self._home_right, self._placed = right, (self.x(), self.width())
 
     def _chip_style(self, on):
         base = f"font-size:{self.chip_px}px; border-radius:10px; padding:6px 10px;"
