@@ -13,7 +13,7 @@ from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import voice
+from . import __version__, applog, mac_keys, voice
 from .actions import APP_ACTIONS, LABELS
 from .hotkeys import GlobalKeys, KeyLogic
 from .keys import format_key
@@ -522,6 +522,8 @@ def _load_model(settings):
 
 
 def main(argv=None):
+    applog.start("Limitless Zoom", __version__)
+    mac_keys.prepare()   # before anything presses or listens for keys, on this, the main thread
     parser = argparse.ArgumentParser(prog="limitless-zoom", description="Accessible zoom control")
     parser.add_argument("--do", metavar="ACTION", help="send an action to the running app, e.g. in, out, fit")
     parser.add_argument("--no-voice", action="store_true", help="don't listen for voice commands")

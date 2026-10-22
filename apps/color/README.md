@@ -17,7 +17,7 @@ You describe what looks wrong, for example "what's supposed to be red looks like
 
 ## Install
 
-Download the latest installer from the repository's **Releases** page (tags named `color-v…`), or from the newest **Limitless Color** run under **Actions**. Mac has two downloads: **apple-silicon** for M1 and newer, **intel** for older Macs.
+Download the latest installer from the repository's **Releases** page (tags named `color-v…`), or from the newest **Limitless Color** run under **Actions**. Mac has two downloads: `Limitless-Color-mac-apple-silicon.dmg` for M1 and newer, `Limitless-Color-mac-intel.dmg` for older Macs. Windows: `Limitless-Color-Setup-windows.exe`.
 
 **Mac:** open the `.dmg` and drag Limitless Color to Applications. The app isn't signed with an Apple developer certificate yet, so the first time:
 
@@ -50,6 +50,7 @@ You can run the guide again from the bottom of the window.
 - **Quick eye check.** Six pairs of circles, about a minute. It works out which kind of color vision difference you have and tunes your colors for it.
 - **Use a screenshot of my session.** Tunes against a picture of your real session instead of the sample.
 - **Save .cube profile.** Saves your profile to Documents › Limitless Color as a standard color lookup file, to back up or share.
+- **Limitless Sound settings.** When the Limitless Sound hub runs, the tuner window follows the text size, high contrast and reduced motion you set there, the moment you change them. They change only the window around your colors, never the swatches, the preview or the screen filter. If your computer is set to reduce motion, the window reduces motion too.
 
 ## How it's built
 
@@ -63,7 +64,8 @@ app/macos-overlay     The Mac screen filter helper (Swift: ScreenCaptureKit + Me
 app/ui                The tuner window (one HTML file, no build step).
 ../../.github/workflows/color.yml
                       Tests, builds and smoke-tests the Mac .dmg (Apple Silicon and Intel)
-                      and the Windows installer; color-v* tags publish a release.
+                      and the Windows installer; a new version in tauri.conf.json
+                      reaching main publishes a color-v<version> release.
 ```
 
 The tuner preview in the window (JavaScript) and the screen filter (Rust) run the same math. A test in `color-core` checks that they give identical colors.
