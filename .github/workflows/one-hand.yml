@@ -8,6 +8,11 @@ on:
   pull_request:
     paths: ["apps/one-hand/**", ".github/workflows/one-hand.yml"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release with this version (for example 0.2.0). Leave empty to just build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -69,7 +74,7 @@ jobs:
             if ($p.ExitCode -ne 0) { throw "$arg failed with exit code $($p.ExitCode)" }
           }
           $ref = "${{ github.ref_name }}"
-          $env:APP_VERSION = if ($ref -like "one-hand-v*") { $ref.Substring(10) } else { "0.2.0" }
+          $env:APP_VERSION = if ("${{ inputs.release }}") { "${{ inputs.release }}" } elseif ($ref -like "one-hand-v*") { $ref.Substring(10) } else { "0.2.0" }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
           if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
 
@@ -80,10 +85,42 @@ jobs:
             apps/one-hand/dist/${{ matrix.artifact }}.dmg
             apps/one-hand/dist/${{ matrix.artifact }}.exe
           if-no-files-found: error
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/one-hand-v')
-        uses: softprops/action-gh-release@v2
+
+  # One job publishes the release after every build passed, so the three
+  # builds never race to create it. A one-hand-v* tag push publishes that tag;
+  # running the workflow by hand with a version creates the tag on this commit.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/one-hand-v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
         with:
+          path: out
+          merge-multiple: true
+      - run: ls -la out
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release != '' && format('one-hand-v{0}', inputs.release) || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Limitless One-Hand ${{ inputs.release != '' && inputs.release || github.ref_name }}
+          fail_on_unmatched_files: true
           files: |
-            apps/one-hand/dist/${{ matrix.artifact }}.dmg
-            apps/one-hand/dist/${{ matrix.artifact }}.exe
+            out/*.dmg
+            out/*.exe
+          body: |
+            **Limitless One-Hand** lets you run Logic Pro and Pro Tools with one hand.
+
+            **Download**
+            - Mac with Apple Silicon (M1 and newer): `Limitless-One-Hand-mac-apple-silicon.dmg`
+            - Mac with Intel: `Limitless-One-Hand-mac-intel.dmg`
+            - Windows 10 and 11: `Limitless-One-Hand-windows.exe` (installer)
+
+            **First time on a Mac:** open the .dmg and drag the app to Applications. One-Hand isn't signed by Apple yet, so the first time macOS may refuse to open it: open System Settings → Privacy & Security and click **Open Anyway**. A welcome page then walks you through the two keyboard permissions.
+
+            **First time on Windows:** if SmartScreen appears, choose More info → Run anyway.
+
+            Full guide: [apps/one-hand/README.md](https://github.com/${{ github.repository }}/blob/main/apps/one-hand/README.md)
