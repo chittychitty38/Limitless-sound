@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     tags: ["hub-v*"]
-    paths: ["shared/**", ".github/workflows/shared.yml"]
+    paths: ["shared/**", "standard/**", ".github/workflows/shared.yml"]
   pull_request:
-    paths: ["shared/**", ".github/workflows/shared.yml"]
+    paths: ["shared/**", "standard/**", ".github/workflows/shared.yml"]
   workflow_dispatch:
 
 defaults:
@@ -27,6 +27,9 @@ jobs:
           python-version: "3.12"
       - run: pip install pytest
       - run: python -m pytest -q
+      - name: Access standard test kit
+        working-directory: standard/conformance
+        run: python -m pytest -q tests
 
   build:
     needs: test
