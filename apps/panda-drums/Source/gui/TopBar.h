@@ -32,8 +32,11 @@ private:
     juce::Slider master;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> masterA;
     std::unique_ptr<juce::FileChooser> chooser;
-    juce::Component::SafePointer<juce::CallOutBox> keyBox;
-    juce::Component::SafePointer<juce::Component> keyPanel;
+    // The open key panel and the call-out it sits in. Ours, not the modal manager's, so the window
+    // can close with it open: both go before the bar does.
+    std::unique_ptr<KeyPanel> keyPanel;
+    std::unique_ptr<juce::CallOutBox> keyBox;
+    int keyPanelCount = 0;
     juce::Rectangle<float> meterArea;
     float levelL = 0.0f, levelR = 0.0f;
     int page = 0;

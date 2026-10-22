@@ -520,6 +520,16 @@ public:
         ed->pumpEvents (1.0, [] (const HitEvent&) { return 1.0; });
         ed->getKitPage().stage.advanceTo (1.05);
         expect (ed->createComponentSnapshot (ed->getLocalBounds()).isValid());
+
+        beginTest ("the key panel opens, closes, and the window can close with it open");
+        ed->getTopBar().showKeyPanel();
+        ed->getTopBar().closeKeyPanel();
+        ed->getTopBar().showKeyPanel();
+        ed->getTopBar().showKeyPanel();      // a second open replaces the first
+        expect (ed->createComponentSnapshot (ed->getLocalBounds()).isValid());
+        ed.reset();                          // the host closes the window: no crash, nothing left behind
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (50);
+        expect (ed == nullptr);
     }
 };
 

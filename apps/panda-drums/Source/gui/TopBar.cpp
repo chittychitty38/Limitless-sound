@@ -150,8 +150,7 @@ TopBar::TopBar (PandaDrumsProcessor& p) : proc (p)
 
 TopBar::~TopBar()
 {
-    if (auto* box = keyBox.getComponent())
-        delete box;
+    closeKeyPanel();
 }
 
 void TopBar::setPage (int i)
@@ -176,8 +175,8 @@ void TopBar::refresh()
     kitButton.setButtonText (name);
     theme::look (kitButton, kit != nullptr && kit->isFactory && name == "Panda Factory Kit" && ! proc.isLoading()
                                 ? "button_kit_selector" : "button_kit_selector_blank");
-    if (auto* panel = dynamic_cast<KeyPanel*> (keyPanel.getComponent()))
-        panel->sync();
+    if (keyPanel != nullptr)
+        keyPanel->sync();
     repaint();
 }
 
@@ -256,24 +255,29 @@ void TopBar::timerCallback()
 void TopBar::showKeyPanel()
 {
     closeKeyPanel();
-    auto panel = std::make_unique<KeyPanel> (proc);
-    panel->setLookAndFeel (&getLookAndFeel());
-    keyPanel = panel.get();
+    keyPanel = std::make_unique<KeyPanel> (proc);
+    keyPanel->setLookAndFeel (&getLookAndFeel());
     // Inside the window (scaled with it, and it never ends up behind the host's window).
     auto* parent = getParentComponent();
     auto area = parent != nullptr ? keyButton.getBounds() + getPosition() : keyButton.getScreenBounds();
-    keyBox = &juce::CallOutBox::launchAsynchronously (std::move (panel), area, parent);
+    keyBox = std::make_unique<juce::CallOutBox> (*keyPanel, area, parent);
+    keyBox->setVisible (true);
+    // A click outside (or Escape) ends its modal state; this one is closed then, unless another
+    // has opened since.
+    auto opened = ++keyPanelCount;
+    keyBox->enterModalState (true, juce::ModalCallbackFunction::create ([bar = juce::Component::SafePointer<TopBar> (this), opened] (int)
+    {
+        if (bar != nullptr && bar->keyPanelCount == opened)
+            bar->closeKeyPanel();
+    }), false);
 }
 
 void TopBar::closeKeyPanel()
 {
-    if (auto* box = keyBox.getComponent())
-    {
-        box->exitModalState (0);
-        box->setVisible (false);
-    }
-    keyBox = nullptr;
-    keyPanel = nullptr;
+    if (keyBox != nullptr && keyBox->isCurrentlyModal())
+        keyBox->exitModalState (0);
+    keyBox.reset();
+    keyPanel.reset();
 }
 
 void TopBar::showKitMenu()

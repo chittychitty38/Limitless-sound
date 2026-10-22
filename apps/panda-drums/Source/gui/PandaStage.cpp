@@ -1032,7 +1032,7 @@ void PandaStage::advanceTo (double t)
     grooving += ((now - lastAnyHit < 1.5 ? 1.0f : 0.25f) - grooving) * (1.0f - std::exp (-dt / 0.6f));
     pose.head = headBase.translated (0.0f, beat * (rig ? 11.0f * grooving : 5.0f) + nod.x * (rig ? 4.0f : 3.0f));
     pose.bodyBounce = bounce.x * 0.08f;
-    pose.tilt = 0.03f * std::sin ((float) now * 1.3f) * (tPlaying ? 0.4f : 1.0f) + nod.x * 0.012f + beat * 0.025f * grooving;
+    pose.tilt = 0.03f * std::sin ((float) now * 1.3f) * (1.0f - 0.6f * hostPlaying) + nod.x * 0.012f + beat * 0.025f * grooving;
     pose.squash = 1.0f - juce::jlimit (-0.05f, 0.06f, bounce.x * 0.0035f);
     pose.mouthOpen = 0.3f + 0.62f * std::min (1.0f, energy);
     pose.mouthRound = juce::jlimit (0.0f, 1.0f, (energy - 0.85f) / 0.5f);
