@@ -32,6 +32,7 @@ cat > "$work/distribution.xml" <<XML
 <installer-gui-script minSpecVersion="2">
     <title>Panda Drums $version</title>
     <options customize="allow" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+    <allowed-os-versions><os-version min="10.13"/></allowed-os-versions>
     <domains enable_localSystem="true"/>
     <choices-outline>
         <line choice="au"/>

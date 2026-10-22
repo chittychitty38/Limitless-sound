@@ -4,7 +4,8 @@ project(PandaDrums VERSION 0.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Oldest macOS the plugin runs on")
+# High Sierra: every Intel Mac with an i5, i7 or i9 from 2018 on, and every Apple silicon Mac.
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Oldest macOS the plugin runs on")
 
 option(PD_BUILD_PLUGIN "Build the AU / VST3 / Standalone plugin" ON)
 option(PD_BUILD_TOOLS  "Build the unit tests and the offline render tool" ON)

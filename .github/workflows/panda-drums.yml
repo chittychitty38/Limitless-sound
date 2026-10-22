@@ -68,6 +68,8 @@ jobs:
           art=build/PandaDrums_artefacts/Release
           for b in "$art/AU/Panda Drums.component" "$art/VST3/Panda Drums.vst3" "$art/Standalone/Panda Drums.app"; do
             codesign --force --deep --sign - "$b"
+            # One binary for both: Apple silicon and Intel (an i9 Mac).
+            lipo "$(find "$b/Contents/MacOS" -type f | head -1)" -verify_arch arm64 x86_64
             lipo -archs "$(find "$b/Contents/MacOS" -type f | head -1)"
           done
           mkdir -p ~/Library/Audio/Plug-Ins/Components

@@ -35,10 +35,12 @@ a piece of the Panda Drums GUI asset pack; see [art/](art/README.md).
 
 ## Install
 
-**Mac:** open `Panda-Drums-<version>-mac.pkg` and click through. It installs the Audio Unit
-(Logic, GarageBand), the VST3 and the app; untick any you don't want under Customize. It isn't
-signed by Apple yet, so the first time macOS refuses: System Settings > Privacy & Security >
-**Open Anyway**. In Logic, rescan with Logic Pro > Settings > Plug-in Manager if it doesn't
+**Mac:** one installer for every Mac: Apple silicon (M1 and later) and Intel (i5, i7, i9), on
+macOS 10.13 High Sierra or later. Open `Panda-Drums-<version>-mac.pkg` and click through. It
+installs the Audio Unit (Logic, GarageBand), the VST3 and the app; untick any you don't want
+under Customize. It isn't signed by Apple yet, so the first time macOS refuses: System Settings
+> Privacy & Security > **Open Anyway** (on macOS 12 and earlier: System Preferences > Security
+& Privacy > **Open Anyway**). In Logic, rescan with Logic Pro > Settings > Plug-in Manager if it doesn't
 show up under Instruments > The Panda Studios.
 
 **Windows:** run `Panda-Drums-Setup-windows.exe`. SmartScreen: More info > Run anyway.
