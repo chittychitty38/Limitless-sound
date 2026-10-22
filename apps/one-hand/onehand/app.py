@@ -1,10 +1,10 @@
 """The One-Hand window, menu bar icon, on-screen badge and first-launch setup."""
 import sys
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QBoxLayout, QButtonGroup, QCheckBox, QComboBox, QFrame, QGridLayout,
-                               QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QStackedWidget,
+                               QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QStackedWidget, QStyle,
                                QSystemTrayIcon, QVBoxLayout, QWidget)
 
 from .engine import Engine, Settings
@@ -14,8 +14,26 @@ from .platform_sim import get_backend
 from .settings import APP_NAME, Prefs, load_layouts
 from .suite import Suite
 
+# High contrast (a Limitless Sound shared setting) goes on top of the usual look: pure black,
+# white text and edges with no grey, and a blue focus ring that shows on every button, even a yellow one.
+HIGH_CONTRAST = """
+QWidget { background: #000; }
+QLabel { background: transparent; }
+QLabel#hint, QLabel#sends, QLabel#tick { color: #fff; }
+QPushButton { background: #000; border-color: #fff; }
+QPushButton:hover { border-color: #ffe600; }
+QPushButton:focus { border-color: #4fc3ff; }
+QFrame#key { background: #000; border-width: 3px; border-color: #fff; }
+QFrame#card, QFrame#step { background: #000; border-color: #fff; }
+QFrame#banner { background: #000; border-width: 3px; }
+QCheckBox::indicator { background: #000; border-color: #fff; }
+QCheckBox:focus { text-decoration: underline; }
+QComboBox { border-color: #fff; }
+QComboBox QAbstractItemView { border: 2px solid #fff; selection-background-color: #ffe600; selection-color: #000; }
+"""
 
-def style(scale=1.0):
+
+def style(scale=1.0, contrast=False):
     px = lambda n: f"{round(n * scale)}px"  # noqa: E731
     return f"""
 QWidget {{ background: #111; color: #fff; font-size: {px(17)}; }}
@@ -45,7 +63,7 @@ QFrame#card QCheckBox, QFrame#card QLabel {{ background: transparent; }}
 QFrame#banner {{ background: #4a1700; border: 2px solid #ff8a50; border-radius: 12px; }}
 QFrame#step {{ background: #191919; border: 2px solid #444; border-radius: 12px; }}
 QFrame#step[done="true"] {{ border-color: #3ddc84; }}
-QLabel#tick {{ font-size: {px(30)}; font-weight: 800; color: #888; }}
+QLabel#tick {{ font-size: {px(30)}; font-weight: 800; color: #888; min-width: {px(40)}; max-width: {px(40)}; }}
 QFrame#step[done="true"] QLabel#tick {{ color: #3ddc84; }}
 QCheckBox {{ spacing: 12px; padding: 2px; }}
 QCheckBox::indicator {{ width: {px(26)}; height: {px(26)}; border: 2px solid #ccc; border-radius: 6px; background: #111; }}
@@ -54,7 +72,7 @@ QCheckBox:focus {{ color: #4fc3ff; }}
 QScrollArea {{ border: none; }}
 QComboBox {{ padding: {px(6)} {px(10)}; border: 2px solid #8a8a8a; border-radius: 8px; }}
 QComboBox:focus {{ border-color: #4fc3ff; }}
-"""
+""" + (HIGH_CONTRAST if contrast else "")
 
 
 def repolish(widget):
@@ -69,7 +87,7 @@ class KeyCard(QFrame):
     def __init__(self):
         super().__init__()
         self.setObjectName("key")
-        self.setMinimumSize(112, 108)
+        self.setMinimumHeight(108)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(3)
@@ -81,7 +99,18 @@ class KeyCard(QFrame):
             lay.addWidget(w)
         lay.addStretch()
         self._unflash = QTimer(self, singleShot=True, interval=450, timeout=lambda: self.set_flash(False))
+        self.steady = False   # reduced motion: a pressed key stays lit instead of flashing
         self.key = None
+
+    def minimumSizeHint(self):
+        # At least 112 wide, and never narrower than its text, however large the text is.
+        hint = super().minimumSizeHint()
+        return QSize(max(112, hint.width()), hint.height())
+
+    def set_steady(self, on):
+        self.steady = on
+        if not on and self.property("flash"):
+            self._unflash.start()
 
     def show_command(self, key, label, sends):
         self.key = key
@@ -93,7 +122,7 @@ class KeyCard(QFrame):
     def set_flash(self, on):
         self.setProperty("flash", on)
         repolish(self)
-        if on:
+        if on and not self.steady:
             self._unflash.start()
 
 
@@ -111,10 +140,18 @@ class OnBadge(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel()
-        self.label.setStyleSheet("background: #ffe600; color: #000; font-size: 17px; font-weight: 800;"
-                                 "border-radius: 16px; padding: 7px 18px; border: 2px solid #000;")
         lay.addWidget(self.label)
         self._floated = False
+        self.set_look(1.0, False)
+
+    def set_look(self, scale, contrast):
+        # High contrast keeps black on yellow, with a thicker edge so it stands out on light screens too.
+        px = lambda n: f"{round(n * scale)}px"  # noqa: E731
+        self.label.setStyleSheet(f"background: #ffe600; color: #000; font-size: {px(17)}; "
+                                 f"font-weight: {900 if contrast else 800}; border-radius: {px(16)}; "
+                                 f"padding: {px(7)} {px(18)}; border: {4 if contrast else 2}px solid #000;")
+        if self.isVisible():
+            self.show_text(self.label.text())   # resize and center it again
 
     def show_text(self, text):
         self.label.setText(text)
@@ -149,8 +186,7 @@ class PermissionPage(QWidget):
             box = QFrame(objectName="step")
             row = QHBoxLayout(box)
             row.setContentsMargins(16, 12, 16, 12)
-            tick = QLabel("○", objectName="tick")
-            tick.setFixedWidth(40)
+            tick = QLabel("○", objectName="tick")   # its width grows with the text, in style()
             row.addWidget(tick)
             text = QLabel(f"<b>Step {n}: {name}</b><br>Switch on <b>Limitless One-Hand</b>. It {why}.",
                           wordWrap=True)
@@ -223,7 +259,7 @@ class MainWindow(QWidget):
         screen = QApplication.primaryScreen().availableGeometry()
         self.resize(min(1220, screen.width() - 40), min(860, screen.height() - 40))
         self.setMinimumSize(760, 520)
-        self.apply_style()
+        self._effects = QApplication.isEffectEnabled(Qt.UIEffect.UI_General)   # menus and lists that fade or slide
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -234,10 +270,12 @@ class MainWindow(QWidget):
         self.pages.addWidget(self._scrolling(self._build_main()))
 
         self._main_thread = MainThread()
-        self.suite = Suite(self.engine, backend, self.set_hand, dispatch=self._main_thread.call.emit).start()
+        self.suite = Suite(self.engine, backend, self.set_hand, dispatch=self._main_thread.call.emit,
+                           prefs_changed=self.apply_style).start()
 
         self.badge = OnBadge(backend)
         self._build_tray()
+        self.apply_style()
 
         QShortcut(QKeySequence.StandardKey.Quit, self, activated=self.quit)
         QShortcut(QKeySequence("Ctrl+W"), self, activated=self.close)
@@ -419,7 +457,34 @@ class MainWindow(QWidget):
         layout.addWidget(box)
 
     def apply_style(self):
-        self.setStyleSheet(style(1.25 if self.prefs.larger_text else 1.0))
+        # Larger text here, or the musician's Limitless Sound settings when they help more.
+        look = self.suite.look(self.prefs.larger_text)
+        scale, contrast, calm = look["textScale"], look["highContrast"], look["reduceMotion"]
+        self.setStyleSheet(style(scale, contrast))
+        self.badge.set_look(scale, contrast)
+        for _, _, card in self.cards:
+            card.set_steady(calm)
+        QApplication.setEffectEnabled(Qt.UIEffect.UI_General, self._effects and not calm)
+        self.fit_to_text()
+        self.suite.prefs_applied(look)
+
+    def fit_to_text(self):
+        # Larger text needs a wider window before the two columns fit side by side, and a wider window at all.
+        bar = self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+        m = self.cols.contentsMargins()
+        edges = m.left() + m.right() + bar
+        self.cols.invalidate()
+        self.cols.activate()   # measure afresh, even while this page is hidden behind the setup page
+        left, right = (self.cols.itemAt(i).minimumSize().width() for i in (0, 1))
+        self.wide_width = max(1120, left + self.cols.spacing() + right + edges)
+        widest = max(max(left, right) + edges, self.permission_page.minimumSizeHint().width() + bar)
+        self.setMinimumWidth(min(max(760, widest), QApplication.primaryScreen().availableGeometry().width()))
+        self.fit_columns(self.width())
+
+    def fit_columns(self, width):
+        # Side by side on a wide window, stacked when narrow, so nothing is ever cut off.
+        wide = width >= self.wide_width
+        self.cols.setDirection(QBoxLayout.Direction.LeftToRight if wide else QBoxLayout.Direction.TopToBottom)
 
     def apply_on_top(self):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.prefs.keep_on_top)
@@ -516,6 +581,8 @@ class MainWindow(QWidget):
             if card.key == key:
                 card.set_flash(True)
                 sends = card.sends.text()
+            elif card.steady and card.property("flash"):
+                card.set_flash(False)   # with reduced motion only the last key pressed stays lit
         name = self.app_pick.currentText()
         self.practice.setText(f"{cap(key)} → {label}. In {name} that presses {sends}.")
         self.backend.announce(label)
@@ -540,6 +607,8 @@ class MainWindow(QWidget):
         self.status.setText(text)
         for _, _, card in self.cards:
             card.setProperty("active", bool(on and (app or in_self)))
+            if not on:
+                card.setProperty("flash", False)   # a key left lit by reduced motion goes out with the mode
             repolish(card)
         if self.tray:
             self.tray.setIcon(tray_icon(on))
@@ -566,13 +635,12 @@ class MainWindow(QWidget):
         notes = [f"{c['label']}: {c['note']}" for c in cmds.values() if c.get("note")]
         self.note.setText("\n".join(notes))
         self.note.setVisible(bool(notes))
+        self.fit_to_text()   # another DAW's shortcuts can need more room
 
     # ---- window life -------------------------------------------------
 
     def resizeEvent(self, event):
-        # Side by side on a wide window, stacked when narrow, so nothing is ever cut off.
-        wide = event.size().width() >= 1120
-        self.cols.setDirection(QBoxLayout.Direction.LeftToRight if wide else QBoxLayout.Direction.TopToBottom)
+        self.fit_columns(event.size().width())
         super().resizeEvent(event)
 
     def bring_back(self):
