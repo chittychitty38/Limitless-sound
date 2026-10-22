@@ -11,7 +11,8 @@ screenshots.
 
   python3 packaging/proof/prove_suite.py --out proof
 
-Writes proof/proof.json and proof/summary.md. Exits 1 if any app fails level 1.
+Writes proof/proof.json and proof/summary.md. Exits 3 if any app fails (level 1, ready in
+time, still running), so a crash of this script itself (exit 1) is told apart.
 Standard library only.
 """
 
@@ -280,7 +281,7 @@ def main(argv=None) -> int:
             f.write(text)
     ok = (all(a["level"] for a in proof["apps"]) and all(s["ok"] for s in proof["suite"])
           and all(x["ok"] for a in proof["apps"] for x in a["proof"] if not x.get("warn")))
-    return 0 if ok else 1
+    return 0 if ok else 3
 
 
 if __name__ == "__main__":
