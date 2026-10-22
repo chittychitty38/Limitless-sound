@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  displayInUse, shownProgress,
   OneEuro, leastSquares, fitCalibration, calibrationGrade, headToScreen,
   buildPads, chordName, noteName, huiSwitch, HuiParser, HUI, OnsetDetector,
 } from '../renderer/lib.js';
@@ -35,6 +36,26 @@ test('head pointer centres on the neutral pose and moves the right way', () => {
   assert.deepEqual(headToScreen(0.1, -0.05, n, 16, 1000, 800), [500, 400]);
   const [x] = headToScreen(0.1 - (8 * Math.PI) / 180, -0.05, n, 16, 1000, 800);
   assert.ok(Math.abs(x - 1000) < 1e-6, 'half the range reaches the screen edge');
+});
+
+test('display uses the more accessible of GazeStage\'s own and the shared settings', () => {
+  const own = { size: 'normal', contrast: false, reduceMotion: false };
+  const mine = { size: 'xlarge', contrast: true, reduceMotion: true };
+  const off = { textScale: 1, highContrast: false, reduceMotion: false };
+  assert.deepEqual(displayInUse(own, null), off, 'no hub: GazeStage\'s own settings');
+  assert.deepEqual(displayInUse(mine, null), { textScale: 24 / 17, highContrast: true, reduceMotion: true });
+  assert.deepEqual(displayInUse(own, { textScale: 1.5, highContrast: true, reduceMotion: true, dwellMs: 1200 }),
+    { textScale: 1.5, highContrast: true, reduceMotion: true }, 'only text size, contrast and motion');
+  assert.deepEqual(displayInUse(mine, { textScale: 1.25, highContrast: false, reduceMotion: false }),
+    { textScale: 24 / 17, highContrast: true, reduceMotion: true }, 'the shared settings never take one away');
+  assert.equal(displayInUse({ ...own, size: 'large' }, { textScale: 2 }).textScale, 2);
+  assert.equal(displayInUse(own, { textScale: 9 }).textScale, 2);
+  assert.deepEqual(displayInUse(own, { textScale: 'big', highContrast: 0 }), off);
+});
+
+test('reduced motion draws dwell progress in quarter steps', () => {
+  assert.deepEqual([0, 0.1, 0.3, 0.6, 0.9, 1, 1.4].map((p) => shownProgress(p, true)), [0, 0.25, 0.5, 0.75, 1, 1, 1]);
+  assert.deepEqual([-1, 0.3, 2].map((p) => shownProgress(p, false)), [0, 0.3, 1]);
 });
 
 test('pads follow the scale and build chords in key', () => {

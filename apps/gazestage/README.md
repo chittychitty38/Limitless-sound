@@ -64,6 +64,12 @@ Other DAWs that support HUI work the same way, including Logic, Cubase and Reape
 | ⌘. | All notes off |
 | ⌘, | Settings |
 
+## Display and Limitless Sound
+
+Settings › Display has light or dark, high contrast, text size and the space between targets. GazeStage also follows your computer's reduce motion setting.
+
+When Limitless Sound is running, GazeStage also follows the suite's shared text size, high contrast and reduced motion settings. It uses whichever is more accessible: the larger text, and high contrast or reduced motion if either one asks for it. Reduced motion turns off animations and fills the dwell ring in steps. It never changes when something is selected. Dwell and switch timing stay GazeStage's own, in Settings › Selecting.
+
 ## Known limits
 
 - It hasn't been tested yet on a real Pro Tools rig or with a player. The HUI codes for rewind (1), fast forward (2) and stop (3) are unconfirmed.
