@@ -1,5 +1,7 @@
-// End-to-end smoke test. Launches the app with a fake camera and microphone on a fresh
-// profile, walks the guided setup, plays a note, opens settings, and checks for page errors.
+// End-to-end smoke test. First launches the app the way the nightly proof does on a fresh Mac
+// (no camera, microphone or answering sound output, nobody to answer a question) and checks it
+// answers every action within a second. Then launches it with a fake camera and microphone on a
+// fresh profile, walks the guided setup, plays a note, opens settings, and checks for page errors.
 // On macOS it also checks that GazeStage created its own virtual MIDI ports. Then it starts
 // GazeStage again on a slowed-down CPU and checks it answers every action, never freezes, and
 // soon finds the face in front of the camera (face-camera.mjs).
@@ -23,6 +25,7 @@ const BUILT = {
   linux: join(root, 'dist', 'linux-unpacked', 'gazestage'),
 };
 const profile = mkdtempSync(join(tmpdir(), 'gazestage-test-'));
+const bareProfile = mkdtempSync(join(tmpdir(), 'gazestage-bare-'));   // first launch with no devices
 const logs = mkdtempSync(join(tmpdir(), 'gazestage-logs-'));
 
 // A stand-in Limitless Sound hub, so the test can check GazeStage joins the suite.
@@ -51,13 +54,96 @@ const hubInvoke = async (id, action) => {
 };
 const flags = ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--user-data-dir=${profile}`];
 const env = { ...process.env, LIMITLESS_SOUND_HOME: hubHome, LIMITLESS_SOUND_LOGS: logs };
-const launch = (more = []) => electron.launch(packaged
-  ? { executablePath: BUILT[process.platform], args: [...flags, ...more], env }
-  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...flags, ...more], env });
-let app = await launch();
+const launch = (more = [], base = flags) => electron.launch(packaged
+  ? { executablePath: BUILT[process.platform], args: [...base, ...more], env }
+  : { executablePath: createRequire(import.meta.url)('electron'), args: [root, ...base, ...more], env });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// The page's longest freeze: the slowest round trip to its thread while watching.
+const freezeWatch = (page) => {
+  const w = { longest: 0, on: true };
+  w.done = (async () => {
+    while (w.on) {
+      const t = Date.now(); await page.evaluate(() => 0).catch(() => {});
+      w.longest = Math.max(w.longest, Date.now() - t); await sleep(25);
+    }
+  })();
+  w.stop = async () => { w.on = false; await w.done; return w.longest; };
+  return w;
+};
+// Presses every action GazeStage announced, one after another like the Access Standard test kit,
+// and times each answer.
+const pressAll = async (firstId) => {
+  const answers = [];
+  for (const [n, { id: action }] of hub.hello.actions.entries()) {
+    const id = firstId + n, sent = Date.now();
+    hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args: {}, source: 'kit', depth: 0 }) + '\n');
+    while (!hub.results.has(id) && Date.now() - sent < 3000) await sleep(5);
+    answers.push({ action, ms: Date.now() - sent, result: hub.results.get(id) });
+  }
+  return answers;
+};
+// The built-in instrument's hidden page (synth.html), where its notes sound.
+const synthPage = async (electronApp) => {
+  for (let t = 0; t < 100; t++) {
+    const page = electronApp.windows().find((p) => p.url().endsWith('/synth.html'));
+    if (page) return page;
+    await sleep(100);
+  }
+  throw new Error('the built-in instrument has no page');
+};
 
 const step = (name) => console.log('•', name);
+let app = null;
 try {
+  step('first launch with no camera, microphone or working sound output: every action answered within a second');
+  // Like the nightly proof on a fresh Mac: a fresh profile, no fake devices, nobody to answer a
+  // question. Making an audio context waits for the computer's audio device, twice, up to 10 s
+  // each: on a Mac without a working one, the first transport click froze the window for 20 s
+  // and 8 of 10 actions went unanswered. Here the audio stops answering too (Chromium's audio
+  // service is paused, except on Windows, which can't), and a note starts the built-in sound
+  // first: the window must still answer every action within a second and never freeze.
+  app = await launch([], ['--no-sandbox', `--user-data-dir=${bareProfile}`]);
+  const bare = await app.firstWindow();
+  for (let t = 0; t < 300 && !hub.hello; t++) await sleep(100);
+  assert.ok(hub.hello, 'joins Limitless Sound on first launch');
+  assert.equal(await bare.evaluate(() => window.__gs.S.onboarded), false, 'first launch: the guided setup is showing');
+  const watch = freezeWatch(bare);
+  let audio = null;
+  if (process.platform !== 'win32') {
+    await bare.evaluate(() => navigator.mediaDevices.enumerateDevices());   // starts the audio service
+    audio = (await app.evaluate(({ app: a }) => a.getAppMetrics())).find((m) => /audio/i.test(m.serviceName || ''));
+    if (audio) process.kill(audio.pid, 'SIGSTOP');
+  }
+  let answers, frozen;
+  try {
+    await bare.evaluate(() => setTimeout(() => document.querySelector('#pads .target')
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }))));
+    answers = await pressAll(200);
+    frozen = await watch.stop();
+  } finally { if (audio) process.kill(audio.pid, 'SIGCONT'); }
+  step(`${answers.map((a) => `${a.action} ${a.ms} ms`).join(', ')}; longest freeze ${frozen} ms${audio ? ', the audio stopped' : ''}`);
+  const slow = answers.filter((a) => !a.result || a.ms > 1000 || /didn’t answer|still starting/.test(a.result.message));
+  assert.deepEqual(slow.map((a) => `${a.action}: ${a.result ? a.result.message : 'no answer'} (${a.ms} ms)`), [], 'every action answered within a second');
+  assert.ok(frozen < 1000, `the window froze for ${frozen} ms`);
+  const pages = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()
+    .map((w) => ({ page: w.webContents.getURL().split('/').pop(), pid: w.webContents.getOSProcessId(), shown: w.isVisible() })));
+  const uiProc = pages.find((p) => p.page === 'index.html'), synthProc = pages.find((p) => p.page === 'synth.html');
+  assert.ok(uiProc && synthProc && uiProc.pid !== synthProc.pid && !synthProc.shown,
+    `the built-in sound plays in a hidden page and process of its own: ${JSON.stringify(pages)}`);
+
+  step('a question on screen (reset all settings) does not stop it answering either');
+  // A confirm() in the page held it until someone answered. The question stays open here.
+  await app.evaluate(({ dialog }) => { dialog.showMessageBox = () => new Promise((r) => { globalThis.answerQuestion = r; }); });
+  await bare.evaluate(() => setTimeout(() => document.getElementById('resetAll').click()));
+  for (let t = 0; t < 50 && !(await app.evaluate(() => !!globalThis.answerQuestion)); t++) await sleep(100);
+  assert.ok(await app.evaluate(() => !!globalThis.answerQuestion), 'the question is asked');
+  const whileAsking = (await pressAll(300)).filter((a) => !a.result || a.ms > 1000 || /didn’t answer|still starting/.test(a.result.message));
+  assert.deepEqual(whileAsking.map((a) => a.action), [], 'every action answered within a second while the question is open');
+  await app.evaluate(() => globalThis.answerQuestion({ response: 1 }));   // Cancel
+  await app.close();
+  hub.hello = null;
+
+  app = await launch();
   const win = await app.firstWindow();
   const errors = [];
   win.on('pageerror', (e) => errors.push(e.message));
@@ -110,20 +196,24 @@ try {
 
   step('instrument pads play the built-in sound');
   assert.equal(await win.locator('#pads .target').count(), 8);
+  const sound = await synthPage(app);
+  const voices = () => sound.evaluate(() => window.__synth.voices.size);
+  const sounding = (yes) => sound.waitForFunction((y) => (window.__synth.voices.size > 0) === y, yes, { timeout: 2000 }).catch(() => {});
   const pad = win.locator('#pads .target').first();
   await pad.hover(); await win.mouse.down();
-  await win.waitForTimeout(200);
-  assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'a note is sounding');
+  await sounding(true);
+  assert.ok(await voices() > 0, 'a note is sounding');
   await win.mouse.up();
   // After a while of silence the audio rests (a running audio context kept the computer busy
   // while idle); the next note wakes it and still plays. A minute in use, 0.3 s here.
-  await win.evaluate(() => { const s = window.__gs.synth; s.allOff(); s.restMs = 300; s.restLater(); });
-  await win.waitForFunction(() => window.__gs.synth.ctx.state === 'suspended', null, { timeout: 5000 });
+  await sounding(false);
+  await sound.evaluate(() => { const s = window.__synth; s.allOff(); s.restMs = 300; s.restLater(); });
+  await sound.waitForFunction(() => window.__synth.ctx.state === 'suspended', null, { timeout: 5000 });
   await pad.hover(); await win.mouse.down();
-  await win.waitForFunction(() => window.__gs.synth.ctx.state === 'running' && window.__gs.synth.voices.size > 0,
+  await sound.waitForFunction(() => window.__synth.ctx.state === 'running' && window.__synth.voices.size > 0,
     null, { timeout: 3000 });
   await win.mouse.up();
-  await win.evaluate(() => { window.__gs.synth.restMs = 60000; window.__gs.synth.restLater(); });
+  await sound.evaluate(() => { window.__synth.restMs = 60000; window.__synth.restLater(); });
   await win.click('[data-action=chords]');
   assert.match(await win.locator('#pads .target').first().textContent(), /^[A-G][♯]?(m|°|\+)?/);
 
@@ -137,16 +227,18 @@ try {
   // Wait until the pointer has settled on the pad (slower on CI runners than locally).
   await win.waitForFunction((id) => window.__gs.state.current?.dataset.pad === id, padId, { timeout: 5000 });
   await win.keyboard.down('Space');
-  await win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 }).catch(() => {});
-  assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the switch plays the pad');
+  await sounding(true);
+  assert.ok(await voices() > 0, 'the switch plays the pad');
   await win.evaluate(() => window.dispatchEvent(new Event('blur')));
-  assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'losing focus stops the note');
+  await sounding(false);
+  assert.equal(await voices(), 0, 'losing focus stops the note');
   await win.keyboard.up('Space');
   await win.keyboard.down('Space');
-  await win.waitForFunction(() => window.__gs.synth.voices.size > 0, null, { timeout: 2000 }).catch(() => {});
-  assert.ok(await win.evaluate(() => window.__gs.synth.voices.size) > 0, 'the next press still works');
-  await win.keyboard.up('Space'); await win.waitForTimeout(100);
-  assert.equal(await win.evaluate(() => window.__gs.synth.voices.size), 0, 'key-up releases the note');
+  await sounding(true);
+  assert.ok(await voices() > 0, 'the next press still works');
+  await win.keyboard.up('Space');
+  await sounding(false);
+  assert.equal(await voices(), 0, 'key-up releases the note');
   await win.evaluate(() => { window.__gs.S.mode = 'head'; window.__gs.S.select = 'dwell'; });
   await win.mouse.move(5, 5);
 
@@ -270,27 +362,14 @@ try {
   again.on('console', (m) => { if (/^Face tracking:/.test(m.text())) tracking.push(m.text()); });
   const cdp = await again.context().newCDPSession(again);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: slowdown });
-  // The page's longest freeze: the slowest round trip to its thread while it starts.
-  let freeze = 0, watching = true;
-  const watcher = (async () => {
-    while (watching) {
-      const t = Date.now(); await again.evaluate(() => 0).catch(() => {});
-      freeze = Math.max(freeze, Date.now() - t); await new Promise((r) => setTimeout(r, 25));
-    }
-  })();
-  for (let t = 0; t < 300 && !hub.hello; t++) await new Promise((r) => setTimeout(r, 100));
+  const watchStart = freezeWatch(again);   // while it starts
+  for (let t = 0; t < 300 && !hub.hello; t++) await sleep(100);
   assert.ok(hub.hello, 'joins Limitless Sound again');
-  const unanswered = [];
-  for (const [n, { id: action }] of hub.hello.actions.entries()) {
-    const id = 100 + n, sent = Date.now();
-    hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args: {}, source: 'kit', depth: 0 }) + '\n');
-    while (!hub.results.has(id) && Date.now() - sent < 3000) await new Promise((r) => setTimeout(r, 10));
-    const r = hub.results.get(id);
-    if (!r || /didn’t answer|still starting/.test(r.message)) unanswered.push(`${action}: ${r ? r.message : 'no answer in 3 s'}`);
-  }
+  const unanswered = (await pressAll(100)).filter((a) => !a.result || /didn’t answer|still starting/.test(a.result.message))
+    .map((a) => `${a.action}: ${a.result ? a.result.message : 'no answer in 3 s'}`);
   // Tracking runs: a face is found (or, with the plain fake camera, reported missing).
   await again.waitForFunction((face) => face ? window.__gs.state.sample?.face : window.__gs.state.cameraState === 'noface', !!faceVideo, { timeout: 90000 });
-  watching = false; await watcher;
+  const freeze = await watchStart.stop();
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   const first = (what) => +(tracking.find((t) => t.includes(`first ${what}`))?.match(/(\d+) ms/)?.[1] ?? NaN);
   for (let t = 0; t < 30 && Number.isNaN(first(faceVideo ? 'face' : 'frame read')); t++) await new Promise((r) => setTimeout(r, 100));
@@ -311,8 +390,9 @@ try {
   assert.deepEqual(errors, []);
   console.log('smoke test passed');
 } finally {
-  await app.close();
+  await app?.close();
   hubServer.close();
+  rmSync(bareProfile, { recursive: true, force: true });
   rmSync(profile, { recursive: true, force: true });
   rmSync(hubHome, { recursive: true, force: true });
   rmSync(logs, { recursive: true, force: true });

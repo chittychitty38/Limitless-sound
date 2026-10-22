@@ -1,7 +1,7 @@
 {
   "name": "gazestage",
   "productName": "GazeStage",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Eye, head and sound control for Pro Tools and virtual instruments. Limitless Sound.",
   "main": "main.js",
   "license": "UNLICENSED",
@@ -33,6 +33,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "synth-preload.js",
       "limitless-link.js",
       "applog.js",
       "renderer/**/*",
