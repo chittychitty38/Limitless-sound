@@ -1,4 +1,4 @@
-# Temporary: finds what keeps the released GazeStage busy while it sits idle on a Mac
+# Temporary: finds what keeps GazeStage busy while it sits idle on a Mac
 # (the proof's 7.5% on Apple silicon and 3.4% on Intel; the limit is 3%).
 name: Diagnose GazeStage idle CPU
 
@@ -12,8 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-15, dmg: GazeStage-0.3.4-mac-arm64.dmg }
-          - { os: macos-15-intel, dmg: GazeStage-0.3.4-mac-x64.dmg }
+          - { os: macos-15, artifact: GazeStage-mac-apple-silicon }
+          - { os: macos-15-intel, artifact: GazeStage-mac-intel }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -21,12 +21,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install the released GazeStage
+      - name: Install GazeStage 0.3.5 as built for PR #60
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download gazestage-v0.3.4 -R "$GITHUB_REPOSITORY" -p "${{ matrix.dmg }}" -D "$RUNNER_TEMP"
-          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "$RUNNER_TEMP/${{ matrix.dmg }}"
+          gh run download 39833562842 -R "$GITHUB_REPOSITORY" -n "${{ matrix.artifact }}" -D "$RUNNER_TEMP/dl"
+          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "$RUNNER_TEMP"/dl/*.dmg
           cp -R "$RUNNER_TEMP/mnt/GazeStage.app" "$RUNNER_TEMP/"
           xattr -cr "$RUNNER_TEMP/GazeStage.app"
       - name: Measure

@@ -66,45 +66,16 @@ async function metrics(pages, seconds = 10) {
   const profile = mkdtempSync(join(tmpdir(), 'gazestage-idle-'));
   const app = await electron.launch({ executablePath: exe, args: [`--user-data-dir=${profile}`] });
   const win = await app.firstWindow();
-  console.log('GPU:', JSON.stringify(await app.evaluate(({ app }) => app.getGPUFeatureStatus())));
-  console.log('display:', JSON.stringify(await app.evaluate(({ screen }) => screen.getPrimaryDisplay())));
+  console.log('version:', await app.evaluate(({ app }) => app.getVersion()));
   await wait(20);
+  await measure('First launch, guided setup showing');
 
-  const b = await measure('First launch, guided setup showing (what the proof measures)');
+  await win.click('[data-ob="skip"]');   // a click: the selection sound plays
+  await wait(5);
+  await measure('5-20 s after a click (how the proof measures)');
   console.log('\nRenderer work in 10 s:'); await metrics(app.windows());
-  sample(Object.keys(b).filter((pid) => b[pid].pct >= 0.3));
-
-  await win.click('[data-ob="skip"]'); await wait(5);
-  await measure('Setup skipped, main page showing');
-  console.log('\nRenderer work in 10 s:'); await metrics(app.windows());
-
+  await measure('Sitting idle');
   const sound = app.windows().find((p) => p.url().endsWith('/synth.html'));
-  await sound.evaluate(() => { window.__synth.ensure(); window.__synth.tick(); }); await wait(5);
-  const c = await measure('A click played 5 s ago (the built-in instrument\'s audio running)');
-  console.log('audio:', JSON.stringify(await sound.evaluate(() => ({ state: window.__synth.ctx.state, rate: window.__synth.ctx.sampleRate, base: window.__synth.ctx.baseLatency, out: window.__synth.ctx.outputLatency }))));
-  sample(Object.keys(c).filter((pid) => c[pid].pct >= 0.5));
-
-  await sound.evaluate(() => { const s = window.__synth; s.wet.disconnect(); s.reverb.disconnect(); }); await wait(2);
-  await measure('Audio running without the reverb');
-
-  await sound.evaluate(() => window.__synth.ctx.suspend()); await wait(2);
-  await measure('Audio suspended');
-
-  await win.evaluate(() => { window.requestAnimationFrame = () => 0; }); await wait(2);
-  await measure('Frame loop stopped (requestAnimationFrame does nothing)');
-
-  await win.evaluate(() => { for (let i = 1; i < 100000; i++) clearInterval(i); }); await wait(2);
-  await measure('Every timer in the page cleared too (status chips no longer refreshed)');
-
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().forEach((w) => w.isVisible() && w.minimize()));
-  await wait(3);
-  await measure('Window minimised');
-
-  console.log('\nsynth page closed:', await app.evaluate(({ BrowserWindow }) => {
-    const s = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith('/synth.html'));
-    s?.destroy(); return !!s;
-  }));
-  await wait(3);
-  await measure('Synth page closed as well');
+  console.log('audio:', await sound.evaluate(() => window.__synth.ctx?.state));
   await app.close();
 })().catch((e) => { console.error(e); process.exit(1); });
