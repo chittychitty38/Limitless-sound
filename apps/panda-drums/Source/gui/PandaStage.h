@@ -1,0 +1,149 @@
+#pragma once
+
+#include "../PluginProcessor.h"
+#include "PandaArt.h"
+
+// The stage: the panda behind the kit, playing every hit the engine plays.
+//
+// Hits arrive with the time they will be heard. With Showtime on they arrive ~75 ms early,
+// so a hand can wind up and land exactly on the sound; otherwise the stick snaps down the
+// moment the hit is heard, with a smear frame so it still reads as a swing.
+class PandaStage : public juce::Component,
+                   public juce::SettableTooltipClient,
+                   private juce::Timer
+{
+public:
+    static constexpr float designW = 1280.0f, designH = 736.0f;
+
+    explicit PandaStage (PandaDrumsProcessor&);
+
+    void paint (juce::Graphics&) override;
+    void resized() override;
+    void mouseMove (const juce::MouseEvent&) override;
+    void mouseExit (const juce::MouseEvent&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+
+    // A hit from the engine; strikeTime in seconds on the same clock as advanceTo().
+    void hit (const pd::HitEvent&, double strikeTime);
+    void advanceTo (double now);
+    void setLive (bool shouldRunOwnClock);        // false: the render tool drives advanceTo()
+    void setTransport (double bpm, double ppq, bool playing) { tBpm = bpm; tPpq = ppq; tPlaying = playing; }
+    void refreshKit();                            // kit, variants or tuning changed
+
+    int getSelectedPiece() const { return selected; }
+    void setSelectedPiece (int p) { selected = p; repaint(); }
+    std::function<void (int)> onSelect;
+    bool showTags = true;          // tag under the hovered / selected drum
+
+    static double nowSeconds() { return juce::Time::getMillisecondCounterHiRes() * 0.001; }
+
+private:
+    using P = juce::Point<float>;
+
+    struct Spring
+    {
+        float x = 0.0f, v = 0.0f, target = 0.0f;
+        void step (float dt, float omega, float zeta)
+        {
+            // Small sub-steps keep stiff springs stable at any frame rate.
+            auto n = std::max (1, (int) std::ceil (dt / 0.002f));
+            auto h = dt / (float) n;
+            for (int i = 0; i < n; ++i)
+            {
+                auto a = -omega * omega * (x - target) - 2.0f * zeta * omega * v;
+                v += a * h;
+                x += v * h;
+            }
+        }
+    };
+
+    struct PieceView
+    {
+        int piece = -1;
+        pd::PieceType type = pd::PieceType::Perc;
+        P pos;                     // drums: top centre; kick and cymbals: centre
+        float radius = 40.0f, shell = 30.0f;
+        pd::art::Wrap wrap = pd::art::Wrap::PurpleSparkle;
+        int hand = 0;              // preferred: 0 = screen left, 1 = screen right
+        bool eitherHand = false;
+        bool isFloor = false;
+        juce::String variantName, pitchText;
+        bool tunable = false, inKey = false, keyOn = false;
+        int variants = 1;
+
+        // Animation.
+        double flashAt = -10.0, rippleAt = -10.0;
+        float flashAmt = 0.0f, rippleAmt = 0.0f;
+        Spring pulse, wobble, gap, press;
+
+        // Hit popup.
+        pd::HitEvent last;
+        double lastAt = -10.0;
+
+        juce::Rectangle<float> hitArea, tag, prevBtn, nextBtn, downBtn, upBtn;
+    };
+
+    struct Strike
+    {
+        int piece = -1, artic = 0;
+        int hand = -1;             // 0 / 1 = a hand, -1 = kick foot, -2 = hi-hat foot
+        float vel = 0.0f;
+        double time = -10.0;       // when it is heard
+        double scheduled = -10.0;  // when we learned about it (wind-up room = time - scheduled)
+    };
+
+    struct Hand
+    {
+        int side = 0;
+        int piece = -1;             // where it is heading / playing
+        P base, from;               // paw hover position, and where the last move began
+        double moveStart = -10.0, moveEnd = -10.0;
+        Strike last, next;          // last landed, next pending
+        double smearUntil = -10.0;
+        P smearPaw, smearTip;
+        double twirlAt = -10.0;
+    };
+
+    struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; };
+    struct Burst { juce::String text; P pos; double at = -10.0; float rot = 0.0f; juce::Colour colour; };
+
+    void timerCallback() override;
+    void layoutPieces();
+    void updateLabels();
+    PieceView* viewFor (int piece);
+    int chooseHand (const PieceView&, double time);
+    P strikePoint (const PieceView&, int hand) const;
+    P stickDir (const PieceView&, int hand) const;
+    void handPose (const Hand&, double now, P& paw, P& tip) const;
+    float liftAt (const Hand&, double now) const;
+    void land (Hand&, const Strike&);
+    void spawnSparkles (const PieceView&, float vel);
+    void spawnHearts (float count);
+    P toDesign (P screen) const;
+    juce::AffineTransform designTransform() const;
+    void drawTags (juce::Graphics&);
+    void drawChips (juce::Graphics&);
+    void drawParticles (juce::Graphics&);
+
+    PandaDrumsProcessor& proc;
+    std::vector<PieceView> views;
+    std::array<Hand, 2> hands;
+    std::vector<Particle> particles;
+    std::vector<Burst> bursts;
+    std::vector<Strike> pending;                  // strikes waiting for their time
+    pd::art::PandaPose pose;
+    juce::Image background;
+
+    double now = 0.0, lastAdvance = 0.0;
+    double lastAnyHit = -10.0, lastBurst = -10.0, nextBlink = 2.0, blinkAt = -10.0, happyUntil = -10.0;
+    float energy = 0.0f;
+    Spring bounce, nod, earL, earR, lookX, lookY, shake;
+    double tBpm = 120.0, tPpq = 0.0;
+    bool tPlaying = false;
+    bool live = true;
+    int selected = -1;
+    int hoverPiece = -1;
+    juce::String hoverButton;
+    juce::Random rng { 1234 };
+    int labelCountdown = 0;
+};

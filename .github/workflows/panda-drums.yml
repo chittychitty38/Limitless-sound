@@ -1,0 +1,123 @@
+name: Panda Drums
+
+on:
+  push:
+    branches: [main]
+    tags: ["panda-drums-v*"]
+    paths: ["apps/panda-drums/**", ".github/workflows/panda-drums.yml"]
+  pull_request:
+    paths: ["apps/panda-drums/**", ".github/workflows/panda-drums.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/panda-drums
+
+jobs:
+  # Unit tests on Linux, then the render tool films the panda playing a groove.
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libasound2-dev libx11-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libxcomposite-dev libfreetype-dev libfontconfig1-dev libgl-dev xvfb ffmpeg
+      - name: Build tests and render tool
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPD_BUILD_PLUGIN=OFF
+          cmake --build build --target PandaDrumsTests PandaDrumsRender
+      - name: Unit tests
+        run: xvfb-run -a build/PandaDrumsTests_artefacts/Release/PandaDrumsTests
+      - name: Screenshots and demo video
+        run: |
+          xvfb-run -a build/PandaDrumsRender_artefacts/Release/PandaDrumsRender screenshots preview
+          xvfb-run -a build/PandaDrumsRender_artefacts/Release/PandaDrumsRender video render 18
+          ffmpeg -loglevel error -y -framerate 30 -i render/frames/%04d.png -i render/groove.wav \
+            -c:v libx264 -pix_fmt yuv420p -crf 20 -c:a aac -b:a 192k -shortest preview/panda-drums-demo.mp4
+          cp render/groove.wav preview/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Panda-Drums-preview
+          path: apps/panda-drums/preview
+
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (Apple silicon + Intel in one)
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build build --config Release -j 4 --target PandaDrums_AU PandaDrums_VST3 PandaDrums_Standalone PandaDrumsTests
+      - name: Unit tests
+        run: build/PandaDrumsTests_artefacts/Release/PandaDrumsTests
+      - name: Sign (ad hoc) and validate the Audio Unit
+        run: |
+          art=build/PandaDrums_artefacts/Release
+          for b in "$art/AU/Panda Drums.component" "$art/VST3/Panda Drums.vst3" "$art/Standalone/Panda Drums.app"; do
+            codesign --force --deep --sign - "$b"
+            lipo -archs "$(find "$b/Contents/MacOS" -type f | head -1)"
+          done
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "$art/AU/Panda Drums.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -a | grep -i panda
+          auval -strict -v aumu PDrm Pnds
+      - name: Validate the VST3 with pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          unzip -q pluginval.zip
+          pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests \
+            --validate "build/PandaDrums_artefacts/Release/VST3/Panda Drums.vst3"
+      - name: Package
+        run: |
+          version=$(sed -nE 's/^project\(PandaDrums VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)
+          mkdir -p dist
+          packaging/mac/build-pkg.sh build/PandaDrums_artefacts/Release "$version" "dist/Panda-Drums-$version-mac.pkg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Panda-Drums-mac
+          path: apps/panda-drums/dist/*.pkg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config Release --parallel --target PandaDrums_VST3 PandaDrums_Standalone PandaDrumsTests
+      - name: Unit tests
+        run: build/PandaDrumsTests_artefacts/Release/PandaDrumsTests.exe
+      - name: Installer
+        shell: pwsh
+        run: |
+          $env:APP_VERSION = (Select-String -Path CMakeLists.txt -Pattern 'project\(PandaDrums VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }
+          iscc packaging\windows.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Panda-Drums-windows
+          path: apps/panda-drums/dist/*.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/panda-drums-v')
+    needs: [preview, mac, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/*.pkg
+            out/*.exe
+            out/*.mp4
+          name: Panda Drums ${{ github.ref_name }}
+          # The repo's Latest release is the Limitless Sound suite download.
+          make_latest: "false"
