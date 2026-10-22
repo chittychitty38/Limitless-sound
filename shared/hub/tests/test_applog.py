@@ -11,10 +11,13 @@ CANONICAL = ROOT / "shared" / "clients" / "python" / "applog.py"
 
 
 def test_every_copy_matches_the_shared_one():
-    copies = [p for p in ROOT.glob("**/applog.py") if p != CANONICAL and "node_modules" not in p.parts]
-    assert copies, "the hub at least carries a copy"
-    for p in copies:
-        assert p.read_text() == CANONICAL.read_text(), f"{p.relative_to(ROOT)} differs from shared/clients/python/applog.py"
+    for name in ("applog.py", "mac_keys.py"):
+        shared = CANONICAL.parent / name
+        copies = [p for p in ROOT.glob(f"**/{name}") if p != shared and "node_modules" not in p.parts
+                  and ".claude" not in p.parts]
+        assert copies, f"some app carries a copy of {name}"
+        for p in copies:
+            assert p.read_text() == shared.read_text(), f"{p.relative_to(ROOT)} differs from shared/clients/python/{name}"
 
 
 def test_writes_errors_nothing_caught_including_in_threads(tmp_path):
