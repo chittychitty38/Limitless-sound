@@ -49,6 +49,13 @@ class _HTTPServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = not os.name == "nt"
 
+    def server_bind(self):
+        # HTTPServer's own server_bind also looks up the computer's full name
+        # (socket.getfqdn), which nothing here uses. On a Mac that lookup can wait on
+        # multicast DNS for half a minute: Limitless Control took 35 s to start that way.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
 
 class Outbox:
     """What the hub has to send one app. Sending never blocks the suite: when an app

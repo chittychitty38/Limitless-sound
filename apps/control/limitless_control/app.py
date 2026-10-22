@@ -13,6 +13,7 @@ import json
 import os
 import secrets
 import socket
+import socketserver
 import subprocess
 import sys
 import threading
@@ -43,6 +44,17 @@ def open_in_browser(url: str) -> None:
         except OSError:
             pass
     threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
+
+
+class SettingsServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self):
+        # HTTPServer's own server_bind also looks up the computer's full name
+        # (socket.getfqdn), which nothing here uses. On a Mac that lookup can wait on
+        # multicast DNS for half a minute: it was 35 of the 38 s this app took to start.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 def accessibility_ok() -> bool:
@@ -410,8 +422,7 @@ class App:
                     return self._json({"ok": True})
                 self._json({"error": "not found"}, 404)
 
-        server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-        server.daemon_threads = True
+        server = SettingsServer(("127.0.0.1", PORT), Handler)
         threading.Thread(target=server.serve_forever, daemon=True, name="settings").start()
         return server
 
