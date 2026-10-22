@@ -10,7 +10,6 @@ on:
     branches: [main]
   push:
     tags: ["v*"]
-    paths: ["packaging/**", ".github/workflows/suite.yml"]
   pull_request:
     paths: ["packaging/**", ".github/workflows/suite.yml"]
   workflow_dispatch:
@@ -69,8 +68,41 @@ jobs:
         with:
           name: Limitless-Sound-Suite-${{ matrix.arch }}
           path: Limitless-Sound-Suite-${{ matrix.arch }}.dmg
-      - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+
+  # One release page for the whole suite: v<packaging/VERSION>. The first build of a new
+  # version publishes it; later builds of the same version refresh its disk images, so the
+  # download always carries every app's newest version. Its assets keep the same names, so
+  # https://github.com/<repo>/releases/latest/download/Limitless-Sound-Suite-<arch>.dmg
+  # stays a permanent link.
+  release:
+    needs: mac
+    if: >-
+      github.event_name == 'workflow_run' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          files: Limitless-Sound-Suite-${{ matrix.arch }}.dmg
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Limitless-Sound-Suite-*
+          path: out
+          merge-multiple: true
+      - name: Publish or refresh the suite release
+        run: |
+          version=$(tr -d '[:space:]' < packaging/VERSION)
+          tag="v$version"
+          ls -l out
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" out/*.dmg --clobber -R "$GITHUB_REPOSITORY"
+            echo "Refreshed $tag with the newest apps."
+          else
+            gh release create "$tag" out/*.dmg -R "$GITHUB_REPOSITORY" --target "$SHA" \
+              --title "Limitless Sound $version" --notes-file packaging/RELEASE.md --latest
+            echo "Published $tag."
+          fi
