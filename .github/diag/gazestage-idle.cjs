@@ -78,6 +78,18 @@ async function metrics(pages, seconds = 10) {
   await measure('Setup skipped, main page showing');
   console.log('\nRenderer work in 10 s:'); await metrics(app.windows());
 
+  const sound = app.windows().find((p) => p.url().endsWith('/synth.html'));
+  await sound.evaluate(() => { window.__synth.ensure(); window.__synth.tick(); }); await wait(5);
+  const c = await measure('A click played 5 s ago (the built-in instrument\'s audio running)');
+  console.log('audio:', JSON.stringify(await sound.evaluate(() => ({ state: window.__synth.ctx.state, rate: window.__synth.ctx.sampleRate, base: window.__synth.ctx.baseLatency, out: window.__synth.ctx.outputLatency }))));
+  sample(Object.keys(c).filter((pid) => c[pid].pct >= 0.5));
+
+  await sound.evaluate(() => { const s = window.__synth; s.wet.disconnect(); s.reverb.disconnect(); }); await wait(2);
+  await measure('Audio running without the reverb');
+
+  await sound.evaluate(() => window.__synth.ctx.suspend()); await wait(2);
+  await measure('Audio suspended');
+
   await win.evaluate(() => { window.requestAnimationFrame = () => 0; }); await wait(2);
   await measure('Frame loop stopped (requestAnimationFrame does nothing)');
 
