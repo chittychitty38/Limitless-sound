@@ -1,5 +1,6 @@
 #include "MixerPage.h"
 #include "Theme.h"
+#include "UiKit.h"
 
 using namespace pd;
 namespace colour = pd::theme::colour;
@@ -10,13 +11,26 @@ juce::Colour groupColour (MicGroup g)
 {
     switch (g)
     {
-        case MicGroup::Close:     return colour::hot;
-        case MicGroup::Overhead:  return colour::gold;
-        case MicGroup::RoomClose: return colour::mint;
-        case MicGroup::RoomFar:   return juce::Colour (0xffa98bff);
-        case MicGroup::Other:     return colour::cream;
+        case MicGroup::Close:     return ui::colour::pink;
+        case MicGroup::Overhead:  return ui::colour::yellow;
+        case MicGroup::RoomClose: return ui::colour::teal;
+        case MicGroup::RoomFar:   return ui::colour::purple.brighter (0.4f);
+        case MicGroup::Other:     return ui::colour::text;
     }
-    return colour::cream;
+    return ui::colour::text;
+}
+
+const char* groupAccent (MicGroup g)
+{
+    switch (g)
+    {
+        case MicGroup::Overhead:  return "yellow";
+        case MicGroup::RoomClose: return "teal";
+        case MicGroup::RoomFar:   return "purple";
+        case MicGroup::Close:
+        case MicGroup::Other:     break;
+    }
+    return "pink";
 }
 
 const char* groupLabel (MicGroup g)
@@ -32,15 +46,22 @@ const char* groupLabel (MicGroup g)
     return "";
 }
 
+// A level meter in the pack's teal readout, stood on end.
 void drawMeter (juce::Graphics& g, juce::Rectangle<float> r, float level)
 {
-    g.setColour (colour::ink.withAlpha (0.8f));
-    g.fillRoundedRectangle (r, 2.0f);
+    ui::readout (g, "readout_zone_v", r);
     auto db = juce::Decibels::gainToDecibels (level, -60.0f);
     auto frac = juce::jlimit (0.0f, 1.0f, (db + 60.0f) / 66.0f);
-    auto fill = r.withTop (r.getBottom() - r.getHeight() * frac);
-    g.setGradientFill (juce::ColourGradient (colour::mint, r.getX(), r.getBottom(), colour::bad, r.getX(), r.getY(), false));
-    g.fillRoundedRectangle (fill, 2.0f);
+    auto in = r.reduced (r.getWidth() * 0.26f, r.getWidth() * 0.3f);
+    if (frac <= 0.0f)
+        return;
+    g.setGradientFill (juce::ColourGradient (ui::colour::teal, in.getX(), in.getBottom(), ui::colour::pink, in.getX(), in.getY(), false));
+    g.fillRoundedRectangle (in.withTop (in.getBottom() - in.getHeight() * frac), in.getWidth() * 0.5f);
+}
+
+juce::String dbText (double v)
+{
+    return v <= -59.9 ? juce::String ("-inf") : juce::String (v, 1) + " dB";
 }
 
 struct Knob : juce::Slider
@@ -64,14 +85,11 @@ public:
         fader.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
         fader.setDoubleClickReturnValue (true, 0.0);
         fader.onValueChange = [this] { repaint(); };
-        pandaKnob.setColour (juce::Slider::rotarySliderFillColourId, colour::hot);
         pandaKnob.setTooltip ("Panda FX: punch and grit for this channel");
-        panKnob.setColour (juce::Slider::rotarySliderFillColourId, colour::mint);
         mute.setClickingTogglesState (true);
         solo.setClickingTogglesState (true);
-        mute.setColour (juce::TextButton::buttonOnColourId, colour::bad);
-        solo.setColour (juce::TextButton::buttonOnColourId, colour::gold);
-        solo.setColour (juce::TextButton::textColourOnId, colour::ink);
+        theme::look (mute, "button_secondary_action", "button_primary_action");
+        theme::look (solo, "button_secondary_action", "button_key_selector_blank");
         open.setTooltip ("Open this mic: a fader for every drum inside it");
         open.onClick = [this] { page.openInside (mic); };
         for (auto* c : std::initializer_list<juce::Component*> { &fader, &pandaKnob, &panKnob, &mute, &solo, &open })
@@ -85,53 +103,45 @@ public:
         soloA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (ps, PandaDrumsProcessor::chParam (mic, "Solo"), solo);
     }
 
-    void setMic (const MicDef& def) { name = def.name; group = def.group; repaint(); }
+    void setMic (const MicDef& def) { name = def.name; group = def.group; theme::accent (fader, groupAccent (group)); repaint(); }
 
     void resized() override
     {
-        auto r = getLocalBounds().reduced (6, 6);
-        r.removeFromTop (54);
-        auto knobs = r.removeFromTop (60);
+        auto r = getLocalBounds().reduced (9, 10);
+        r.removeFromTop (50);
+        auto knobs = r.removeFromTop (62);
         pandaKnob.setBounds (knobs.removeFromLeft (knobs.getWidth() / 2).withTrimmedBottom (14).reduced (1));
-        panKnob.setBounds (knobs.withTrimmedBottom (14).reduced (4));
-        auto ms = r.removeFromTop (26);
-        mute.setBounds (ms.removeFromLeft (ms.getWidth() / 2).reduced (2, 1));
-        solo.setBounds (ms.reduced (2, 1));
-        open.setBounds (r.removeFromBottom (28).reduced (0, 2));
+        panKnob.setBounds (knobs.withTrimmedBottom (14).reduced (1));
+        auto ms = r.removeFromTop (28);
+        mute.setBounds (ms.removeFromLeft (ms.getWidth() / 2).reduced (1, 1));
+        solo.setBounds (ms.reduced (1, 1));
+        open.setBounds (r.removeFromBottom (30).reduced (0, 1));
         r.removeFromBottom (18);
-        meterArea = r.removeFromRight (10).reduced (0, 10).toFloat();
+        r.removeFromTop (6);
+        meterArea = r.removeFromRight (9).reduced (0, 6).toFloat();
         fader.setBounds (r);
     }
 
     void paint (juce::Graphics& g) override
     {
+        // The pack's mixer channel, its mic's group in the group's colour.
         auto r = getLocalBounds().toFloat().reduced (3.0f, 2.0f);
-        theme::drawCard (g, r, colour::plumLight.darker (0.2f), 12.0f, false);
+        ui::panel (g, "panel_mixer_channel", r);
         auto gc = groupColour (group);
-        g.setColour (gc);
-        g.fillRoundedRectangle (r.withHeight (6.0f).reduced (8.0f, 0.0f).translated (0.0f, 4.0f), 3.0f);
-        auto t = r.reduced (6.0f, 0.0f).withTrimmedTop (12.0f);
-        g.setColour (gc);
-        g.setFont (theme::title (10.5f));
-        g.drawText (groupLabel (group), t.removeFromTop (12.0f), juce::Justification::centred);
-        g.setColour (colour::text);
-        g.setFont (theme::title (14.0f));
-        g.drawFittedText (name, t.removeFromTop (32.0f).toNearestInt(), juce::Justification::centred, 2, 0.8f);
+        auto t = r.reduced (8.0f, 0.0f).withTrimmedTop (11.0f);
+        ui::label (g, groupLabel (group), t.removeFromTop (12.0f), gc, 9.5f);
+        g.setColour (ui::colour::text);
+        g.setFont (ui::font (12.0f));
+        g.drawFittedText (name, t.removeFromTop (30.0f).toNearestInt(), juce::Justification::centred, 2, 0.8f);
 
-        g.setColour (colour::textDim);
-        g.setFont (theme::title (10.0f));
         auto pk = pandaKnob.getBounds().toFloat();
-        g.drawText ("PANDA", pk.withY (pk.getBottom()).withHeight (12.0f).expanded (8.0f, 0.0f), juce::Justification::centred);
+        ui::label (g, "PANDA", pk.withY (pk.getBottom()).withHeight (12.0f).expanded (8.0f, 0.0f), ui::colour::textDim, 8.5f);
         auto pn = panKnob.getBounds().toFloat();
-        g.drawText ("PAN", pn.withY (pn.getBottom() + 3.0f).withHeight (12.0f).expanded (8.0f, 0.0f), juce::Justification::centred);
+        ui::label (g, "PAN", pn.withY (pn.getBottom()).withHeight (12.0f).expanded (8.0f, 0.0f), ui::colour::textDim, 8.5f);
 
         drawMeter (g, meterArea, level);
         auto fb = fader.getBounds().toFloat();
-        auto v = fader.getValue();
-        g.setColour (colour::text);
-        g.setFont (theme::body (12.0f));
-        g.drawText (v <= -59.9 ? juce::String ("-inf") : juce::String (v, 1) + " dB", fb.withY (fb.getBottom() + 1.0f).withHeight (16.0f).expanded (10.0f, 0.0f),
-                    juce::Justification::centred);
+        ui::label (g, dbText (fader.getValue()), fb.withY (fb.getBottom() + 1.0f).withHeight (16.0f).expanded (10.0f, 0.0f), ui::colour::text, 10.5f);
     }
 
     void tick()
@@ -166,9 +176,8 @@ public:
         fader.setSliderStyle (juce::Slider::LinearVertical);
         fader.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
         fader.setDoubleClickReturnValue (true, 0.0);
-        fader.setColour (juce::Slider::trackColourId, colour::gold);
+        theme::accent (fader, "yellow");
         fader.onValueChange = [this] { repaint(); };
-        bus.setColour (juce::Slider::rotarySliderFillColourId, colour::gold);
         bus.setTooltip ("Panda FX on the whole kit");
         addAndMakeVisible (fader);
         addAndMakeVisible (bus);
@@ -178,41 +187,29 @@ public:
 
     void resized() override
     {
-        auto r = getLocalBounds().reduced (8, 6);
-        r.removeFromTop (54);
-        bus.setBounds (r.removeFromTop (60).withTrimmedBottom (14).withSizeKeepingCentre (52, 46));
-        r.removeFromTop (26);
+        auto r = getLocalBounds().reduced (10, 10);
+        r.removeFromTop (50);
+        bus.setBounds (r.removeFromTop (62).withTrimmedBottom (14).withSizeKeepingCentre (54, 48));
+        r.removeFromTop (34);
         r.removeFromBottom (46);
-        meters = r.removeFromRight (22).reduced (0, 10).toFloat();
+        meters = r.removeFromRight (20).reduced (0, 6).toFloat();
         fader.setBounds (r);
     }
 
     void paint (juce::Graphics& g) override
     {
         auto r = getLocalBounds().toFloat().reduced (3.0f, 2.0f);
-        theme::drawCard (g, r, colour::plumLight, 12.0f, false);
-        g.setColour (colour::gold);
-        g.fillRoundedRectangle (r.withHeight (6.0f).reduced (8.0f, 0.0f).translated (0.0f, 4.0f), 3.0f);
-        g.setFont (theme::title (10.5f));
-        g.drawText ("OUTPUT", r.withTrimmedTop (12.0f).withHeight (12.0f), juce::Justification::centred);
-        g.setColour (colour::text);
-        g.setFont (theme::display (22.0f));
-        g.drawText ("MASTER", r.withTrimmedTop (24.0f).withHeight (30.0f), juce::Justification::centred);
-        g.setColour (colour::textDim);
-        g.setFont (theme::title (10.0f));
+        ui::panel (g, "panel_mixer_channel", r);
+        auto t = r.reduced (8.0f, 0.0f).withTrimmedTop (11.0f);
+        ui::label (g, "OUTPUT", t.removeFromTop (12.0f), ui::colour::yellow, 9.5f);
+        ui::label (g, "MASTER", t.removeFromTop (28.0f), ui::colour::text, 17.0f);
         auto bb = bus.getBounds().toFloat();
-        g.drawText ("PANDA BUS", bb.withY (bb.getBottom()).withHeight (12.0f).expanded (20.0f, 0.0f), juce::Justification::centred);
+        ui::label (g, "PANDA BUS", bb.withY (bb.getBottom()).withHeight (12.0f).expanded (20.0f, 0.0f), ui::colour::textDim, 8.5f);
         drawMeter (g, meters.withWidth (9.0f), levelL);
-        drawMeter (g, meters.withTrimmedLeft (12.0f), levelR);
+        drawMeter (g, meters.withTrimmedLeft (11.0f), levelR);
         auto fb = fader.getBounds().toFloat();
-        auto v = fader.getValue();
-        g.setColour (colour::text);
-        g.setFont (theme::body (12.0f));
-        g.drawText (v <= -59.9 ? juce::String ("-inf") : juce::String (v, 1) + " dB", fb.withY (fb.getBottom() + 1.0f).withHeight (16.0f).expanded (10.0f, 0.0f),
-                    juce::Justification::centred);
-        g.setFont (theme::body (11.0f));
-        g.setColour (colour::textDim);
-        g.drawFittedText (juce::String (proc.getActiveVoices()) + " voices", getLocalBounds().removeFromBottom (24), juce::Justification::centred, 1);
+        ui::label (g, dbText (fader.getValue()), fb.withY (fb.getBottom() + 1.0f).withHeight (16.0f).expanded (10.0f, 0.0f), ui::colour::text, 10.5f);
+        ui::label (g, juce::String (proc.getActiveVoices()) + " voices", getLocalBounds().toFloat().removeFromBottom (30.0f), ui::colour::textDim, 9.5f);
     }
 
     void tick()
@@ -274,7 +271,7 @@ public:
             s->setDoubleClickReturnValue (true, 0.0);
             s->setPopupDisplayEnabled (true, true, this);
             s->setTextValueSuffix (" dB");
-            s->setColour (juce::Slider::trackColourId, colour::gold);
+            theme::accent (*s, "yellow");
             s->setValue (proc.getBleedDb ((int) p, m), juce::dontSendNotification);
             auto piece = (int) p;
             s->onValueChange = [this, s, piece] { proc.setBleedDb (piece, mic, (float) s->getValue()); repaint(); };
@@ -308,31 +305,23 @@ public:
     {
         g.fillAll (colour::ink.withAlpha (0.55f));
         auto r = getLocalBounds().toFloat().reduced (6.0f);
-        theme::drawCard (g, r, colour::plum, 16.0f);
-        auto in = r.reduced (14.0f, 10.0f);
-        g.setColour (colour::gold);
-        g.setFont (theme::display (28.0f));
-        g.drawText (micName.toUpperCase() + "  - WHAT'S INSIDE", in.removeFromTop (36.0f), juce::Justification::centredLeft);
-        g.setColour (colour::textDim);
-        g.setFont (theme::body (13.0f));
-        g.drawText ("How loud each drum is in this mic. Turn one down here without touching the rest of it. Double-click a fader to reset.",
-                    in.removeFromTop (22.0f), juce::Justification::centredLeft);
+        ui::panel (g, "panel_modal_dialog", r);
+        auto in = r.reduced (18.0f, 14.0f);
+        ui::label (g, micName.toUpperCase() + utf8 ("  \xc2\xb7  WHAT'S INSIDE"), in.removeFromTop (34.0f), ui::colour::yellow, 18.0f,
+                   juce::Justification::centredLeft);
+        ui::label (g, "How loud each drum is in this mic. Turn one down here without touching the rest of it. Double-click a fader to reset.",
+                   in.removeFromTop (22.0f), ui::colour::textDim, 11.5f, juce::Justification::centredLeft);
         if (faders.isEmpty())
         {
-            g.drawText ("Nothing in the loaded drums reaches this mic.", in, juce::Justification::centred);
+            ui::label (g, "Nothing in the loaded drums reaches this mic.", in, ui::colour::textDim, 12.0f);
             return;
         }
         for (int i = 0; i < faders.size(); ++i)
         {
             auto b = faders[i]->getBounds().toFloat();
-            g.setColour (colour::text);
-            g.setFont (theme::title (13.0f));
-            g.drawFittedText (names[i], b.withY (b.getBottom() + 4.0f).withHeight (18.0f).expanded (30.0f, 0.0f).toNearestInt(), juce::Justification::centred, 1);
-            g.setColour (colour::gold);
-            g.setFont (theme::body (11.5f));
-            auto v = faders[i]->getValue();
-            g.drawText (v <= -59.9 ? juce::String ("-inf") : juce::String (v, 1) + " dB", b.withY (b.getBottom() + 20.0f).withHeight (16.0f).expanded (30.0f, 0.0f),
-                        juce::Justification::centred);
+            ui::label (g, names[i], b.withY (b.getBottom() + 4.0f).withHeight (18.0f).expanded (30.0f, 0.0f), ui::colour::text, 11.5f);
+            ui::label (g, dbText (faders[i]->getValue()), b.withY (b.getBottom() + 20.0f).withHeight (16.0f).expanded (30.0f, 0.0f),
+                       ui::colour::yellow, 10.5f);
         }
     }
 
@@ -393,14 +382,10 @@ void MixerPage::resized()
 void MixerPage::paint (juce::Graphics& g)
 {
     g.fillAll (colour::plum);
-    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36);
-    g.setColour (colour::text);
-    g.setFont (theme::display (26.0f));
-    g.drawText ("MIXER", r, juce::Justification::centredLeft);
-    g.setColour (colour::textDim);
-    g.setFont (theme::body (13.0f));
-    g.drawText ("One channel per mic. Hit OPEN on the overheads or rooms to set every drum inside them.", r.withTrimmedLeft (110),
-                juce::Justification::centredLeft);
+    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36).toFloat();
+    ui::label (g, "MIXER", r.removeFromLeft (110.0f), ui::colour::pink, 18.0f, juce::Justification::centredLeft);
+    ui::label (g, "One channel per mic. Hit OPEN on the overheads or rooms to set every drum inside them.", r, ui::colour::textDim, 11.5f,
+               juce::Justification::centredLeft);
 }
 
 void MixerPage::timerCallback()

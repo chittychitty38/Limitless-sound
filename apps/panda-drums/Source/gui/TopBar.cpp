@@ -1,6 +1,7 @@
 #include "TopBar.h"
 #include "PandaArt.h"
 #include "Theme.h"
+#include "UiKit.h"
 
 using namespace pd;
 namespace colour = pd::theme::colour;
@@ -26,6 +27,8 @@ public:
             b->onClick = [this, s] { auto k = proc.getKey(); k.scale = (int) s; proc.setKey (k); sync(); };
             addAndMakeVisible (b);
         }
+        theme::look (tuneNow, "button_key_selector_blank");
+        theme::accent (autoTune, "teal");
         tuneNow.onClick = [this] { proc.tuneKitToKey(); proc.sendChangeMessage(); sync(); };
         tuneNow.setTooltip ("Retune the kick, snare and toms to the nearest notes of this key, keeping their order");
         autoTune.setToggleState (proc.autoTuneToKey, juce::dontSendNotification);
@@ -71,11 +74,10 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        g.fillAll (colour::plum);
         auto r = getLocalBounds().reduced (14);
-        g.setColour (colour::mint);
-        g.setFont (theme::display (24.0f));
-        g.drawText ("SONG KEY:  " + proc.getKey().name().toUpperCase(), r.removeFromTop (30), juce::Justification::centredLeft);
+        auto head = r.removeFromTop (30).toFloat();
+        ui::label (g, "SONG KEY", head.removeFromLeft (100.0f), ui::colour::textDim, 13.0f, juce::Justification::centredLeft);
+        ui::label (g, proc.getKey().name().toUpperCase(), head, ui::colour::teal.brighter (0.35f), 20.0f, juce::Justification::centredLeft);
 
         auto kit = proc.getKit();
         if (kit == nullptr)
@@ -86,7 +88,7 @@ public:
                 line << kit->pieces[p].name << " " << pitchName (proc.getPitch ((int) p)).upToFirstOccurrenceOf (" ", false, false)
                      << (proc.pitchInKey ((int) p) && ! proc.getKey().isOff() ? utf8 (" \xe2\x9c\x93") : juce::String()) << "    ";
         g.setColour (colour::textDim);
-        g.setFont (theme::body (12.5f));
+        g.setFont (ui::font (11.5f));
         g.drawFittedText (line, notesArea.reduced (2), juce::Justification::centredLeft, 2);
     }
 
@@ -118,6 +120,7 @@ TopBar::TopBar (PandaDrumsProcessor& p) : proc (p)
     for (auto* name : { "KIT", "MIXER", "LAB", "MAPPING" })
     {
         auto* b = tabs.add (new juce::TextButton (name));
+        theme::look (*b, "button_tab_inactive", "button_tab_" + juce::String (name).toLowerCase() + "_active");
         b->setRadioGroupId (77);
         b->setClickingTogglesState (true);
         b->onClick = [this, i] { setPage (i); if (onPage) onPage (i); };
@@ -127,7 +130,6 @@ TopBar::TopBar (PandaDrumsProcessor& p) : proc (p)
     tabs[0]->setToggleState (true, juce::dontSendNotification);
     tabs[2]->setTooltip ("Velocity & round robin lab: every sample in its lane");
 
-    keyButton.setColour (juce::TextButton::buttonColourId, colour::mint.darker (0.55f));
     keyButton.setTooltip ("The song's key: every tunable drum snaps into it");
     keyButton.onClick = [this] { showKeyPanel(); };
     kitButton.setTooltip ("Load your kit folder, or go back to the factory kit");
@@ -138,7 +140,6 @@ TopBar::TopBar (PandaDrumsProcessor& p) : proc (p)
     master.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     master.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     master.setPopupDisplayEnabled (true, true, nullptr);
-    master.setColour (juce::Slider::rotarySliderFillColourId, colour::gold);
     master.setDoubleClickReturnValue (true, 0.0);
     master.setTooltip ("Master volume");
     addAndMakeVisible (master);
@@ -147,7 +148,11 @@ TopBar::TopBar (PandaDrumsProcessor& p) : proc (p)
     startTimerHz (30);
 }
 
-TopBar::~TopBar() = default;
+TopBar::~TopBar()
+{
+    if (auto* box = keyBox.getComponent())
+        delete box;
+}
 
 void TopBar::setPage (int i)
 {
@@ -158,42 +163,55 @@ void TopBar::setPage (int i)
 
 void TopBar::refresh()
 {
-    keyButton.setButtonText ("KEY  " + proc.getKey().name().toUpperCase() + utf8 ("  \xe2\x96\xbe"));
+    // The pack's selectors have the factory kit and D minor lettered on them; any other kit or
+    // key goes on the blank ones in the same lettering.
+    auto key = proc.getKey();
+    auto keyName = key.isOff() ? juce::String ("OFF") : key.name().toUpperCase();
+    keyButton.setButtonText ("KEY " + keyName);
+    theme::look (keyButton, keyName == "D MINOR" ? "button_key_selector" : "button_key_selector_blank");
     auto kit = proc.getKit();
     auto name = kit != nullptr ? kit->name : juce::String ("No kit");
     if (proc.isLoading())
         name = "Loading...";
-    kitButton.setButtonText (name + utf8 ("  \xe2\x96\xbe"));
+    kitButton.setButtonText (name);
+    theme::look (kitButton, kit != nullptr && kit->isFactory && name == "Panda Factory Kit" && ! proc.isLoading()
+                                ? "button_kit_selector" : "button_kit_selector_blank");
+    if (auto* panel = dynamic_cast<KeyPanel*> (keyPanel.getComponent()))
+        panel->sync();
     repaint();
 }
 
 void TopBar::resized()
 {
-    auto r = getLocalBounds().reduced (10, 10);
-    r.removeFromLeft (300);
-    auto right = r.removeFromRight (520);
-    meterArea = right.removeFromRight (16).reduced (0, 4).toFloat();
-    right.removeFromRight (4);
-    master.setBounds (right.removeFromRight (44));
-    right.removeFromRight (10);
-    kitButton.setBounds (right.removeFromRight (210));
-    right.removeFromRight (8);
-    keyButton.setBounds (right.removeFromRight (220));
-    auto w = std::min (110, r.getWidth() / tabs.size());
-    auto x = r.getX() + (r.getWidth() - w * tabs.size()) / 2;
+    // The pack's nav bar holds tabs and selectors at their own height.
+    auto r = getLocalBounds().reduced (4, 3).reduced (0, 7);
+    auto x = 292;
     for (int t = 0; t < tabs.size(); ++t)
-        tabs[t]->setBounds (juce::Rectangle<int> (x + t * w, r.getY(), w, r.getHeight()).reduced (3, 0));
+        tabs[t]->setBounds (x + t * 126, r.getY(), 120, r.getHeight());
+    x += 4 * 126 + 6;
+    keyButton.setBounds (x, r.getY(), 190, r.getHeight());
+    kitButton.setBounds (keyButton.getRight() + 8, r.getY(), 190, r.getHeight());
+    master.setBounds (kitButton.getRight() + 6, r.getY(), 44, r.getHeight());
+    meterArea = juce::Rectangle<float> ((float) master.getRight() + 6.0f, (float) r.getY() + 1.0f, 18.0f, (float) r.getHeight() - 2.0f);
+}
+
+void TopBar::paintOverChildren (juce::Graphics& g)
+{
+    for (auto* b : { &keyButton, &kitButton })
+    {
+        auto r = b->getBounds().toFloat();
+        auto down = b->isDown();
+        ui::icon (g, "icon_dropdown", r.removeFromRight (r.getHeight()).reduced (r.getHeight() * 0.33f).translated (-4.0f, down ? 1.0f : 0.0f));
+    }
 }
 
 void TopBar::paint (juce::Graphics& g)
 {
     auto r = getLocalBounds().toFloat();
-    g.setGradientFill (juce::ColourGradient (colour::plumLight, 0.0f, 0.0f, colour::plum, 0.0f, r.getBottom(), false));
-    g.fillRect (r);
-    g.setColour (colour::hot);
-    g.fillRect (r.removeFromBottom (3.0f));
+    g.fillAll (colour::plum);
+    ui::panel (g, "panel_top_navigation_bar", r.reduced (4.0f, 3.0f));
 
-    auto logo = juce::Rectangle<float> (12.0f, 4.0f, 58.0f, 58.0f);
+    auto logo = juce::Rectangle<float> (14.0f, 6.0f, 52.0f, 52.0f);
     g.setColour (colour::pink);
     g.fillEllipse (logo.reduced (2.0f));
     g.setColour (colour::ink);
@@ -205,22 +223,26 @@ void TopBar::paint (juce::Graphics& g)
         g.reduceClipRegion (clip);
         art::drawPandaBadge (g, logo.reduced (1.0f).translated (0.0f, 4.0f));
     }
-    theme::drawTextOutlined (g, "PANDA DRUMS", { 78.0f, 6.0f, 200.0f, 36.0f }, theme::display (32.0f), colour::cream, colour::ink, 5.0f,
+    theme::drawTextOutlined (g, "PANDA DRUMS", { 76.0f, 8.0f, 200.0f, 32.0f }, theme::display (29.0f), colour::cream, colour::ink, 5.0f,
                              juce::Justification::centredLeft);
-    g.setColour (colour::hot);
-    g.setFont (theme::title (14.0f));
-    g.drawText (utf8 ("vol. one  \xc2\xb7  in key with any song"), juce::Rectangle<float> (80.0f, 40.0f, 230.0f, 18.0f), juce::Justification::centredLeft);
+    ui::label (g, utf8 ("vol. one  \xc2\xb7  in key with any song"), { 78.0f, 39.0f, 205.0f, 16.0f }, colour::hot, 10.5f,
+               juce::Justification::centredLeft);
+    drawMeters (g);
+}
 
+void TopBar::drawMeters (juce::Graphics& g)
+{
+    // Left and right in the pack's teal readout, stood on end.
     auto half = meterArea.getWidth() * 0.5f - 1.0f;
     for (int s = 0; s < 2; ++s)
     {
         auto m = juce::Rectangle<float> (meterArea.getX() + (half + 2.0f) * (float) s, meterArea.getY(), half, meterArea.getHeight());
-        g.setColour (colour::ink);
-        g.fillRoundedRectangle (m, 2.0f);
+        ui::readout (g, "readout_zone_v", m);
         auto lvl = s == 0 ? levelL : levelR;
         auto frac = juce::jlimit (0.0f, 1.0f, (juce::Decibels::gainToDecibels (lvl, -60.0f) + 60.0f) / 66.0f);
-        g.setGradientFill (juce::ColourGradient (colour::mint, m.getX(), m.getBottom(), colour::bad, m.getX(), m.getY(), false));
-        g.fillRoundedRectangle (m.withTop (m.getBottom() - m.getHeight() * frac), 2.0f);
+        auto in = m.reduced (2.5f, 3.0f);
+        g.setGradientFill (juce::ColourGradient (ui::colour::teal, in.getX(), in.getBottom(), ui::colour::pink, in.getX(), in.getY(), false));
+        g.fillRoundedRectangle (in.withTop (in.getBottom() - in.getHeight() * frac), in.getWidth() * 0.5f);
     }
 }
 
@@ -233,9 +255,25 @@ void TopBar::timerCallback()
 
 void TopBar::showKeyPanel()
 {
+    closeKeyPanel();
     auto panel = std::make_unique<KeyPanel> (proc);
     panel->setLookAndFeel (&getLookAndFeel());
-    juce::CallOutBox::launchAsynchronously (std::move (panel), keyButton.getScreenBounds(), nullptr);
+    keyPanel = panel.get();
+    // Inside the window (scaled with it, and it never ends up behind the host's window).
+    auto* parent = getParentComponent();
+    auto area = parent != nullptr ? keyButton.getBounds() + getPosition() : keyButton.getScreenBounds();
+    keyBox = &juce::CallOutBox::launchAsynchronously (std::move (panel), area, parent);
+}
+
+void TopBar::closeKeyPanel()
+{
+    if (auto* box = keyBox.getComponent())
+    {
+        box->exitModalState (0);
+        box->setVisible (false);
+    }
+    keyBox = nullptr;
+    keyPanel = nullptr;
 }
 
 void TopBar::showKitMenu()

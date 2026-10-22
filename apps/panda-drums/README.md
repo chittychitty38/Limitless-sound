@@ -6,6 +6,8 @@ across the keyboard like an instrument. And the plush panda in glasses sits behi
 glitter kit and plays every hit your MIDI sends, in time.
 
 AU, VST3 and stand-alone, for macOS 11+ (Apple silicon and Intel in one) and Windows 10/11.
+Every control on screen (panels, tabs, knobs, toggles, the drum tiles, the readouts, icons) is
+a piece of the Panda Drums GUI asset pack; see [art/](art/README.md).
 
 ![The panda playing](docs/panda-playing.gif)
 
@@ -29,7 +31,7 @@ AU, VST3 and stand-alone, for macOS 11+ (Apple silicon and Intel in one) and Win
 | A Panda effect on each fader | **PANDA** knob on every channel and on the master bus. For now it's a punch-and-grit chain (compressor into saturation); the real Panda chain drops into the same knob. |
 | A default map, saved maps, Superior Drummer style, import your own | **Mapping** page: Panda (General MIDI +), General MIDI, Toontrack style (SD3 / EZdrummer), Roland V-Drums. Save, load, MIDI-learn from your pads. |
 | A menu bar item for the song's key | **KEY** at the top: pick the root and scale; the kit retunes itself. |
-| The panda playing the drums along with the MIDI | The whole stage is the Panda Drums art (the panda, the purple glitter kit, gold cymbals, the CRUSH kick, bamboo and heart lights; see [art/](art/README.md)). He switches to the pose for what he's playing (hi-hat, snare, toms, crashes, kick, fills) on every hit, with a stick streak and a spark; the hi-hat opens and closes with the pedal; he bobs to the host's tempo. Twelve faces and a blink follow the playing: focused, happy, excited, laughing on a big crash, surprised after a rest, a wink when idle, and he cheers with both sticks up when the song stops. **Showtime sync** lands every pose exactly on the sound. |
+| The panda playing the drums along with the MIDI | The whole stage is the Panda Drums art (the panda, the purple glitter kit, gold cymbals, the CRUSH kick, bamboo and heart lights; see [art/](art/README.md)). He switches to the pose for what he's playing (hi-hat, snare, toms, crashes, kick, fills) on every hit, with a stick streak and a spark; his head moves on its own, nodding to the host's tempo, leaning toward each drum and dipping into it; the hi-hat opens and closes with the pedal; spotlights sway and flare with the cymbals and the rug glows with the kick. The drum's tile lights up in the strip below. Twelve faces and a blink follow the playing: focused, happy, excited, laughing on a big crash, surprised after a rest, a wink when idle, and he cheers with both sticks up when the song stops. **Showtime sync** lands every pose exactly on the sound. |
 
 ## Install
 

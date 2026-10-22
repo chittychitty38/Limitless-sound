@@ -198,6 +198,55 @@ def clean_pose(img, name):
     return Image.fromarray(a, "RGBA")
 
 
+def fill_holes(mask):
+    m = mask.astype(np.uint8)
+    flood = np.pad(m, 1).copy()
+    cv2.floodFill(flood, None, (0, 0), 2)
+    return mask | (flood[1:-1, 1:-1] == 0)
+
+
+def split_head(img, ell):
+    """Cuts the head (ears and all) off a pose, so it can nod and tilt on its own. Returns the
+    head and the body. The body keeps the bottom of the head, narrowed from the sides: the neck
+    under the chin, hidden under the head however it moves, so the body never shows a second
+    outline or a gap."""
+    a = rgba(img).copy()
+    h, w = a.shape[:2]
+    hsv = hsv_of(a)
+    cx, cy, rx, ry = ell
+    yy, xx = np.mgrid[0:h, 0:w]
+    solid = a[..., 3] > 20
+    inside = ((xx - cx) / (rx * 1.03)) ** 2 + ((yy - cy) / (ry * 1.03)) ** 2 < 1
+    cream = (hsv[..., 2] > 150) & (hsv[..., 1] < 110)
+    # Low on the head only the fur of the chin belongs to it: not a paw, a stick or the collar.
+    head = inside & solid & ((yy < cy + 0.55 * ry) | cream)
+    # The ears: dark blobs above the head that don't run down into an arm.
+    band = (yy > cy - 1.7 * ry) & (yy < cy - 0.25 * ry) & (np.abs(xx - cx) < 1.5 * rx)
+    dark = (hsv[..., 2] < 90) & solid & band & ~inside
+    n, lab, st, cen = cv2.connectedComponentsWithStats(dark.astype(np.uint8), 8)
+    bottom = cy - 0.25 * ry - 2
+    for i in range(1, n):
+        x, y, bw, bh, area = st[i]
+        if area > 0.02 * rx * rx and y + bh < bottom and abs(cen[i][0] - cx) < 1.2 * rx:
+            head |= lab == i
+    head = cv2.morphologyEx(head.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))) > 0
+    head = fill_holes(largest(head) | (head & (yy < cy - 0.25 * ry)))
+    soft = cv2.GaussianBlur(head.astype(np.float32), (0, 0), 1.6)
+    head_a = a.copy()
+    head_a[..., 3] = (a[..., 3] * np.where(yy > cy + 0.55 * ry, soft, head)).astype(np.uint8)
+
+    # The neck the body keeps: the bottom of the head, its sides pulled in by a fifth of the head.
+    m = int(rx * 0.2)
+    neck = cv2.erode(head.astype(np.uint8), np.ones((1, 2 * m + 1), np.uint8)) > 0
+    ramp = np.clip((yy - (cy + 0.1 * ry)) / (0.25 * ry), 0, 1)
+    gone = cv2.dilate(head.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0     # past the head's soft outline too
+    keep = np.where(gone, neck * ramp, 1.0)
+    keep = cv2.GaussianBlur(keep.astype(np.float32), (0, 0), 2.0)
+    body = a.copy()
+    body[..., 3] = (a[..., 3] * np.clip(keep, 0, 1)).astype(np.uint8)
+    return Image.fromarray(head_a, "RGBA"), Image.fromarray(body, "RGBA")
+
+
 def glasses_box(img, ell):
     """The glasses' frame: the rows of the head where dark pixels span most of its width."""
     a = rgba(img)
@@ -303,6 +352,41 @@ def main(src, outdir):
             rgb = rgba(room.resize((STAGE_W, STAGE_H)))[lab == i][:, :3].mean(0) / 255
             bulbs.append(dict(at=P(*ce[i]), colour=[round(float(c), 3) for c in rgb]))
     man["stage"]["bulbs"] = bulbs
+    # The rug's top, for its glow, and where the rug sits.
+    rug_h = rug_s.height / 2
+    man["stage"]["rug"] = [640.0, round(700 - 20 - rug_h * 0.06, 2), round(rw / 2 * 0.47, 2), round(rug_h * 0.33, 2)]
+
+    # The spotlights' three beams, without their lamps, wire and labels: they sway over the room
+    # and flare on the big hits.
+    sp = rgba(piece("spotlights")).copy()
+    h, w = sp.shape[:2]
+    hsv = hsv_of(sp)
+    dark_rows = np.nonzero(((hsv[..., 2] < 60) & (sp[..., 3] > 200)).sum(1) > w * 0.12)[0]
+    label_top = int(dark_rows[dark_rows > h * 0.6].min()) - 6 if len(dark_rows[dark_rows > h * 0.6]) else int(h * 0.85)
+    lamp = (hsv[..., 2] < 120) & (sp[..., 3] > 60)
+    lamp = cv2.dilate(lamp.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+    sp[lamp, 3] = 0
+    sp[..., :3] = (255, 244, 250)
+    beams = []
+    for i, cx in enumerate((300.0, 640.0, 980.0)):
+        x0, x1 = int(w * i / 3), int(w * (i + 1) / 3)
+        crop = sp[:label_top, x0:x1].copy()
+        ys, xs = np.nonzero(crop[..., 3] > 8)
+        crop = crop[ys.min():, xs.min():xs.max() + 1]
+        cw = crop.shape[1]
+        # Soft light, not a cut-out: the holes the lamps left closed, the edges blurred well out.
+        al = crop[..., 3].astype(np.float32)
+        al = cv2.morphologyEx(al, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (41, 41)))
+        al = cv2.GaussianBlur(al, (0, 0), cw * 0.05)
+        al *= 210.0 / max(1.0, al.max())
+        edge = np.clip(np.minimum(np.arange(cw), cw - 1 - np.arange(cw)) / (cw * 0.12), 0, 1)
+        fade = np.clip((crop.shape[0] - np.arange(crop.shape[0])) / (crop.shape[0] * 0.3), 0, 1)
+        top = np.clip(np.arange(crop.shape[0]) / (crop.shape[0] * 0.08), 0, 1)
+        crop[..., 3] = (al * edge[None, :] * (fade * top)[:, None]).clip(0, 255).astype(np.uint8)
+        s = 600 / crop.shape[0]
+        out.layer("beam_%d" % i, Image.fromarray(crop, "RGBA"), cx - cw * s / 2, -30, s)
+        beams.append(dict(file="beam_%d" % i, pivot=P(cx, -30)))
+    man["stage"]["beams"] = beams
 
     # ---- slots
     for kind, slots in SLOTS.items():
@@ -403,8 +487,9 @@ def main(src, outdir):
     out.layer("kick_pedal", pedal, 640 + 40, FLOOR_FRONT + 14 - pedal.height * s, s)
     man["kit"]["kick"]["pedal_file"] = "kick_pedal"
 
-    # ---- the panda: poses lined up on the head; faces laid over each pose's own face, lined
-    # up on the glasses. A face is placed for the idle pose; each pose says how to move it.
+    # ---- the panda: poses lined up on the head, each also cut into its head and its body (so
+    # the head can nod and tilt on its own); faces laid over each pose's own face, lined up on
+    # the glasses. A face is placed for the idle pose; each pose says how to move it.
     pan = man["panda"]
     pan["head"] = dict(anchor=P(*HEAD), radius=HEAD_RX)
     pan["poses"] = {}
@@ -415,10 +500,14 @@ def main(src, outdir):
         ell = HEADS.get(name) or head_of(img, 0.6)
         s = HEAD_RX / ell[2]
         x, y = HEAD[0] - ell[0] * s, HEAD[1] - ell[1] * s
-        out.layer(name, img, x, y, s)
+        head, body = split_head(img, ell)
+        out.layer(name + "_head", head, x, y, s)
+        out.layer(name + "_body", body, x, y, s)
         g = glasses_box(img, ell)
         glasses[pose] = (x + g[0] * s, y + g[1] * s, x + g[2] * s, y + g[3] * s)
-        pan["poses"][pose] = dict(file=name, head=[HEAD[0], HEAD[1], HEAD_RX, round(ell[3] * s, 2)],
+        pan["poses"][pose] = dict(head_file=name + "_head", body_file=name + "_body",
+                                  head=[HEAD[0], HEAD[1], HEAD_RX, round(ell[3] * s, 2)],
+                                  neck=P(HEAD[0], HEAD[1] + ell[3] * s * 0.92),
                                   glasses=[round(v, 2) for v in glasses[pose]])
     ref = glasses["idle"]
     for pose, g in glasses.items():

@@ -1,5 +1,6 @@
 #include "PandaStage.h"
 #include "Theme.h"
+#include "UiKit.h"
 
 using namespace pd;
 namespace colour = pd::theme::colour;
@@ -344,7 +345,7 @@ void PandaStage::updateLabels()
     if (kit == nullptr || views.size() != kit->pieces.size())
         return;
     auto key = proc.getKey();
-    auto font = theme::body (13.0f);
+    auto font = ui::font (11.5f);
     for (auto& v : views)
     {
         auto& piece = kit->pieces[(size_t) v.piece];
@@ -358,24 +359,24 @@ void PandaStage::updateLabels()
         // Tag under the drum: [<] name [>]   [v] note [^]
         auto nameW = juce::GlyphArrangement::getStringWidth (font, v.variantName) + 10.0f;
         auto arrows = v.variants > 1 ? 40.0f : 0.0f;
-        auto pitchW = v.tunable ? 26.0f + 62.0f + 4.0f : 0.0f;
-        auto w = nameW + arrows + pitchW + 12.0f;
+        auto pitchW = v.tunable ? 26.0f + 70.0f + 4.0f : 0.0f;
+        auto w = nameW + arrows + pitchW + 16.0f;
         P anchor;
         if (v.type == PieceType::Kick)          anchor = { v.pos.x, v.pos.y + v.radius + 2.0f };
         else if (v.type == PieceType::HiHat)    anchor = { v.pos.x + 20.0f, v.pos.y + 36.0f };
         else if (isCymbal (v.type))             anchor = { v.pos.x, v.pos.y + v.radius * v.squash + 14.0f };
         else                                    anchor = { v.pos.x, v.pos.y + v.shell + v.radius * v.squash + 16.0f };
         anchor.y = std::min (anchor.y, designH - 26.0f);
-        v.tag = juce::Rectangle<float> (w, 22.0f).withCentre (anchor);
+        v.tag = juce::Rectangle<float> (w, 26.0f).withCentre (anchor);
         if (v.tag.getRight() > designW - 4.0f) v.tag.setX (designW - 4.0f - w);
         if (v.tag.getX() < 4.0f) v.tag.setX (4.0f);
 
-        auto r = v.tag.reduced (4.0f, 2.0f);
+        auto r = v.tag.reduced (6.0f, 2.0f);
         v.prevBtn = v.variants > 1 ? r.removeFromLeft (20.0f) : juce::Rectangle<float>();
         if (v.tunable)
         {
             v.upBtn = r.removeFromRight (20.0f);
-            r.removeFromRight (62.0f);
+            r.removeFromRight (70.0f);
             v.downBtn = r.removeFromRight (20.0f);
             r.removeFromRight (4.0f);
         }
@@ -641,6 +642,10 @@ void PandaStage::advanceTo (double t)
             if (auto& rt = snap->pieces[(size_t) s.piece]; rt.data != nullptr && juce::isPositiveAndBelow (s.artic, (int) rt.data->artics.size()))
                 articId = rt.data->artics[(size_t) s.artic].id;
 
+        // His head leans toward what he hits and dips into it.
+        headLean.v += juce::jlimit (-1.0f, 1.0f, (v->pos.x - 640.0f) / 420.0f) * (0.7f + 0.9f * vel);
+        headDip.v += (v->type == PieceType::Kick ? 40.0f : 85.0f) * vel;
+
         switch (v->type)
         {
             case PieceType::Kick:
@@ -752,6 +757,8 @@ void PandaStage::advanceTo (double t)
     }
     bounce.step (dt, 16.0f, 0.32f);
     nod.step (dt, 13.0f, 0.4f);
+    headLean.step (dt, 8.5f, 0.42f);
+    headDip.step (dt, 15.0f, 0.45f);
     earL.step (dt, 22.0f, 0.15f);
     earR.step (dt, 22.0f, 0.15f);
     shake.step (dt, 55.0f, 0.25f);
@@ -1201,24 +1208,84 @@ void PandaStage::paintSkin (juce::Graphics& g)
         }
     }
 
-    // ---- the panda: the pose for what he's playing, his face over it, bouncing with the music
+    // ---- the spotlights' beams sway over the room and flare with the cymbals; the rug's ring
+    // lights up with the kick; specks of light drift up through the beams.
+    {
+        float crashFlash = 0.0f, kickGlow = 0.0f;
+        for (auto& v : views)
+        {
+            auto f = drumState (v).flash;
+            if (v.type == PieceType::Crash || v.type == PieceType::China || v.type == PieceType::Splash)
+                crashFlash = std::max (crashFlash, f);
+            if (v.type == PieceType::Kick)
+                kickGlow = std::max (kickGlow, f);
+        }
+        if (auto* beams = skin.at ("stage/beams").getArray())
+            for (int i = 0; i < beams->size(); ++i)
+            {
+                auto b = (*beams)[i];
+                auto pivot = Skin::point (b.getProperty ("pivot", {}));
+                auto sway = 0.05f * std::sin ((float) now * (0.29f + 0.06f * (float) i) + (float) i * 2.1f);
+                auto a = 0.36f + 0.07f * std::sin ((float) now * 0.8f + (float) i * 1.3f) + 0.45f * crashFlash + 0.15f * kickGlow;
+                skin.draw (g, skin.sprite (b.getProperty ("file", {}).toString()), juce::AffineTransform::rotation (sway, pivot.x, pivot.y),
+                           juce::jlimit (0.0f, 0.95f, a));
+            }
+        auto rug = Skin::ellipse (skin.at ("stage/rug"));
+        if (! rug.isEmpty() && kickGlow > 0.01f)
+        {
+            juce::Path ring;
+            ring.addEllipse (rug);
+            for (auto [width, alpha] : { std::pair { 30.0f, 0.12f }, std::pair { 16.0f, 0.22f }, std::pair { 6.0f, 0.5f } })
+            {
+                g.setColour (juce::Colour (0xffff7ac0).withAlpha (alpha * kickGlow));
+                g.strokePath (ring, juce::PathStrokeType (width));
+            }
+        }
+        auto motes = skin.sprite (skin.at ("panda/fx/glow_particles").toString());
+        if (motes.isValid())
+            for (int i = 0; i < 7; ++i)
+            {
+                auto cycle = 14.0f + 3.0f * (float) (i % 3);
+                auto phase = std::fmod ((float) now / cycle + (float) i * 0.37f, 1.0f);
+                auto x = 240.0f + 130.0f * (float) i + 24.0f * std::sin ((float) now * 0.4f + (float) i);
+                auto y = 560.0f - 460.0f * phase;
+                auto size = 0.3f + 0.12f * (float) ((i * 5) % 3);
+                auto a = 0.45f * std::sin (juce::MathConstants<float>::pi * phase) * (0.7f + 0.3f * std::sin ((float) now * 3.0f + (float) i));
+                auto c = motes.bounds.getCentre();
+                skin.draw (g, motes, juce::AffineTransform::translation (-c.x, -c.y).scaled (size).rotated ((float) i).translated (x, y), a);
+            }
+    }
+
+    // ---- the panda: his body in the pose for what he's playing, his head on it moving on its
+    // own (nodding to the beat, leaning toward each hit, dipping into it), his face over that.
     auto head0 = pt ("panda/head/anchor");
     P seat (head0.x, head0.y + pose.radius * 2.1f);
-    auto popIn = 1.0f + 0.025f * std::exp (-(float) (now - poseAt) / 0.06f);   // each new pose lands with a little punch
-    auto panT = juce::AffineTransform::translation (-seat.x, -seat.y)
-                    .scaled ((1.0f + (1.0f - pose.squash) * 0.6f) * popIn, pose.squash * popIn)
-                    .rotated (pose.tilt * 0.6f)
-                    .translated (seat.x + pose.head.x - head0.x, seat.y + pose.head.y - head0.y + pose.bodyBounce);
-    auto poseLayer = [&skin] (const juce::String& name)
-    {
-        auto file = skin.at ("panda/poses/" + name + "/file").toString();
-        return skin.sprite (file.isNotEmpty() ? file : skin.at ("panda/poses/idle/file").toString());
-    };
+    auto popIn = 1.0f + 0.03f * std::exp (-(float) (now - poseAt) / 0.06f);   // each new pose lands with a little punch
+    auto nodBy = pose.head - pose.torso;
+    auto breathe = 1.0f + 0.006f * pose.breath;
     auto shown = now < cheerUntil ? juce::String ("cheer") : poseName;
-    auto blend = juce::jlimit (0.0f, 1.0f, (float) (now - poseAt) / 0.05f);
-    if (blend < 1.0f && shown == poseName)
-        skin.draw (g, poseLayer (lastPoseName), panT);
-    skin.draw (g, poseLayer (shown), panT, shown == poseName ? blend : 1.0f);
+    auto poseKey = [&skin] (const juce::String& name, const juce::String& key)
+    {
+        auto v = skin.at ("panda/poses/" + name + "/" + key);
+        return v.isVoid() ? skin.at ("panda/poses/idle/" + key) : v;
+    };
+    auto split = poseKey (shown, "head_file").toString().isNotEmpty();
+    auto panT = juce::AffineTransform::translation (-seat.x, -seat.y)
+                    .scaled ((1.0f + (1.0f - pose.squash) * 0.6f) * popIn, pose.squash * popIn * breathe)
+                    .rotated (pose.tilt * (split ? 0.25f : 0.6f))
+                    .translated (seat.x + nodBy.x * (split ? 0.3f : 1.0f), seat.y + pose.bodyBounce + nodBy.y * (split ? 0.3f : 1.0f));
+    auto headT = panT;
+    if (split)
+    {
+        auto neck = Skin::point (poseKey (shown, "neck"));
+        headT = juce::AffineTransform::rotation (pose.tilt * 1.2f + juce::jlimit (-0.14f, 0.14f, headLean.x * 0.09f), neck.x, neck.y)
+                    .translated (nodBy.x * 0.7f, nodBy.y * 0.7f + juce::jlimit (-4.0f, 9.0f, headDip.x * 0.09f))
+                    .followedBy (panT);
+        skin.draw (g, skin.sprite (poseKey (shown, "body_file").toString()), panT);
+        skin.draw (g, skin.sprite (poseKey (shown, "head_file").toString()), headT);
+    }
+    else
+        skin.draw (g, skin.sprite (poseKey (shown, "file").toString()), panT);
     if (! (bool) skin.at ("panda/poses/" + shown + "/own_face"))
     {
         auto* f = skin.at ("panda/poses/" + shown + "/face").getArray();
@@ -1230,10 +1297,8 @@ void PandaStage::paintSkin (juce::Graphics& g)
             auto file = skin.at ("panda/faces/" + name + "/file").toString();
             return skin.sprite (file.isNotEmpty() ? file : skin.at ("panda/faces/neutral/file").toString());
         };
-        auto fade = juce::jlimit (0.0f, 1.0f, (float) (now - faceAt) / 0.06f);
-        if (fade < 1.0f)
-            skin.draw (g, faceLayer (lastFace), faceT.followedBy (panT));
-        skin.draw (g, faceLayer (face), faceT.followedBy (panT), fade);
+        // Faces cut from one to the next like a cartoon's: a blend would show two pairs of eyes.
+        skin.draw (g, faceLayer (face), faceT.followedBy (headT));
     }
 
     // ---- cymbals: stands, then the discs swinging on them
@@ -1431,56 +1496,54 @@ void PandaStage::drawParticles (juce::Graphics& g)
 
 void PandaStage::drawTags (juce::Graphics& g)
 {
-    auto font = theme::body (13.0f);
+    // The drum's swap and tune controls, on the pack's selector with its arrows and a readout.
     for (auto& v : views)
     {
         auto isSel = v.piece == selected, isHover = v.piece == hoverPiece;
         if (v.tag.isEmpty() || ! (isSel || isHover))
             continue;
-        theme::drawPill (g, v.tag, colour::plum.withAlpha (isSel || isHover ? 0.95f : 0.78f), isSel ? colour::hot : juce::Colours::transparentBlack);
+        if (isSel)
+            ui::glow (g, "button_instrument_selector", v.tag, colour::hot.withAlpha (0.7f), 7.0f);
+        ui::button (g, "button_instrument_selector", v.tag, isHover && hoverButton == "tag" ? 0.07f : 0.0f);
 
         auto arrow = [&] (juce::Rectangle<float> r, float angle, const juce::String& id)
         {
             if (r.isEmpty())
                 return;
-            auto hot = isHover && hoverButton == id;
-            if (hot)
+            if (isHover && hoverButton == id)
             {
-                g.setColour (colour::hot.withAlpha (0.35f));
-                g.fillEllipse (r.withSizeKeepingCentre (18.0f, 18.0f));
+                g.setColour (juce::Colours::white.withAlpha (0.18f));
+                g.fillEllipse (r.withSizeKeepingCentre (19.0f, 19.0f));
             }
-            juce::Path tri;
-            tri.addTriangle (-4.5f, -5.0f, -4.5f, 5.0f, 5.0f, 0.0f);
-            tri.applyTransform (juce::AffineTransform::rotation (angle).translated (r.getCentreX(), r.getCentreY()));
-            g.setColour (hot ? juce::Colours::white : colour::hot);
-            g.fillPath (tri);
+            ui::icon (g, "icon_chevron_left", r.withSizeKeepingCentre (13.0f, 13.0f), angle);
         };
-        arrow (v.prevBtn, juce::MathConstants<float>::pi, "prev");
-        arrow (v.nextBtn, 0.0f, "next");
-        arrow (v.downBtn, juce::MathConstants<float>::halfPi, "down");
-        arrow (v.upBtn, -juce::MathConstants<float>::halfPi, "up");
+        arrow (v.prevBtn, 0.0f, "prev");
+        arrow (v.nextBtn, juce::MathConstants<float>::pi, "next");
+        arrow (v.downBtn, -juce::MathConstants<float>::halfPi, "down");
+        arrow (v.upBtn, juce::MathConstants<float>::halfPi, "up");
 
-        auto nameArea = v.tag.reduced (4.0f, 0.0f);
+        auto nameArea = v.tag.reduced (6.0f, 0.0f);
         if (! v.prevBtn.isEmpty()) nameArea.setLeft (v.prevBtn.getRight());
         nameArea.setRight (! v.nextBtn.isEmpty() ? v.nextBtn.getX() : (! v.downBtn.isEmpty() ? v.downBtn.getX() - 4.0f : nameArea.getRight()));
-        g.setColour (colour::text);
-        g.setFont (font);
-        g.drawText (v.variantName, nameArea, juce::Justification::centred, true);
+        ui::label (g, v.variantName, nameArea, ui::colour::text, 11.5f);
 
         if (v.tunable)
         {
-            auto pr = juce::Rectangle<float> (v.downBtn.getRight(), v.tag.getY() + 3.0f, v.upBtn.getX() - v.downBtn.getRight(), v.tag.getHeight() - 6.0f);
+            auto pr = juce::Rectangle<float> (v.downBtn.getRight(), v.tag.getY() + 4.0f, v.upBtn.getX() - v.downBtn.getRight(), v.tag.getHeight() - 8.0f);
             auto ok = v.keyOn && v.inKey;
-            theme::drawPill (g, pr, (ok ? colour::mint : colour::plumLight).withAlpha (ok ? 0.25f : 0.9f));
-            g.setColour (ok ? colour::mint : (v.keyOn ? colour::gold : colour::cream));
-            g.setFont (theme::title (14.0f));
-            g.drawText (v.pitchText.upToFirstOccurrenceOf (" ", false, false), pr, juce::Justification::centred);
+            auto piece = ok ? "readout_zone" : (v.keyOn ? "readout_midi" : "readout_velocity");
+            ui::readout (g, piece, pr);
+            auto text = pr.withTrimmedLeft (pr.getHeight() * 0.85f).withTrimmedRight (pr.getHeight() * 0.3f);
+            if (ok)
+                ui::icon (g, "icon_heart_teal", text.removeFromRight (pr.getHeight()).reduced (pr.getHeight() * 0.18f));
+            ui::label (g, v.pitchText.upToFirstOccurrenceOf (" ", false, false), text, ok ? ui::colour::text : (v.keyOn ? ui::colour::yellow : ui::colour::text), 12.0f);
         }
     }
 }
 
 void PandaStage::drawChips (juce::Graphics& g)
 {
+    // What just played: round robin, velocity and zone on the pack's readout, in the zone's colour.
     for (auto& v : views)
     {
         auto age = (float) (now - v.lastAt);
@@ -1500,22 +1563,19 @@ void PandaStage::drawChips (juce::Graphics& g)
 
         juce::Graphics::ScopedSaveState s (g);
         g.addTransform (juce::AffineTransform::scale (pop, pop, anchor.x, anchor.y));
-        auto box = juce::Rectangle<float> (196.0f, 26.0f).withCentre (anchor);
-        box.setX (juce::jlimit (4.0f, designW - 200.0f, box.getX()));
+        auto box = juce::Rectangle<float> (206.0f, 28.0f).withCentre (anchor);
+        box.setX (juce::jlimit (4.0f, designW - 210.0f, box.getX()));
         box.setY (std::max (4.0f, box.getY()));
+        auto t = e.zoneCount > 1 ? (float) e.zone / (float) (e.zoneCount - 1) : 1.0f;
+        auto piece = t < 0.34f ? "readout_zone" : (t < 0.67f ? "readout_midi" : "readout_hit");
         auto zc = colour::zone (e.zone, e.zoneCount);
-        theme::drawPill (g, box.translated (0.0f, 2.0f), juce::Colours::black.withAlpha (0.25f * alpha));
-        theme::drawPill (g, box, colour::plum.withAlpha (0.94f * alpha), zc.withAlpha (alpha));
-        g.setColour (zc.withAlpha (alpha));
-        g.fillEllipse (box.getX() + 8.0f, box.getCentreY() - 5.0f, 10.0f, 10.0f);
-        auto r = box.withTrimmedLeft (22.0f).withTrimmedRight (8.0f);
-        g.setFont (theme::title (14.5f));
-        g.setColour (colour::text.withAlpha (alpha));
-        g.drawText (rr, r.removeFromLeft (52.0f), juce::Justification::centredLeft);
-        g.setColour (colour::gold.withAlpha (alpha));
-        g.drawText (vel, r.removeFromLeft (58.0f), juce::Justification::centredLeft);
-        g.setColour (zc.withAlpha (alpha));
-        g.drawText (zone, r, juce::Justification::centredRight);
+        g.setColour (juce::Colours::black.withAlpha (0.25f * alpha));
+        g.fillRoundedRectangle (box.translated (0.0f, 3.0f).reduced (2.0f, 1.0f), 13.0f);
+        ui::readout (g, piece, box, alpha);
+        auto r = box.withTrimmedLeft (box.getHeight() * 0.95f).withTrimmedRight (11.0f);
+        ui::label (g, rr, r.removeFromLeft (54.0f), colour::text.withAlpha (alpha), 12.5f, juce::Justification::centredLeft);
+        ui::label (g, vel, r.removeFromLeft (62.0f), colour::gold.withAlpha (alpha), 12.5f, juce::Justification::centredLeft);
+        ui::label (g, zone, r, zc.withAlpha (alpha), 12.5f, juce::Justification::centredRight);
     }
 }
 

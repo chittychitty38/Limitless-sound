@@ -407,14 +407,20 @@ public:
         }
         for (auto* pose : { "idle", "blink", "kick", "snare", "hi_hat", "tom_left", "tom_right", "crash_left", "crash_right", "fill", "cheer" })
         {
-            names.add (skin.at (juce::String ("panda/poses/") + pose + "/file").toString());
+            names.add (skin.at (juce::String ("panda/poses/") + pose + "/head_file").toString());
+            names.add (skin.at (juce::String ("panda/poses/") + pose + "/body_file").toString());
+            expect (Skin::point (skin.at (juce::String ("panda/poses/") + pose + "/neck")).y > 250.0f, pose);
             expect (skin.at (juce::String ("panda/poses/") + pose + "/own_face") || skin.at (juce::String ("panda/poses/") + pose + "/face").size() == 3, pose);
         }
         for (auto* face : { "neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh",
                             "surprised", "tongue_out", "angry", "sad", "blink" })
             names.add (skin.at (juce::String ("panda/faces/") + face + "/file").toString());
-        for (auto* fx : { "blur_1", "blur_2", "blur_3", "hit_spark", "heart_red", "heart_pink", "heart_yellow" })
+        for (auto* fx : { "blur_1", "blur_2", "blur_3", "hit_spark", "heart_red", "heart_pink", "heart_yellow", "glow_particles" })
             names.add (skin.at (juce::String ("panda/fx/") + fx).toString());
+        expect (skin.at ("stage/beams").size() == 3);
+        for (int i = 0; i < skin.at ("stage/beams").size(); ++i)
+            names.add (skin.at ("stage/beams")[i].getProperty ("file", {}).toString());
+        expect (Skin::ellipse (skin.at ("stage/rug")).getWidth() > 400.0f);
         for (auto& n : names)
             expect (skin.imagesLoad (skin.sprite (n)), "missing layer: " + n);
 

@@ -1,5 +1,6 @@
 #include "MappingPage.h"
 #include "Theme.h"
+#include "UiKit.h"
 
 using namespace pd;
 namespace colour = pd::theme::colour;
@@ -8,7 +9,7 @@ namespace
 {
 juce::Colour pieceColour (int piece)
 {
-    static const juce::Colour cols[] = { colour::hot, colour::gold, colour::mint, juce::Colour (0xffa98bff), juce::Colour (0xffff8a5b),
+    static const juce::Colour cols[] = { ui::colour::pink, ui::colour::yellow, ui::colour::teal, ui::colour::purple.brighter (0.45f), juce::Colour (0xffff8a5b),
                                          juce::Colour (0xff6fc3ff), colour::blush, juce::Colour (0xffc6f06b) };
     return cols[(size_t) (std::max (0, piece) % 8)];
 }
@@ -44,6 +45,7 @@ public:
             l->setClickingTogglesState (false);
             l->setTooltip ("Then hit a pad or key: that note plays this drum");
             l->onClick = [this, i] { page.learn ((int) i); };
+            theme::look (*l, "button_secondary_action", "button_primary_action");
             auto* c = clearButtons.add (new juce::TextButton ("Clear"));
             c->onClick = [this, i] { page.clearRow ((int) i); };
             addAndMakeVisible (l);
@@ -79,28 +81,25 @@ public:
         for (size_t i = 0; i < targets.size(); ++i)
         {
             auto row = juce::Rectangle<int> (0, (int) i * rowH, getWidth(), rowH).reduced (2, 2).toFloat();
-            g.setColour (i % 2 == 0 ? colour::plumLight.darker (0.25f) : colour::plumLight.darker (0.4f));
-            g.fillRoundedRectangle (row, 8.0f);
+            g.setColour (juce::Colours::white.withAlpha (i % 2 == 0 ? 0.045f : 0.02f));
+            g.fillRoundedRectangle (row, 9.0f);
             auto& t = targets[i];
             g.setColour (pieceColour (t.piece));
-            g.fillRoundedRectangle (row.withWidth (6.0f).reduced (0.0f, 4.0f).translated (6.0f, 0.0f), 3.0f);
-            g.setColour (colour::text);
-            g.setFont (theme::title (15.0f));
-            g.drawText (t.label, row.withTrimmedLeft (20.0f).withWidth (230.0f), juce::Justification::centredLeft, true);
+            g.fillRoundedRectangle (row.withWidth (5.0f).reduced (0.0f, 6.0f).translated (8.0f, 0.0f), 2.5f);
+            ui::label (g, t.label, row.withTrimmedLeft (22.0f).withWidth (230.0f), ui::colour::text, 12.5f, juce::Justification::centredLeft);
 
+            // Each note on the pack's MIDI readout.
             auto x = row.getX() + 260.0f;
             for (int n = 0; n < 128; ++n)
                 if (resolved[(size_t) n].piece == t.piece && resolved[(size_t) n].artic == t.artic)
                 {
                     auto text = noteLabel (n);
-                    auto w = juce::GlyphArrangement::getStringWidth (theme::body (13.0f), text) + 18.0f;
-                    auto chip = juce::Rectangle<float> (x, row.getCentreY() - 11.0f, w, 22.0f);
+                    auto w = juce::GlyphArrangement::getStringWidth (ui::font (11.5f), text) + 34.0f;
+                    auto chip = juce::Rectangle<float> (x, row.getCentreY() - 12.0f, w, 24.0f);
                     if (chip.getRight() > row.getRight() - 210.0f)
                         break;
-                    theme::drawPill (g, chip, pieceColour (t.piece).withAlpha (0.22f), pieceColour (t.piece));
-                    g.setColour (colour::text);
-                    g.setFont (theme::body (13.0f));
-                    g.drawText (text, chip, juce::Justification::centred);
+                    ui::readout (g, "readout_midi", chip);
+                    ui::label (g, text, chip.withTrimmedLeft (20.0f).withTrimmedRight (8.0f), ui::colour::text, 11.5f);
                     x += w + 6.0f;
                 }
         }
@@ -125,12 +124,12 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        theme::drawCard (g, getLocalBounds().toFloat(), colour::plumLight.darker (0.3f), 12.0f, false);
+        ui::panel (g, "panel_mapping_panel", getLocalBounds().toFloat());
         auto snap = proc.getSnapshot();
         auto kit = proc.getKit();
         if (snap == nullptr || kit == nullptr)
             return;
-        auto area = getLocalBounds().toFloat().reduced (10.0f, 8.0f);
+        auto area = getLocalBounds().toFloat().reduced (14.0f, 11.0f);
         keyArea = area;
         int whites = 0;
         for (int n = lowNote; n <= highNote; ++n) whites += isBlack (n) ? 0 : 1;
@@ -141,7 +140,7 @@ public:
             auto t = snap->notes[(size_t) n];
             auto chrom = snap->chromaticOn && n >= snap->chromaticLow && n <= snap->chromaticHigh;
             auto base = black ? colour::ink : colour::cream;
-            if (chrom) base = black ? colour::mint.darker (0.6f) : colour::mint.brighter (0.4f);
+            if (chrom) base = black ? ui::colour::teal.darker (0.6f) : ui::colour::teal.brighter (0.55f);
             if (t.piece >= 0 && ! chrom) base = pieceColour (t.piece).withMultipliedBrightness (black ? 0.8f : 1.0f);
             if (n == pressed) base = base.brighter (0.5f);
             g.setColour (base);
@@ -150,9 +149,7 @@ public:
             g.drawRoundedRectangle (r, 3.0f, 1.0f);
             if (n % 12 == 0 && ! black)
             {
-                g.setColour (colour::ink.withAlpha (0.6f));
-                g.setFont (theme::body (10.0f));
-                g.drawText (midiNoteName (n), r.removeFromBottom (14.0f), juce::Justification::centred);
+                ui::label (g, midiNoteName (n), r.removeFromBottom (14.0f), colour::ink.withAlpha (0.6f), 9.0f);
             }
         };
 
@@ -278,8 +275,8 @@ MappingPage::MappingPage (PandaDrumsProcessor& p) : proc (p)
     auto label = [this] (juce::Label& l, const juce::String& text, juce::Component& target)
     {
         l.setText (text, juce::dontSendNotification);
-        l.setFont (theme::title (12.0f));
-        l.setColour (juce::Label::textColourId, colour::textDim);
+        l.setFont (ui::font (10.5f));
+        l.setColour (juce::Label::textColourId, ui::colour::textDim);
         l.attachToComponent (&target, false);
         addAndMakeVisible (target);
     };
@@ -290,6 +287,8 @@ MappingPage::MappingPage (PandaDrumsProcessor& p) : proc (p)
     addAndMakeVisible (snap);
     for (auto* c : { &chromaticPiece, &low, &high })
         c->onChange = [this] { pushChromatic(); };
+    theme::accent (chromaticOn, "teal");
+    theme::accent (snap, "teal");
     chromaticOn.onClick = [this] { pushChromatic(); };
     snap.onClick = [this] { pushChromatic(); };
     refresh();
@@ -386,20 +385,20 @@ void MappingPage::resized()
     r.removeFromBottom (10);
     auto side = r.removeFromRight (320);
     r.removeFromRight (12);
-    auto bar = r.removeFromTop (34);
-    preset.setBounds (bar.removeFromLeft (290).reduced (0, 2));
+    auto bar = r.removeFromTop (36);
+    preset.setBounds (bar.removeFromLeft (290).reduced (0, 1));
     bar.removeFromLeft (8);
     save.setBounds (bar.removeFromLeft (120).reduced (0, 2));
     bar.removeFromLeft (6);
     load.setBounds (bar.removeFromLeft (120).reduced (0, 2));
     bar.removeFromLeft (6);
     reset.setBounds (bar.removeFromLeft (90).reduced (0, 2));
-    r.removeFromTop (8);
-    viewport.setBounds (r);
-    rows->setSize (r.getWidth() - 10, rows->getHeight());
+    r.removeFromTop (16);
+    viewport.setBounds (r.reduced (8, 8));
+    rows->setSize (viewport.getWidth() - 10, rows->getHeight());
 
-    auto s = side.reduced (16, 12);
-    s.removeFromTop (34);
+    auto s = side.reduced (18, 12);
+    s.removeFromTop (38);
     chromaticOn.setBounds (s.removeFromTop (28));
     s.removeFromTop (24);
     chromaticPiece.setBounds (s.removeFromTop (30));
@@ -416,22 +415,19 @@ void MappingPage::resized()
 void MappingPage::paint (juce::Graphics& g)
 {
     g.fillAll (colour::plum);
-    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36);
-    g.setColour (colour::text);
-    g.setFont (theme::display (26.0f));
-    g.drawText ("MAPPING", r, juce::Justification::centredLeft);
-    g.setColour (colour::textDim);
-    g.setFont (theme::body (13.0f));
-    g.drawText ("Pick a map, learn notes from your pads, or save and load your own. Notes are C3 = 60.", r.withTrimmedLeft (140), juce::Justification::centredLeft);
+    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36).toFloat();
+    ui::label (g, "MAPPING", r.removeFromLeft (140.0f), ui::colour::pink, 18.0f, juce::Justification::centredLeft);
+    ui::label (g, "Pick a map, learn notes from your pads, or save and load your own. Notes are C3 = 60.", r, ui::colour::textDim, 11.5f,
+               juce::Justification::centredLeft);
 
-    theme::drawCard (g, chromaticArea.toFloat(), colour::plumLight.darker (0.3f), 12.0f, false);
-    auto c = chromaticArea.toFloat().reduced (16.0f, 10.0f);
-    g.setColour (colour::mint);
-    g.setFont (theme::display (22.0f));
-    g.drawText ("CHROMATIC DRUM", c.removeFromTop (28.0f), juce::Justification::centredLeft);
+    // The list and the chromatic drum on the pack's mapping panels.
+    ui::panel (g, "panel_mapping_panel", viewport.getBounds().toFloat().expanded (8.0f, 8.0f));
+    ui::panel (g, "panel_mapping_panel", chromaticArea.toFloat());
+    auto c = chromaticArea.toFloat().reduced (18.0f, 12.0f);
+    ui::label (g, "CHROMATIC DRUM", c.removeFromTop (28.0f), ui::colour::teal.brighter (0.3f), 15.0f, juce::Justification::centredLeft);
     auto text = c.withTrimmedTop (snap.getBottom() - chromaticArea.getY() - 2.0f);
-    g.setColour (colour::textDim);
-    g.setFont (theme::body (12.5f));
+    g.setColour (ui::colour::textDim);
+    g.setFont (ui::font (11.0f));
     g.drawFittedText ("Play a tunable drum on the keys like an instrument: every key is a note. With snap on, out-of-key notes "
                       "land on the nearest note of the song's key, so a tom melody or an 808-style kick line is always in key.",
                       text.reduced (0.0f, 4.0f).toNearestInt(), juce::Justification::topLeft, 8);

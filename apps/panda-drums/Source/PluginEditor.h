@@ -27,6 +27,7 @@ public:
     int getPage() const { return page; }
     KitPage& getKitPage() { return *kitPage; }
     LabPage& getLabPage() { return *labPage; }
+    TopBar& getTopBar() { return *topBar; }
 
     // Moves hits from the engine to the screen. The render tool passes its own clock and
     // tells it exactly when each hit is heard.
@@ -46,7 +47,7 @@ private:
     std::unique_ptr<MixerPage> mixerPage;
     std::unique_ptr<LabPage> labPage;
     std::unique_ptr<MappingPage> mappingPage;
-    juce::TooltipWindow tooltips { this, 600 };
+    pd::theme::Tooltips tooltips { this };
     int page = 0;
     juce::uint32 lastGeneration = 0;
 };

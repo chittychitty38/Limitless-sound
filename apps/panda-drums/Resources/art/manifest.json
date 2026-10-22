@@ -179,6 +179,35 @@
      0.503
     ]
    }
+  ],
+  "rug": [
+   640.0,
+   660.77,
+   526.4,
+   105.77
+  ],
+  "beams": [
+   {
+    "file": "beam_0",
+    "pivot": [
+     300.0,
+     -30.0
+    ]
+   },
+   {
+    "file": "beam_1",
+    "pivot": [
+     640.0,
+     -30.0
+    ]
+   },
+   {
+    "file": "beam_2",
+    "pivot": [
+     980.0,
+     -30.0
+    ]
+   }
   ]
  },
  "files": {
@@ -188,6 +217,27 @@
    "y": 0,
    "w": 1280,
    "h": 736
+  },
+  "beam_0": {
+   "file": "beam_0",
+   "x": 34.49,
+   "y": -30,
+   "w": 531.02,
+   "h": 600.0
+  },
+  "beam_1": {
+   "file": "beam_1",
+   "x": 377.18,
+   "y": -30,
+   "w": 525.63,
+   "h": 600.0
+  },
+  "beam_2": {
+   "file": "beam_2",
+   "x": 713.12,
+   "y": -30,
+   "w": 533.77,
+   "h": 600.0
   },
   "kick": {
    "file": "kick",
@@ -364,78 +414,155 @@
    "w": 84.65,
    "h": 120.0
   },
-  "pose_idle": {
-   "file": "pose_idle",
+  "pose_idle_head": {
+   "file": "pose_idle_head",
    "x": 466.03,
    "y": 68.42,
    "w": 352.51,
    "h": 442.54
   },
-  "pose_blink": {
-   "file": "pose_blink",
+  "pose_idle_body": {
+   "file": "pose_idle_body",
+   "x": 466.03,
+   "y": 68.42,
+   "w": 352.51,
+   "h": 442.54
+  },
+  "pose_blink_head": {
+   "file": "pose_blink_head",
    "x": 471.03,
    "y": 70.41,
    "w": 345.34,
    "h": 430.39
   },
-  "pose_kick": {
-   "file": "pose_kick",
+  "pose_blink_body": {
+   "file": "pose_blink_body",
+   "x": 471.03,
+   "y": 70.41,
+   "w": 345.34,
+   "h": 430.39
+  },
+  "pose_kick_head": {
+   "file": "pose_kick_head",
    "x": 438.53,
    "y": 66.05,
    "w": 444.63,
    "h": 503.3
   },
-  "pose_snare": {
-   "file": "pose_snare",
+  "pose_kick_body": {
+   "file": "pose_kick_body",
+   "x": 438.53,
+   "y": 66.05,
+   "w": 444.63,
+   "h": 503.3
+  },
+  "pose_snare_head": {
+   "file": "pose_snare_head",
    "x": 468.83,
    "y": 60.23,
    "w": 378.12,
    "h": 504.15
   },
-  "pose_hi_hat": {
-   "file": "pose_hi_hat",
+  "pose_snare_body": {
+   "file": "pose_snare_body",
+   "x": 468.83,
+   "y": 60.23,
+   "w": 378.12,
+   "h": 504.15
+  },
+  "pose_hi_hat_head": {
+   "file": "pose_hi_hat_head",
    "x": 465.02,
    "y": 74.53,
    "w": 325.4,
    "h": 446.65
   },
-  "pose_tom_left": {
-   "file": "pose_tom_left",
+  "pose_hi_hat_body": {
+   "file": "pose_hi_hat_body",
+   "x": 465.02,
+   "y": 74.53,
+   "w": 325.4,
+   "h": 446.65
+  },
+  "pose_tom_left_head": {
+   "file": "pose_tom_left_head",
    "x": 425.01,
    "y": 76.95,
    "w": 430.78,
    "h": 471.88
   },
-  "pose_tom_right": {
-   "file": "pose_tom_right",
+  "pose_tom_left_body": {
+   "file": "pose_tom_left_body",
+   "x": 425.01,
+   "y": 76.95,
+   "w": 430.78,
+   "h": 471.88
+  },
+  "pose_tom_right_head": {
+   "file": "pose_tom_right_head",
    "x": 487.38,
    "y": 71.35,
    "w": 396.82,
    "h": 519.75
   },
-  "pose_crash_left": {
-   "file": "pose_crash_left",
+  "pose_tom_right_body": {
+   "file": "pose_tom_right_body",
+   "x": 487.38,
+   "y": 71.35,
+   "w": 396.82,
+   "h": 519.75
+  },
+  "pose_crash_left_head": {
+   "file": "pose_crash_left_head",
    "x": 294.04,
    "y": 67.39,
    "w": 661.73,
    "h": 508.16
   },
-  "pose_crash_right": {
-   "file": "pose_crash_right",
+  "pose_crash_left_body": {
+   "file": "pose_crash_left_body",
+   "x": 294.04,
+   "y": 67.39,
+   "w": 661.73,
+   "h": 508.16
+  },
+  "pose_crash_right_head": {
+   "file": "pose_crash_right_head",
    "x": 343.0,
    "y": 60.62,
    "w": 556.88,
    "h": 480.97
   },
-  "pose_fill": {
-   "file": "pose_fill",
+  "pose_crash_right_body": {
+   "file": "pose_crash_right_body",
+   "x": 343.0,
+   "y": 60.62,
+   "w": 556.88,
+   "h": 480.97
+  },
+  "pose_fill_head": {
+   "file": "pose_fill_head",
    "x": 395.82,
    "y": 62.04,
    "w": 614.88,
    "h": 489.2
   },
-  "pose_cheer": {
-   "file": "pose_cheer",
+  "pose_fill_body": {
+   "file": "pose_fill_body",
+   "x": 395.82,
+   "y": 62.04,
+   "w": 614.88,
+   "h": 489.2
+  },
+  "pose_cheer_head": {
+   "file": "pose_cheer_head",
+   "x": 414.68,
+   "y": 74.6,
+   "w": 437.08,
+   "h": 513.64
+  },
+  "pose_cheer_body": {
+   "file": "pose_cheer_body",
    "x": 414.68,
    "y": 74.6,
    "w": 437.08,
@@ -1145,12 +1272,17 @@
   },
   "poses": {
    "idle": {
-    "file": "pose_idle",
+    "head_file": "pose_idle_head",
+    "body_file": "pose_idle_body",
     "head": [
      640.0,
      205.0,
      132.0,
      107.58
+    ],
+    "neck": [
+     640.0,
+     303.98
     ],
     "glasses": [
      525.55,
@@ -1165,12 +1297,17 @@
     ]
    },
    "blink": {
-    "file": "pose_blink",
+    "head_file": "pose_blink_head",
+    "body_file": "pose_blink_body",
     "head": [
      640.0,
      205.0,
      132.0,
      108.71
+    ],
+    "neck": [
+     640.0,
+     305.01
     ],
     "glasses": [
      528.71,
@@ -1185,12 +1322,17 @@
     ]
    },
    "kick": {
-    "file": "pose_kick",
+    "head_file": "pose_kick_head",
+    "body_file": "pose_kick_body",
     "head": [
      640.0,
      205.0,
      132.0,
      108.07
+    ],
+    "neck": [
+     640.0,
+     304.42
     ],
     "glasses": [
      529.61,
@@ -1205,12 +1347,17 @@
     ]
    },
    "snare": {
-    "file": "pose_snare",
+    "head_file": "pose_snare_head",
+    "body_file": "pose_snare_body",
     "head": [
      640.0,
      205.0,
      132.0,
      117.52
+    ],
+    "neck": [
+     640.0,
+     313.12
     ],
     "glasses": [
      515.66,
@@ -1225,12 +1372,17 @@
     ]
    },
    "hi_hat": {
-    "file": "pose_hi_hat",
+    "head_file": "pose_hi_hat_head",
+    "body_file": "pose_hi_hat_body",
     "head": [
      640.0,
      205.0,
      132.0,
      103.6
+    ],
+    "neck": [
+     640.0,
+     300.32
     ],
     "glasses": [
      527.95,
@@ -1245,12 +1397,17 @@
     ]
    },
    "tom_left": {
-    "file": "pose_tom_left",
+    "head_file": "pose_tom_left_head",
+    "body_file": "pose_tom_left_body",
     "head": [
      640.0,
      205.0,
      132.0,
      109.08
+    ],
+    "neck": [
+     640.0,
+     305.35
     ],
     "glasses": [
      520.65,
@@ -1265,12 +1422,17 @@
     ]
    },
    "tom_right": {
-    "file": "pose_tom_right",
+    "head_file": "pose_tom_right_head",
+    "body_file": "pose_tom_right_body",
     "head": [
      640.0,
      205.0,
      132.0,
      113.85
+    ],
+    "neck": [
+     640.0,
+     309.74
     ],
     "glasses": [
      511.3,
@@ -1285,12 +1447,17 @@
     ]
    },
    "crash_left": {
-    "file": "pose_crash_left",
+    "head_file": "pose_crash_left_head",
+    "body_file": "pose_crash_left_body",
     "head": [
      640.0,
      205.0,
      132.0,
      116.04
+    ],
+    "neck": [
+     640.0,
+     311.76
     ],
     "glasses": [
      519.22,
@@ -1305,12 +1472,17 @@
     ]
    },
    "crash_right": {
-    "file": "pose_crash_right",
+    "head_file": "pose_crash_right_head",
+    "body_file": "pose_crash_right_body",
     "head": [
      640.0,
      205.0,
      132.0,
      111.38
+    ],
+    "neck": [
+     640.0,
+     307.47
     ],
     "glasses": [
      524.5,
@@ -1325,12 +1497,17 @@
     ]
    },
    "fill": {
-    "file": "pose_fill",
+    "head_file": "pose_fill_head",
+    "body_file": "pose_fill_body",
     "head": [
      640.0,
      205.0,
      132.0,
      110.07
+    ],
+    "neck": [
+     640.0,
+     306.26
     ],
     "glasses": [
      525.71,
@@ -1345,12 +1522,17 @@
     ]
    },
    "cheer": {
-    "file": "pose_cheer",
+    "head_file": "pose_cheer_head",
+    "body_file": "pose_cheer_body",
     "head": [
      640.0,
      205.0,
      132.0,
      102.49
+    ],
+    "neck": [
+     640.0,
+     299.29
     ],
     "glasses": [
      528.74,

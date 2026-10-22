@@ -6,11 +6,12 @@
 //                                           ffmpeg -framerate 30 -i frames/%04d.png -i groove.wav ...
 //   PandaDrumsRender icon <file.png>        the app icon on its own
 //   PandaDrumsRender promo <dir>            the promo performance: the panda plays through five
-//                                           keys and a tour of the pages, then cheers; frames at
-//                                           1920 wide, drums.wav and timeline.json for the
-//                                           compositor (art/promo.py)
+//                                           keys (the key panel opens for each) and a tour of
+//                                           the pages, then cheers; frames at 2560 wide, drums.wav
+//                                           and timeline.json for the compositor (art/promo.py)
 #include "PluginEditor.h"
 #include "gui/PandaArt.h"
+#include "gui/UiKit.h"
 
 namespace
 {
@@ -96,6 +97,7 @@ struct Session
 
     void pump (double now)
     {
+        pd::ui::setTime (now);      // the controls' flashes and slides run on the frame's clock
         auto latency = proc.getShowtimeLatency();
         editor->pumpEvents (now, [latency] (const pd::HitEvent& e) { return (double) (e.time + latency) / sampleRate; });
     }
@@ -228,10 +230,11 @@ int video (const juce::File& dir, double seconds)
     std::printf ("%d frames and groove.wav in %s\n", frames, dir.getFullPathName().toRawUTF8());
     return 0;
 }
-// The promo: a groove that moves through five keys (the tom melody follows each one), a tour
-// of the pages, a big ending and the panda's cheer. Writes JPEG frames of the whole window at
-// 1.5x, the drums, and timeline.json saying when each key and page starts, what every drum is
-// tuned to, and where the kicks land (the compositor ducks its pad on them).
+// The promo: a groove that moves through five keys (the tom melody follows each one; the key
+// panel opens and picks each key), a tour of the pages, a big ending and the panda's cheer.
+// Writes JPEG frames of the whole window at 2x (so the compositor can zoom in), the drums, and
+// timeline.json saying when each key and page starts, what every drum is tuned to, and where
+// the kicks land (the compositor ducks its pad on them).
 int promo (const juce::File& dir)
 {
     Session s;
@@ -326,9 +329,25 @@ int promo (const juce::File& dir)
     juce::Array<juce::var> sectionList;
     size_t current = (size_t) -1;
     auto frames = (int) (total * fps);
+    auto& topBar = s.editor->getTopBar();
+    bool panelOpen = false;
     for (int f = 0; f < frames; ++f)
     {
         auto t0 = (double) s.clock / sampleRate;
+        // The key panel opens a moment before each new key, picks it, and closes.
+        bool wantPanel = false;
+        for (size_t i = 1; i < sections.size(); ++i)
+        {
+            auto start = intro + sections[i].firstBar * bar;
+            if (juce::String (sections[i].caption) == "key" && t0 >= start - 1.1 && t0 < start + 0.45)
+                wantPanel = true;
+        }
+        if (wantPanel != panelOpen)
+        {
+            if (wantPanel) topBar.showKeyPanel();
+            else           topBar.closeKeyPanel();
+            panelOpen = wantPanel;
+        }
         // Change key and page when a section starts (just before its downbeat is heard).
         for (size_t i = 0; i < sections.size(); ++i)
         {
@@ -370,7 +389,7 @@ int promo (const juce::File& dir)
         }
         if (t < intro - 0.2)
             continue;       // the compositor shows its titles here
-        auto img = snapshot (*s.editor, 1.5f);
+        auto img = snapshot (*s.editor, 2.0f);
         auto file = framesDir.getChildFile (juce::String (f + 1).paddedLeft ('0', 4) + ".jpg");
         juce::FileOutputStream os (file);
         if (os.openedOk())

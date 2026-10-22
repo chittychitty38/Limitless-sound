@@ -169,6 +169,7 @@ private:
     double lastAnyHit = -10.0, lastBurst = -10.0, nextBlink = 2.0, blinkAt = -10.0, happyUntil = -10.0;
     float energy = 0.0f;
     Spring bounce, nod, earL, earR, lookX, lookY, shake;
+    Spring headLean, headDip;       // the head on its own: leaning toward a hit (radians), dipping with it (stage units)
     double tBpm = 120.0, tPpq = 0.0;
     bool tPlaying = false;
     bool live = true;

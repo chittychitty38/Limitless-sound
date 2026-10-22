@@ -1,5 +1,6 @@
 #include "LabPage.h"
 #include "Theme.h"
+#include "UiKit.h"
 
 using namespace pd;
 namespace colour = pd::theme::colour;
@@ -18,6 +19,13 @@ std::vector<LabTarget> targets (const EngineSnapshot& s, const Kit& kit)
                     out.push_back ({ (int) p, (int) a, kit.pieces[p].name.toUpperCase() + utf8 ("  \xc2\xb7  ") + s.pieces[p].data->artics[a].name });
     return out;
 }
+
+// The pack's readout in a zone's colour: teal for the soft zones, yellow in the middle, pink for the hard ones.
+const char* zoneReadout (int zone, int zones)
+{
+    auto t = zones > 1 ? (float) zone / (float) (zones - 1) : 1.0f;
+    return t < 0.34f ? "readout_zone" : (t < 0.67f ? "readout_midi" : "readout_hit");
+}
 } // namespace
 
 //==============================================================================
@@ -30,25 +38,22 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        theme::drawCard (g, getLocalBounds().toFloat(), colour::plumLight.darker (0.3f), 12.0f, false);
-        auto r = getLocalBounds().reduced (6);
-        g.setColour (colour::textDim);
-        g.setFont (theme::title (12.0f));
-        g.drawText (utf8 ("DRUM  \xc2\xb7  SOUND"), r.removeFromTop (22), juce::Justification::centredLeft);
-        rowH = std::min (30, items.empty() ? 30 : r.getHeight() / (int) items.size());
+        ui::panel (g, "panel_lab_panel", getLocalBounds().toFloat());
+        auto r = getLocalBounds().reduced (10, 10);
+        ui::label (g, utf8 ("DRUM  \xc2\xb7  SOUND"), r.removeFromTop (22).toFloat().withTrimmedLeft (4.0f), ui::colour::textDim, 10.5f,
+                   juce::Justification::centredLeft);
+        rowH = std::min (32, items.empty() ? 32 : r.getHeight() / (int) items.size());
         top = r.getY();
         for (size_t i = 0; i < items.size(); ++i)
         {
             auto row = juce::Rectangle<int> (r.getX(), top + (int) i * rowH, r.getWidth(), rowH).reduced (0, 1).toFloat();
             auto sel = items[i].piece == lab.piece && items[i].artic == lab.artic;
-            if (sel || (int) i == hover)
-            {
-                g.setColour (sel ? colour::hot : colour::plumLight);
-                g.fillRoundedRectangle (row, 8.0f);
-            }
-            g.setColour (sel ? juce::Colours::white : colour::text);
-            g.setFont (theme::body ((float) std::min (14, rowH - 10)));
-            g.drawText (items[i].label, row.reduced (8.0f, 0.0f), juce::Justification::centredLeft, true);
+            if (sel)
+                ui::button (g, "button_primary_action", row);
+            else if ((int) i == hover)
+                ui::button (g, "button_secondary_action", row, 0.06f);
+            ui::label (g, items[i].label, row.reduced (10.0f, 0.0f), ui::colour::text, std::min (12.0f, (float) rowH * 0.4f),
+                       juce::Justification::centredLeft);
         }
     }
 
@@ -85,44 +90,40 @@ public:
     void paint (juce::Graphics& g) override
     {
         auto r = getLocalBounds().toFloat();
-        theme::drawCard (g, r, colour::plumLight.darker (0.3f), 12.0f, false);
-        auto bar = r.reduced (14.0f, 0.0f).withTrimmedTop (22.0f).withTrimmedBottom (20.0f);
-        g.setColour (colour::textDim);
-        g.setFont (theme::title (12.0f));
-        g.drawText ("VELOCITY LANES", r.reduced (14.0f, 4.0f).removeFromTop (16.0f), juce::Justification::centredLeft);
+        ui::panel (g, "panel_lab_panel", r);
+        auto bar = r.reduced (16.0f, 0.0f).withTrimmedTop (26.0f).withTrimmedBottom (20.0f);
+        ui::label (g, "VELOCITY LANES", r.reduced (16.0f, 7.0f).removeFromTop (16.0f), ui::colour::textDim, 10.5f, juce::Justification::centredLeft);
         auto x = [&] (float v) { return bar.getX() + (v - 1.0f) / 126.0f * bar.getWidth(); };
         auto n = (int) layout.zones.size();
         for (int z = 0; z < n; ++z)
         {
+            // Each lane on the pack's readout in its zone's colour.
             auto& zone = layout.zones[(size_t) z];
-            auto seg = juce::Rectangle<float> (x ((float) zone.lo - 0.5f), bar.getY(), x ((float) zone.hi + 0.5f) - x ((float) zone.lo - 0.5f), bar.getHeight()).reduced (1.0f, 0.0f);
+            auto seg = juce::Rectangle<float> (x ((float) zone.lo - 0.5f), bar.getY(), x ((float) zone.hi + 0.5f) - x ((float) zone.lo - 0.5f), bar.getHeight()).reduced (1.5f, 0.0f);
             auto zc = colour::zone (z, n);
-            g.setColour (zc.withAlpha (0.85f));
-            g.fillRoundedRectangle (seg, 5.0f);
-            g.setColour (colour::ink);
-            g.setFont (theme::title (13.0f));
-            if (seg.getWidth() > 34.0f)
-                g.drawText ("ZONE " + juce::String (z + 1), seg.withTrimmedBottom (seg.getHeight() * 0.45f), juce::Justification::centred);
-            g.setFont (theme::body (11.0f));
-            g.drawText (juce::String (zone.lo) + "-" + juce::String (zone.hi) + utf8 ("  \xc2\xb7  ") + juce::String ((int) zone.hits.size()) + " RR",
-                        seg.withTrimmedTop (seg.getHeight() * 0.5f), juce::Justification::centred, true);
+            auto playing = lastIn > 0 && lastUsed >= zone.lo && lastUsed <= zone.hi;
+            if (playing)
+                ui::glow (g, zoneReadout (z, n), seg, zc.withAlpha (0.8f), 8.0f);
+            ui::readout (g, zoneReadout (z, n), seg);
+            g.setColour (zc.withAlpha (playing ? 0.32f : 0.16f));
+            g.fillRoundedRectangle (seg.reduced (3.0f), seg.getHeight() * 0.4f);
+            auto text = seg.withTrimmedLeft (std::min (seg.getWidth() * 0.3f, seg.getHeight() * 0.7f));
+            if (seg.getWidth() > 44.0f)
+            {
+                ui::label (g, "ZONE " + juce::String (z + 1), text.withTrimmedBottom (text.getHeight() * 0.45f).withTrimmedTop (3.0f), ui::colour::text, 11.5f);
+                ui::label (g, juce::String (zone.lo) + "-" + juce::String (zone.hi) + utf8 ("  \xc2\xb7  ") + juce::String ((int) zone.hits.size()) + " RR",
+                           text.withTrimmedTop (text.getHeight() * 0.5f).withTrimmedBottom (3.0f), zc.brighter (0.3f), 9.5f);
+            }
         }
         for (int v : { 1, 32, 64, 96, 127 })
-        {
-            g.setColour (colour::textDim);
-            g.setFont (theme::body (10.5f));
-            g.drawText (juce::String (v), juce::Rectangle<float> (40.0f, 14.0f).withCentre ({ x ((float) v), bar.getBottom() + 10.0f }), juce::Justification::centred);
-        }
+            ui::label (g, juce::String (v), juce::Rectangle<float> (40.0f, 14.0f).withCentre ({ x ((float) v), bar.getBottom() + 10.0f }), ui::colour::textDim, 9.5f);
         if (lastIn > 0)
         {
+            // Where the last hit landed: the pack's pointer over a line through the lanes.
             auto px = x ((float) lastUsed);
-            juce::Path tri;
-            tri.addTriangle (px - 8.0f, bar.getY() - 10.0f, px + 8.0f, bar.getY() - 10.0f, px, bar.getY() + 2.0f);
-            g.setColour (juce::Colours::white);
-            g.fillPath (tri);
-            g.setColour (colour::ink);
-            g.strokePath (tri, juce::PathStrokeType (1.5f));
-            g.drawLine (px, bar.getY(), px, bar.getBottom(), 2.0f);
+            g.setColour (ui::colour::text);
+            g.fillRoundedRectangle (px - 1.0f, bar.getY(), 2.0f, bar.getHeight(), 1.0f);
+            ui::icon (g, "icon_dropdown", juce::Rectangle<float> (18.0f, 18.0f).withCentre ({ px, bar.getY() - 4.0f }));
         }
     }
 
@@ -148,89 +149,90 @@ public:
     void flash (int hit)
     {
         flashHit = hit;
-        flashAt = juce::Time::getMillisecondCounterHiRes();
+        flashAt = ui::now();
         startTimerHz (30);
     }
 
     void paint (juce::Graphics& g) override
     {
-        theme::drawCard (g, getLocalBounds().toFloat(), colour::plumLight.darker (0.3f), 12.0f, false);
+        ui::panel (g, "panel_lab_panel", getLocalBounds().toFloat());
         cells.clear();
         auto* a = artic();
         auto* lay = layout();
         if (a == nullptr || lay == nullptr)
         {
-            g.setColour (colour::textDim);
-            g.setFont (theme::body (14.0f));
-            g.drawText ("Pick a drum on the left.", getLocalBounds(), juce::Justification::centred);
+            ui::label (g, "Pick a drum on the left.", getLocalBounds().toFloat(), ui::colour::textDim, 13.0f);
             return;
         }
-        auto r = getLocalBounds().toFloat().reduced (10.0f);
-        auto head = r.removeFromTop (22.0f);
-        g.setColour (colour::textDim);
-        g.setFont (theme::title (12.0f));
-        g.drawText (utf8 ("ROUND ROBINS  (click: play it  \xc2\xb7  right-click or Cmd-click: mark bad)"), head, juce::Justification::centredLeft);
+        auto r = getLocalBounds().toFloat().reduced (14.0f, 12.0f);
+        auto head = r.removeFromTop (24.0f);
+        ui::label (g, utf8 ("ROUND ROBINS   (click: play it  \xc2\xb7  right-click or Cmd-click: mark bad)"), head, ui::colour::textDim, 10.5f,
+                   juce::Justification::centredLeft);
 
         auto zones = (int) lay->zones.size();
         int cols = 1;
         for (auto& z : lay->zones) cols = std::max (cols, (int) z.hits.size());
         auto rowH = std::min (64.0f, r.getHeight() / (float) std::max (1, zones));
-        auto labelW = 116.0f;
-        auto colW = std::min (150.0f, (r.getWidth() - labelW) / (float) cols);
+        auto labelW = 132.0f;
+        auto colW = std::min (156.0f, (r.getWidth() - labelW) / (float) cols);
         auto& disabled = snap->pieces[(size_t) lab.piece].disabled[(size_t) lab.artic];
-        auto flashAmt = (float) std::max (0.0, 1.0 - (juce::Time::getMillisecondCounterHiRes() - flashAt) / 600.0);
+        auto flashAmt = (float) std::max (0.0, 1.0 - (ui::now() - flashAt) / 0.6);
 
         for (int z = zones - 1, row = 0; z >= 0; --z, ++row)
         {
             auto& zone = lay->zones[(size_t) z];
             auto zc = colour::zone (z, zones);
             auto y = r.getY() + rowH * (float) row;
-            auto label = juce::Rectangle<float> (r.getX(), y, labelW - 6.0f, rowH).reduced (0.0f, 3.0f);
-            g.setColour (zc.withAlpha (0.9f));
-            g.fillRoundedRectangle (label, 8.0f);
-            g.setColour (colour::ink);
-            g.setFont (theme::display (std::min (20.0f, rowH * 0.36f)));
-            g.drawText ("ZONE " + juce::String (z + 1), label.withTrimmedBottom (label.getHeight() * 0.42f), juce::Justification::centred);
-            g.setFont (theme::body (std::min (12.0f, rowH * 0.22f)));
-            g.drawText ("vel " + juce::String (zone.lo) + "-" + juce::String (zone.hi) + "  " + juce::String (zone.refDb, 1) + " dB",
-                        label.withTrimmedTop (label.getHeight() * 0.55f), juce::Justification::centred);
+
+            // The zone on its readout.
+            auto label = juce::Rectangle<float> (r.getX(), y, labelW - 8.0f, rowH).reduced (0.0f, 4.0f);
+            ui::readout (g, zoneReadout (z, zones), label);
+            g.setColour (zc.withAlpha (0.18f));
+            g.fillRoundedRectangle (label.reduced (3.0f), label.getHeight() * 0.4f);
+            auto lt = label.withTrimmedLeft (label.getHeight() * 0.62f).withTrimmedRight (6.0f);
+            ui::label (g, "ZONE " + juce::String (z + 1), lt.withTrimmedBottom (lt.getHeight() * 0.45f).withTrimmedTop (2.0f), ui::colour::text,
+                       std::min (14.0f, rowH * 0.25f));
+            ui::label (g, "vel " + juce::String (zone.lo) + "-" + juce::String (zone.hi) + "  " + juce::String (zone.refDb, 1) + " dB",
+                       lt.withTrimmedTop (lt.getHeight() * 0.52f).withTrimmedBottom (2.0f), zc.brighter (0.3f), std::min (10.0f, rowH * 0.18f));
 
             for (size_t k = 0; k < zone.hits.size(); ++k)
             {
+                // Each round robin on a pack panel; it glows in the zone's colour when it plays.
                 auto h = zone.hits[k];
                 auto cell = juce::Rectangle<float> (r.getX() + labelW + colW * (float) k, y, colW, rowH).reduced (3.0f);
                 cells.push_back ({ cell, h, zone.hi });
                 auto isBad = juce::isPositiveAndBelow (h, (int) disabled.size()) && disabled[(size_t) h] != 0;
                 auto hov = h == hover;
                 auto& hit = a->hits[(size_t) h];
-                g.setColour (isBad ? colour::bad.withAlpha (0.35f) : (hov ? colour::plumLight.brighter (0.2f) : colour::plumLight));
-                g.fillRoundedRectangle (cell, 8.0f);
-                if (h == flashHit && flashAmt > 0.0f)
+                auto flashing = h == flashHit && flashAmt > 0.0f;
+                if (flashing)
+                    ui::glow (g, "panel_popup_panel", cell, zc.withAlpha (flashAmt), 9.0f);
+                ui::panel (g, "panel_popup_panel", cell, isBad ? 0.6f : 1.0f);
+                if (hov || flashing)
                 {
-                    g.setColour (zc.withAlpha (flashAmt * 0.8f));
-                    g.fillRoundedRectangle (cell, 8.0f);
+                    g.setColour ((flashing ? zc : juce::Colours::white).withAlpha (flashing ? flashAmt * 0.3f : 0.05f));
+                    g.fillRoundedRectangle (cell.reduced (3.0f), 9.0f);
                 }
-                g.setColour (isBad ? colour::bad : zc.withAlpha (0.6f));
-                g.drawRoundedRectangle (cell, 8.0f, isBad ? 2.0f : 1.0f);
 
-                auto in = cell.reduced (8.0f, 4.0f);
-                g.setColour (colour::text);
-                g.setFont (theme::title (std::min (16.0f, rowH * 0.3f)));
-                g.drawText ("RR " + juce::String ((int) k + 1), in.withHeight (in.getHeight() * 0.5f), juce::Justification::centredLeft);
-                g.setFont (theme::body (std::min (11.5f, rowH * 0.2f)));
-                g.setColour (isBad ? colour::bad : colour::textDim);
+                auto in = cell.reduced (12.0f, 6.0f);
+                auto top = in.withHeight (in.getHeight() * 0.5f);
+                if (isBad)
+                    ui::icon (g, "icon_heart_red", top.removeFromRight (top.getHeight() + 10.0f).withTrimmedRight (10.0f));
+                ui::label (g, "RR " + juce::String ((int) k + 1), top, isBad ? ui::colour::textDim : ui::colour::text, std::min (13.0f, rowH * 0.24f),
+                           juce::Justification::centredLeft);
                 auto matchDb = juce::Decibels::gainToDecibels (lay->hitGain[(size_t) h]);
-                g.drawText (isBad ? juce::String ("BAD - skipped") : juce::String (hit.rmsDb, 1) + " dB" + (std::abs (matchDb) > 0.05f ? " (" + juce::String (matchDb, 1) + ")" : juce::String()),
-                            in.withTrimmedTop (in.getHeight() * 0.5f), juce::Justification::centredLeft, true);
+                ui::label (g, isBad ? juce::String ("BAD - skipped") : juce::String (hit.rmsDb, 1) + " dB" + (std::abs (matchDb) > 0.05f ? " (" + juce::String (matchDb, 1) + ")" : juce::String()),
+                           in.withTrimmedTop (in.getHeight() * 0.5f).withTrimmedRight (10.0f), isBad ? colour::bad : ui::colour::textDim,
+                           std::min (10.0f, rowH * 0.18f), juce::Justification::centredLeft);
 
                 // How far this one sits from the zone's level: the odd one out sticks out.
                 auto dev = juce::jlimit (-6.0f, 6.0f, hit.rmsDb - zone.refDb);
-                auto bar = juce::Rectangle<float> (in.getRight() - 8.0f, in.getY(), 5.0f, in.getHeight());
-                g.setColour (colour::ink.withAlpha (0.6f));
+                auto bar = juce::Rectangle<float> (in.getRight() - 5.0f, in.getY(), 5.0f, in.getHeight());
+                g.setColour (ui::colour::panel);
                 g.fillRoundedRectangle (bar, 2.0f);
                 auto mid = bar.getCentreY();
                 auto len = dev / 6.0f * bar.getHeight() * 0.5f;
-                g.setColour (std::abs (dev) > 3.0f ? colour::bad : colour::mint);
+                g.setColour (std::abs (dev) > 3.0f ? ui::colour::pink : ui::colour::teal);
                 g.fillRect (bar.getX(), std::min (mid, mid - len), bar.getWidth(), std::max (1.5f, std::abs (len)));
             }
         }
@@ -286,7 +288,7 @@ private:
     void timerCallback() override
     {
         repaint();
-        if (juce::Time::getMillisecondCounterHiRes() - flashAt > 700.0)
+        if (ui::now() - flashAt > 0.7)
             stopTimer();
     }
 
@@ -312,8 +314,8 @@ LabPage::LabPage (PandaDrumsProcessor& p) : proc (p)
     auto label = [this] (juce::Label& l, const juce::String& text, juce::Component& target)
     {
         l.setText (text, juce::dontSendNotification);
-        l.setFont (theme::title (12.0f));
-        l.setColour (juce::Label::textColourId, colour::textDim);
+        l.setFont (ui::font (10.5f));
+        l.setColour (juce::Label::textColourId, ui::colour::textDim);
         l.attachToComponent (&target, false);
         addAndMakeVisible (target);
     };
@@ -344,6 +346,10 @@ LabPage::LabPage (PandaDrumsProcessor& p) : proc (p)
         s->setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
         s->setPopupDisplayEnabled (true, true, this);
     }
+    theme::accent (levelMatch, "teal");
+    theme::accent (build, "pink");
+    theme::accent (curve, "yellow");
+    theme::accent (humanize, "purple");
     levelMatch.setRange (0.0, 100.0, 1.0);
     levelMatch.setTextValueSuffix (" %");
     levelMatch.setTooltip ("Stabilize: pulls every round robin of a zone to the same level, so none jumps out");
@@ -385,10 +391,10 @@ void LabPage::resized()
 
     list->setBounds (r.removeFromLeft (250));
     r.removeFromLeft (12);
-    auto controls = r.removeFromTop (58).withTrimmedTop (18);
+    auto controls = r.removeFromTop (60).withTrimmedTop (20);
     auto w = controls.getWidth() / 8;
     for (auto* c : std::initializer_list<juce::Component*> { &source, &zones, &ranges, &rrMode, &levelMatch, &build, &curve, &humanize })
-        c->setBounds (controls.removeFromLeft (w).reduced (5, 2));
+        c->setBounds (controls.removeFromLeft (w).reduced (5, 1));
     r.removeFromTop (8);
     lanes->setBounds (r.removeFromTop (86));
     r.removeFromTop (8);
@@ -398,16 +404,12 @@ void LabPage::resized()
 void LabPage::paint (juce::Graphics& g)
 {
     g.fillAll (colour::plum);
-    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36);
-    g.setColour (colour::text);
-    g.setFont (theme::display (26.0f));
-    g.drawText ("VELOCITY & ROUND ROBIN LAB", r, juce::Justification::centredLeft);
-    g.setColour (colour::textDim);
-    g.setFont (theme::body (13.0f));
+    auto r = getLocalBounds().reduced (16, 10).removeFromTop (36).toFloat();
+    ui::label (g, "VELOCITY & ROUND ROBIN LAB", r.removeFromLeft (330.0f), ui::colour::pink, 18.0f, juce::Justification::centredLeft);
     auto bad = proc.countBad();
-    g.drawText (bad == 0 ? juce::String ("Every recorded hit in its lane. Play them, compare them, take out the weird ones.")
-                         : juce::String (bad) + (bad == 1 ? " sample marked bad and skipped." : " samples marked bad and skipped."),
-                r.withTrimmedLeft (360), juce::Justification::centredLeft);
+    ui::label (g, bad == 0 ? juce::String ("Every recorded hit in its lane. Play them, compare them, take out the weird ones.")
+                           : juce::String (bad) + (bad == 1 ? " sample marked bad and skipped." : " samples marked bad and skipped."),
+               r, bad == 0 ? ui::colour::textDim : colour::bad, 11.5f, juce::Justification::centredLeft);
 }
 
 void LabPage::refresh()
