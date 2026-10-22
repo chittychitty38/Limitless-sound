@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -r requirements.txt pyinstaller==6.22.3 pytest
+        run: pip install -r requirements.txt pyinstaller==6.22.3 pillow==11.3.0 pytest
       - name: Test
         run: python -m pytest -q
       - name: Check the keyboard code from source
@@ -43,23 +43,33 @@ jobs:
       - name: Build app
         run: pyinstaller --noconfirm onehand.spec
 
-      - name: Smoke test and disk image (macOS)
+      - name: Smoke test the built app (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 3
         run: |
           "dist/Limitless One-Hand.app/Contents/MacOS/Limitless One-Hand" --self-test
+          "dist/Limitless One-Hand.app/Contents/MacOS/Limitless One-Hand" --ui-smoke
+          codesign --verify --deep --strict "dist/Limitless One-Hand.app" && echo "signature ok"
+      - name: Disk image (macOS)
+        if: runner.os == 'macOS'
+        run: |
           mkdir dmg
           cp -R "dist/Limitless One-Hand.app" dmg/
+          cp "assets/How to open One-Hand.txt" dmg/
           ln -s /Applications dmg/Applications
           hdiutil create -volname "Limitless One-Hand" -srcfolder dmg -ov -format UDZO "dist/${{ matrix.artifact }}.dmg"
 
       - name: Smoke test and installer (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 5
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\LimitlessOneHand.exe -ArgumentList "--self-test" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "self-test failed with exit code $($p.ExitCode)" }
+          foreach ($arg in "--self-test", "--ui-smoke") {
+            $p = Start-Process -FilePath dist\LimitlessOneHand.exe -ArgumentList $arg -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "$arg failed with exit code $($p.ExitCode)" }
+          }
           $ref = "${{ github.ref_name }}"
-          $env:APP_VERSION = if ($ref -like "one-hand-v*") { $ref.Substring(10) } else { "0.1.0" }
+          $env:APP_VERSION = if ($ref -like "one-hand-v*") { $ref.Substring(10) } else { "0.2.0" }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
           if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
 

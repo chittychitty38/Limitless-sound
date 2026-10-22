@@ -22,9 +22,10 @@ Download the newest `one-hand-v…` release from the repository's **Releases** p
 
 ### First time on a Mac
 
-1. The app is not yet signed by Apple, so the first time, **right-click the app and choose Open**, then Open again.
-2. macOS will ask to let the app use the keyboard. Go to **System Settings → Privacy & Security** and switch on **Limitless One-Hand** under both **Accessibility** and **Input Monitoring**. Then press **Try again** in the app.
-3. For Pro Tools record (⌘Space), turn off the Spotlight shortcut in System Settings → Keyboard → Keyboard Shortcuts → Spotlight.
+1. Open the `.dmg` and drag **Limitless One-Hand** onto **Applications**.
+2. Double-click it in Applications. It isn't signed by Apple yet, so macOS may say it can't check the app. Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once. (The disk image includes these steps in *How to open One-Hand.txt*.)
+3. A welcome page walks you through the two switches macOS needs, **Accessibility** and **Input Monitoring**. Each step has a button that opens the right page in System Settings, and the welcome page notices on its own when they're on.
+4. For Pro Tools record (⌘Space), turn off the Spotlight shortcut in System Settings → Keyboard → Keyboard Shortcuts → Spotlight.
 
 ### First time on Windows
 
@@ -37,7 +38,10 @@ Windows may show "Windows protected your PC" because the app is new. Choose **Mo
 - **Space still plays and stops.** Hold Space and press a key to type the letter from the other half of the keyboard, handy for naming tracks. (Space now acts when you let go.)
 - Real shortcuts still work: if you hold ⌘/Ctrl, Option/Alt or Shift, keys pass straight through.
 - Keys only change while Logic Pro or Pro Tools is in front. Every other app types normally.
-- Sound and spoken "on/off" feedback, and "keep window on top", are in the options.
+- **Try it here:** with one-hand mode on, press keys while the One-Hand window is in front. Each key's card lights up and tells you what it would do, without pressing anything.
+- **Menu bar:** One-Hand keeps running in the menu bar (the 1H key) when you close its window. Click the icon to switch the mode or the hand, or to quit.
+- **ON badge:** a yellow badge at the top of the screen shows when one-hand mode is on, even over a full-screen DAW.
+- Options: sounds, spoken "on/off", larger text, keep the window on top, start with the mode on, and open at login. VoiceOver reads out each change.
 - Works alongside on-screen keyboards, Switch Control, Voice Control and other assistive tools: keys they type go through one-hand mode too.
 
 For two-key shortcuts one finger at a time, also turn on Sticky Keys (Mac: Accessibility → Keyboard; Windows: Settings → Accessibility → Keyboard).
