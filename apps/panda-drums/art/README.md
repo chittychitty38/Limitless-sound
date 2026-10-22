@@ -49,6 +49,10 @@ cp ui/* ../Resources/ui/
   - how each hand holds its stick in the picture, in 3D (the stick's heading and pitch, solved
     from how it shows on screen), so his rest pose is exactly the picture's.
 
+  It's a rock kit, big around him: every drum and cymbal a size up on the picture's
+  (`KIT_GROW`), the panda a little smaller on his throne (`PANDA_SCALE`), so he sits behind it the
+  way a drummer does.
+
   The kit is laid out the way a real one is around the drummer:
   - on his left (the picture's right): the hi-hat, rack tom 1 and the first crash;
   - in front of him: the snare;
@@ -94,9 +98,9 @@ tooltip and the key panel from them.
 | Room | The picture's room; the heart lights glow, twinkle and flare with the kick. |
 | Drums | Scaled to the drum's size in inches; the head flashes and a ring runs across it on every hit. |
 | Cymbals | Swing on their stands; a flash of light across the bronze. The hi-hat opens with the pedal. |
-| Arms | At rest, the picture's own arms. Playing, each hand is its own fist from the picture, its arm a string of balls of his fur out of the sleeve, bending at the elbow, the stick across the front of the fist as in the picture. Each hand plays like a drummer's. The stick turns in 3D about the fulcrum in his fist, so it shortens on screen when it points at the drum. A stroke starts at the height its velocity needs: an accent gets an upstroke first, and a ghost note is an inch-high tap. The stick drops onto the head, faster and faster, and lands exactly when the hit sounds. It sits for a frame, then bounces back up to the height that hand has been playing at. The hand leads the stick down; the forearm joins in for the loud ones. As the sticks rise they open into a V, away from his face. Sticks lie nearly flat to a drum head, go across the hi-hat from the side, put the tip on the ride's bow and the shoulder on a crash's edge. |
+| Arms | At rest, the picture's own arms. Playing, each hand is its own fist from the picture, its arm a string of balls of his fur out of the sleeve, bending at the elbow, the stick across the front of the fist as in the picture. Each hand plays like a drummer's. The stick turns in 3D about the fulcrum in his fist, so it shortens on screen when it points at the drum. A stroke starts at the height its velocity needs: an accent gets an upstroke first, and a ghost note is an inch-high tap. The stick drops onto the head, faster and faster, and lands exactly when the hit sounds. It sits for a frame, then bounces back up to the height that hand has been playing at. The hand leads the stick down; the forearm and shoulder join in for the loud ones (a rock backbeat or crash starts with the stick up past vertical). A fast stick blurs, the way a camera sees a drummer's downstroke. As the sticks rise they open into a V, away from his face. Sticks lie nearly flat to a drum head, go across the hi-hat from the side, put the tip on the ride's bow and the shoulder on a crash's edge. |
 | Sticking | Open-handed: his left hand keeps time on the hi-hat, his right plays the snare and the ride. Fills go hand to hand around the toms, as far as each hand can reach. Each hand finishes the stroke it's on before it heads for the next drum, in an arc, the stick turning as it goes. |
-| Body | Leans into far reaches, bounces with the kick, breathes. His head nods to the beat, leans toward each hit and dips into it. Hands with nothing to play go back to the picture's sticks-up pose; arms up, sticks waving, when the song stops. |
+| Body | Leans into far reaches and turns with them, bounces with the kick, breathes. His head goes down hard on every beat (a rocker's nod), leans toward each hit and dips into it. Hands with nothing to play go back to the picture's sticks-up pose; arms up, sticks waving, when the song stops. |
 | Face | His grin while he plays; a blink every few seconds; a squint through a tom fill and on a solid china; a laugh on a big crash; a wink when idle; sad when you mark a hit bad. |
 | Effects | A stick streak and a spark on hard hits, hearts on big crashes. |
 

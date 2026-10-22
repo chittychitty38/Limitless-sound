@@ -164,6 +164,7 @@ private:
     juce::AffineTransform headTransform() const;
     void paintRig (juce::Graphics&, bool arms);
     void drawArm (juce::Graphics&, const Arm&, int side);
+    void drawStickBlur (juce::Graphics&, const Hand&, const Arm&);
     juce::String skinKind (const PieceView&) const;        // which picture of the art a piece uses
     juce::String poseFor (const PieceView&) const;         // the panda's pose for hitting it
     void strikeFx (const PieceView&, int hand, float vel);

@@ -2159,6 +2159,31 @@ void PandaStage::drawArm (juce::Graphics& g, const Arm& a, int side)
         stickPart (false);
 }
 
+void PandaStage::drawStickBlur (juce::Graphics& g, const Hand& h, const Arm& a)
+{
+    // A fast stick blurs: where it was a few milliseconds ago, fainter the further back, the way a
+    // camera sees a drummer's downstroke.
+    auto& skin = Skin::get();
+    auto stick = skin.sprite (skin.at ("panda/stick/file").toString());
+    if (! stick.isValid())
+        return;
+    auto pivotY = Skin::number (skin.at ("panda/stick/pivot_y"), 142.0f);
+    auto picLen = Skin::number (skin.at ("panda/stick/length"), 138.0f);
+    for (int k = 4; k >= 1; --k)
+    {
+        auto was = armPose (h, now - 0.007 * k);
+        auto moved = was.tip.getDistanceFrom (a.tip);
+        if (moved < 9.0f || was.atRest)
+            continue;
+        auto alpha = juce::jlimit (0.0f, 0.42f, (moved - 9.0f) / 60.0f) * (1.0f - (float) k / 5.0f);
+        skin.draw (g, stick, juce::AffineTransform::translation (-stick.bounds.getWidth() * 0.5f, -pivotY)
+                                 .scaled (was.scale, was.tip.getDistanceFrom (was.pivot) / picLen)
+                                 .rotated (was.angle + juce::MathConstants<float>::halfPi)
+                                 .translated (was.pivot.x, was.pivot.y),
+                   alpha);
+    }
+}
+
 void PandaStage::paintRig (juce::Graphics& g, bool arms)
 {
     auto& skin = Skin::get();
@@ -2171,7 +2196,10 @@ void PandaStage::paintRig (juce::Graphics& g, bool arms)
         if (auto& a = shownArms[(size_t) side]; a.atRest)
             skin.draw (g, skin.sprite (skin.at ("panda/rest")[side].toString()), torsoTransform());
         else
+        {
+            drawStickBlur (g, hands[(size_t) side], a);
             drawArm (g, a, side);
+        }
     };
     if (! arms)
     {
