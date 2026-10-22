@@ -71,13 +71,16 @@ ipcMain.on('midi:send', (_e, port, bytes) => {
 
 // Hardware MIDI outputs (a Line 6 Helix over USB, an interface's MIDI out), for the tone pad.
 // Our own virtual ports are left out of the list.
+// Listed through the notes port GazeStage already has open: any output can list them all.
+// Making a new MIDI output for each look (at start, then every 4 s) set up a CoreMIDI client
+// every time, which held up this process (the first face came about a second later on an
+// Intel Mac) and never gave the clients back.
 function hardwareOutputs() {
-  if (!midi.native) return [];
+  const o = midi.out.notes;
+  if (!midi.native || !o) return [];
   try {
-    const { Output } = require('@julusian/midi');
-    const o = new Output(), names = [];
+    const names = [];
     for (let i = 0; i < o.getPortCount(); i++) names.push(o.getPortName(i));
-    o.closePort?.();
     return [...new Set(names)].filter((n) => n && !/^GazeStage /.test(n) && !/IAC Driver|Midi Through/i.test(n));
   } catch { return []; }
 }
