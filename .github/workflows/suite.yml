@@ -1,0 +1,108 @@
+# One download for the whole suite: collects the newest Mac build of every app
+# (from each app's own workflow on main) into Limitless-Sound-Suite-<arch>.dmg.
+name: Limitless Sound Suite
+
+on:
+  workflow_run:
+    workflows: ["Hub and clients", "Limitless Voice", "Limitless One-Hand", "Limitless Zoom",
+                "Limitless Color", "Limitless Control", "GazeStage"]
+    types: [completed]
+    branches: [main]
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: ["packaging/**", ".github/workflows/suite.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: suite-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  mac:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: mac-apple-silicon
+          - os: macos-15-intel
+            arch: mac-intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download every app's newest Mac build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p in
+          for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
+            run=$(gh run list -R "$GITHUB_REPOSITORY" -w "$wf" -b main -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
+            if [ -z "$run" ]; then echo "::warning::No successful $wf build on main yet"; continue; fi
+            name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" -q ".artifacts[] | select(.name | endswith(\"-${{ matrix.arch }}\")) | .name" | head -1)
+            if [ -z "$name" ]; then echo "::warning::$wf run $run has no ${{ matrix.arch }} build"; continue; fi
+            echo "$wf: $name (run $run)"
+            gh run download "$run" -R "$GITHUB_REPOSITORY" -n "$name" -D "in/$wf"
+          done
+          find in -maxdepth 3 | sed 's/^/  /'
+      - name: Build the suite disk image
+        run: packaging/mac/build-suite-dmg.sh in "${{ matrix.arch }}" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg"
+      - name: Check every app in it opens far enough to run
+        run: |
+          mnt=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg" >/dev/null
+          ls -1 "$mnt"
+          for app in "$mnt"/*.app; do
+            exe="$app/Contents/MacOS/$(defaults read "$app/Contents/Info" CFBundleExecutable)"
+            file "$exe" | sed "s|$mnt/||"
+            codesign --verify --deep "$app" && echo "  signature ok: $(basename "$app")"
+          done
+          hdiutil detach "$mnt" -quiet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Limitless-Sound-Suite-${{ matrix.arch }}
+          path: Limitless-Sound-Suite-${{ matrix.arch }}.dmg
+
+  # One release page for the whole suite: v<packaging/VERSION>. The first build of a new
+  # version publishes it; later builds of the same version refresh its disk images, so the
+  # download always carries every app's newest version. Its assets keep the same names, so
+  # https://github.com/<repo>/releases/latest/download/Limitless-Sound-Suite-<arch>.dmg
+  # stays a permanent link.
+  release:
+    needs: mac
+    if: >-
+      github.event_name == 'workflow_run' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Limitless-Sound-Suite-*
+          path: out
+          merge-multiple: true
+      - name: Publish or refresh the suite release
+        run: |
+          version=$(tr -d '[:space:]' < packaging/VERSION)
+          tag="v$version"
+          ls -l out
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" out/*.dmg --clobber -R "$GITHUB_REPOSITORY"
+            echo "Refreshed $tag with the newest apps."
+          else
+            gh release create "$tag" out/*.dmg -R "$GITHUB_REPOSITORY" --target "$SHA" \
+              --title "Limitless Sound $version" --notes-file packaging/RELEASE.md --latest
+            echo "Published $tag."
+          fi

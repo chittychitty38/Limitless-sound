@@ -27,3 +27,78 @@ jobs:
           python-version: "3.12"
       - run: pip install pytest
       - run: python -m pytest -q
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            name: mac-apple-silicon
+          - os: macos-15-intel
+            name: mac-intel
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller==6.16.0
+      - run: pyinstaller --noconfirm packaging/limitless_hub.spec
+
+      - name: Smoke test the built hub
+        shell: bash
+        run: |
+          export LIMITLESS_SOUND_HOME="$RUNNER_TEMP/ls-home"
+          if [ "$RUNNER_OS" = "Windows" ]; then BIN="dist/Limitless Sound/Limitless Sound.exe"
+          else BIN="dist/Limitless Sound.app/Contents/MacOS/Limitless Sound"; fi
+          "$BIN" --background --port 48900 --http-port 48901 &
+          for i in $(seq 1 40); do [ -f "$LIMITLESS_SOUND_HOME/link.json" ] && break; sleep 0.5; done
+          TOKEN=$(python -c "import json,os;print(json.load(open(os.path.join(os.environ['LIMITLESS_SOUND_HOME'],'link.json')))['token'])")
+          curl -sf -H "X-Limitless-Token: $TOKEN" http://127.0.0.1:48901/api/state | python -c "import json,sys; s=json.load(sys.stdin); assert len(s['tools'])>=6; print('hub ok,', len(s['actions']), 'actions')"
+          curl -sf "http://127.0.0.1:48901/?t=$TOKEN" | grep -q "Limitless Sound"
+          curl -sf -X POST -H "X-Limitless-Token: $TOKEN" -H "Content-Type: application/json" -d '{}' http://127.0.0.1:48901/api/quit
+          sleep 2
+
+      - name: Make the Mac disk image
+        if: runner.os == 'macOS'
+        working-directory: shared/hub/dist
+        run: |
+          mkdir dmg && cp -R "Limitless Sound.app" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Limitless Sound" -srcfolder dmg -ov -format UDZO "Limitless-Sound-${{ matrix.name }}.dmg"
+
+      - name: Make the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+            $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
+          }
+          $v = python -c "import limitless_hub; print(limitless_hub.__version__)"
+          iscc /DAppVersion=$v packaging\windows.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Limitless-Sound-${{ matrix.name }}
+          path: |
+            shared/hub/dist/*.dmg
+            shared/hub/dist/Limitless-Sound-Setup-windows.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/hub-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*

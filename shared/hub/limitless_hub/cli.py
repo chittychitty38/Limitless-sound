@@ -7,6 +7,7 @@
   Limitless Sound do daw.record        whichever open tool can press Record does it
   Limitless Sound list                 every action
   Limitless Sound status               which tools are connected
+  Limitless Sound autostart on|off     start at sign-in (the Mac suite installer turns it on)
 """
 
 from __future__ import annotations
@@ -74,7 +75,7 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     argv = [a for a in argv if not a.startswith("-psn")]  # macOS Finder adds this
     p = argparse.ArgumentParser(prog="limitless-sound", description="Limitless Sound hub")
-    p.add_argument("command", nargs="?", choices=["run", "do", "list", "status", "say"], default="run")
+    p.add_argument("command", nargs="?", choices=["run", "do", "list", "status", "say", "autostart"], default="run")
     p.add_argument("rest", nargs="*")
     p.add_argument("--background", action="store_true", help="don't open the settings page")
     p.add_argument("--port", type=int, default=paths.DEFAULT_PORT)
@@ -86,6 +87,15 @@ def main(argv=None) -> int:
             print("Which action? For example: do zoom.in")
             return 2
         return do(a.rest[0], _parse_args(a.rest[1:]))
+    if a.command == "autostart":
+        from .launcher import set_autostart
+        on = (a.rest or ["on"])[0].lower() in ("on", "yes", "true", "1")
+        set_autostart(on)
+        settings = paths.read_json(paths.settings_file()) or {}
+        settings["autostart"] = on
+        paths.write_private(paths.settings_file(), settings)
+        print("Limitless Sound will start when you sign in." if on else "Limitless Sound won't start at sign-in.")
+        return 0
     if a.command == "say":
         return do("hub.say", {"text": " ".join(a.rest)})
     if a.command in ("list", "status"):
@@ -128,7 +138,7 @@ def main(argv=None) -> int:
         except (ValueError, OSError):
             pass
     try:
-        while not stop.wait(1):
+        while not stop.wait(0.5) and not hub.quit.is_set():
             pass
     finally:
         hub.stop()
