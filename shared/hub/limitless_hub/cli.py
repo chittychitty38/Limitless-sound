@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 import webbrowser
 
-from . import catalog, paths
+from . import __version__, applog, catalog, paths
 from .launcher import Launcher
 from .server import Hub, running_hub
 
@@ -124,6 +124,7 @@ def main(argv=None) -> int:
         if not a.background:
             webbrowser.open(f"http://127.0.0.1:{other['http']}/?t={other['token']}")
         return 0
+    applog.start("Limitless Sound", __version__)
     hub = Hub(port=a.port, http_port=a.http_port).start()
     print(f"Limitless Sound is running. Settings: {hub.page_url()}")
     start_tools = hub.settings.get("startTools") or []
