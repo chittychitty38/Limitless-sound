@@ -1,7 +1,8 @@
 # PyInstaller recipe: builds "Limitless One-Hand.app" on macOS and LimitlessOneHand.exe on Windows.
+import re
 import sys
 
-VERSION = "0.2.0"
+VERSION = re.search(r'__version__ = "([^"]+)"', open("onehand/__init__.py").read()).group(1)
 
 a = Analysis(
     ["main.py"],

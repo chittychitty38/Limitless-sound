@@ -48,7 +48,8 @@ class Clock:
 @pytest.fixture
 def bus():
     clock = Clock()
-    b = Bus({}, TOKEN, speaker=FakeSpeaker(), launcher=FakeLauncher(), clock=clock)
+    b = Bus({}, TOKEN, speaker=FakeSpeaker(), launcher=FakeLauncher(), clock=clock,
+            background=lambda fn: fn())
     b.clock_obj = clock
     return b
 
@@ -304,3 +305,84 @@ def test_default_routes_are_valid(bus):
     known = bus.known_action_ids()
     for r in routes.DEFAULT_ROUTES:
         assert routes.validate(r, known) == [], r["id"]
+
+
+def test_link_to_closed_app_is_quiet(bus):
+    control, _ = connect(bus, "control")
+    bus.receive(control, {"op": "did", "action": "record", "intent": "daw.record"})
+    assert not any(e["kind"] == "warn" for e in bus.log)
+
+
+def test_vendored_clients_match_shared_copy():
+    """Apps carry a copy of the Python client; it must not drift from shared/."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[3]
+    shared = (root / "shared" / "clients" / "python" / "limitless_link.py").read_text()
+    for copy in (root / "apps").rglob("limitless_link.py"):
+        assert copy.read_text() == shared, f"{copy} differs from shared/clients/python/limitless_link.py"
+
+
+def test_mac_executable_reads_info_plist(tmp_path):
+    import plistlib
+    from limitless_hub.catalog import mac_executable
+    app = tmp_path / "Limitless Color.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    with open(app / "Contents" / "Info.plist", "wb") as f:
+        plistlib.dump({"CFBundleExecutable": "limitless-color"}, f)
+    assert mac_executable(app, "Limitless Color").name == "limitless-color"
+    assert mac_executable(tmp_path / "Missing.app", "Fallback").name == "Fallback"
+
+
+def test_intent_falls_through_to_the_next_app(bus):
+    control, cin = connect(bus, "control", [{"id": "record", "label": "Record", "intent": "daw.record"}])
+    voice, vin = connect(bus, "voice", [{"id": "record", "label": "Record", "intent": "daw.record"}])
+    got = []
+    bus.invoke("daw.record", source="gaze", on_result=got.append)
+    first = of(cin, "invoke")[0]
+    bus.receive(control, {"op": "result", "id": first["id"], "ok": False, "message": "No key in Finder."})
+    second = of(vin, "invoke")[0]
+    bus.receive(voice, {"op": "result", "id": second["id"], "ok": True, "message": "Recording"})
+    assert got == [{"ok": True, "message": "Recording"}]
+
+
+def test_depth_from_an_app_cannot_dodge_the_loop_guard(bus):
+    zoom, zin = connect(bus, "zoom", [{"id": "in", "label": "In"}])
+    voice, _ = connect(bus, "voice")
+    assert bus.receive(voice, {"op": "invoke", "id": 1, "action": "zoom.in", "depth": -1000})
+    assert of(zin, "invoke")[-1]["depth"] == 0
+    assert bus.receive(voice, {"op": "invoke", "id": 2, "action": "zoom.in", "depth": "lots"})
+    assert of(zin, "invoke")[-1]["depth"] == 0
+    assert bus.receive(voice, {"op": "invoke", "id": 3, "action": "zoom.in", "depth": 10 ** 9})
+    assert of(zin, "invoke")[-1]["id"] != 3 and len(of(zin, "invoke")) == 2
+
+
+def test_a_second_copy_tells_the_first_to_step_aside(bus):
+    first, fin = connect(bus, "zoom")
+    second, _ = connect(bus, "zoom")
+    assert first.closed and bus.tools["zoom"] is second
+    assert of(fin, "error")[-1]["code"] == "replaced"
+
+
+def test_a_slow_command_line_does_not_hold_up_the_suite():
+    import threading
+    started, release = threading.Event(), threading.Event()
+
+    class Slow(FakeLauncher):
+        def run_cli(self, tool, action, args):
+            started.set()
+            release.wait(5)
+            return True, "ok"
+
+    b = Bus({}, TOKEN, speaker=FakeSpeaker(), launcher=Slow({"zoom"}))
+    got = []
+    b.invoke("zoom.in", on_result=got.append)
+    assert started.wait(2)
+    assert b.lock.acquire(timeout=0.5), "the hub's lock was held while a command line ran"
+    b.lock.release()
+    assert got == []
+    release.set()
+    for _ in range(100):
+        if got:
+            break
+        threading.Event().wait(0.02)
+    assert got and got[0]["ok"]
