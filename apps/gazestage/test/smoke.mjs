@@ -150,7 +150,8 @@ try {
     const g = window.__gs; g.sent = [];
     const send = g.midi.sendTone.bind(g.midi);
     g.midi.sendTone = (b) => { for (let i = 0; i + 2 < b.length; i += 3) g.sent.push([b[i], b[i + 1], b[i + 2]]); return send(b); };
-    Object.assign(g.S, { mode: 'mouse', select: 'dwell', xyGlide: 0 });
+    // Switch mode, so the mouse resting on a button never dwells it by accident.
+    Object.assign(g.S, { mode: 'mouse', select: 'switch', xyGlide: 0 });
   });
   await win.click('[data-goto=tone]');
   assert.equal(await win.evaluate(() => window.__gs.state.page), 'tone');
@@ -164,9 +165,13 @@ try {
   assert.ok((await win.evaluate(() => window.__gs.sent[0][0])) === 0xb0, 'control changes on channel 1');
 
   step('tone pad: look and hold still to place');
+  await win.evaluate(() => { window.__gs.S.select = 'dwell'; });
   await win.mouse.move(...at(0.25, 0.3));
   await win.waitForFunction(() => Math.abs(window.__gs.motion.x - 0.25) < 0.03, null, { timeout: 4000 });
-  assert.ok(near(await lastCC(16), 32) && near(await lastCC(17), 38));
+  await win.waitForTimeout(100);
+  assert.ok(near(await lastCC(16), 32) && near(await lastCC(17), 38), `placed by dwell: ${await lastCC(16)}, ${await lastCC(17)}, at ${await win.evaluate(() => [window.__gs.motion.x, window.__gs.motion.y])}`);
+
+  await win.evaluate(() => { window.__gs.S.select = 'switch'; });
 
   step('tone pad: arrows, saved tones and glide');
   const before = await win.evaluate(() => window.__gs.motion.x);
