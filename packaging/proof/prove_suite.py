@@ -248,7 +248,8 @@ def summary(proof: dict) -> str:
         level = {None: "❌ none", "connected": "1 Connected", "adaptive": "2 Adaptive"}.get(a["level"], a["level"])
         c4 = next((x for x in a["checks"] if x["id"] == "C4"), None)
         u = a.get("idle") or {}
-        lines.append(f"| {a['name']} | {a['openedBy']} | {a['joinedSeconds'] if a['joinedSeconds'] is not None else '—'} s "
+        name = f"{a['name']} {a['version']}" if a.get("version") else a["name"]
+        lines.append(f"| {name} | {a['openedBy']} | {a['joinedSeconds'] if a['joinedSeconds'] is not None else '—'} s "
                      f"| {level} | {'✅' if c4 and c4['ok'] else '❌'} {a['actionsTried']} "
                      f"| {u.get('cpuPercent', '—')}% | {u.get('memoryMB', '—')} MB |")
     lines += ["", "| Suite check | Result |", "|---|---|"]

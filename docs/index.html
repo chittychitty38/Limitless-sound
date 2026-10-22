@@ -479,12 +479,13 @@ footer p { margin: 0; }
         const apps = run.apps.map((a) => {
           const good = passed(a);
           const c4 = (a.checks || []).find((x) => x.id === "C4");
+          const idle = a.idle && a.idle.cpuPercent != null ? `, ${esc(a.idle.cpuPercent)}% of the processor sitting idle` : "";
           const how = good
-            ? `ready in ${a.joinedSeconds} s, answered all ${a.actionsTried} of its commands`
+            ? `ready in ${a.joinedSeconds} s, answered all ${a.actionsTried} of its commands${idle}`
             : esc(why(a));
           const shot = a.screenshot ? ` <a href="${shots}${esc(a.screenshot)}">screenshot</a>` : "";
           return `<li class="${good ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${good ? "✓" : "✕"}</span>`
-            + `<span><b>${esc(a.name)}<span class="vh">: ${good ? "passed" : "failed"}</span></b><span class="how">${how}${shot}</span></span></li>`;
+            + `<span><b>${esc(a.name)}${a.version ? " " + esc(a.version) : ""}<span class="vh">: ${good ? "passed" : "failed"}</span></b><span class="how">${how}${shot}</span></span></li>`;
         }).join("");
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
