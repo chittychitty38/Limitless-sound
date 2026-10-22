@@ -83,22 +83,52 @@ jobs:
           python3 packaging/proof/prove_suite.py --out proof \
             --suite-version "${{ steps.get.outputs.version }}" --install-seconds "${{ steps.install.outputs.seconds }}"
 
-      - name: Gather the apps' logs
+      - name: Gather the apps' logs and any crash reports
         if: always()
         run: |
           mkdir -p proof/logs
           cp install.log proof/logs/ 2>/dev/null || true
-          for d in "$HOME/Library/Logs" "$HOME/Library/Application Support"; do
-            find "$d" -maxdepth 3 \( -iname "*limitless*" -o -iname "*gazestage*" \) -print 2>/dev/null
-          done | while read -r p; do
-            find "$p" -maxdepth 3 -type f \( -name "*.log" -o -name "*.txt" -o -name "*.json" \) \
-              ! -name "link.json" -size -2M -print 2>/dev/null
-          done | while read -r f; do
-            dest="proof/logs/$(echo "${f#$HOME/Library/}" | tr '/ ' '__')"
-            cp "$f" "$dest"
+          # Each app's own log folder and settings, and macOS's crash reports for our apps.
+          find "$HOME/Library/Logs" "$HOME/Library/Application Support" -maxdepth 4 -type f \
+               \( -ipath "*limitless*" -o -ipath "*gazestage*" \) \
+               \( -name "*.log" -o -name "*.txt" -o -name "*.json" -o -name "*.ips" -o -name "*.crash" \) \
+               ! -name "link.json" ! -path "*leveldb*" -size -2M 2>/dev/null | while read -r f; do
+            cp "$f" "proof/logs/$(echo "${f#$HOME/Library/}" | tr '/ ' '__')"
+          done
+          find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -maxdepth 1 -type f \
+               \( -iname "*limitless*" -o -iname "*gazestage*" -o -iname "Python*" \) 2>/dev/null | while read -r f; do
+            cp "$f" "proof/logs/crash_$(basename "$f" | tr ' ' '_')"
           done
           ls -l proof/logs
-          # Small screenshots for the website.
+          # Put crashes and app logs in this log too, where they can be read without downloading.
+          for f in proof/logs/crash_*; do
+            [ -f "$f" ] || continue
+            echo "::group::Crash report $(basename "$f")"
+            python3 - "$f" <<'PY'
+          import json, sys
+          text = open(sys.argv[1], errors="replace").read()
+          head, _, body = text.partition("\n")
+          try:
+              r = json.loads(body)
+              print(r.get("procPath"), "|", r.get("exception"), "|", r.get("termination"))
+              th = r.get("threads", [])[r.get("faultingThread", 0)] if r.get("threads") else {}
+              imgs = r.get("usedImages", [])
+              for fr in th.get("frames", [])[:25]:
+                  img = imgs[fr["imageIndex"]].get("name", "?") if fr.get("imageIndex", -1) < len(imgs) else "?"
+                  print(f'  {img:32} {fr.get("symbol", "")}')
+              for k in ("asi", "lastExceptionBacktrace"):
+                  if r.get(k):
+                      print(k, json.dumps(r[k])[:1500])
+          except ValueError:
+              print(text[:6000])
+          PY
+            echo "::endgroup::"
+          done
+          for f in proof/logs/*.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$(basename "$f") (last 80 lines)"; tail -80 "$f"; echo "::endgroup::"
+          done
+          # Small screenshots for the results page.
           for f in proof/shots/*.png; do
             [ -f "$f" ] && sips -s format jpeg -s formatOptions 70 -Z 1600 "$f" --out "${f%.png}.jpg" >/dev/null && rm "$f"
           done
@@ -110,58 +140,69 @@ jobs:
           name: proof-${{ matrix.arch }}
           path: proof
 
-  # Put the results on the website: proof/latest.json on gh-pages (small, keeps its history)
-  # and the screenshots on the "proof" prerelease (replaced each night, so the repo doesn't grow).
+  # Publish the results, failures included. They go on a branch of their own, replaced on
+  # every run so the repository doesn't grow: proof-results for the nightly run on main,
+  # proof-results-test for pull requests and manual runs. The nightly results also go on the
+  # website (gh-pages proof/latest.json).
   publish:
     needs: mac
-    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.run_id == ''
+    if: always()
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      NIGHTLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.run_id == '' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           pattern: proof-*
           path: in
+      - name: Put the results on their branch
+        run: |
+          set -e
+          branch=$([ "$NIGHTLY" = "true" ] && echo proof-results || echo proof-results-test)
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
+          mkdir results && cd results
+          for d in ../in/proof-*; do
+            arch=${d##*/proof-}
+            mkdir -p "$arch" && cp -R "$d"/. "$arch"/
+          done
+          python3 - <<'EOF'
+          import json, os, pathlib
+          runs = []
+          for d in sorted(p for p in pathlib.Path(".").iterdir() if p.is_dir()):
+              f = d / "proof.json"
+              if not f.exists():
+                  runs.append({"arch": d.name, "error": "The run stopped before it finished. See the workflow log."})
+                  continue
+              r = json.loads(f.read_text())
+              r["arch"] = d.name
+              for a in r["apps"]:
+                  if a.get("screenshot"):
+                      a["screenshot"] = f"{d.name}/" + a["screenshot"].replace(".png", ".jpg")
+              runs.append(r)
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          pathlib.Path("latest.json").write_text(json.dumps({"run": run_url, "runs": runs}, indent=2))
+          pathlib.Path("README.md").write_text(
+              f"# Limitless Sound proof\n\nFrom {run_url}\n\n" +
+              "\n".join((d / "summary.md").read_text() for d in sorted(pathlib.Path('.').iterdir())
+                        if (d / "summary.md").exists()))
+          EOF
+          git init -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Proof $(date -u +%Y-%m-%dT%H:%MZ) from run $GITHUB_RUN_ID"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/$GITHUB_REPOSITORY.git" "$branch"
       - uses: actions/checkout@v4
+        if: env.NIGHTLY == 'true'
         with:
           ref: gh-pages
           path: site
-      - name: Publish
+      - name: Put the nightly results on the website
+        if: env.NIGHTLY == 'true'
         run: |
-          set -e
-          mkdir -p site/proof shots
-          python3 - <<'EOF'
-          import json, pathlib, shutil
-          runs = []
-          for d in sorted(pathlib.Path("in").glob("proof-*")):
-              arch = d.name[len("proof-"):]
-              f = d / "proof.json"
-              if not f.exists():
-                  runs.append({"arch": arch, "error": "The run stopped before it finished. See the workflow log."})
-                  continue
-              p = json.loads(f.read_text())
-              p["arch"] = arch
-              for a in p["apps"]:
-                  if a.get("screenshot"):
-                      src = d / a["screenshot"].replace(".png", ".jpg")
-                      if src.exists():
-                          name = f"{arch}-{a['tool']}.jpg"
-                          shutil.copy(src, f"shots/{name}")
-                          a["screenshot"] = name
-                      else:
-                          a["screenshot"] = ""
-              runs.append(p)
-          pathlib.Path("site/proof/latest.json").write_text(json.dumps({"runs": runs}, indent=2))
-          EOF
-          cat site/proof/latest.json | head -40
-          if ls shots/*.jpg >/dev/null 2>&1; then
-            gh release view proof -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-              gh release create proof -R "$GITHUB_REPOSITORY" --prerelease --latest=false \
-                --title "Nightly proof" \
-                --notes "Screenshots from the nightly proof run: a fresh Mac downloads the suite from the website, installs it and tests every app. Results: https://chittychitty38.github.io/Limitless-sound/#proof"
-            gh release upload proof shots/*.jpg --clobber -R "$GITHUB_REPOSITORY"
-          fi
+          mkdir -p site/proof
+          cp results/latest.json site/proof/latest.json
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

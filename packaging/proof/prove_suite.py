@@ -42,8 +42,10 @@ TOOLS = {
     "gaze": ("GazeStage", "GazeStage.app"),
 }
 HUB_APP = "Limitless Sound.app"
-OPEN_LIMIT = 90.0    # seconds an app may take to open and join the suite on a cold start
+OPEN_LIMIT = 90.0    # seconds to wait for an app to open and join the suite at all
+READY_LIMIT = 15.0   # seconds a musician should ever wait for an app to be ready
 IDLE_SECONDS = 15    # how long to watch CPU while everything sits idle
+IDLE_CPU_LIMIT = 3.0 # % of one core an app may use sitting idle, so laptops last a session
 
 
 def run(cmd: list[str], timeout: float = 30) -> str:
@@ -200,9 +202,14 @@ def summary(proof: dict) -> str:
     lines += ["", "| Suite check | Result |", "|---|---|"]
     lines += [f"| {s['check']} | {'✅' if s['ok'] else '❌'} {s['detail']} |" for s in proof["suite"]]
     failures = [f"- **{a['name']}** {x['id']}: {x['check']} — {x['detail']}"
-                for a in proof["apps"] for x in a["checks"] if not x["ok"] and x["level"] == "connected"]
+                for a in proof["apps"] for x in a["checks"] + a["proof"]
+                if not x["ok"] and not x.get("warn") and x.get("level", "proof") in ("connected", "proof")]
+    warnings = [f"- **{a['name']}** {x['id']}: {x['check']} — {x['detail']}"
+                for a in proof["apps"] for x in a["proof"] if not x["ok"] and x.get("warn")]
     if failures:
         lines += ["", "### What failed", *failures]
+    if warnings:
+        lines += ["", "### To improve", *warnings]
     return "\n".join(lines) + "\n"
 
 
@@ -236,6 +243,15 @@ def main(argv=None) -> int:
                   if all(rep.level_ok(x) for x in las_check.LEVELS[:las_check.LEVELS.index(lvl) + 1])]
         app["level"] = passed[-1] if passed else None
         app["checks"] = rep.checks
+        joined = app["joinedSeconds"]
+        app["proof"] = [
+            {"id": "P1", "ok": joined is not None and joined <= READY_LIMIT,
+             "check": f"Ready within {READY_LIMIT:.0f} seconds of opening",
+             "detail": f"{joined} s" if joined is not None else f"not ready after {OPEN_LIMIT:.0f} s"},
+            {"id": "P2", "ok": connected(hub, tool),
+             "check": "Still running after every one of its actions was pressed",
+             "detail": "" if connected(hub, tool) else "It quit or crashed. See the crash report in the log."},
+        ]
         app["actionsTried"] = len([a for a in hub.state()["actions"] if a.get("tool") == tool and a.get("live")])
         state = hub.state()
         app["version"] = next((t["version"] for t in state["tools"] if t["id"] == tool), "")
@@ -248,6 +264,10 @@ def main(argv=None) -> int:
     idle = usage({t: TOOLS[t][1] for t in tools} | {"hub": HUB_APP})
     for a in proof["apps"]:
         a["idle"] = idle.get(a["tool"], {})
+        cpu = a["idle"].get("cpuPercent")
+        a["proof"].append({"id": "P3", "ok": cpu is not None and cpu <= IDLE_CPU_LIMIT, "warn": True,
+                           "check": f"Uses under {IDLE_CPU_LIMIT:.0f}% CPU sitting idle",
+                           "detail": f"{cpu}%" if cpu is not None else "not running"})
     proof["hubIdle"] = idle.get("hub", {})
     screenshot(out / "shots" / "all.png")
 
@@ -258,7 +278,8 @@ def main(argv=None) -> int:
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(text)
-    ok = all(a["level"] for a in proof["apps"]) and all(s["ok"] for s in proof["suite"])
+    ok = (all(a["level"] for a in proof["apps"]) and all(s["ok"] for s in proof["suite"])
+          and all(x["ok"] for a in proof["apps"] for x in a["proof"] if not x.get("warn")))
     return 0 if ok else 1
 
 
