@@ -15,7 +15,8 @@
 //   const log = require('./applog').start('GazeStage', app.getVersion());
 //   log.info('Camera ready'); log.warn('No MIDI ports'); log.error('Model failed', err);
 //
-// Node's standard library only. Writes are synchronous, so the last line before a crash is kept.
+// Node's standard library only. Writes are synchronous (to a file kept open), so the last line
+// before a crash is kept.
 'use strict';
 
 const fs = require('node:fs');
@@ -47,10 +48,13 @@ function describe(part) {
 }
 
 class AppLog {
+  // The file stays open, so a line costs one write: opening the file for every line held up
+  // Electron's main thread (and with it the window) on a busy Mac.
   constructor(app, file) {
     this.app = app;
     this.file = file;
-    try { this.size = fs.statSync(file).size; } catch { this.size = 0; }
+    this.fd = fs.openSync(file, 'a');
+    this.size = fs.fstatSync(this.fd).size;
   }
 
   write(level, ...parts) {
@@ -58,10 +62,15 @@ class AppLog {
     try {
       const bytes = Buffer.byteLength(line);
       if (this.size + bytes >= KEEP_BYTES && this.size > 0) {
+        // Closed first: Windows can't rename a file that's open.
+        fs.closeSync(this.fd);
+        this.fd = null;
         fs.renameSync(this.file, `${this.file}.1`);
+        this.fd = fs.openSync(this.file, 'a');
         this.size = 0;
       }
-      fs.appendFileSync(this.file, line);
+      if (this.fd === null) this.fd = fs.openSync(this.file, 'a');
+      fs.writeSync(this.fd, line);
       this.size += bytes;
     } catch {
       // A log that can't be written must never stop the app.
