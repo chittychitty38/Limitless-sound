@@ -22,6 +22,7 @@ from importlib import resources
 from urllib.parse import parse_qs, unquote, urlparse
 
 from . import __version__, catalog, launcher as launcher_mod, paths
+from . import setup as setup_mod
 from .bus import PROTOCOL, Bus
 from .speech import Speaker
 
@@ -326,6 +327,20 @@ class Hub:
                     except OSError as e:
                         return self._json({"ok": False, "message": str(e)}, 500)
                     return self._json({"ok": True})
+                if p == "/api/setup":
+                    # The guided setup: apply the answers, remember them, open the apps.
+                    if body.get("skip"):
+                        with bus.lock:
+                            hub.settings["setupDone"] = True
+                            hub._save(hub.settings)
+                        return self._json({"ok": True})
+                    plan = setup_mod.plan(body.get("inputs") or [], body.get("look") or {})
+                    with bus.lock:
+                        hub.settings.update(startTools=plan["tools"], setupDone=True, setupInputs=plan["inputs"])
+                        hub._save(hub.settings)
+                    prefs = bus.set_prefs(plan["prefs"])
+                    opened = hub.launcher.open_many(plan["tools"]) if plan["tools"] else {"message": ""}
+                    return self._json({"ok": True, **plan, "prefs": prefs, "message": opened.get("message", "")})
                 if p == "/api/quit":
                     hub.quit.set()
                     return self._json({"ok": True})
