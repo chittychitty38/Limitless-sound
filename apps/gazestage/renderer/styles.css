@@ -32,10 +32,13 @@
   color-scheme: dark;
 }
 :root[data-spacing="wide"] { --gap: 28px; }
-/* Text past Extra large: the status chips get a row of their own under the buttons, and the
-   transport hint gives up its margins, so the targets keep their room. */
+/* Text past Extra large: the status chips get a row of their own under the buttons, the page
+   buttons drop their little pictures (the words are big enough; "Instrument" no longer fit
+   beside Pause once the Tone page came), and the transport hint gives up its margins, so the
+   targets keep their room. */
 :root[data-size="huge"] .brand { flex: 1; }
 :root[data-size="huge"] .chips { order: 1; flex-basis: 100%; }
+:root[data-size="huge"] .tabs .glyph { display: none; }
 :root[data-size="huge"] .hint { margin: 0; }
 /* High contrast, whatever the theme: thick borders and focus ring, and switches that show their state. */
 :root[data-contrast="high"] :is(.topbar, .chip, .tool, .preview, select, #settings, #settings header, #settings section, .card, .note, .bigcam, #toast) { border-width: 2px; }
