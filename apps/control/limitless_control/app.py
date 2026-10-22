@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import __version__, applog, frontmost, keys, login, profiles
+from . import __version__, applog, frontmost, keys, login, mac_keys, profiles
 from .engine import Engine
 
 PORT = 47820
@@ -496,6 +496,7 @@ def main(argv=None) -> None:
     parser.add_argument("--self-test", action="store_true", help="check the app starts, then quit")
     args = parser.parse_args(argv)
     applog.start("Limitless Control", __version__)
+    mac_keys.prepare()   # before anything presses keys, on this, the main thread
     if args.self_test:
         sys.exit(self_test())
 

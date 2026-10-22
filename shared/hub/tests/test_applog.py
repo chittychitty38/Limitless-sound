@@ -26,9 +26,9 @@ def _skipped(path: Path) -> bool:
 
 
 def test_every_copy_matches_the_shared_one():
-    for canonical in (CANONICAL, CANONICAL_JS, CANONICAL_RS):
+    for canonical in (CANONICAL, CANONICAL.parent / "mac_keys.py", CANONICAL_JS, CANONICAL_RS):
         copies = [p for p in ROOT.glob(f"**/{canonical.name}") if p != canonical and not _skipped(p)]
-        assert copies, f"an app carries a copy of {canonical.name}"
+        assert copies, f"some app carries a copy of {canonical.name}"
         for p in copies:
             assert p.read_text() == canonical.read_text(), \
                 f"{p.relative_to(ROOT)} differs from {canonical.relative_to(ROOT).as_posix()}"
