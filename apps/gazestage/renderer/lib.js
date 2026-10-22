@@ -195,3 +195,53 @@ export class OnsetDetector {
     return { hit, level: Math.min(rms / (th * 1.5), 1) };
   }
 }
+
+// ---------- XY tone pad ----------
+// Two MIDI CCs from one point: left–right sends one controller, down–up the other.
+// Positions are 0..1 with y = 1 at the top. Profiles pick sensible controller numbers.
+export const XY_PROFILES = {
+  learn: { name: 'Any plugin or amp (MIDI learn)', x: 16, y: 17 },
+  helix: { name: 'Line 6 Helix: EXP 1 and EXP 2 pedals', x: 1, y: 2 },
+  custom: { name: 'Choose the controller numbers', x: null, y: null },
+};
+const unit = (v) => (v < 0 ? 0 : v > 1 ? 1 : +v || 0);
+export const toCC = (v) => Math.round(unit(v) * 127);
+
+// Control-change bytes for whatever changed since `last` ({ x, y } in CC values).
+// channel is 1..16. Returns { bytes, sent } where sent is the new `last`.
+export function xyMessages(channel, ccX, ccY, x, y, last = {}) {
+  const st = 0xb0 | ((Math.max(1, Math.min(16, channel | 0)) - 1) & 0x0f);
+  const vx = toCC(x), vy = toCC(y), bytes = [];
+  if (vx !== last.x) bytes.push(st, ccX & 0x7f, vx);
+  if (vy !== last.y) bytes.push(st, ccY & 0x7f, vy);
+  return { bytes, sent: { x: vx, y: vy } };
+}
+
+// Moves the pad's point: glide to a spot over a set time (eased), or chase a moving spot
+// (follow mode) with a short time constant so a jittery pointer still sweeps smoothly.
+export class XYMotion {
+  constructor(x = 0.5, y = 0.5) { this.x = x; this.y = y; this.glide = null; this.chase = null; this.t = null; }
+  glideTo(x, y, ms, now) {
+    this.chase = null;
+    if (ms <= 0) { this.glide = null; this.x = unit(x); this.y = unit(y); return; }
+    this.glide = { x0: this.x, y0: this.y, x: unit(x), y: unit(y), t0: now, ms };
+  }
+  chaseTo(x, y, tauMs) { this.glide = null; this.chase = { x: unit(x), y: unit(y), tau: Math.max(1, tauMs) }; }
+  stop() { this.glide = null; this.chase = null; }
+  get moving() { return !!(this.glide || this.chase); }
+  step(now) {
+    const dt = this.t == null ? 0 : Math.max(0, now - this.t); this.t = now;
+    const g = this.glide;
+    if (g) {
+      const p = Math.min(1, (now - g.t0) / g.ms), e = p * p * (3 - 2 * p);
+      this.x = g.x0 + (g.x - g.x0) * e; this.y = g.y0 + (g.y - g.y0) * e;
+      if (p >= 1) this.glide = null;
+    } else if (this.chase) {
+      const c = this.chase, k = 1 - Math.exp(-dt / c.tau);
+      this.x += (c.x - this.x) * k; this.y += (c.y - this.y) * k;
+      // Arrived: the chase is over (left set, it kept the window drawing every frame).
+      if (Math.abs(c.x - this.x) < 1e-4 && Math.abs(c.y - this.y) < 1e-4) { this.x = c.x; this.y = c.y; this.chase = null; }
+    }
+    return [this.x, this.y];
+  }
+}

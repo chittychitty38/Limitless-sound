@@ -47,8 +47,8 @@ const hubServer = createServer((sock) => {
 });
 await new Promise((r) => hubServer.listen(0, '127.0.0.1', r));
 writeFileSync(join(hubHome, 'link.json'), JSON.stringify({ port: hubServer.address().port, token: 'test' }));
-const hubInvoke = async (id, action) => {
-  hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args: {}, source: 'voice', depth: 0 }) + '\n');
+const hubInvoke = async (id, action, args = {}) => {
+  hub.sock.write(JSON.stringify({ op: 'invoke', id, action, args, source: 'voice', depth: 0 }) + '\n');
   for (let t = 0; t < 50 && !hub.results.has(id); t++) await new Promise((r) => setTimeout(r, 100));
   return hub.results.get(id);
 };
@@ -153,9 +153,9 @@ try {
     window.__frames = 0; window.requestAnimationFrame = (f) => { window.__frames++; return ask(f); };
   });
   const laidOut = await layouts();
-  await sleep(3000);
+  await sleep(5000);   // longer than anything GazeStage checks now and then (the tone pad's output, every 4 s)
   const idle = { layouts: await layouts() - laidOut, frames: await bare.evaluate(() => window.__frames) };
-  assert.deepEqual(idle, { layouts: 0, frames: 0 }, `in 3 s sitting idle: ${JSON.stringify(idle)}`);
+  assert.deepEqual(idle, { layouts: 0, frames: 0 }, `in 5 s sitting idle: ${JSON.stringify(idle)}`);
   await app.close();
   hub.hello = null;
 
@@ -280,6 +280,84 @@ try {
   assert.equal(shown?.ok, true);
   assert.equal(await win.evaluate(() => window.__gs.state.page), 'transport');
   await hubInvoke(4, 'pads');
+
+  step('tone pad: two controllers from one point');
+  // On macOS, listen on GazeStage Notes like Pro Tools or a plugin would.
+  const heard = [];
+  let listener = null;
+  if (process.platform === 'darwin') {
+    const { Input } = createRequire(import.meta.url)('@julusian/midi');
+    listener = new Input();
+    for (let i = 0; i < listener.getPortCount(); i++) if (listener.getPortName(i) === 'GazeStage Notes') { listener.openPort(i); break; }
+    listener.on('message', (_dt, m) => heard.push(m));
+  }
+  await win.evaluate(() => {
+    const g = window.__gs; g.sent = [];
+    const send = g.midi.sendTone.bind(g.midi);
+    g.midi.sendTone = (b) => { for (let i = 0; i + 2 < b.length; i += 3) g.sent.push([b[i], b[i + 1], b[i + 2]]); return send(b); };
+    // Switch mode, so the mouse resting on a button never dwells it by accident.
+    Object.assign(g.S, { mode: 'mouse', select: 'switch', xyGlide: 0 });
+  });
+  await win.click('[data-goto=tone]');
+  assert.equal(await win.evaluate(() => window.__gs.state.page), 'tone');
+  const xyBox = await win.locator('#xy').boundingBox();
+  const at = (u, v) => [xyBox.x + u * xyBox.width, xyBox.y + (1 - v) * xyBox.height];
+  const lastCC = (cc) => win.evaluate((c) => window.__gs.sent.filter((m) => m[1] === c).at(-1)?.[2] ?? null, cc);
+  const near = (a, b) => a != null && Math.abs(a - b) <= 2;
+  await win.mouse.click(...at(0.75, 0.75));
+  await win.waitForTimeout(150);
+  assert.ok(near(await lastCC(16), 95) && near(await lastCC(17), 95), `a click places the point: ${await lastCC(16)}, ${await lastCC(17)}`);
+  assert.ok((await win.evaluate(() => window.__gs.sent[0][0])) === 0xb0, 'control changes on channel 1');
+
+  step('tone pad: look and hold still to place');
+  await win.evaluate(() => { window.__gs.S.select = 'dwell'; });
+  await win.mouse.move(...at(0.25, 0.3));
+  await win.waitForFunction(() => Math.abs(window.__gs.motion.x - 0.25) < 0.03, null, { timeout: 4000 });
+  await win.waitForTimeout(100);
+  assert.ok(near(await lastCC(16), 32) && near(await lastCC(17), 38), `placed by dwell: ${await lastCC(16)}, ${await lastCC(17)}, at ${await win.evaluate(() => [window.__gs.motion.x, window.__gs.motion.y])}`);
+
+  await win.evaluate(() => { window.__gs.S.select = 'switch'; });
+
+  step('tone pad: arrows, saved tones and glide');
+  const before = await win.evaluate(() => window.__gs.motion.x);
+  await win.click('[data-nudge=right]');
+  await win.waitForTimeout(300);
+  assert.ok(await win.evaluate(() => window.__gs.motion.x) > before + 0.03, 'right arrow steps right');
+  await win.click('[data-snap=A]');
+  await win.waitForTimeout(100);
+  assert.deepEqual(await win.evaluate(() => [window.__gs.motion.x, window.__gs.motion.y]), [0.2, 0.8]);
+  await win.click('[data-action=xyCenter]');
+  await win.click('[data-action=xyStore]');
+  await win.click('[data-snap=D]');
+  assert.deepEqual(await win.evaluate(() => window.__gs.S.xySnaps.D), [0.5, 0.5]);
+  await win.click('[data-action=xyGlide]');
+  assert.equal(await win.evaluate(() => window.__gs.S.xyGlide), 250);
+
+  step('tone pad: Listen holds a chord on the built-in sound, shaped by the pad');
+  await win.click('[data-action=xyListen]');
+  await sounding(true);
+  assert.ok(await voices() >= 3, `a chord is sounding: ${await voices()} notes`);
+  assert.deepEqual(await sound.evaluate(() => window.__synth.shaping), await win.evaluate(() => [window.__gs.motion.x, window.__gs.motion.y]),
+    'the built-in sound has the pad\'s shape');
+  await win.click('[data-action=xyListen]');
+  await sounding(false);
+  assert.equal(await voices(), 0, 'Listen again lets the chord go');
+  await win.mouse.move(5, 5);
+
+  step('tone pad: other Limitless Sound apps can move it');
+  assert.ok(hub.hello.actions.some((a) => a.id === 'xy.set'));
+  const set = await hubInvoke(5, 'xy.set', { x: 0, y: 127, glide: 0 });
+  assert.equal(set?.ok, true, JSON.stringify(set));
+  await win.waitForTimeout(100);
+  assert.deepEqual([await lastCC(16), await lastCC(17)], [0, 127]);
+  assert.equal((await hubInvoke(6, 'xy.snapC'))?.ok, true);
+  if (listener) {
+    await win.waitForTimeout(300);
+    listener.closePort();
+    assert.ok(heard.some((m) => m[0] === 0xb0 && m[1] === 16 && m[2] === 0), `GazeStage Notes carried the tone pad: ${JSON.stringify(heard.slice(-4))}`);
+  }
+  await win.evaluate(() => Object.assign(window.__gs.S, { mode: 'head', select: 'dwell' }));
+  await win.click('[data-goto=play]');
 
   step('settings open and close');
   await win.click('#settingsBtn');

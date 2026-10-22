@@ -24,6 +24,7 @@ addEventListener('message', (e) => {
       case 'noteOff': synth.noteOff(m.note); break;
       case 'allOff': synth.allOff(); break;
       case 'preset': synth.setPreset(m.name); break;
+      case 'shape': synth.shape(m.x, m.y); break;
       case 'volume': synth.setVolume(m.value); break;
     }
   };

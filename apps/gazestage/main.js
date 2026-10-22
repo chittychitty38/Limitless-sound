@@ -52,7 +52,7 @@ function openVirtualPorts() {
   }
 }
 function closeVirtualPorts() {
-  for (const p of [midi.out.notes, midi.out.hui, midi.huiIn]) { try { p?.closePort(); } catch {} }
+  for (const p of [midi.out.notes, midi.out.hui, midi.out.tone, midi.huiIn]) { try { p?.closePort(); } catch {} }
   midi.out = {}; midi.huiIn = null;
 }
 
@@ -61,10 +61,40 @@ ipcMain.on('midi:send', (_e, port, bytes) => {
   const o = midi.out[port];
   if (!o || !Array.isArray(bytes)) return;
   // Split a run of complete messages (e.g. a HUI zone + port pair) into single sends.
-  for (let i = 0; i < bytes.length;) {
-    const len = (bytes[i] & 0xf0) === 0xc0 || (bytes[i] & 0xf0) === 0xd0 ? 2 : 3;
-    o.sendMessage(bytes.slice(i, i + len)); i += len;
-  }
+  try {
+    for (let i = 0; i < bytes.length;) {
+      const len = (bytes[i] & 0xf0) === 0xc0 || (bytes[i] & 0xf0) === 0xd0 ? 2 : 3;
+      o.sendMessage(bytes.slice(i, i + len)); i += len;
+    }
+  } catch {}   // a device unplugged mid-send; the page re-picks its outputs on its own
+});
+
+// Hardware MIDI outputs (a Line 6 Helix over USB, an interface's MIDI out), for the tone pad.
+// Our own virtual ports are left out of the list.
+function hardwareOutputs() {
+  if (!midi.native) return [];
+  try {
+    const { Output } = require('@julusian/midi');
+    const o = new Output(), names = [];
+    for (let i = 0; i < o.getPortCount(); i++) names.push(o.getPortName(i));
+    o.closePort?.();
+    return [...new Set(names)].filter((n) => n && !/^GazeStage /.test(n) && !/IAC Driver|Midi Through/i.test(n));
+  } catch { return []; }
+}
+ipcMain.handle('midi:outputs', () => hardwareOutputs());
+// Open one hardware output as the "tone" port (or close it with an empty name).
+ipcMain.handle('midi:open-tone', (_e, name) => {
+  try { midi.out.tone?.closePort(); } catch {}
+  delete midi.out.tone;
+  if (!name || !midi.native) return { ok: !name };
+  try {
+    const { Output } = require('@julusian/midi');
+    const o = new Output();
+    for (let i = 0; i < o.getPortCount(); i++) {
+      if (o.getPortName(i) === name) { o.openPort(i); midi.out.tone = o; return { ok: true }; }
+    }
+    return { ok: false, error: `${name} isn't connected` };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
 
 // ---------- Limitless Sound ----------
@@ -81,6 +111,19 @@ const SUITE_ACTIONS = [
   { id: 'scale', label: 'Next scale' },
   { id: 'latch', label: 'Hold notes on or off' },
   { id: 'panic', label: 'All notes off' },
+  // The XY tone pad: two MIDI controllers from one point, for a Helix or any plugin.
+  { id: 'tone', label: 'Show the tone pad', phrases: ['tone pad', 'show tone'] },
+  { id: 'xy.set', label: 'Move the tone pad to a point', args: { x: 'number', y: 'number', glide: 'number' } },
+  { id: 'xy.snapA', label: 'Tone pad: go to A', phrases: ['tone A', 'snapshot A'] },
+  { id: 'xy.snapB', label: 'Tone pad: go to B', phrases: ['tone B', 'snapshot B'] },
+  { id: 'xy.snapC', label: 'Tone pad: go to C', phrases: ['tone C', 'snapshot C'] },
+  { id: 'xy.snapD', label: 'Tone pad: go to D', phrases: ['tone D', 'snapshot D'] },
+  { id: 'xy.center', label: 'Tone pad: back to the middle', phrases: ['tone center', 'tone middle'] },
+  { id: 'xy.left', label: 'Tone pad: step left' },
+  { id: 'xy.right', label: 'Tone pad: step right' },
+  { id: 'xy.up', label: 'Tone pad: step up' },
+  { id: 'xy.down', label: 'Tone pad: step down' },
+  { id: 'xy.follow', label: 'Tone pad: follow the pointer on or off' },
 ];
 const TRANSPORT = new Set(['play', 'stop', 'record']);
 const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [], tracking: '' };
@@ -283,6 +326,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Transport', accelerator: 'CmdOrCtrl+1', click: send('page:transport') },
         { label: 'Instrument', accelerator: 'CmdOrCtrl+2', click: send('page:play') },
+        { label: 'Tone Pad', accelerator: 'CmdOrCtrl+3', click: send('page:tone') },
         { type: 'separator' },
         { label: 'All Notes Off', accelerator: 'CmdOrCtrl+.', click: send('panic') },
         { label: 'Run Setup Again…', click: send('onboarding') },

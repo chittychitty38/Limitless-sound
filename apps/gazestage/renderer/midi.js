@@ -3,6 +3,9 @@
 // browser) it uses Web MIDI with loopback ports the player picks, auto-picking likely names.
 import { HUI, HuiParser, huiSwitch } from './lib.js';
 
+// Line 6 hardware that takes MIDI over USB: Helix, HX Stomp, HX Effects, POD Go.
+const LINE6 = /helix|hx stomp|hx effects|pod go|line ?6/i;
+
 const GUESS = {
   notes: /gazestage notes|notes/i,
   huiOut: /to pro tools|gazestage hui|hui/i,
@@ -16,7 +19,7 @@ export class MidiRouter extends EventTarget {
     this.mode = 'none';            // 'native' | 'web' | 'none'
     this.access = null;
     this.parser = new HuiParser();
-    this.lastPing = 0;
+    this.lastPing = -Infinity;
     this.leds = new Map();         // `${zone}:${port}` -> on
     this.sel = { notes: store.get('midi.notes', ''), huiOut: store.get('midi.huiOut', ''), huiIn: store.get('midi.huiIn', '') };
     this.useBuiltIn = store.get('midi.useBuiltIn', true);
@@ -89,6 +92,39 @@ export class MidiRouter extends EventTarget {
     const o = this.webOut('huiOut'); if (!o) return false; o.send(bytes); return true;
   }
   transport(port, down) { return this.sendHui(huiSwitch(HUI.TRANSPORT_ZONE, port, down)); }
+
+  // ---------- tone pad output ----------
+  // choice: 'auto' (a connected Line 6 device, otherwise the notes port), 'notes', or the name
+  // of a hardware output. Resolved again whenever ports come and go.
+  async toneOutputs() {
+    if (this.mode === 'native') return (await window.gazestage.midi.outputs()).map(name => ({ id: name, name }));
+    return this.access ? [...this.access.outputs.values()].map(p => ({ id: p.id, name: p.name })) : [];
+  }
+  async resolveTone(choice) {
+    const list = await this.toneOutputs();
+    let pick = null;
+    if (choice === 'auto') pick = list.find(p => LINE6.test(p.name)) || null;
+    else if (choice !== 'notes') pick = list.find(p => p.id === choice || p.name === choice) || null;
+    this.toneMissing = choice !== 'auto' && choice !== 'notes' && !pick ? choice : null;
+    if (this.mode === 'native') {
+      const want = pick?.name || '';
+      if (want !== (this.toneOpen || '')) {
+        const r = await window.gazestage.midi.openTone(want);
+        this.toneOpen = r.ok ? want : '';
+      }
+      this.toneName = this.toneOpen || this.nativePorts?.notes || null;
+    } else {
+      this.toneId = pick?.id || null;
+      this.toneName = pick?.name || this.webOut('notes')?.name || null;
+    }
+    return this.toneName;
+  }
+  sendTone(bytes) {
+    if (!bytes.length) return true;
+    if (this.mode === 'native') { window.gazestage.midi.send(this.toneOpen ? 'tone' : 'notes', bytes); return true; }
+    const o = (this.toneId && this.access?.outputs.get(this.toneId)) || this.webOut('notes');
+    if (!o) return false; o.send(bytes); return true;
+  }
 
   sendNotes(bytes) {
     if (this.mode === 'native') { window.gazestage.midi.send('notes', bytes); return true; }

@@ -3,13 +3,14 @@
 // waits for the computer's audio.
 export class SynthLink {
   constructor(bridge) {
-    this.port = null; this.waiting = []; this.preset = 'keys'; this.volume = 0.9;
+    this.port = null; this.waiting = []; this.preset = 'keys'; this.volume = 0.9; this.shaping = null;
     addEventListener('message', (e) => {
       if (e.source !== window || e.data !== 'gazestage:synth-port') return;
       this.port?.close(); this.port = e.ports[0];
       // The instrument's page (a new one too, if it had to be replaced) starts with the sound chosen here.
       this.port.postMessage({ op: 'preset', name: this.preset });
       this.port.postMessage({ op: 'volume', value: this.volume });
+      if (this.shaping) this.port.postMessage({ op: 'shape', x: this.shaping[0], y: this.shaping[1] });
       // Pressed while GazeStage was starting: they count from now, so they still sound.
       for (const m of this.waiting.splice(0)) this.port.postMessage({ ...m, at: Date.now() });
     });
@@ -27,6 +28,8 @@ export class SynthLink {
   allOff() { this.send({ op: 'allOff' }); }
   tick() { this.send({ op: 'tick' }); }
   warm() { this.send({ op: 'warm' }); }
+  // The tone pad's brightness and room on the built-in sound (x null: back to the preset).
+  shape(x, y) { this.shaping = x == null ? null : [x, y]; if (this.port) this.send({ op: 'shape', x, y }); }
   setPreset(name) { this.preset = name; if (this.port) this.send({ op: 'preset', name }); }
   setVolume(value) { this.volume = value; if (this.port) this.send({ op: 'volume', value }); }
 }

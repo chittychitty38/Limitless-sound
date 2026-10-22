@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('gazestage', {
   },
   midi: {
     status: () => ipcRenderer.invoke('midi:status'),
+    outputs: () => ipcRenderer.invoke('midi:outputs'),
+    openTone: (name) => ipcRenderer.invoke('midi:open-tone', name),
     send: (port, bytes) => ipcRenderer.send('midi:send', port, Array.from(bytes)),
     onHuiIn: (cb) => ipcRenderer.on('midi:hui-in', (_e, bytes) => cb(bytes)),
   },

@@ -38,8 +38,26 @@ A helper can click through setup with a mouse. Once the camera is on, every step
 
 - **Instrument:** big note pads in any key and scale. Higher notes are on the top row. **Chords** turns every pad into a chord that fits the key, and **Hold notes** latches notes on. The built-in sound has two voices, Soft keys and Warm pad, so it plays with no other software.
 - **Transport:** Rewind, Play, Fast forward, Record and Stop for Pro Tools. Play and Record light up to match Pro Tools.
+- **Tone:** an XY pad for shifting your sound hands-free. Left–right and down–up each send a MIDI controller, so one point moves two things at once: drive and delay, wah and mix, or any two controls on an amp, a Helix or a plugin. See [The tone pad](#the-tone-pad).
 - **Pause:** look at Pause to rest. Nothing fires until you look at Resume.
 - If the pointer drifts, choose **Recenter** (⌘R). **Calibrate** (⌘K) fits the pointer to you.
+
+## The tone pad
+
+Open **Tone** (⌘3). The yellow point is where your tone is.
+
+- **Place it:** look anywhere on the pad and hold still. When the ring fills, the point glides there. With a switch, a sound or a long blink, it goes to the pointer straight away. A helper can click or drag.
+- **Follow:** turn on **Follow** and the point follows you while you look around the pad, for live sweeps. It waits a moment when you first look onto the pad, so glancing across never moves your tone. With a switch, it follows only while you hold the switch.
+- **Arrows:** step the point. Keep looking at an arrow to keep it moving.
+- **A, B, C, D:** saved tones. Choose **Save here**, then a letter, to save where the point is now. Choosing a letter glides to that tone.
+- **Glide:** how long a move takes, from instant to 4 seconds, for smooth tone morphs.
+- **Listen:** holds a chord on the built-in sound so you can hear the pad work with nothing else connected. Left–right makes it darker or brighter, and up–down adds room.
+
+**What it sends:** CC 16 (left–right) and CC 17 (down–up) on channel 1, 0 to 127. You can change the numbers, the channel and the names in Settings › Tone pad.
+
+**A plugin in Pro Tools:** set the track's MIDI input to `GazeStage Notes`. Start MIDI learn on the plugin control, then in Settings › Tone pad choose **Teach left–right** or **Teach up–down**. Only that one controller moves, so the plugin learns the right one.
+
+**A Line 6 Helix, HX Stomp or POD Go:** plug it in with USB. GazeStage finds it and sends to it automatically. In Settings › Tone pad › Controller numbers, choose **Line 6 Helix: EXP 1 and EXP 2 pedals**. GazeStage then sends CC 1 and CC 2, which the Helix treats as its EXP 1 and EXP 2 pedals. Anything you assign to those pedals on the Helix, such as a wah, a volume swell or a set of parameters, now follows the point. Other Limitless Sound apps can move the pad too, for example a voice command "tone A".
 
 ## Connecting Pro Tools (one time)
 
@@ -60,7 +78,7 @@ Other DAWs that support HUI work the same way, including Logic, Cubase and Reape
 | ⌘R | Recenter the pointer |
 | ⌘K | Calibrate |
 | ⌘P | Pause or resume |
-| ⌘1 / ⌘2 | Transport / Instrument |
+| ⌘1 / ⌘2 / ⌘3 | Transport / Instrument / Tone |
 | ⌘. | All notes off |
 | ⌘, | Settings |
 
@@ -73,6 +91,7 @@ When Limitless Sound is running, GazeStage also follows the suite's shared text 
 ## Known limits
 
 - It hasn't been tested yet on a real Pro Tools rig or with a player. The HUI codes for rewind (1), fast forward (2) and stop (3) are unconfirmed.
+- The tone pad hasn't been tried on a real Helix yet. CC 1 and CC 2 as EXP 1 and EXP 2 come from Line 6's published MIDI table.
 - GazeStage controls its own window. Moving the system cursor and sending shortcuts to other apps is planned through the Limitless Sound hub.
 
 ## For developers
