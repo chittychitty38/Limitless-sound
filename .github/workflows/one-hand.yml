@@ -131,6 +131,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Limitless One-Hand ${{ steps.version.outputs.version }}
           fail_on_unmatched_files: true
+          make_latest: "false"   # the repo's Latest release is the whole-suite download
           files: |
             out/*.dmg
             out/*.exe
