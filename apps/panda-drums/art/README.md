@@ -36,14 +36,18 @@ cp ui/* ../Resources/ui/
   ride, the bottom hi-hat under the top one, the shirt under the arms and chin). The wall is
   spread back in behind everything that moves; the room keeps its stands and the panda's legs.
   For the rig it cuts:
-  - the right fist with its stick painted out of it in fur;
+  - both fists, each with its stick painted out of it in fur (the left one is its own shape,
+    holding its stick level);
   - the whole stick, upright, carried on through the fist to a rounded butt;
-  - an arm: a plush tube of his own fur, shaded round.
+  - a ball of his own fur, lit like the fists: the plugin strings them into his arms;
+  - both arms exactly as the picture has them, for him at rest.
 - `hero_stage.py` lays the layers out on the 1280 x 736 stage, at 1x and 2x, with
   `manifest.json`:
   - where each layer sits, the drum heads and cymbal discs, and the slots other kits' drums go in;
-  - the rig's points: the shoulders, the fulcrum in the fist, the wrist, the stick's length either
-    side of the fulcrum, the neck and the seat.
+  - the rig's points: the shoulders, each fist's fulcrum and wrist, the stick's length either
+    side of the fulcrum, the neck and the seat;
+  - how each hand holds its stick in the picture, in 3D (the stick's heading and pitch, solved
+    from how it shows on screen), so his rest pose is exactly the picture's.
 
   The kit is laid out the way a real one is around the drummer:
   - on his left (the picture's right): the hi-hat, rack tom 1 and the first crash;
@@ -90,7 +94,7 @@ tooltip and the key panel from them.
 | Room | The picture's room; the heart lights glow, twinkle and flare with the kick. |
 | Drums | Scaled to the drum's size in inches; the head flashes and a ring runs across it on every hit. |
 | Cymbals | Swing on their stands; a flash of light across the bronze. The hi-hat opens with the pedal. |
-| Arms | Each hand plays like a drummer's. The stick turns in 3D about the fulcrum in his fist, so it shortens on screen when it points at the drum. A stroke starts at the height its velocity needs: an accent gets an upstroke first, and a ghost note is an inch-high tap. The stick drops onto the head, faster and faster, and lands exactly when the hit sounds. It sits for a frame, then bounces back up to the height that hand has been playing at. The hand leads the stick down; the forearm joins in for the loud ones. As the sticks rise they open into a V, away from his face. Sticks lie nearly flat to a drum head, go across the hi-hat from the side, put the tip on the ride's bow and the shoulder on a crash's edge. |
+| Arms | At rest, the picture's own arms. Playing, each hand is its own fist from the picture, its arm a string of balls of his fur out of the sleeve, bending at the elbow, the stick across the front of the fist as in the picture. Each hand plays like a drummer's. The stick turns in 3D about the fulcrum in his fist, so it shortens on screen when it points at the drum. A stroke starts at the height its velocity needs: an accent gets an upstroke first, and a ghost note is an inch-high tap. The stick drops onto the head, faster and faster, and lands exactly when the hit sounds. It sits for a frame, then bounces back up to the height that hand has been playing at. The hand leads the stick down; the forearm joins in for the loud ones. As the sticks rise they open into a V, away from his face. Sticks lie nearly flat to a drum head, go across the hi-hat from the side, put the tip on the ride's bow and the shoulder on a crash's edge. |
 | Sticking | Open-handed: his left hand keeps time on the hi-hat, his right plays the snare and the ride. Fills go hand to hand around the toms, as far as each hand can reach. Each hand finishes the stroke it's on before it heads for the next drum, in an arc, the stick turning as it goes. |
 | Body | Leans into far reaches, bounces with the kick, breathes. His head nods to the beat, leans toward each hit and dips into it. Hands with nothing to play go back to the picture's sticks-up pose; arms up, sticks waving, when the song stops. |
 | Face | His grin while he plays; a blink every few seconds; a squint through a tom fill and on a solid china; a laugh on a big crash; a wink when idle; sad when you mark a hit bad. |

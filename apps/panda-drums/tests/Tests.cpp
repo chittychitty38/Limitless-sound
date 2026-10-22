@@ -401,12 +401,18 @@ public:
         expect ((bool) skin.at ("kit/china/front"));
         expect (skin.at ("kit/stands/china").size() == 1);
         names.add (skin.at ("kit/stands/china")[0].getProperty ("file", {}).toString());
-        // The rig: torso, head, both sleeves, the fist, the stick and the arm.
-        for (auto* path : { "panda/torso", "panda/head_file", "panda/fist/file", "panda/stick/file", "panda/limb/file" })
+        // The rig: torso, head, both sleeves, each hand's fist and resting arm, the stick and the fur.
+        for (auto* path : { "panda/torso", "panda/head_file", "panda/stick/file", "panda/fur/file" })
             names.add (skin.at (path).toString());
-        expect (skin.at ("panda/sleeves").size() == 2);
-        for (int i = 0; i < skin.at ("panda/sleeves").size(); ++i)
-            names.add (skin.at ("panda/sleeves")[i].toString());
+        for (auto* list : { "panda/sleeves", "panda/rest" })
+        {
+            expect (skin.at (list).size() == 2, list);
+            for (int i = 0; i < skin.at (list).size(); ++i)
+                names.add (skin.at (list)[i].toString());
+        }
+        expect (skin.at ("panda/fists").size() == 2);
+        for (int i = 0; i < skin.at ("panda/fists").size(); ++i)
+            names.add (skin.at ("panda/fists")[i].getProperty ("file", {}).toString());
         for (auto* face : { "neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh",
                             "surprised", "tongue_out", "angry", "sad", "blink" })
             if (! (bool) skin.at (juce::String ("panda/faces/") + face + "/own"))
@@ -422,14 +428,23 @@ public:
         expect (shoulders.size() == 2);
         auto right = Skin::point (shoulders[0]), left = Skin::point (shoulders[1]);
         expect (right.x < centre && left.x > centre, "a shoulder each side of his middle");
-        auto pivot = Skin::point (skin.at ("panda/fist/pivot")), wrist = Skin::point (skin.at ("panda/fist/wrist"));
-        expect (skin.sprite (skin.at ("panda/fist/file").toString()).bounds.contains (pivot), "the stick turns inside the fist");
-        expect (pivot.getDistanceFrom (wrist) < 80.0f && wrist.getDistanceFrom (right) < 120.0f);
+        for (int side = 0; side < 2; ++side)
+        {
+            auto fist = skin.at ("panda/fists")[side];
+            auto pivot = Skin::point (fist.getProperty ("pivot", {})), wrist = Skin::point (fist.getProperty ("wrist", {}));
+            expect (skin.sprite (fist.getProperty ("file", {}).toString()).bounds.contains (pivot), "the stick turns inside the fist");
+            expect (pivot.getDistanceFrom (wrist) < 80.0f && wrist.getDistanceFrom (Skin::point (shoulders[side])) < 120.0f);
+            // At rest the hand is where the picture has it.
+            auto home = skin.at ("panda/home")[side];
+            expect (Skin::point (home.getProperty ("pivot", {})) == pivot);
+            expect (std::abs ((double) home.getProperty ("heading", 9.0)) < 1.6 && std::abs ((double) home.getProperty ("pitch", 9.0)) < 1.6);
+        }
         auto length = Skin::number (skin.at ("panda/stick/length")), butt = Skin::number (skin.at ("panda/stick/butt"));
         auto stick = skin.sprite (skin.at ("panda/stick/file").toString()).bounds;
         expect (length > 80.0f && butt > 10.0f && butt < length);
+        expect (Skin::number (skin.at ("panda/stick/real")) >= length);
         expectWithinAbsoluteError (Skin::number (skin.at ("panda/stick/pivot_y")) + butt, stick.getHeight(), 3.0f);
-        expect (Skin::number (skin.at ("panda/limb/radius")) > 10.0f);
+        expect (Skin::number (skin.at ("panda/fur/radius")) > 10.0f);
         expect (Skin::point (skin.at ("panda/neck")).y > Skin::point (skin.at ("panda/head/anchor")).y);
 
         beginTest ("slots and anchors for every kind of drum");

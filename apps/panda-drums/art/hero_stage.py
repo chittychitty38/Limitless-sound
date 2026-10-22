@@ -75,7 +75,7 @@ SLOTS = {
     "crash": [((1050, 127), 139), ((200, 218), 140), ((1130, 300), 118), ((120, 330), 118)],
     "ride": [((352, 178), 140), ((1120, 330), 128)],
     "china": [((452, 325), 146), ((1150, 60), 104)],
-    "splash": [((910, 200), 56), ((560, 168), 52)],
+    "splash": [((1125, 394), 60), ((560, 168), 52)],     # the first on the right crash stand's lower clamp, by the hi-hat
     "perc": [((1100, 520), 62), ((230, 520), 62)],
 }
 DEFAULT_SIZE = {"kick": [22], "rack1": [10], "rack2": [10, 12], "rack3": [10, 12, 13], "rack4": [10, 12, 13, 14],
@@ -83,7 +83,7 @@ DEFAULT_SIZE = {"kick": [22], "rack1": [10], "rack2": [10, 12], "rack3": [10, 12
                 "china": [18, 16], "splash": [10, 10], "perc": [8, 8]}
 
 # The rig, hero pixels.
-RIG = dict(shoulders=[(588, 264), (836, 288)], wrist=(546, 258), grip=(526, 200), tip=(549, 100),
+RIG = dict(grip=(526, 200), tip=(549, 100),
            neck=(720, 262), head=(720, 160, 137, 105), seat=(712, 430))
 FACES = ["neutral", "happy", "open_mouth", "smile", "focused", "excited", "wink", "laugh", "surprised", "tongue_out",
          "angry", "sad"]
@@ -190,31 +190,39 @@ def main(src, pieces, outdir):
 
     # ---- the panda
     pan = man["panda"]
-    for name in ("torso", "head", "sleeve_r", "sleeve_l", "fist"):
+    for name in ("torso", "head", "sleeve_r", "sleeve_l", "fist", "fist_l", "rest_r", "rest_l"):
         hero_layer(src, info, out, name)
-    # The arm tube and the stick are upright pictures of their own, kept at the origin.
-    for name in ("limb", "stick"):
+    # The fur ball and the stick are upright pictures of their own, kept at the origin.
+    for name in ("fur", "stick"):
         x, y, w, hh = info["layers"][name]
         out.write(name, Image.open(os.path.join(src, name + ".png")).convert("RGBA"), 0, 0, w * K, hh * K)
     r = RIG
+    rig = info["rig"]
     hx, hy, ha, hb = r["head"]
     gx, gy = r["grip"]
     tx, ty = r["tip"]
-    limb_len, limb_r = info["rig"]["limb"]
     grip_len = math.hypot(tx - gx, ty - gy)
-    pin, butt_in = info["rig"]["pivot_in"], info["rig"]["butt_in"]
-    pivot = (gx + (gx - tx) / grip_len * pin, gy + (gy - ty) / grip_len * pin)
+    pin, butt_in = rig["pivot_in"], rig["butt_in"]
+    pivot_r = (gx + (gx - tx) / grip_len * pin, gy + (gy - ty) / grip_len * pin)
+    pivot_l = tuple(rig["pivot_l"])
+    homes, real = hand_poses([(S(*pivot_r), S(tx, ty)), (S(*pivot_l), S(*rig["tip_l"]))])
     pan.update(
         head=dict(anchor=S(hx, hy), radius=R(ha), ellipse=E(hx, hy, ha, hb)),
         torso="torso", head_file="head", sleeves=["sleeve_r", "sleeve_l"],
-        shoulders=[S(*p) for p in r["shoulders"]], neck=S(*r["neck"]), seat=S(*r["seat"]),
-        # The stick pivots in the fist (the fulcrum, between thumb and fingers): its length is from
-        # there to the tip, its butt from there to the other end, and pivot_y is where the fulcrum
-        # is in its upright picture. The angle is the picture's, on screen.
-        fist=dict(file="fist", pivot=S(*pivot), wrist=S(*r["wrist"])),
+        shoulders=[S(*p) for p in rig["shoulders"]], neck=S(*r["neck"]), seat=S(*r["seat"]),
+        # Each hand's own fist from the picture. The stick turns about the fulcrum in it (pivot);
+        # the arm meets it at the wrist. On the right the stick's butt shows below the fist.
+        fists=[dict(file="fist", pivot=S(*pivot_r), wrist=S(*rig["wrists"][0]), butt_front=True),
+               dict(file="fist_l", pivot=S(*pivot_l), wrist=S(*rig["wrists"][1]), butt_front=False)],
+        # The picture's arms as they are, for him at rest, and how each hand holds its stick there
+        # (the stick's heading across the floor and pitch above it, in radians).
+        rest=["rest_r", "rest_l"],
+        home=homes,
+        # The stick's picture: from the fulcrum to the tip (length) and to the butt, where the
+        # fulcrum is in the upright picture (pivot_y), and how long the stick really is (real).
         stick=dict(file="stick", length=R(grip_len + pin), butt=R(butt_in - pin), pivot_y=R(4 + grip_len + pin),
-                   angle=round(math.degrees(math.atan2(ty - gy, tx - gx)), 3)),
-        limb=dict(file="limb", length=R(limb_len), radius=R(limb_r)),
+                   real=round(real, 2)),
+        fur=dict(file="fur", radius=R(rig["fur_r"])),
     )
 
     # ---- faces, from the sheet, on the picture's glasses
@@ -361,6 +369,38 @@ def hero_eyes(head_img, head_place):
         crop = rgba[y0:y1, x0:x1].clip(0, 255).astype(np.uint8)
         out.append((name, Image.fromarray(crop, "RGBA"), (x0, y0)))
     return out
+
+
+CAM_TILT = 0.26          # the camera looks down on him ~15 degrees (the plugin uses the same)
+
+
+def on_screen(heading, pitch):
+    """A stick's direction (heading across the floor: 0 toward us, + to screen right; pitch above
+    it) as it shows on screen, per unit of its length."""
+    X = math.cos(pitch) * math.sin(heading)
+    Y = math.sin(pitch)
+    Z = math.cos(pitch) * math.cos(heading)
+    return X, -Y * math.cos(CAM_TILT) + Z * math.sin(CAM_TILT)
+
+
+def hand_poses(sticks, right_pitch=math.radians(75)):
+    """How each hand holds its stick in the picture, in 3D: the right stick stands up (pitch 75
+    degrees), which with its slant on screen gives its heading and the stick's real length; the
+    left one, at that length, is whatever heading and pitch show it as it is."""
+    (p0, t0), (p1, t1) = sticks
+    vx, vy = t0[0] - p0[0], t0[1] - p0[1]
+    best = min((abs(math.atan2(*reversed(on_screen(h, right_pitch))) - math.atan2(vy, vx)), h)
+               for h in (math.radians(d / 10) for d in range(1, 890)))
+    h0 = best[1]
+    real = math.hypot(vx, vy) / math.hypot(*on_screen(h0, right_pitch))
+    ux, uy = t1[0] - p1[0], t1[1] - p1[1]
+    err, h1, q1 = min((math.hypot(on_screen(h, q)[0] * real - ux, on_screen(h, q)[1] * real - uy), h, q)
+                      for h in (math.radians(d / 4) for d in range(-356, 357))
+                      for q in (math.radians(d / 4) for d in range(-200, 357)))
+    print("hands at rest: right heading %.1f pitch %.1f, left heading %.1f pitch %.1f (off %.2f px), stick %.1f"
+          % (math.degrees(h0), math.degrees(right_pitch), math.degrees(h1), math.degrees(q1), err, real))
+    return ([dict(pivot=list(p0), heading=round(h0, 4), pitch=round(right_pitch, 4)),
+             dict(pivot=list(p1), heading=round(h1, 4), pitch=round(q1, 4))], real)
 
 
 def tone_to(patch, head_rgb, place, head_place):

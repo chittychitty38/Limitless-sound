@@ -113,7 +113,9 @@ private:
         float ready = 0.45f;        // the stroke height it has been playing at
         double nextFromT = -10.0;   // when the next stroke was known, and how high the stick was then
         float nextFromH = 0.0f;
-        float home = 1.0f;          // 1: resting in the picture's pose, sticks up
+        float home = 1.0f;          // 1: resting in the picture's pose
+        float homeFrom = 0.0f;      // leaving it: how far in it the hand was, and over when
+        double homeFadeStart = -10.0, homeFadeEnd = -10.0;
     };
 
     // The rigged panda's arm at a moment. The stick turns in 3D about the fulcrum in his fist:
@@ -129,6 +131,7 @@ private:
         P strikePivot;              // where the fist is when the stick is on the head
         float heading = 0.0f, pitch = 0.0f;   // the stick's heading and pitch on the head
         float height = 0.0f;        // the stroke: 0 on the head ... 1 all the way up
+        bool atRest = false;        // exactly in the picture's pose
     };
 
     struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; int variant = 0; };
@@ -154,6 +157,7 @@ private:
     void paintSkin (juce::Graphics&);
     Arm armPose (const Hand&, double t) const;
     float strokeAt (const Hand&, double t) const;
+    float homeWeight (const Hand&, double t) const;
     P rigStrikePoint (const PieceView&, int hand) const;
     juce::AffineTransform torsoTransform() const;
     juce::AffineTransform headTransform() const;

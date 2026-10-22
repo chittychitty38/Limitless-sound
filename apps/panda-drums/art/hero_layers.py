@@ -63,7 +63,8 @@ PIECES = [
     ("torso", [poly((560, 220), (612, 226), (700, 236), (790, 238), (842, 262), (862, 300), (860, 338), (556, 338), (560, 300))], {}),
     ("sleeve_r", [poly((568, 220), (604, 226), (610, 262), (604, 308), (566, 310))], {"purple": True}),
     ("sleeve_l", [poly((798, 262), (846, 264), (858, 290), (852, 312), (800, 306))], {"purple": True}),
-    ("head", [ellipse(720, 162, 142, 114), ellipse(650, 52, 50, 46), ellipse(856, 102, 50, 50)],
+    ("head", [ellipse(720, 162, 142, 114), ellipse(650, 52, 50, 46), ellipse(856, 102, 50, 50),
+              ellipse(636, 228, 46, 24), ellipse(806, 242, 46, 22)],
      {"all": [ellipse(720, 161, 132, 104)], "no_collar_below": 228}),
     ("floor", [poly((295, 370), (306, 360), (522, 360), (530, 372), (530, 552), (520, 568), (305, 568), (295, 552))], {}),
     ("drum_center", [poly((552, 322), (560, 316), (738, 316), (745, 324), (745, 396), (552, 396))],
@@ -71,7 +72,7 @@ PIECES = [
     ("drum_right", [poly((748, 354), (756, 348), (946, 348), (952, 356), (952, 444), (748, 444))], {}),
     ("kick", [ellipse(689, 520, 176, 150), poly((518, 400), (560, 392), (560, 640), (518, 620))], {"all": [ellipse(690, 520, 150, 124)]}),
     ("arm_r", [poly((466, 186), (568, 186), (580, 222), (576, 314), (520, 318), (466, 284)), line(551, 96, 510, 264, 18)], {"not_purple": True}),
-    ("arm_l", [poly((836, 266), (872, 272), (898, 300), (898, 349), (826, 349), (832, 300)), line(848, 336, 963, 299, 18)], {"not_purple": True}),
+    ("arm_l", [poly((812, 274), (872, 272), (898, 300), (898, 349), (812, 354), (802, 300)), line(848, 336, 963, 299, 18)], {"not_purple": True}),
     ("front_stand", [rect(438, 345, 468, 560), poly((452, 505), (580, 667), (325, 667))], {}),
     ("china", [ellipse(452, 325, 148, 27, 5), rect(441, 281, 472, 312)], {"no_fur": True, "all": [ellipse(452, 326, 140, 21, 5)]}),
 ]
@@ -94,10 +95,17 @@ FIST_R = poly((482, 194), (564, 190), (570, 256), (540, 272), (482, 266))     # 
 SHAFT_R = poly((530, 90), (570, 90), (546, 203), (514, 203))                   # the stick above the fist
 GRIP, TIP = (526.0, 200.0), (549.0, 100.0)    # where the stick leaves the fist, and its tip
 PIVOT_IN, BUTT_IN = 24.0, 66.0          # down the stick from the grip: the fulcrum in the fist, and the butt end
-FUR_PATCH = (540, 250, 584, 282)        # plain arm fur, for the arm tube
-LIMB, LIMB_R = 130, 27                  # the arm tube: length and radius (hero pixels)
 STICK_W = 16                            # the stick's width, with room for its soft edge
 STICK_R = line(551, 96, 510, 264, 18)
+# The left fist: it holds its stick level, pointing at the hi-hat, laid across its front.
+FIST_L = poly((812, 280), (868, 279), (886, 298), (889, 340), (875, 355), (820, 355), (805, 337), (805, 295))
+STICK_L = line(851, 331, 892, 319, 16)                                          # the stick where it crosses the fist
+PIVOT_L, TIP_L = (847.2, 331.7), (954.0, 301.0)  # the left stick's fulcrum in the fist, and its tip
+# Where each arm comes out of its sleeve and meets its fist, and the fur the arms are made of.
+SHOULDERS = [(588, 266), (800, 296)]
+WRISTS = [(546, 258), (819, 316)]
+FUR_PATCH = (822, 296, 846, 326)        # plain fur on the left fist
+FUR_R = 30                              # an arm's radius (hero pixels)
 
 
 def draw_shape(mask, shape, value=255):
@@ -340,25 +348,41 @@ def main(src, outdir):
 
     # ---- the rig: the right fist (with the stick where it crosses the fingers), the stick on
     # its own (straight, upright, from the grip to the tip), and the arm
-    arm = masks["arm_r"]
-    save_layer(clean_fist(rgb, arm, room, hsv_h, hsv_s, hsv_v), "fist", outdir, info)
-    save_layer(clean_stick(rgb, arm, room), "stick", outdir, info, keep_box=True)
-    save_layer(fur_tube(rgb), "limb", outdir, info, keep_box=True)
+    hsv = (hsv_h, hsv_s, hsv_v)
+    save_layer(clean_fist(rgb, masks["arm_r"], room, hsv, FIST_R, [STICK_R], [SHAFT_R], [STICK_R]), "fist", outdir, info)
+    save_layer(clean_fist(rgb, masks["arm_l"], room, hsv, FIST_L, [STICK_L], [], [line(848, 336, 963, 299, 18)]), "fist_l", outdir, info)
+    save_layer(clean_stick(rgb, masks["arm_r"], room), "stick", outdir, info, keep_box=True)
+    save_layer(fur_ball(rgb), "fur", outdir, info, keep_box=True)
+    # The picture's arms as they are (fist, fur and stick), for him at rest.
+    for name in ("arm_r", "arm_l"):
+        F, a = soften(rgb, largest(masks[name]), room)
+        save_layer(np.dstack([F, (a * 255 + 0.5).astype(np.uint8)]), "rest_" + name[-1], outdir, info)
 
     rig = {k: list(v) for k, v in RIG.items()}
-    rig.update(grip=list(GRIP), tip=list(TIP), limb=[LIMB, LIMB_R], pivot_in=PIVOT_IN, butt_in=BUTT_IN)
+    rig.update(grip=list(GRIP), tip=list(TIP), pivot_in=PIVOT_IN, butt_in=BUTT_IN, pivot_l=list(PIVOT_L), tip_l=list(TIP_L),
+               shoulders=[list(p) for p in SHOULDERS], wrists=[list(p) for p in WRISTS], fur_r=FUR_R)
     with open(os.path.join(outdir, "layers.json"), "w") as f:
         json.dump(dict(scale=SCALE, size=[HERO_W, HERO_H], layers=info, rig=rig), f, indent=1)
     print("wrote", len(info), "layers", flush=True)
 
 
-def clean_fist(rgb, arm, room, hsv_h, hsv_s, hsv_v):
-    """The right fist without its stick: the wood across the fingers and the butt below them is
-    painted out with fur, so the plugin can pivot a stick in it at any angle (drawn behind it, the
-    stick comes out of the fist on both sides, the way it does in a real grip)."""
+def largest(mask):
+    """The biggest connected piece of a mask (no stray specks)."""
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
+    if n <= 1:
+        return mask
+    return lab == 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+
+
+def clean_fist(rgb, arm, room, hsv, shape, stick, not_in, whole_stick):
+    """A fist without its stick: the wood across the fingers (and, on the right, the butt below
+    them) is painted out with fur, so the plugin can lay a stick across it at any angle."""
+    hsv_h, hsv_s, hsv_v = hsv
     hw = arm.shape
-    fist = arm & (region([FIST_R], hw) | region([STICK_R], hw)) & ~region([SHAFT_R], hw)
-    wood = fist & (hsv_h >= 6) & (hsv_h <= 32) & (hsv_s > 60) & (hsv_v > 60)
+    fist = arm & (region([shape], hw) | region(stick, hw))
+    if not_in:
+        fist &= ~region(not_in, hw)
+    wood = fist & (hsv_h >= 5) & (hsv_h <= 35) & (hsv_s > 35) & (hsv_v > 80)
     wood = cv2.dilate(wood.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     fur = fist & ~wood
     # The fist's outline goes on behind where the stick crossed it; the butt sticking out of it goes.
@@ -366,8 +390,16 @@ def clean_fist(rgb, arm, room, hsv_h, hsv_s, hsv_v):
     closed = cv2.morphologyEx(fur.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))) > 0
     body = fill_holes(fur | (wood & closed))
     body = cv2.morphologyEx(body.astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))) > 0
-    body &= region([FIST_R], hw) | fur
+    body &= region([shape], hw) | fur
+    # Where the stick ran off the fist's edge, the fist's round outline carries on under it.
+    hull = np.zeros(hw, np.uint8)
+    cv2.fillConvexPoly(hull, cv2.convexHull(cv2.findNonZero(largest(body).astype(np.uint8))), 1)
+    body |= (hull > 0) & wood & region([shape], hw)
+    body = largest(body)
     hole = cv2.dilate((wood & body).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
+    # The whole stick goes from the picture first, or LaMa carries it on into the fist.
+    whole = region(whole_stick, hw) & (hsv_h >= 5) & (hsv_h <= 35) & (hsv_s > 35) & (hsv_v > 80)
+    hole |= cv2.dilate(whole.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
     filled = lama_crop(rgb, hole, pad=64)
     F, a = soften(filled, body, room)
     return np.dstack([F, (a * 255 + 0.5).astype(np.uint8)])
@@ -407,30 +439,38 @@ def clean_stick(rgb, arm, room):
     return out.clip(0, 255).astype(np.uint8)
 
 
-def fur_tube(rgb):
-    """The panda's arm: a plush tube of his own arm fur (mirror-tiled, so no seams), round at both
-    ends, shaded like a cylinder lit from the upper left, with a soft furry edge. Upright, LIMB
-    hero pixels long and LIMB_R thick; the plugin stretches its middle between shoulder and wrist."""
+def fur_ball(rgb):
+    """A ball of the panda's own fur, lit from the upper left like his fists, with a tufted edge.
+    The plugin strings them along a curve, overlapping, to make his arms: soft and round, any
+    length, bent anywhere, and never stretched."""
     s = SCALE
     x0, y0, x1, y1 = (int(v * s) for v in FUR_PATCH)
     patch = rgb[y0:y1, x0:x1].astype(np.float32)
-    w, h = int(LIMB_R * 2 * s), int(LIMB * s)
+    r = FUR_R * s
+    size = int(2 * r + 12 * s)
     tile = np.concatenate([patch, patch[:, ::-1]], 1)
     tile = np.concatenate([tile, tile[::-1]], 0)
-    reps = (h // tile.shape[0] + 2, w // tile.shape[1] + 2, 1)
-    tex = np.tile(tile, reps)[:h, :w]
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    r = LIMB_R * s
-    cx = w / 2
-    cy = np.clip(yy, r, h - r)
-    dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+    tex = np.tile(tile, (size // tile.shape[0] + 2, size // tile.shape[1] + 2, 1))[:size, :size]
+    c = (size - 1) / 2
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float32)
+    dx, dy = (xx - c) / r, (yy - c) / r
+    d = np.sqrt(dx * dx + dy * dy)
+    theta = np.arctan2(dy, dx)
+    # Tufts round the edge: the rim comes and goes with the angle, and the fur's own grain.
+    rng = np.random.default_rng(11)
+    tufts = sum(np.sin(k * theta + rng.uniform(0, 6.3)) / k ** 0.5 for k in (23, 37, 59, 83, 131))
     lum = tex.mean(2)
-    hp = lum - cv2.GaussianBlur(lum, (0, 0), 3)
-    alpha = np.clip((r - dist) / (2.5 * s) + 0.5 + hp / 40, 0, 1)
-    across = np.clip((xx - cx) / r, -1, 1)
-    shade = 0.78 + 0.32 * np.sqrt(np.clip(1 - across ** 2, 0, 1)) - 0.08 * across
-    tex = np.clip(tex * shade[..., None], 0, 255)
-    return np.dstack([tex.astype(np.uint8), (alpha * 255).astype(np.uint8)])
+    grain = (lum - cv2.GaussianBlur(lum, (0, 0), 2.0)) / 30
+    rim = 1.0 + 0.045 * tufts + 0.05 * grain
+    alpha = np.clip((rim - d) * r / (2.2 * s) + 0.5, 0, 1)
+    # A ball lit from the upper left (as the fists are), darker toward its rim.
+    nz = np.sqrt(np.clip(1 - d * d, 0, 1))
+    light = np.array([-0.45, -0.6, 0.66])
+    light /= np.linalg.norm(light)
+    lit = np.clip(dx * light[0] + dy * light[1] + nz * light[2], 0, 1)
+    shade = 0.62 + 0.55 * lit
+    out = np.clip(tex * shade[..., None], 0, 255)
+    return np.dstack([out, alpha * 255]).astype(np.uint8)
 
 
 def save_layer(rgba, name, outdir, info, keep_box=False):
