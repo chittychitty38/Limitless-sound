@@ -1,0 +1,170 @@
+# Proof that the suite works where it matters: on a fresh Mac, installed from the same
+# download link the website gives musicians. Every night (and on demand) each Mac downloads
+# the suite, installs it, opens every app through the hub and runs the Limitless Access
+# Standard test kit against each one. Results go on the website, failures included.
+name: Proof on real computers
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Test the suite built by this 'Limitless Sound Suite' run instead of the public download"
+        required: false
+        default: ""
+  pull_request:
+    paths: ["packaging/proof/**", ".github/workflows/proof.yml"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15        # Apple Silicon
+            arch: mac-apple-silicon
+          - os: macos-15-intel  # Intel
+            arch: mac-intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            packaging/proof
+            standard/conformance
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the suite the way a musician does
+        id: get
+        run: |
+          mkdir -p dl
+          if [ -n "${{ inputs.run_id }}" ]; then
+            gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n "Limitless-Sound-Suite-${{ matrix.arch }}" -D dl
+            echo "version=build ${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          else
+            curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.dmg" \
+              "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-${{ matrix.arch }}.dmg"
+            echo "version=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l dl
+          # A web browser marks a download as coming from the internet. Do the same, so macOS
+          # treats this copy exactly like a musician's.
+          xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" dl/*.dmg
+
+      - name: Install it
+        id: install
+        run: |
+          start=$(date +%s)
+          mnt="$RUNNER_TEMP/suite"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dl/*.dmg
+          ls -1 "$mnt"
+          # What double-clicking "Install Limitless Sound" runs. (The one "Open Anyway" click
+          # before it is a person's job; this Mac can't click System Settings.)
+          TERM=dumb bash "$mnt/Install Limitless Sound.command" 2>&1 | tee install.log
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+          ls -1d /Applications/Limitless*.app /Applications/GazeStage.app 2>/dev/null || true
+
+      - name: Open every app and prove it works
+        run: |
+          python3 packaging/proof/prove_suite.py --out proof \
+            --suite-version "${{ steps.get.outputs.version }}" --install-seconds "${{ steps.install.outputs.seconds }}"
+
+      - name: Gather the apps' logs
+        if: always()
+        run: |
+          mkdir -p proof/logs
+          cp install.log proof/logs/ 2>/dev/null || true
+          for d in "$HOME/Library/Logs" "$HOME/Library/Application Support"; do
+            find "$d" -maxdepth 3 \( -iname "*limitless*" -o -iname "*gazestage*" \) -print 2>/dev/null
+          done | while read -r p; do
+            find "$p" -maxdepth 3 -type f \( -name "*.log" -o -name "*.txt" -o -name "*.json" \) \
+              ! -name "link.json" -size -2M -print 2>/dev/null
+          done | while read -r f; do
+            dest="proof/logs/$(echo "${f#$HOME/Library/}" | tr '/ ' '__')"
+            cp "$f" "$dest"
+          done
+          ls -l proof/logs
+          # Small screenshots for the website.
+          for f in proof/shots/*.png; do
+            [ -f "$f" ] && sips -s format jpeg -s formatOptions 70 -Z 1600 "$f" --out "${f%.png}.jpg" >/dev/null && rm "$f"
+          done
+          ls -l proof/shots || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-${{ matrix.arch }}
+          path: proof
+
+  # Put the results on the website: proof/latest.json on gh-pages (small, keeps its history)
+  # and the screenshots on the "proof" prerelease (replaced each night, so the repo doesn't grow).
+  publish:
+    needs: mac
+    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.run_id == ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: proof-*
+          path: in
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+      - name: Publish
+        run: |
+          set -e
+          mkdir -p site/proof shots
+          python3 - <<'EOF'
+          import json, pathlib, shutil
+          runs = []
+          for d in sorted(pathlib.Path("in").glob("proof-*")):
+              arch = d.name[len("proof-"):]
+              f = d / "proof.json"
+              if not f.exists():
+                  runs.append({"arch": arch, "error": "The run stopped before it finished. See the workflow log."})
+                  continue
+              p = json.loads(f.read_text())
+              p["arch"] = arch
+              for a in p["apps"]:
+                  if a.get("screenshot"):
+                      src = d / a["screenshot"].replace(".png", ".jpg")
+                      if src.exists():
+                          name = f"{arch}-{a['tool']}.jpg"
+                          shutil.copy(src, f"shots/{name}")
+                          a["screenshot"] = name
+                      else:
+                          a["screenshot"] = ""
+              runs.append(p)
+          pathlib.Path("site/proof/latest.json").write_text(json.dumps({"runs": runs}, indent=2))
+          EOF
+          cat site/proof/latest.json | head -40
+          if ls shots/*.jpg >/dev/null 2>&1; then
+            gh release view proof -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+              gh release create proof -R "$GITHUB_REPOSITORY" --prerelease --latest=false \
+                --title "Nightly proof" \
+                --notes "Screenshots from the nightly proof run: a fresh Mac downloads the suite from the website, installs it and tests every app. Results: https://chittychitty38.github.io/Limitless-sound/#proof"
+            gh release upload proof shots/*.jpg --clobber -R "$GITHUB_REPOSITORY"
+          fi
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proof/latest.json
+          git commit -m "Nightly proof $(date -u +%Y-%m-%d)" || exit 0
+          git push
