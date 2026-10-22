@@ -111,6 +111,12 @@ is switched off and reported.
 and the app is connected, `say` through the hub instead of speaking directly; the Python
 client's `say()` returns `False` when the app should speak for itself.
 
+After applying a `prefs` message (and the prefs in `welcome`), report what you honored as
+the state `prefs.applied`: an object of each shared setting you support, with the value you
+are now using. For example `{"textScale": 1.5, "highContrast": true, "reduceMotion": true}`.
+That is how the settings page, and the Limitless Access Standard test kit
+(`standard/conformance/`), know a setting reached you. Send it within 3 seconds.
+
 ## HTTP (settings page and one-shot triggers)
 
 `http://127.0.0.1:<http>/`. Requests need the token: `X-Limitless-Token` header, or `?t=`
