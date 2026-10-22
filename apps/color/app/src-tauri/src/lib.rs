@@ -176,6 +176,10 @@ fn get_status(app: AppHandle, state: State<AppState>) -> Status {
 fn set_profile(app: AppHandle, state: State<AppState>, profile: serde_json::Value) -> Result<Status, String> {
     let p = Profile::from_json(&profile.to_string()).map_err(|e| format!("That profile couldn't be read: {e}"))?;
     let mut inner = state.0.lock().unwrap();
+    if inner.profile == p {
+        // Nothing changed: don't save the file, rebuild the filter or redraw the window again.
+        return Ok(status(&inner));
+    }
     inner.profile = p;
     sync(&app, &mut inner);
     Ok(status(&inner))
