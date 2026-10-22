@@ -1,10 +1,12 @@
 // GazeStage app: pointer, targeting, selection, pages, guided setup and settings.
 import {
+  displayInUse, shownProgress, TEXT_SCALE,
   OneEuro, fitCalibration, calibrationGrade, dot, headToScreen, buildPads, SCALES, NOTE_NAMES, HUI, OnsetDetector,
   XY_PROFILES, xyMessages, XYMotion, toCC,
 } from './lib.js';
 import { Tracker } from './tracker.js';
 import { Synth, SYNTH_PRESETS } from './synth.js';
+import { SynthLink } from './synth-link.js';
 import { MidiRouter } from './midi.js';
 
 const $ = (id) => document.getElementById(id);
@@ -42,20 +44,31 @@ const state = {
 };
 const motion = new XYMotion(S.xyX, S.xyY);
 const filterX = new OneEuro(S.smooth), filterY = new OneEuro(S.smooth);
-const tracker = new Tracker($('cam'));
-const synth = new Synth(); synth.setPreset(S.preset);
+const tracker = new Tracker($('cam'), store);
+// The built-in instrument plays in a hidden page of its own (synth-link.js), so starting the
+// computer's audio never holds up this page; in a plain browser, here.
+const synth = bridge?.synth ? new SynthLink(bridge.synth) : new Synth(); synth.setPreset(S.preset);
 const midi = new MidiRouter(store);
 const onset = new OnsetDetector();
-window.__gs = { state, S, synth, midi, motion, suite: () => suiteOn };   // for the smoke test
+window.__gs = { state, S, synth, midi, motion, suite: () => suiteOn, listening: () => !!mic };   // for the smoke test
 
 // ---------- display ----------
+// Text size, contrast and motion come from GazeStage's own settings (and the system's reduced
+// motion), and while Limitless Sound is connected, from the musician's shared settings too.
+const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let shared = null, display = null, reported = '';
 function applyDisplay() {
   const r = document.documentElement;
-  r.dataset.theme = S.theme; r.dataset.contrast = S.contrast ? 'high' : 'normal';
-  r.dataset.size = S.size; r.dataset.spacing = S.spacing;
+  display = displayInUse({ size: S.size, contrast: S.contrast, reduceMotion: systemMotion.matches }, shared);
+  r.dataset.theme = S.theme; r.dataset.contrast = display.highContrast ? 'high' : 'normal';
+  r.dataset.motion = display.reduceMotion ? 'reduce' : 'normal';
+  r.style.setProperty('--scale', display.textScale); r.dataset.spacing = S.spacing;
+  r.dataset.size = display.textScale > TEXT_SCALE.xlarge ? 'huge' : S.size;   // huge: the shared size, past Extra large
   $('preview').classList.toggle('hidden', !S.preview || !state.cameraOn);
   bridge?.setAlwaysOnTop(S.onTop);
+  reportDisplay();
 }
+systemMotion.addEventListener('change', applyDisplay);
 
 let toastTimer = 0;
 function toast(msg, ms = 2600) {
@@ -63,9 +76,12 @@ function toast(msg, ms = 2600) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+// The chips are checked every second but written only when they change: rewriting them laid out
+// and redrew the window every second, about 1.4% of the CPU on a Mac sitting idle.
 function chip(id, level, html) {
-  const c = $(id); c.querySelector('.dot').className = 'dot ' + (level || '');
-  c.querySelector('span:last-child').innerHTML = html;
+  const c = $(id), dot = c.querySelector('.dot'), text = c.querySelector('span:last-child');
+  put(dot, '_level', level || '', (v) => { dot.className = 'dot ' + v; });
+  put(text, '_html', html, (v) => { text.innerHTML = v; });
 }
 const SELECT_NAMES = { dwell: 'Dwell', switch: 'Switch', sound: 'Sound', blink: 'Blink' };
 function refreshChips() {
@@ -83,9 +99,9 @@ function refreshChips() {
   else chip('chipMidi', 'bad', 'MIDI <b>off</b>');
   chip('chipPT', midi.proToolsConnected ? 'ok' : '', `Pro Tools <b>${midi.proToolsConnected ? 'linked' : 'not linked'}</b>`);
   const hint = $('transportHint');
-  if (midi.proToolsConnected) hint.textContent = 'Connected to Pro Tools.';
-  else if (midi.mode === 'native') hint.innerHTML = 'Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>. <button class="linkish" data-cmd="settings">How to connect</button>';
-  else hint.innerHTML = 'Not linked yet. <button class="linkish" data-cmd="settings">Choose the Pro Tools ports in Settings</button>';
+  put(hint, '_html', midi.proToolsConnected ? 'Connected to Pro Tools.'
+    : midi.mode === 'native' ? 'Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>. <button class="linkish" data-cmd="settings">How to connect</button>'
+    : 'Not linked yet. <button class="linkish" data-cmd="settings">Choose the Pro Tools ports in Settings</button>', (v) => { hint.innerHTML = v; });
 }
 setInterval(refreshChips, 1000);
 
@@ -98,8 +114,7 @@ async function startCamera() {
       const ok = await bridge.media.ask('camera');
       if (!ok) throw Object.assign(new Error('Camera access is turned off for GazeStage'), { name: 'NotAllowedError' });
     }
-    await tracker.load();
-    await tracker.open(S.camera);
+    await Promise.all([tracker.load(), tracker.open(S.camera)]);   // the face model loads in its worker meanwhile
     tracker.onSample = onSample;
     tracker.start();
     state.cameraOn = true; state.cameraState = 'tracking'; state.autoCentre = [];
@@ -107,7 +122,7 @@ async function startCamera() {
     for (const v of document.querySelectorAll('video[data-mirror]')) v.srcObject = tracker.stream;
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(e); tracker.close();   // never leave the camera on when tracking can't start
     state.cameraState = 'error'; refreshChips();
     state.cameraError = e.name === 'NotAllowedError' || /denied|turned off/i.test(e.message) ? 'denied' : (e.message || String(e));
     return false;
@@ -122,7 +137,7 @@ async function fillCameras() {
 
 // One camera frame.
 function onSample(s) {
-  state.sample = s;
+  state.sample = s; wake();
   const now = performance.now();
   if (!s.face) {
     if (!state.lostSince) state.lostSince = now;
@@ -239,30 +254,56 @@ function refreshCalInfo() {
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ---------- microphone switch ----------
-let micStarted = false;
+// Open only while the sound switch is chosen: a Mac shows its microphone light for as long as
+// an app listens, and listening keeps the audio and a meter running. Trying the sound switch in
+// the guided setup and then choosing dwell used to leave the microphone on all session.
+// The samples are read straight from the microphone, with no audio context: making one here
+// waits for the computer's sound output, which froze this page for 20 s on a Mac without one.
+let mic = null;   // { stream, reader, raf } while listening
 async function startMic() {
-  if (micStarted) return true;
+  if (mic) return true;
   try {
     if (bridge && !(await bridge.media.ask('microphone'))) throw new Error('denied');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
-    const ctx = synth.ensure();
-    const an = ctx.createAnalyser(); an.fftSize = 512;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const buf = new Float32Array(an.fftSize);
+    if (mic || S.select !== 'sound') { stream.getTracks().forEach((t) => t.stop()); return !!mic; }   // changed meanwhile
+    const reader = new MediaStreamTrackProcessor({ track: stream.getAudioTracks()[0] }).readable.getReader();
+    const recent = new Float32Array(512);   // the latest 512 samples, round and round
+    const listening = mic = { stream, reader, raf: 0 };
+    (async () => {
+      let at = 0, chunk = new Float32Array(1024);
+      for (;;) {
+        const { value, done } = await reader.read().catch(() => ({ done: true }));
+        if (done || mic !== listening) { value?.close(); return; }
+        try {
+          const n = value.numberOfFrames;
+          if (n > chunk.length) chunk = new Float32Array(n);
+          value.copyTo(chunk, { planeIndex: 0, format: 'f32-planar' });
+          for (let i = 0; i < n; i++) { recent[at] = chunk[i]; at = (at + 1) & 511; }
+        } catch {} finally { value.close(); }
+      }
+    })();
     const tick = () => {
-      an.getFloatTimeDomainData(buf);
-      let sum = 0; for (const v of buf) sum += v * v;
-      const r = onset.push(Math.sqrt(sum / buf.length), performance.now(), +S.mic);
+      if (mic !== listening) return;
+      let sum = 0; for (const v of recent) sum += v * v;
+      const r = onset.push(Math.sqrt(sum / recent.length), performance.now(), +S.mic);
       $('micMeter').value = r.level;
       const m = $('obMicMeter'); if (m) m.value = r.level;
       if (r.hit) onSwitch('sound');
-      requestAnimationFrame(tick);
+      listening.raf = requestAnimationFrame(tick);
     };
-    tick(); micStarted = true; return true;
+    tick(); return true;
   } catch {
     toast('Microphone access is off. Allow it in System Settings › Privacy & Security › Microphone.', 5000);
     return false;
   }
+}
+function stopMic() {
+  if (!mic) return;
+  cancelAnimationFrame(mic.raf);
+  mic.reader.cancel().catch(() => {});
+  mic.stream.getTracks().forEach((t) => t.stop());
+  mic = null;
+  $('micMeter').value = 0;
 }
 
 // ---------- targeting ----------
@@ -298,22 +339,53 @@ function setCurrent(t, now) {
     if (state.fired && isHoldable(state.current) && !(S.select === 'switch' && switchDown)) release(state.current);
   }
   state.current = t; state.enteredAt = now; state.fired = false;
-  if (t) t.classList.add('gazed');
+  if (t) { t.classList.add('gazed'); if (isPad(t) ? S.builtIn : S.tick) synth.warm(); }
+}
+// Each frame writes to the page only what changed: rewriting the same values 60 times a second
+// kept the window redrawing (and the CPU busy) while nothing moved.
+function put(el, key, value, write) {
+  if (!el || el[key] === value) return;
+  el[key] = value; write(value);
 }
 function setProgress(t, p) {
+  const shown = shownProgress(p, display.reduceMotion);
   const bar = t.querySelector(':scope > .progress');
-  if (bar) bar.style.width = clamp(p, 0, 1) * 100 + '%';
-  $('cursorFill').setAttribute('stroke-dasharray', `${clamp(p, 0, 1) * 126} 126`);
+  put(bar, '_width', shown, (v) => { bar.style.width = v * 100 + '%'; });
+  const fill = $('cursorFill');
+  put(fill, '_dash', shown, (v) => fill.setAttribute('stroke-dasharray', `${v * 126} 126`));
 }
 
-function frame(now) {
+// The frame loop runs every frame while something can change: the pointer or the head moving,
+// a target settling or filling up, the camera on, calibration. Sitting still it looks 4 times a
+// second: hit-testing every target 60 times a second for nothing kept the CPU busy (about 6%).
+// Those looks run straight from a timer: asking for an animation frame each time woke the
+// window's drawing (and the GPU process) 4 times a second, about 0.8% of the CPU on a Mac.
+let framePending = false, idleTimer = 0, lastAt = '';
+function wake() {
+  if (framePending) return;
+  framePending = true;
   requestAnimationFrame(frame);
+}
+function frame(now) {
+  framePending = false;
   toneTick(now);
+  step(now);
+  const at = `${state.px},${state.py}`, moved = at !== lastAt;
+  lastAt = at;
+  const settling = state.candidate !== state.current;
+  const filling = state.current && !state.fired && S.select !== 'switch';
+  const toning = motion.moving || state.nudging || state.teaching;
+  if (moved || settling || filling || toning || state.cameraOn || state.calibrating) wake();
+  else if (!idleTimer) idleTimer = setTimeout(() => { idleTimer = 0; if (!framePending) frame(performance.now()); }, 250);
+}
+for (const type of ['mousemove', 'mousedown', 'keydown', 'wheel', 'resize', 'focus']) addEventListener(type, wake, { passive: true });
+
+function step(now) {
   const cursor = $('cursor');
   // Camera modes wait for the automatic centring (about the first second) before anything can fire.
   const active = S.mode === 'mouse' || (state.cameraOn && state.autoCentre === null);
-  cursor.style.display = active && !state.calibrating ? 'block' : 'none';
-  cursor.style.transform = `translate(${state.px}px, ${state.py}px)`;
+  put(cursor, '_display', active && !state.calibrating ? 'block' : 'none', (v) => { cursor.style.display = v; });
+  put(cursor, '_at', `translate(${state.px}px, ${state.py}px)`, (v) => { cursor.style.transform = v; });
   const lost = S.mode !== 'mouse' && state.lostSince && now - state.lostSince > 300;
   cursor.classList.toggle('lost', !!lost);
   cursor.classList.toggle('paused', state.paused);
@@ -526,8 +598,9 @@ function suiteInvoke(name, args = {}) {
     const port = HUI.PORT[name];
     if (!midi.transport(port, true)) return { ok: false, message: 'GazeStage isn’t linked to Pro Tools.' };
     setTimeout(() => midi.transport(port, false), 90);
+    // The flash and click come after the answer has gone back.
     const t = document.querySelector(`[data-hui="${name}"]`);
-    if (t) feedback(t);
+    if (t) setTimeout(() => feedback(t));
     return { ok: true, message: SUITE_TRANSPORT[name] };
   }
   const run = SUITE_DO[name];
@@ -548,8 +621,19 @@ bridge?.suite?.onInvoke(({ id, action: name, args }) => {
   try { result = suiteInvoke(String(name), args); } catch (e) { result = { ok: false, message: String(e?.message || e) }; }
   bridge.suite.reply(id, result);
 });
-bridge?.suite?.onConnected((on) => { suiteOn = !!on; });
-bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; });
+bridge?.suite?.onConnected((on) => { suiteOn = !!on; if (!on && shared) { shared = null; applyDisplay(); } });
+bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; if (s?.prefs) useShared(s.prefs); });
+
+// The musician's shared settings, from the hub's welcome and every change after it.
+function useShared(prefs) { shared = prefs || {}; reported = ''; applyDisplay(); }
+bridge?.suite?.onPrefs(useShared);
+// Once they're on screen, tell the hub what's in use: only the settings GazeStage honors.
+function reportDisplay() {
+  if (!shared) return;
+  const applied = { textScale: Math.round(display.textScale * 100) / 100, highContrast: display.highContrast, reduceMotion: display.reduceMotion };
+  if (JSON.stringify(applied) === reported) return;
+  reported = JSON.stringify(applied); bridge.suite.applied(applied);
+}
 
 function action(a) {
   switch (a) {
@@ -676,10 +760,11 @@ function xyPointer(t, now) {
   return true;
 }
 
-function placeXY(x, y, ms = +S.xyGlide) { motion.glideTo(x, y, ms, performance.now()); }
+function placeXY(x, y, ms = +S.xyGlide) { motion.glideTo(x, y, ms, performance.now()); wake(); }
 function nudgeXY([dx, dy], step) {
   const x = motion.glide ? motion.glide.x : motion.x, y = motion.glide ? motion.glide.y : motion.y;
   motion.glideTo(clamp(x + dx * step, 0, 1), clamp(y + dy * step, 0, 1), 120, performance.now());
+  wake();
 }
 function snapXY(k) {
   if (state.xyStore) {
@@ -700,7 +785,7 @@ function dragXY(t, e) {
   const go = (ev, instant) => {
     const r = t.getBoundingClientRect();
     const x = clamp((ev.clientX - r.left) / r.width, 0, 1), y = clamp(1 - (ev.clientY - r.top) / r.height, 0, 1);
-    if (instant) placeXY(x, y, Math.min(+S.xyGlide, 150)); else motion.chaseTo(x, y, 40);
+    if (instant) placeXY(x, y, Math.min(+S.xyGlide, 150)); else { motion.chaseTo(x, y, 40); wake(); }
   };
   go(e, true);
   try { t.setPointerCapture(e.pointerId); } catch {}
@@ -738,7 +823,7 @@ function toneTick(now) {
   const r = xyMessages(+S.xyChannel, ccX, ccY, x, y, state.xySent);
   if (r.bytes.length) {
     midi.sendTone(r.bytes); state.xySent = r.sent;
-    if (S.xyShape && synth.ctx) synth.shape(x, y);
+    if (S.xyShape) synth.shape(x, y);
     xySaveDue = true;
   }
   if (xySaveDue && !motion.moving && !state.nudging) { S.xyX = x; S.xyY = y; save(); xySaveDue = false; }
@@ -754,7 +839,14 @@ function toneTick(now) {
   }
 }
 
+// Drawn again only when something it shows has changed: the output is looked for every 4 s
+// (a Helix plugged in), and redrawing the same page each time kept the window busy.
+let toneShown = '';
 function renderTone() {
+  const shows = JSON.stringify([S.xyNameX, S.xyNameY, S.xySnaps, state.xyStore, S.xyFollow, S.select, S.xyGlide,
+    !!state.listen, xyCC(), S.xyChannel, S.xyProfile, midi.toneName, midi.toneMissing]);
+  if (shows === toneShown) return;
+  toneShown = shows;
   $('xyNameX').textContent = S.xyNameX; $('xyNameY').textContent = S.xyNameY;
   for (const m of document.querySelectorAll('.snapmark')) {
     const p = S.xySnaps[m.dataset.mark];
@@ -785,7 +877,7 @@ function listen(on) {
   if (!on === !state.listen) return;
   if (on) {
     if (!S.xyShape) { S.xyShape = true; save(); syncSettingsForm(); }
-    synth.ensure(); synth.shape(motion.x, motion.y);
+    synth.warm(); synth.shape(motion.x, motion.y);
     state.listen = buildPads({ key: +S.key, octave: 3, scale: S.scale, count: 1, chords: true })[0].notes;
     state.listen.forEach(n => synth.noteOn(n, 90));
   } else {
@@ -823,8 +915,8 @@ async function renderToneSettings() {
 }
 for (const [k, v] of Object.entries(XY_PROFILES)) $('sXyProfile').add(new Option(v.x != null ? `${v.name} (CC ${v.x} and ${v.y})` : v.name, k));
 for (let c = 1; c <= 16; c++) $('sXyChannel').add(new Option(String(c), c));
-$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
-$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
+$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; wake(); toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
+$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; wake(); toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
 
 // ---------- Pro Tools LEDs ----------
 midi.addEventListener('led', (e) => {
@@ -889,7 +981,7 @@ async function onSettingChanged(key) {
     case 'smooth': filterX.setSmoothing(S.smooth); filterY.setSmoothing(S.smooth); break;
     case 'mode': filterX.reset(); filterY.reset(); state.offset = { x: 0, y: 0 }; if (S.mode !== 'mouse') await startCamera(); refreshCalInfo(); break;
     case 'camera': if (state.cameraOn) { await tracker.open(S.camera); for (const v of document.querySelectorAll('video[data-mirror]')) v.srcObject = tracker.stream; } break;
-    case 'select': if (S.select === 'sound') await startMic(); if (S.select === 'blink' && !state.cameraOn) await startCamera(); break;
+    case 'select': if (S.select === 'sound') await startMic(); else stopMic(); if (S.select === 'blink' && !state.cameraOn) await startCamera(); break;
     case 'builtIn': if (!S.builtIn) synth.allOff(); renderInstrument(); break;
     case 'preset': synth.setPreset(S.preset); renderInstrument(); break;
     case 'volume': synth.setVolume(+S.volume); break;
@@ -903,8 +995,10 @@ async function onSettingChanged(key) {
   applyDisplay(); refreshChips();
 }
 $('clearCal').onclick = () => { S.cal = { ...S.cal, [S.mode]: undefined }; delete S.cal[S.mode]; save(); state.offset = { x: 0, y: 0 }; refreshCalInfo(); toast('Calibration cleared'); };
-$('resetAll').onclick = () => {
-  if (!confirm('Reset every GazeStage setting, including calibration?')) return;
+$('resetAll').onclick = async () => {
+  // Asked by the main process: a confirm() here would stop this page answering other apps until someone answers it.
+  const question = 'Reset every GazeStage setting, including calibration?';
+  if (!(bridge ? await bridge.confirm(question, 'Reset') : confirm(question))) return;
   try { localStorage.removeItem(KEY); } catch {}
   location.reload();
 };
@@ -1070,7 +1164,7 @@ async function onboardAction(ob, t) {
   if (ob === 'mode') { S.mode = t.dataset.value; save(); filterX.reset(); filterY.reset(); if (S.mode !== 'mouse') startCamera(); return renderStep('pointer'); }
   if (ob === 'select') {
     S.select = t.dataset.value; save(); refreshChips();
-    if (S.select === 'sound') await startMic();
+    if (S.select === 'sound') await startMic(); else stopMic();
     return renderStep('select');
   }
   if (ob === 'recenter') return recenter();
@@ -1094,7 +1188,7 @@ $('aboutLine').textContent = 'GazeStage 0.4 · Limitless Sound · runs entirely 
 synth.setVolume(+S.volume);
 if (S.xyShape) synth.shape(S.xyX, S.xyY);
 midi.init();
-requestAnimationFrame(frame);
+wake();
 (async () => {
   if (!S.onboarded) { startOnboarding(); return; }
   if (S.mode !== 'mouse') {

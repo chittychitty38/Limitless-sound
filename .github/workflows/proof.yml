@@ -1,0 +1,340 @@
+# Proof that the suite works where it matters: on a fresh Mac, installed from the same
+# download link the website gives musicians. Every night (and on demand) each Mac downloads
+# the suite, installs it, opens every app through the hub and runs the Limitless Access
+# Standard test kit against each one. Results go on the website, failures included.
+name: Proof on real computers
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Test the suite built by this 'Limitless Sound Suite' run instead of the public download"
+        required: false
+        default: ""
+  pull_request:
+    paths: ["packaging/proof/**", ".github/workflows/proof.yml"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15        # Apple Silicon
+            arch: mac-apple-silicon
+          - os: macos-15-intel  # Intel
+            arch: mac-intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            packaging/proof
+            standard/conformance
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the suite the way a musician does
+        id: get
+        run: |
+          mkdir -p dl
+          if [ -n "${{ inputs.run_id }}" ]; then
+            gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n "Limitless-Sound-Suite-${{ matrix.arch }}" -D dl
+            echo "version=build ${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          else
+            # The website's Mac button: the installer package (from 0.2.0), or the disk image
+            # a release before it has.
+            base="https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-${{ matrix.arch }}"
+            curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.pkg" "$base.pkg" \
+              || { rm -f dl/*.pkg; curl -fsSL --retry 3 -o "dl/Limitless-Sound-Suite-${{ matrix.arch }}.dmg" "$base.dmg"; }
+            echo "version=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l dl
+          # A web browser marks a download as coming from the internet. Do the same, so macOS
+          # treats this copy exactly like a musician's.
+          for f in dl/*; do xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$f"; done
+
+      - name: Install it
+        id: install
+        run: |
+          set -o pipefail
+          start=$(date +%s)
+          pkg=$(find dl -maxdepth 1 -name "*.pkg" | head -1)
+          if [ -n "$pkg" ]; then
+            # What the Mac installer does after Continue, Install and the password. (The one
+            # "Open Anyway" click before it is a person's job; this Mac can't click System Settings.)
+            sudo installer -pkg "$pkg" -target / -verboseR 2>&1 | tee install.log
+          else
+            # A release before 0.2.0: what double-clicking "Install Limitless Sound" ran.
+            mnt="$RUNNER_TEMP/suite"
+            hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dl/*.dmg
+            ls -1 "$mnt"
+            TERM=dumb bash "$mnt/Install Limitless Sound.command" 2>&1 | tee install.log
+          fi
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+          ls -1d /Applications/Limitless*.app /Applications/GazeStage.app 2>/dev/null || true
+
+      - name: Open every app and prove it works
+        run: |
+          set +e
+          python3 packaging/proof/prove_suite.py --out proof \
+            --suite-version "${{ steps.get.outputs.version }}" --install-seconds "${{ steps.install.outputs.seconds }}"
+          code=$?
+          # On a pull request this checks the proof itself works; the apps it found failing
+          # are the public release's, fixed elsewhere. The nightly run fails on them.
+          if [ $code -eq 3 ] && [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::warning::Apps in the public release failed the proof; see the summary. The proof itself ran."
+            exit 0
+          fi
+          exit $code
+
+      - name: Gather the apps' logs and any crash reports
+        if: always()
+        run: |
+          mkdir -p proof/logs
+          cp install.log proof/logs/ 2>/dev/null || true
+          # Each app's own log folder and settings, and macOS's crash reports for our apps.
+          find "$HOME/Library/Logs" "$HOME/Library/Application Support" -maxdepth 4 -type f \
+               \( -ipath "*limitless*" -o -ipath "*gazestage*" \) \
+               \( -name "*.log" -o -name "*.txt" -o -name "*.json" -o -name "*.ips" -o -name "*.crash" \) \
+               ! -name "link.json" ! -path "*leveldb*" -size -2M 2>/dev/null | while read -r f; do
+            cp "$f" "proof/logs/$(echo "${f#$HOME/Library/}" | tr '/ ' '__')"
+          done
+          find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -maxdepth 1 -type f \
+               \( -iname "*limitless*" -o -iname "*gazestage*" -o -iname "Python*" \) 2>/dev/null | while read -r f; do
+            cp "$f" "proof/logs/crash_$(basename "$f" | tr ' ' '_')"
+          done
+          ls -l proof/logs
+          # Put crashes and app logs in this log too, where they can be read without downloading.
+          for f in proof/logs/crash_*; do
+            [ -f "$f" ] || continue
+            echo "::group::Crash report $(basename "$f")"
+            python3 - "$f" <<'PY'
+          import json, sys
+          text = open(sys.argv[1], errors="replace").read()
+          head, _, body = text.partition("\n")
+          try:
+              r = json.loads(body)
+              print(r.get("procPath"), "|", r.get("exception"), "|", r.get("termination"))
+              th = r.get("threads", [])[r.get("faultingThread", 0)] if r.get("threads") else {}
+              imgs = r.get("usedImages", [])
+              for fr in th.get("frames", [])[:25]:
+                  img = imgs[fr["imageIndex"]].get("name", "?") if fr.get("imageIndex", -1) < len(imgs) else "?"
+                  print(f'  {img:32} {fr.get("symbol", "")}')
+              for k in ("asi", "lastExceptionBacktrace"):
+                  if r.get(k):
+                      print(k, json.dumps(r[k])[:1500])
+          except ValueError:
+              print(text[:6000])
+          PY
+            echo "::endgroup::"
+          done
+          for f in proof/logs/*.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$(basename "$f") (last 80 lines)"; tail -80 "$f"; echo "::endgroup::"
+          done
+          # Small screenshots for the results page.
+          for f in proof/shots/*.png; do
+            [ -f "$f" ] && sips -s format jpeg -s formatOptions 70 -Z 1600 "$f" --out "${f%.png}.jpg" >/dev/null && rm "$f"
+          done
+          ls -l proof/shots || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-${{ matrix.arch }}
+          path: proof
+
+  # The same on a fresh Windows PC, with the Windows suite installer.
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            packaging/proof
+            standard/conformance
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the suite the way a musician does
+        id: get
+        shell: bash
+        run: |
+          mkdir -p dl
+          if [ -n "${{ inputs.run_id }}" ]; then
+            gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n Limitless-Sound-Suite-windows -D dl
+            echo "version=build ${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          elif curl -fsSL --retry 3 -o dl/Limitless-Sound-Suite-windows.exe \
+                 "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Limitless-Sound-Suite-windows.exe"; then
+            echo "version=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The public release has no Windows suite installer yet, so there is nothing to prove on Windows."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l dl
+
+      - name: Install it
+        id: install
+        if: steps.get.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          $start = Get-Date
+          # A browser marks a download as coming from the internet; so does this.
+          Set-Content -Path dl\Limitless-Sound-Suite-windows.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+          # A musician then sees SmartScreen and clicks More info › Run anyway (it's unsigned).
+          # Nobody can click here: opening it through the shell (Start-Process) asks and is
+          # cancelled, so start it directly, as Windows does once Run anyway is clicked.
+          $run = [System.Diagnostics.ProcessStartInfo]::new((Resolve-Path dl\Limitless-Sound-Suite-windows.exe).Path,
+                   "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log")
+          $run.UseShellExecute = $false
+          $run.WorkingDirectory = (Get-Location).Path
+          $p = [System.Diagnostics.Process]::Start($run)
+          # Wait for the installer itself: -Wait would also wait for any app an installer opens.
+          $done = $p.WaitForExit(900000)
+          Get-Content install.log -Tail 30
+          if (-not $done) { $p.Kill(); throw "The suite installer was still running after 15 minutes" }
+          if ($p.ExitCode -ne 0) { throw "The suite installer failed with code $($p.ExitCode)" }
+          "seconds=$([int]((Get-Date) - $start).TotalSeconds)" >> $env:GITHUB_OUTPUT
+          # Limitless Sound starts by itself at the next sign-in; start it the same way now.
+          $hub = Join-Path $env:LOCALAPPDATA "Programs\Limitless Sound\Limitless Sound.exe"
+          Start-Process -FilePath $hub -ArgumentList "--background"
+
+      - name: Open every app and prove it works
+        if: steps.get.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set +e
+          python packaging/proof/prove_suite.py --out proof \
+            --suite-version "${{ steps.get.outputs.version }}" --install-seconds "${{ steps.install.outputs.seconds }}"
+          code=$?
+          if [ $code -eq 3 ] && [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::warning::Apps in the public release failed the proof on Windows; see the summary. The proof itself ran."
+            exit 0
+          fi
+          exit $code
+
+      - name: Gather the apps' logs and any crash reports
+        if: always() && steps.get.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force proof\logs | Out-Null
+          Copy-Item install.log proof\logs\ -ErrorAction SilentlyContinue
+          $roots = @("$env:LOCALAPPDATA\Limitless Sound\Logs", "$env:LOCALAPPDATA\CrashDumps",
+                     "$env:LOCALAPPDATA\Microsoft\Windows\WER\ReportArchive", "$env:ProgramData\Microsoft\Windows\WER\ReportArchive")
+          foreach ($r in $roots) {
+            if (Test-Path $r) {
+              Get-ChildItem $r -Recurse -File -Include *.log, *.txt, Report.wer -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "Limitless|GazeStage" -or $_.DirectoryName -match "Limitless" } |
+                ForEach-Object { Copy-Item $_.FullName ("proof\logs\" + ($_.FullName.Substring(3) -replace '[\\: ]', '_')) }
+            }
+          }
+          Get-ChildItem proof\logs | Format-Table Name, Length
+          foreach ($f in Get-ChildItem proof\logs -File) {
+            Write-Output "::group::$($f.Name) (last 80 lines)"; Get-Content $f.FullName -Tail 80; Write-Output "::endgroup::"
+          }
+          # Small screenshots for the results page.
+          Add-Type -AssemblyName System.Drawing
+          foreach ($f in Get-ChildItem proof\shots -Filter *.png -ErrorAction SilentlyContinue) {
+            $img = [System.Drawing.Image]::FromFile($f.FullName)
+            $img.Save(($f.FullName -replace '\.png$', '.jpg'), [System.Drawing.Imaging.ImageFormat]::Jpeg)
+            $img.Dispose(); Remove-Item $f.FullName
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.get.outputs.skip != 'true'
+        with:
+          name: proof-windows
+          path: proof
+
+  # Publish the results, failures included. They go on a branch of their own, replaced on
+  # every run so the repository doesn't grow: proof-results for the nightly run on main,
+  # proof-results-test for pull requests and manual runs. The nightly results also go on the
+  # website (gh-pages proof/latest.json).
+  publish:
+    needs: [mac, windows]
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NIGHTLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.run_id == '' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: proof-*
+          path: in
+      - name: Put the results on their branch
+        run: |
+          set -e
+          if ! ls -d in/proof-* >/dev/null 2>&1; then
+            echo "No results to publish (the Mac runs were cancelled or never started)."
+            exit 0
+          fi
+          branch=$([ "$NIGHTLY" = "true" ] && echo proof-results || echo proof-results-test)
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
+          mkdir results && cd results
+          for d in ../in/proof-*; do
+            arch=${d##*/proof-}
+            mkdir -p "$arch" && cp -R "$d"/. "$arch"/
+          done
+          python3 - <<'EOF'
+          import json, os, pathlib
+          runs = []
+          for d in sorted(p for p in pathlib.Path(".").iterdir() if p.is_dir()):
+              f = d / "proof.json"
+              if not f.exists():
+                  runs.append({"arch": d.name, "error": "The run stopped before it finished. See the workflow log."})
+                  continue
+              r = json.loads(f.read_text())
+              r["arch"] = d.name
+              for a in r["apps"]:
+                  if a.get("screenshot"):
+                      a["screenshot"] = f"{d.name}/" + a["screenshot"].replace(".png", ".jpg")
+              runs.append(r)
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          pathlib.Path("latest.json").write_text(json.dumps({"run": run_url, "runs": runs}, indent=2))
+          pathlib.Path("README.md").write_text(
+              f"# Limitless Sound proof\n\nFrom {run_url}\n\n" +
+              "\n".join((d / "summary.md").read_text() for d in sorted(pathlib.Path('.').iterdir())
+                        if (d / "summary.md").exists()))
+          EOF
+          git init -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Proof $(date -u +%Y-%m-%dT%H:%MZ) from run $GITHUB_RUN_ID"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/$GITHUB_REPOSITORY.git" "$branch"
+      - uses: actions/checkout@v4
+        if: env.NIGHTLY == 'true' && hashFiles('results/latest.json') != ''
+        with:
+          ref: gh-pages
+          path: site
+      - name: Put the nightly results on the website
+        if: env.NIGHTLY == 'true' && hashFiles('results/latest.json') != ''
+        run: |
+          mkdir -p site/proof
+          cp results/latest.json site/proof/latest.json
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proof/latest.json
+          git commit -m "Nightly proof $(date -u +%Y-%m-%d)" || exit 0
+          git push

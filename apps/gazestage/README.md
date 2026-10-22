@@ -82,6 +82,12 @@ Other DAWs that support HUI work the same way, including Logic, Cubase and Reape
 | ⌘. | All notes off |
 | ⌘, | Settings |
 
+## Display and Limitless Sound
+
+Settings › Display has light or dark, high contrast, text size and the space between targets. GazeStage also follows your computer's reduce motion setting.
+
+When Limitless Sound is running, GazeStage also follows the suite's shared text size, high contrast and reduced motion settings. It uses whichever is more accessible: the larger text, and high contrast or reduced motion if either one asks for it. Reduced motion turns off animations and fills the dwell ring in steps. It never changes when something is selected. Dwell and switch timing stay GazeStage's own, in Settings › Selecting.
+
 ## Known limits
 
 - It hasn't been tested yet on a real Pro Tools rig or with a player. The HUI codes for rewind (1), fast forward (2) and stop (3) are unconfirmed.
@@ -103,9 +109,10 @@ npm run test:packaged    # smoke test the built app in dist/
 | `main.js` | Electron shell: the `app://` protocol, virtual MIDI ports (`@julusian/midi`), the menu, window state, and camera and microphone permissions |
 | `preload.js` | The small bridge the page can use |
 | `renderer/app.js` | Pointer, sticky targeting, selection, pages, guided setup and settings |
-| `renderer/tracker.js` | MediaPipe face and iris tracking |
+| `renderer/tracker.js` | The camera, and face and iris samples for the pointer |
+| `renderer/face-worker.js` | MediaPipe face tracking, in its own thread so the window never freezes while it loads or works. It runs on the graphics chip or the CPU, whichever is faster on this computer, and says which (`gaze.faceTracking`) |
 | `renderer/lib.js` | Pure logic covered by the unit tests: filter, calibration fit, head mapping, scales and chords, the HUI protocol, sound onsets |
-| `renderer/synth.js` | The built-in instrument |
+| `renderer/synth.js` | The built-in instrument. It plays in a hidden page and process of its own (`renderer/synth.html` and `synth-page.js`; `synth-link.js` is the window's side, `synth-preload.js` its bridge), because starting the computer's audio can hold up the page that starts it for seconds |
 | `renderer/midi.js` | Native or Web MIDI routing and the HUI link |
 
 CI (`.github/workflows/gazestage.yml`) runs the tests on every pull request. It then builds the Mac .dmg files and the Windows installer, smoke tests each built app, and checks that the macOS build creates its own MIDI ports. A `gazestage-v*` tag attaches the installers to a release.

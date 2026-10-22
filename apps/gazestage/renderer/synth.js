@@ -8,12 +8,31 @@ const PRESETS = {
 export const SYNTH_PRESETS = Object.fromEntries(Object.entries(PRESETS).map(([k, v]) => [k, v.name]));
 
 export class Synth {
-  constructor() { this.ctx = null; this.voices = new Map(); this.preset = 'keys'; }
+  constructor() {
+    this.ctx = null; this.voices = new Map(); this.preset = 'keys'; this.volume = 0.9;
+    this.restMs = 10000;
+  }
+
+  // 10 s after the last sound (its release and the reverb's tail are over by then) the audio
+  // context is suspended: a running one kept the computer's audio busy, about 2.5% of the CPU
+  // on a Mac, for as long as GazeStage sat idle. warm() starts it again ahead of the next note.
+  restLater() {
+    clearTimeout(this.restTimer);
+    this.restTimer = setTimeout(() => {
+      if (this.voices.size) this.restLater();
+      else this.ctx?.suspend();
+    }, this.restMs);
+  }
+
+  // Ready to play at once: the window calls this as the pointer settles on something that will
+  // sound, a moment before it's chosen, so the first note after a rest isn't late.
+  warm() { this.ensure(); }
 
   ensure() {
+    this.restLater();
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return this.ctx; }
     const ctx = this.ctx = new AudioContext({ latencyHint: 'interactive' });
-    this.master = ctx.createGain(); this.master.gain.value = 0.9;
+    this.master = ctx.createGain(); this.master.gain.value = this.volume;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
     this.dry = ctx.createGain(); this.wet = ctx.createGain();
@@ -55,7 +74,9 @@ export class Synth {
     const p = PRESETS[this.preset];
     this.wet.gain.value = p.reverb; this.dry.gain.value = 1 - p.reverb * 0.5;
   }
-  setVolume(v) { this.ensure(); this.master.gain.value = v; }
+  // Kept until the first note: an audio context started at launch keeps the computer's audio
+  // running (and the reverb with it) while GazeStage sits idle.
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
 
   noteOn(note, velocity = 100) {
     const ctx = this.ensure();
@@ -95,7 +116,7 @@ export class Synth {
 
   noteOff(note, immediate = false) {
     const v = this.voices.get(note); if (!v) return;
-    this.voices.delete(note);
+    this.voices.delete(note); this.restLater();
     const t = this.ctx.currentTime, r = immediate ? 0.02 : v.release;
     v.amp.gain.cancelScheduledValues(t);
     v.amp.gain.setValueAtTime(v.amp.gain.value, t);

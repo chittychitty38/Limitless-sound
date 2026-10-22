@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limitless Sound Software</title>
+<meta name="description" content="Free music software for musicians with disabilities. Play, record and mix with your voice, one hand, your eyes, a switch or an adaptive controller. Music is for every body.">
+<meta name="theme-color" content="#13121f">
+<meta property="og:title" content="Limitless Sound Software">
+<meta property="og:description" content="Free music software for musicians with disabilities. Music is for every body.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://chittychitty38.github.io/Limitless-sound/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+@font-face { font-family: "Bricolage"; src: url("fonts/BricolageGrotesque-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Bricolage"; src: url("fonts/BricolageGrotesque-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Atkinson Next"; src: url("fonts/AtkinsonHyperlegibleNext.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
+
+/* Limitless Sound brand: night navy, cream, crimson, lavender. The brand is dark, so the page is dark in both modes. */
+:root {
+  color-scheme: dark;
+  --night: #13121f;
+  --night-2: #1a1929;
+  --card: #1f1e30;
+  --line: #34324a;
+  --cream: #f3eee4;
+  --muted: #bdb8ca;
+  --crimson: #d2334c;
+  --crimson-hover: #e0405a;
+  --red: #ef4f5f;
+  --lavender: #b4b0fa;
+  --focus: #b4b0fa;
+  --display: "Bricolage", "Atkinson Next", system-ui, sans-serif;
+  --body: "Atkinson Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Instrument Serif", Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before { transition: none !important; animation: none !important; } }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--cream);
+  font-family: var(--body);
+  font-size: 1.15rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--lavender); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+.label { font-family: var(--mono); font-size: .88rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.accent { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--lavender); letter-spacing: 0; }
+
+.skip { position: absolute; left: -999px; top: 8px; background: var(--cream); color: var(--night); padding: 10px 16px; border-radius: 999px; z-index: 10; font-weight: 700; }
+.skip:focus { left: 16px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+/* Header */
+header.top { position: sticky; top: 0; z-index: 5; background: rgba(19,18,31,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--cream); text-decoration: none; }
+.brand img { width: 46px; height: 46px; }
+.brand b { display: block; font-family: var(--display); font-weight: 800; font-size: 1.2rem; line-height: 1.1; letter-spacing: -.01em; }
+.brand span { display: block; font-family: var(--mono); font-size: .74rem; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; }
+nav ul { list-style: none; display: flex; gap: 6px 22px; margin: 0; padding: 0; flex-wrap: wrap; align-items: center; }
+nav a { color: var(--cream); text-decoration: none; font-family: var(--mono); font-size: .85rem; letter-spacing: .14em; text-transform: uppercase; }
+nav a:hover { color: var(--lavender); }
+nav .pill { border: 2px solid var(--cream); border-radius: 999px; padding: 8px 16px; }
+nav .pill:hover { border-color: var(--lavender); }
+@media (max-width: 720px) { nav li.hide-sm { display: none; } }
+
+/* Buttons */
+.btns { display: flex; flex-wrap: wrap; gap: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 999px; font-family: var(--display); font-weight: 800; font-size: 1.12rem; text-decoration: none; line-height: 1.15; min-height: 58px; transition: background .15s, border-color .15s, transform .15s; }
+.btn small { display: block; font-family: var(--body); font-weight: 500; font-size: .84rem; opacity: .9; }
+.btn .arrow { font-family: var(--body); font-weight: 400; font-size: 1.3em; line-height: 1; }
+.btn-primary { background: var(--crimson); color: #fff; }
+.btn-primary:hover { background: var(--crimson-hover); transform: translateY(-1px); }
+.btn-ghost { border: 2px solid var(--cream); color: var(--cream); }
+.btn-ghost:hover { border-color: var(--lavender); color: var(--lavender); }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; padding: 84px 0 0; background:
+  radial-gradient(900px 520px at 85% 10%, rgba(180,176,250,.13), transparent 60%),
+  radial-gradient(700px 480px at 0% 100%, rgba(210,51,76,.14), transparent 60%),
+  var(--night); }
+.hero-mark { position: absolute; right: -60px; top: 40px; width: 520px; max-width: 60vw; opacity: .07; pointer-events: none; }
+.meta { margin: 0 0 10px; line-height: 1.9; }
+.live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
+h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
+.lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
+.lede strong { color: var(--cream); }
+
+.download { margin-top: 8px; max-width: 760px; }
+.fine { font-size: .98rem; color: var(--muted); margin: 18px 0 0; max-width: 60ch; }
+
+.flex { margin-top: 64px; padding: 14px 0 26px; }
+.flex .label { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
+.flex .label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+.flexline { display: block; width: 100%; height: 90px; }
+.flexline path { fill: none; stroke: var(--lavender); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1800; stroke-dashoffset: 1800; animation: draw 2.6s ease-out .3s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Honest note */
+.honest { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--night-2); }
+.honest .wrap { padding-top: 24px; padding-bottom: 24px; display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: start; }
+.honest .label { color: var(--lavender); padding-top: 3px; }
+.honest p { margin: 0; }
+@media (max-width: 640px) { .honest .wrap { grid-template-columns: 1fr; } }
+
+section { padding: 88px 0; }
+.kicker { margin: 0 0 12px; }
+section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1rem, 4.6vw, 3.4rem); line-height: 1.02; letter-spacing: -.035em; margin: 0 0 18px; max-width: 18ch; }
+.section-lede { color: var(--muted); max-width: 60ch; margin: 0 0 40px; }
+
+/* Inputs */
+.inputs { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; padding: 0; margin: 0 0 40px; }
+.inputs li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-family: var(--mono); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--cream); }
+
+/* Apps */
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.app { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.app:hover { border-color: #4a4766; }
+.app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 18px; display: flex; justify-content: space-between; }
+.app h3 { font-family: var(--display); font-weight: 800; font-size: 1.55rem; letter-spacing: -.02em; line-height: 1.1; margin: 0 0 4px; }
+.app .tag { font-family: var(--serif); font-style: italic; font-size: 1.35rem; color: var(--lavender); margin: 0 0 12px; line-height: 1.2; }
+.app p { margin: 0 0 12px; font-size: 1.04rem; }
+.app .for { font-size: .98rem; color: var(--muted); }
+.app .links { margin-top: auto; padding-top: 12px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-weight: 700; font-size: 1rem; }
+.ver { font-family: var(--mono); font-size: .8rem; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+.hubcard { margin-top: 18px; border-radius: 22px; padding: 30px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 28px; background: linear-gradient(135deg, rgba(180,176,250,.16), rgba(210,51,76,.12)); border: 1px solid var(--line); }
+.hubcard h3 { font-family: var(--display); font-weight: 800; font-size: 1.7rem; letter-spacing: -.02em; line-height: 1.1; margin: 8px 0 10px; }
+.hubcard p { margin: 0; color: var(--muted); }
+.hubcard ul { margin: 0; padding-left: 1.1em; }
+.hubcard li { margin-bottom: 8px; }
+.hubcard li::marker { color: var(--red); }
+@media (max-width: 760px) { .hubcard { grid-template-columns: 1fr; } }
+
+/* Install */
+.alt { background: var(--night-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.steps li { counter-increment: s; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
+.steps li::before { content: "0" counter(s); display: block; font-family: var(--mono); font-size: .85rem; letter-spacing: .18em; color: var(--red); margin-bottom: 12px; }
+.steps strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.01em; line-height: 1.2; margin-bottom: 6px; }
+.steps em, .panel em { font-style: normal; font-weight: 700; color: var(--cream); }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); border-radius: 20px; padding: 22px 24px; }
+.panel h3 { font-family: var(--display); font-weight: 800; font-size: 1.25rem; margin: 0 0 8px; }
+.panel p, .panel ul { margin: 0; color: var(--muted); }
+.panel ul { padding-left: 1.1em; }
+.panel li { margin-bottom: 4px; }
+
+/* Vision */
+.docs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 760px) { .docs { grid-template-columns: 1fr; } }
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; }
+.doc h3 { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 14px; }
+.doc p { margin: 0 0 14px; }
+.doc ul { margin: 0 0 22px; padding-left: 1.1em; }
+.doc li { margin-bottom: 6px; }
+.doc li::marker { color: var(--red); }
+.doc .btns { margin-top: auto; }
+.levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 16px; padding: 0; list-style: none; }
+.levels li { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-weight: 700; font-size: .98rem; line-height: 1.25; }
+.levels b { display: block; font-family: var(--mono); font-weight: 400; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+@media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
+.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; }
+.proofrun h3 { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 0 0 4px; }
+.proofrun .label { display: block; margin-bottom: 14px; }
+.prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
+.prooflist li { display: grid; grid-template-columns: 1.6em 1fr; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
+.prooflist .ok .mark { color: #7fd6a4; }
+.prooflist .bad .mark { color: var(--red); }
+.prooflist b { display: block; }
+.prooflist span.how { color: var(--muted); font-size: 1rem; }
+.doc .note { font-size: .98rem; color: var(--muted); margin-bottom: 22px; }
+
+/* Involved */
+.involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
+.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; }
+.involve strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.01em; margin-bottom: 4px; }
+.involve span { color: var(--muted); }
+
+footer { border-top: 1px solid var(--line); padding: 40px 0 56px; color: var(--muted); font-size: 1rem; }
+footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; }
+footer .brand img { width: 38px; height: 38px; }
+footer p { margin: 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Limitless Sound Foundation, back to top">
+      <img src="logo.png" alt="" width="46" height="46">
+      <span style="all:unset"><b>Limitless Sound</b><span>Foundation</span></span>
+    </a>
+    <nav aria-label="Sections">
+      <ul>
+        <li class="hide-sm"><a href="#apps">Apps</a></li>
+        <li class="hide-sm"><a href="#install">Install</a></li>
+        <li class="hide-sm"><a href="#proof">Proof</a></li>
+        <li class="hide-sm"><a href="#vision">The plan</a></li>
+        <li><a class="pill" href="#download">Download</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero" id="top">
+    <img class="hero-mark" src="logo.png" alt="" aria-hidden="true">
+    <div class="wrap">
+      <p class="meta label"><span class="live" aria-hidden="true"></span> Free software &middot; Mac &amp; Windows &middot; Works offline</p>
+      <h1>Music software for <span class="accent">every</span> body.</h1>
+      <p class="lede">Six free apps that let musicians with disabilities play, record and mix in Logic Pro, Pro Tools and Ableton Live with <strong>their voice, one hand, their eyes, a single switch or an adaptive controller.</strong> From the Limitless Sound Foundation. <strong>Free to every musician.</strong></p>
+
+      <div class="download" id="download">
+        <div class="btns">
+          <a class="btn btn-primary" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg">
+            <span>Download for Mac<small>Apple Silicon: M1 and newer</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-intel.pkg">
+            <span>Intel Mac<small>Older Macs, before late 2020</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-windows.exe">
+            <span>Windows<small>Windows 10 and 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version 0.1.0. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
+      </div>
+
+      <div class="flex" aria-hidden="true">
+        <p class="label">Any input. Any app.</p>
+        <svg class="flexline" viewBox="0 0 1080 90" preserveAspectRatio="none">
+          <path d="M0 45 H300 L330 45 L350 12 L372 78 L392 30 L410 58 L428 45 H560 C600 45 610 20 640 20 S680 70 710 70 S750 45 780 45 H1080"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="honest" role="note" aria-label="Project status">
+    <div class="wrap">
+      <span class="label">Early days</span>
+      <p><strong>Honest about where this is.</strong> These apps were built in October 2026 and pass their automated tests, but they have not yet been tested by disabled musicians in real sessions. That&rsquo;s the next step, and the reason for this page. Expect rough edges, and please tell us what breaks.</p>
+    </div>
+  </div>
+
+  <section id="apps" aria-labelledby="apps-title">
+    <div class="wrap">
+      <p class="kicker label">The suite</p>
+      <h2 id="apps-title">Six apps. Any input can do <span class="accent">anything.</span></h2>
+      <p class="section-lede">Each app takes down one barrier on its own. Together they share one action bus, so a button, a glance or a word can reach any of them. Everything runs on the musician&rsquo;s own computer, with the mic, webcam, keyboard or controller they already own.</p>
+
+      <ul class="inputs" aria-label="Ways to play">
+        <li>Voice</li><li>One hand</li><li>Eyes &amp; head</li><li>Single switch</li><li>Foot pedal</li><li>Xbox Adaptive Controller</li><li>A short sound</li><li>Color vision</li>
+      </ul>
+
+      <ul class="apps">
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>01</span><span>Voice</span></p>
+          <h3>Limitless Voice</h3>
+          <p class="tag">Run the DAW by speaking</p>
+          <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools or anywhere on the computer. Fully offline: your voice never leaves the machine.</p>
+          <p class="for">For musicians who can&rsquo;t use, or can&rsquo;t always use, a mouse and keyboard.</p>
+          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.3.4">Download<span class="ver">0.3.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
+        </li>
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>02</span><span>One hand</span></p>
+          <h3>Limitless One-Hand</h3>
+          <p class="tag">The whole studio under one hand</p>
+          <p>Switch on one-hand mode and the keys under your hand become the commands you use most: play, record, undo, split, mute, solo, zoom, save. Switch it off and the keyboard is normal again.</p>
+          <p class="for">For musicians with the use of one hand, left or right.</p>
+          <div class="links"><a data-app="one-hand" href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.2">Download<span class="ver">0.2.2</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme">How it works</a></div>
+        </li>
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>03</span><span>Vision</span></p>
+          <h3>Limitless Zoom</h3>
+          <p class="tag">See the session at any size</p>
+          <p>Zoom the DAW or the whole screen by voice, a one-hand key layer, resting your pointer on big buttons, or a single switch. Every action is shown in large text and said out loud.</p>
+          <p class="for">For low-vision musicians, and anyone who can&rsquo;t pinch, scroll or hold modifier keys.</p>
+          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.2">Download<span class="ver">0.1.2</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
+        </li>
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
+          <h3>Limitless Color</h3>
+          <p class="tag">A screen tuned to your eyes</p>
+          <p>Describe what looks wrong (&ldquo;the red meters look yellow&rdquo;) and it recolors the whole screen, asking what you see now until it&rsquo;s right. Pin Solo, Mute or the meters to an exact color.</p>
+          <p class="for">For colorblind musicians, in any app and any plug-in.</p>
+          <div class="links"><a data-app="color" href="https://github.com/chittychitty38/limitless-sound/releases/tag/color-v0.1.3">Download<span class="ver">0.1.3</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/color#readme">How it works</a></div>
+        </li>
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>05</span><span>Switches</span></p>
+          <h3>Limitless Control</h3>
+          <p class="tag">Switches become key commands</p>
+          <p>Every button and switch jack on an Xbox Adaptive Controller, or any gamepad, becomes a DAW command. It follows the app in front, filters tremor and double hits, and puts Record on a hold so it never starts by accident.</p>
+          <p class="for">For musicians who play with switches, buttons, feet or limited movement.</p>
+          <div class="links"><a data-app="control" href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.3">Download<span class="ver">0.2.3</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme">How it works</a></div>
+        </li>
+        <li class="app">
+          <p class="num" aria-hidden="true"><span>06</span><span>Eyes</span></p>
+          <h3>GazeStage</h3>
+          <p class="tag">Play with your eyes or head</p>
+          <p>Play instruments and run the transport by looking, turning your head, making a short sound or pressing a switch. Uses the built-in camera or any webcam. Video never leaves the computer and nothing is recorded.</p>
+          <p class="for">For musicians who move mostly or only with their eyes and head.</p>
+          <div class="links"><a data-app="gazestage" href="https://github.com/chittychitty38/limitless-sound/releases/tag/gazestage-v0.3.5">Download<span class="ver">0.3.5</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/gazestage#readme">How it works</a></div>
+        </li>
+      </ul>
+
+      <div class="hubcard">
+        <div>
+          <p class="label">The hub</p>
+          <h3>One suite, joined like a sidechain</h3>
+          <p>A small background app links the six. Each still works on its own; with the hub, they work as one.</p>
+        </div>
+        <ul>
+          <li>A controller button can zoom. A glance in GazeStage can turn on screen colors. A spoken phrase can start one-hand mode.</li>
+          <li>While recording, Voice only listens for &ldquo;stop&rdquo;, so singing in a take can&rsquo;t trigger commands.</li>
+          <li>Text size, contrast and dwell time are set once for every app.</li>
+          <li>Built on an open protocol anyone can use: <a href="https://github.com/chittychitty38/limitless-sound/blob/main/shared/PROTOCOL.md">Limitless Link</a>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="alt" aria-labelledby="install-title">
+    <div class="wrap">
+      <p class="kicker label">First open</p>
+      <h2 id="install-title">One minute, <span class="accent">once.</span></h2>
+      <p class="section-lede">The apps aren&rsquo;t signed with a paid Apple or Microsoft certificate yet, so the computer asks once before it trusts them.</p>
+      <ol class="steps">
+        <li><strong>Open the download</strong>Double-click the installer you downloaded.</li>
+        <li><strong>macOS can&rsquo;t check the developer</strong>That&rsquo;s expected. Click <em>Done</em> (or <em>OK</em>).</li>
+        <li><strong>Allow it once</strong>Open System Settings &rsaquo; Privacy &amp; Security, scroll down and click <em>Open Anyway</em>. On older macOS you can instead right-click the installer and choose <em>Open</em>.</li>
+        <li><strong>You&rsquo;re in</strong>The Mac installer puts every app in Applications (it asks for your password). Then Limitless Sound opens in your browser, where you choose which apps start together.</li>
+      </ol>
+      <div class="split">
+        <div class="panel">
+          <h3>On Windows</h3>
+          <p>Download Limitless Sound for Windows and run it: it installs every app for you, with no administrator needed. If SmartScreen appears, click <em>More info</em> &rsaquo; <em>Run anyway</em>. Each app is listed in Settings &rsaquo; Apps under its own name.</p>
+        </div>
+        <div class="panel">
+          <h3>What you need</h3>
+          <ul>
+            <li>A Mac from roughly the last ten years (macOS 12 or newer for most apps), or Windows 10 or 11.</li>
+            <li>Whatever you already have: the built-in mic and camera, any webcam, a keyboard, switch or controller.</li>
+            <li>No account, no internet once installed. Free.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="proof" aria-labelledby="proof-title">
+    <div class="wrap">
+      <p class="kicker label">Proof, every night</p>
+      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
+      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
+      <div class="proofruns" id="proof-runs" aria-live="polite">
+        <p class="fine">Loading last night&rsquo;s results&hellip;</p>
+      </div>
+      <p class="fine">These computers have no microphone, camera or controller, so this proves the install, start-up, the suite and every command. Voices, faces and hands are tested by musicians. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml">Every run, in full</a>.</p>
+    </div>
+  </section>
+
+  <section id="vision" aria-labelledby="vision-title">
+    <div class="wrap">
+      <p class="kicker label">Where this is going</p>
+      <h2 id="vision-title">Software is the <span class="accent">start.</span></h2>
+      <p class="section-lede">The goal is a program that puts working setups in the hands of disabled musicians, a song series that shows what they make, and an open standard so every instrument and plug-in fits them out of the box.</p>
+      <div class="docs">
+        <article class="doc" aria-labelledby="plan-title">
+          <p class="label">The plan</p>
+          <h3 id="plan-title">Limitless Sound: the 38x plan</h3>
+          <ul>
+            <li>Ongoing interviews and outreach with disabled musicians, as a ready-to-run program.</li>
+            <li>A sponsored pilot that fully kits out one or two artists in their own studio.</li>
+            <li>A guest-feature song series pairing them with players they admire, filmed as it happens.</li>
+            <li>Partners for gear, reamping, drums and accessible plug-ins.</li>
+          </ul>
+          <div class="btns">
+            <a class="btn btn-primary" href="Limitless-Sound-38x-Plan.pdf"><span>Read the plan<small>PDF, 9 pages</small></span><span class="arrow" aria-hidden="true">&rarr;</span></a>
+          </div>
+        </article>
+        <article class="doc" aria-labelledby="std-title">
+          <p class="label">The standard &middot; draft 0.1</p>
+          <h3 id="std-title">The Limitless Access Standard</h3>
+          <p>MIDI let any keyboard play any synth. This does the same for access: any input a musician can use can drive any instrument, plug-in, amp modeler or recording app that carries the mark. Free to implement, with an open test kit.</p>
+          <ol class="levels" aria-label="The four levels">
+            <li><b>Level 1</b>Connected</li>
+            <li><b>Level 2</b>Adaptive</li>
+            <li><b>Level 3</b>Hands-free</li>
+            <li><b>Level 4</b>Co-designed</li>
+          </ol>
+          <p class="note">A voluntary, compassionate standard written with disabled musicians. Not a legal accessibility certification.</p>
+          <div class="btns">
+            <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/blob/main/standard/README.md"><span>Read the standard</span><span class="arrow" aria-hidden="true">&rarr;</span></a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="involved" class="alt" aria-labelledby="inv-title">
+    <div class="wrap">
+      <p class="kicker label">Get involved</p>
+      <h2 id="inv-title">Built <span class="accent">with</span> the people it&rsquo;s for.</h2>
+      <ul class="involve">
+        <li><strong>Musicians</strong><span>Try an app and tell us what works and what doesn&rsquo;t. Your setup shapes what gets built next.</span></li>
+        <li><strong>Brands &amp; sponsors</strong><span>Help fund a pilot, put gear in an artist&rsquo;s hands, or carry the Access Standard in your products.</span></li>
+        <li><strong>Developers</strong><span>Everything is open source. Build on the protocol or add your instrument to the suite.</span></li>
+      </ul>
+      <div class="btns"><a class="btn btn-primary" href="https://github.com/chittychitty38/limitless-sound/issues/new"><span>Send feedback or say hello</span><span class="arrow" aria-hidden="true">&rarr;</span></a></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Back to top"><img src="logo.png" alt="" width="38" height="38"><span style="all:unset"><b>Limitless Sound</b><span>Music is for every body</span></span></a>
+    <p>Limitless Sound Foundation &middot; 501(c)(3) &middot; Conyers, Georgia &middot; Founded by Jason Barnes<br>Software free and open source &middot; <a href="https://github.com/chittychitty38/limitless-sound">Source on GitHub</a></p>
+  </div>
+</footer>
+<script>
+// Each Download button goes to that app's newest release, looked up when the page opens.
+// The link written above is kept when GitHub can't be reached.
+(async () => {
+  const links = [...document.querySelectorAll('a[data-app]')];
+  try {
+    const res = await fetch('https://api.github.com/repos/chittychitty38/limitless-sound/releases?per_page=100');
+    if (!res.ok) return;
+    const releases = (await res.json()).filter((r) => !r.draft && !r.prerelease);
+    for (const a of links) {
+      const r = releases.find((x) => x.tag_name.startsWith(a.dataset.app + '-v'));
+      if (!r) continue;
+      a.href = r.html_url;
+      const ver = a.querySelector('.ver');
+      if (ver) ver.textContent = r.tag_name.slice(a.dataset.app.length + 2);
+    }
+  } catch { /* keep the written links */ }
+})();
+
+(() => {
+  const box = document.getElementById("proof-runs");
+  const shots = "https://raw.githubusercontent.com/chittychitty38/Limitless-sound/proof-results/";
+  const mac = { "mac-apple-silicon": "Apple silicon Mac", "mac-intel": "Intel Mac", "windows": "Windows PC" };
+  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const passed = (a) => !!a.level && (a.proof || []).every((x) => x.ok || x.warn);
+  const why = (a) => {
+    const bad = [...(a.checks || []), ...(a.proof || [])].find((x) => !x.ok && !x.warn && (x.level || "proof") !== "adaptive"
+      && ["connected", "proof"].includes(x.level || "proof"));
+    return bad ? `${bad.check}: ${bad.detail || "failed"}` : "";
+  };
+  fetch("proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
+    .then((data) => {
+      const link = document.getElementById("proof-run");
+      if (data.run) link.href = data.run;
+      box.innerHTML = data.runs.map((run) => {
+        if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>${esc(run.error)}</p></div>`;
+        const ok = run.apps.filter(passed).length;
+        const when = new Date(run.when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+        const apps = run.apps.map((a) => {
+          const good = passed(a);
+          const c4 = (a.checks || []).find((x) => x.id === "C4");
+          const how = good
+            ? `ready in ${a.joinedSeconds} s, answered all ${a.actionsTried} of its commands`
+            : esc(why(a));
+          const shot = a.screenshot ? ` <a href="${shots}${esc(a.screenshot)}">screenshot</a>` : "";
+          return `<li class="${good ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${good ? "✓" : "✕"}</span>`
+            + `<span><b>${esc(a.name)}<span class="vh">: ${good ? "passed" : "failed"}</span></b><span class="how">${how}${shot}</span></span></li>`;
+        }).join("");
+        return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
+          + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
+          + `<ul class="prooflist">${apps}</ul></div>`;
+      }).join("");
+    })
+    .catch(() => { box.innerHTML = `<p class="fine">The first nightly results haven&rsquo;t been published yet.</p>`; });
+})();
+</script>
+</body>
+</html>

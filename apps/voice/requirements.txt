@@ -1,0 +1,11 @@
+PyYAML>=6
+platformdirs>=4
+vosk==0.3.44  # 0.3.45 has no macOS wheel
+sounddevice>=0.4.6
+pynput>=1.7.7
+PySide6-Essentials>=6.7
+pyttsx3>=2.90; sys_platform != "darwin"
+pyobjc-framework-Cocoa>=10; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices>=10; sys_platform == "darwin"
+pyobjc-framework-AVFoundation>=10; sys_platform == "darwin"
+pyobjc-framework-ServiceManagement>=10; sys_platform == "darwin"

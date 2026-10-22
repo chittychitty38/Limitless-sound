@@ -3,7 +3,9 @@
 With the Limitless Sound hub running, any other app can switch one-hand mode
 (a controller button, a voice command, a glance in GazeStage), and One-Hand can
 press DAW commands for them: when GazeStage asks for "Record", the layout for the
-app in front knows the keys. Without the hub, none of this does anything.
+app in front knows the keys. The suite's shared text size, high contrast and
+reduce motion settings reach One-Hand's window and badge too. Without the hub,
+none of this does anything.
 """
 
 from .engine import Tap
@@ -38,15 +40,28 @@ ACTIONS = [
     {"id": "right", "label": "Right-hand layout"},
 ] + [{"id": intent.split(".")[1], "label": label, "intent": intent} for intent, label in INTENT_LABELS.items()]
 
+LARGER_TEXT = 1.25   # the text size of One-Hand's own "Larger text" option
+
+
+def combine(larger_text, shared):
+    """The text size, contrast and motion to use, from One-Hand's own option and the suite's
+    shared settings: whichever is more accessible. These are the only shared settings One-Hand honors."""
+    scale = min(2.0, max(1.0, float(shared.get("textScale") or 1.0)))
+    return {"textScale": max(LARGER_TEXT if larger_text else 1.0, scale),
+            "highContrast": bool(shared.get("highContrast")),
+            "reduceMotion": bool(shared.get("reduceMotion"))}
+
 
 class Suite:
-    def __init__(self, engine, backend, set_hand, dispatch=None):
+    def __init__(self, engine, backend, set_hand, dispatch=None, prefs_changed=None):
         self.engine = engine
         self.backend = backend
         self.set_hand = set_hand
+        self.prefs_changed = prefs_changed
+        self.shared = {}   # the suite's shared settings, once the hub sends them
         self.link = Link("onehand", "Limitless One-Hand", VERSION, actions=ACTIONS,
-                         on_invoke=self.invoke, on_connected=self._connected, dispatch=dispatch,
-                         subscribe=["daw.*", "zoom.keys"])
+                         on_invoke=self.invoke, on_connected=self._connected, on_prefs=self._prefs,
+                         dispatch=dispatch, subscribe=["daw.*", "zoom.keys"])
 
     def start(self):
         self.link.start()
@@ -88,6 +103,19 @@ class Suite:
         if up:  # tell a newly started hub where things stand
             self.mode_changed(self.engine.enabled)
             self.hand_changed(self.engine.settings.hand)
+
+    def _prefs(self, prefs):
+        # Sent when the hub connects and whenever the musician changes a shared setting.
+        self.shared = prefs
+        if self.prefs_changed:
+            self.prefs_changed()
+
+    def look(self, larger_text):
+        return combine(larger_text, self.shared)
+
+    def prefs_applied(self, applied):
+        """Tell the suite which shared settings are now in use, so its settings page knows they arrived."""
+        self.link.state("prefs.applied", dict(applied))
 
     def mode_changed(self, on):
         self.link.state("mode", bool(on))

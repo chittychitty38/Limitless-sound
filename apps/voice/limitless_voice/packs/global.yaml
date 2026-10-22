@@ -1,0 +1,110 @@
+# Commands that work in every app, on Mac and Windows.
+# Shortcuts are written with Mac names (cmd, opt, ctrl). On Windows, cmd
+# becomes Ctrl and opt becomes Alt automatically. Where Windows does
+# something different, a command has its own do_windows line, written
+# with Windows key names (ctrl, alt, win).
+
+name: Everywhere
+apps: []
+
+commands:
+  # --- any key, any app -------------------------------------------------
+  - say: ["press {chord:keys}", "hit {chord:keys}"]
+    do: {keys: "{chord}", literal: true}
+    reply: "{chord}"
+    help: Press any key or shortcut, e.g. "press command shift n"
+  - say: ["type {words:text}"]
+    do: {type: "{words}"}
+    repeatable: false
+    help: Type the words that follow
+
+  # --- editing ----------------------------------------------------------
+  - say: ["undo", "undo that"]
+    do: {keys: cmd+z}
+    reply: Undone
+  - say: ["redo", "redo that"]
+    do: {keys: cmd+shift+z}
+    do_windows: {keys: ctrl+y}
+    reply: Redone
+  - say: ["copy", "copy that"]
+    do: {keys: cmd+c}
+  - say: ["cut", "cut that"]
+    repeatable: 3   # one misheard number must never wipe a session
+    do: {keys: cmd+x}
+  - say: ["paste", "paste that"]
+    repeatable: 3   # one misheard number must never wipe a session
+    do: {keys: cmd+v}
+  - say: ["select all"]
+    do: {keys: cmd+a}
+  - say: ["save", "save [the] project", "save [the] session", "save that"]
+    do: {keys: cmd+s}
+    reply: Saved
+    repeatable: false
+
+  # --- moving around ----------------------------------------------------
+  - say: ["press enter", "press return", "enter", "return"]
+    do: {keys: return}
+  - say: ["escape", "press escape"]
+    do: {keys: escape}
+  - say: ["tab", "next field"]
+    do: {keys: tab}
+  - say: ["previous field"]
+    do: {keys: shift+tab}
+  - say: ["move up", "arrow up"]
+    do: {keys: up}
+  - say: ["move down", "arrow down"]
+    do: {keys: down}
+  - say: ["move left", "arrow left"]
+    do: {keys: left}
+  - say: ["move right", "arrow right"]
+    do: {keys: right}
+  - say: ["page up", "scroll up"]
+    do: {keys: pageup}
+  - say: ["page down", "scroll down"]
+    do: {keys: pagedown}
+
+  # --- windows and apps -------------------------------------------------
+  - say: ["open {name:text}", "switch to {name:text}"]
+    do: {open_app: "{name}"}
+    reply: Opening {name}
+    repeatable: false
+    help: Open or switch to an app, e.g. "open logic pro"
+  - say: ["next window", "switch window"]
+    do: {keys: "cmd+`"}
+    do_windows: {keys: "alt+tab"}
+  - say: ["close [the] window"]
+    do: {keys: cmd+w}
+    confirm: true
+    help: close this window
+  - say: ["quit [the] app", "quit application"]
+    do: {keys: cmd+q}
+    do_windows: {keys: "alt+f4"}
+    confirm: true
+    help: quit this app
+  - say: ["mission control", "show all windows", "task view"]
+    do: {keys: ctrl+up}
+    do_windows: {keys: "win+tab"}
+  - say: ["show desktop"]
+    do: {keys: f11}
+    do_windows: {keys: "win+d"}
+  - say: ["spotlight", "search computer", "start menu"]
+    do: {keys: cmd+space}
+    do_windows: {keys: "win+s"}
+
+  # --- system -----------------------------------------------------------
+  - say: ["volume up", "louder"]
+    do: {keys: [volumeup, volumeup]}
+  - say: ["volume down", "quieter", "softer"]
+    do: {keys: [volumedown, volumedown]}
+  - say: ["mute volume", "mute sound", "unmute volume"]
+    do: {keys: mute}
+  - say: ["set volume to {level:number}"]
+    platforms: [mac]
+    do: {applescript: "set volume output volume {level}"}
+    reply: Volume {level}
+  - say: ["zoom screen in", "magnify"]
+    do: {keys: cmd+opt+=}
+    do_windows: {keys: "win+="}
+  - say: ["zoom screen out"]
+    do: {keys: cmd+opt+-}
+    do_windows: {keys: "win+-"}

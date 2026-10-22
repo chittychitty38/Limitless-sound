@@ -72,6 +72,18 @@ def test_tap_fires_once_after_min_press(out):
     assert out.spoken == ["Play stop"]
 
 
+def test_busy_only_while_a_switch_is_held(out):
+    """The main loop slows down when nothing is held, so it must know when something is."""
+    e = make_engine(out)
+    assert not e.busy
+    e.press("b", 0)
+    assert e.busy
+    e.tick(1.0)              # the long press fires...
+    assert e.busy            # ...and the switch is still down
+    e.release("b", 1.2)
+    assert not e.busy
+
+
 def test_tremor_bump_ignored(out):
     e = make_engine(out)
     e.press("a", 0)

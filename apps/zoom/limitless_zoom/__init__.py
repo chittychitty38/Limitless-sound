@@ -1,3 +1,3 @@
 """Limitless Zoom: accessible zoom control for musicians."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"

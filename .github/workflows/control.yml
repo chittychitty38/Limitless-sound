@@ -9,6 +9,11 @@ on:
     paths: ["apps/control/**", ".github/workflows/control.yml"]
   workflow_dispatch:
 
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: control-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: write
 
@@ -86,7 +91,7 @@ jobs:
             mkdir -p dmg
             cp -R "dist/Limitless Control.app" dmg/
             ln -s /Applications dmg/Applications
-            hdiutil create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO "$OUT"
+            "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Control" -srcfolder dmg -ov -format UDZO "$OUT"
           fi
           hdiutil verify "$OUT"
 

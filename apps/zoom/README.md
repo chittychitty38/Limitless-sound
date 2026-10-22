@@ -20,6 +20,10 @@ Linux works too, for testing.
 
 Every action is shown in large text and spoken aloud (turn speech off in the menu).
 
+Waiting costs almost nothing: the speech recognizer only runs while the microphone hears
+something, from a second before a sound to a second and a half after it, and nothing on
+screen redraws while nothing changes.
+
 ## What gets zoomed
 
 The app looks at which program is in front and presses that program's own zoom keys:
@@ -81,7 +85,8 @@ pyinstaller packaging/limitless_zoom.spec       # build the app for this OS
 
 GitHub Actions (`.github/workflows/zoom.yml` at the repo root) builds the Mac (Apple Silicon and Intel)
 and Windows installers on every push, runs the tests, checks voice recognition with
-recorded speech, and attaches installers to a release when a `zoom-v*` tag is pushed.
+recorded speech, and publishes a `zoom-v<version>` release when a new version in
+`limitless_zoom/__init__.py` reaches `main`.
 
 Layout: `actions.py` (actions and phrases), `keymaps.py` (per-app keys), `router.py`
 (action → keys), `hotkeys.py` (zoom key layer and switch), `voice.py` (offline speech),
@@ -105,6 +110,12 @@ When the Limitless Sound hub is running, Zoom joins the suite by itself:
   round, so the two never fight over the same keys.
 - The panel follows the suite's shared dwell time and scanning speed, and spoken feedback goes
   through the suite's one voice when that setting is on.
+- Every window (the panel, the big-text messages, the "ZOOM KEYS ON" badge, setup) follows the
+  suite's text size, high contrast and reduced motion settings straight away, with no restart.
+  If the panel's own `button_scale` makes its text bigger, the bigger one wins. With reduced
+  motion the dwell bar fills in steps instead of sliding, and menus and tooltips don't animate.
+  Zoom tells the suite which of these settings it's using (Limitless Access Standard level 2,
+  Adaptive).
 
 Without the hub nothing changes. The link is `limitless_zoom/suite.py`, using a copy of
 `shared/clients/python/limitless_link.py`.

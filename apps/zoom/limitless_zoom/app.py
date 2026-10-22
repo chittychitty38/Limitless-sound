@@ -2,27 +2,30 @@
 
 import argparse
 import getpass
+import logging
 import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QCoreApplication, QLockFile, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import voice
+from . import __version__, applog, mac_keys, voice
 from .actions import APP_ACTIONS, LABELS
 from .hotkeys import GlobalKeys, KeyLogic
 from .keys import format_key
 from .router import Router
 from .settings import Settings, config_dir
 from .suite import Suite
-from .ui import KeyCaptureDialog, Panel, Setup, Toast
+from .ui import KeyCaptureDialog, Look, Panel, Setup, Toast
 
 SERVER_NAME = f"limitless-zoom-{getpass.getuser()}"
+SHOW = "show"   # what opening Zoom again sends the copy already running: show the panel
+log = logging.getLogger("Limitless Zoom")
 
 
 class Bus(QObject):
@@ -86,7 +89,12 @@ class ZoomApp(QObject):
         self.last_action = None
         self.voice = None
         self.setup_window = None
+        self.capture_dialog = None
         self._perms_ok = None
+        self._perms_shown = None   # what Setup shows now, so it's only redrawn when that changes
+        self._status_text = None
+        self.look = Look()   # the suite's shared text size, contrast and motion (set_look)
+        self.ui_effects = QApplication.isEffectEnabled(Qt.UI_General)
 
         self.toast = Toast()
         self.badge = Toast(persistent=True)
@@ -182,7 +190,10 @@ class ZoomApp(QObject):
             self._status("")
         self._perms_ok = ok
         setup_open = self.setup_window is not None and self.setup_window.isVisible()
-        if self.setup_window is not None:
+        if self.setup_window is not None and perms != self._perms_shown:
+            # Only when something changed: restyling Setup every second redrew the whole
+            # window every second for as long as a permission was missing.
+            self._perms_shown = perms
             self.setup_window.set_permissions(perms)
         # Check every second while someone is setting up, otherwise now and then.
         self.perm_timer.setInterval(1000 if setup_open or not ok else 10000)
@@ -271,11 +282,15 @@ class ZoomApp(QObject):
             self.keys_action.setChecked(on)
 
     def _status(self, text):
+        if text == self._status_text:
+            return
+        self._status_text = text
         self.panel.status.setText(text)
         if self.tray:
             self.tray.setToolTip(f"Limitless Zoom\n{text}" if text else "Limitless Zoom")
 
     def _voice_status(self, text):
+        log.info("Voice: %s", text)   # only when it changes: which microphone, or why there's none
         self.panel.voice_label.setText(f"Voice: {text}")
         if self.setup_window is not None:
             self.setup_window.set_voice_status(text)
@@ -288,6 +303,19 @@ class ZoomApp(QObject):
     def _level(self, value):
         if self.setup_window is not None and self.setup_window.isVisible():
             self.setup_window.set_level(value)
+
+    def set_look(self, look):
+        """The suite's text size, high contrast and reduced motion, live in every window.
+        The panel's own button_scale wins when it makes the panel's text bigger."""
+        self.look = look
+        self.toast.set_look(look)
+        self.badge.set_look(look)
+        self.panel.set_look(look.combined(Look(self.settings["button_scale"])))
+        for w in (self.setup_window, self.capture_dialog):
+            if w is not None:
+                w.set_look(look)
+        # Menus, pop-up lists and tooltips appear at once instead of sliding or fading in.
+        QApplication.setEffectEnabled(Qt.UI_General, self.ui_effects and not look.reduce_motion)
 
     # Voice -----------------------------------------------------------------
 
@@ -338,10 +366,11 @@ class ZoomApp(QObject):
     # Choosing keys --------------------------------------------------------------
 
     def capture_key(self, title, prompt):
-        dlg = KeyCaptureDialog(title, prompt, lambda cb: None)
+        dlg = self.capture_dialog = KeyCaptureDialog(title, prompt, lambda cb: None, look=self.look)
         self.bus.captured.connect(dlg.got_key)
         self.logic.capture_next(self.bus.captured.emit)
         dlg.exec()
+        self.capture_dialog = None
         self.logic.capture = None
         self.bus.captured.disconnect(dlg.got_key)
         return dlg.key
@@ -381,7 +410,7 @@ class ZoomApp(QObject):
             mics = []
         login = self.backend.open_at_login() if self.backend.can_open_at_login() else None
         w = Setup(self.key_text(), format_key(self.settings["switch_key"], self.backend.os_name),
-                  mics, self.settings["voice_device"], login)
+                  mics, self.settings["voice_device"], login, look=self.look)
         w.request_permission.connect(self.backend.request_permission)
         w.choose_layer.connect(self.choose_layer_key)
         w.choose_switch.connect(self.choose_switch_key)
@@ -392,6 +421,7 @@ class ZoomApp(QObject):
         if self.voice is None:
             w.set_voice_status("off" if not self.settings["voice_enabled"] else "starting…")
         self.setup_window = w
+        self._perms_shown = None
         self._check_permissions()
         screen = w.screen().availableGeometry()
         w.resize(min(w.width(), screen.width() - 40), min(w.height(), screen.height() - 40))
@@ -470,7 +500,9 @@ class ZoomApp(QObject):
             # unread data is lost if the sender closes the pipe first.)
             words = bytes(sock.readAll()).decode("utf-8", "ignore").split()
             for word in words:
-                if word in LABELS:
+                if word == SHOW:
+                    self.show_panel()
+                elif word in LABELS:
                     self.run(word)
             if words:
                 sock.write(b"ok\n")
@@ -495,6 +527,25 @@ def send_remote(action, timeout_ms=1000):
     if sock.state() != QLocalSocket.UnconnectedState:
         sock.waitForDisconnected(timeout_ms)
     return True
+
+
+def single_instance(folder=None, take_over=False):
+    """A lock that only one running Limitless Zoom holds, or None while another copy has it.
+    Two copies opened at the same moment (at login, say) could otherwise both find nobody
+    listening yet, and both run: twice the CPU, and every zoom key pressed twice.
+    take_over: the copy holding it never answered, so it's gone; take the lock anyway."""
+    folder = Path(folder or config_dir())
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    lock = QLockFile(str(folder / "running.lock"))
+    lock.setStaleLockTime(0)   # a copy that crashed leaves a lock; it's stale once that process is gone
+    if take_over:
+        lock.removeStaleLockFile()
+    if lock.tryLock(0) or lock.error() != QLockFile.LockError.LockFailedError:
+        return lock   # ours, or no lock can be made there at all: run as before
+    return None
 
 
 def _try(fn):
@@ -522,6 +573,7 @@ def _load_model(settings):
 
 
 def main(argv=None):
+    applog.start("Limitless Zoom", __version__)
     parser = argparse.ArgumentParser(prog="limitless-zoom", description="Accessible zoom control")
     parser.add_argument("--do", metavar="ACTION", help="send an action to the running app, e.g. in, out, fit")
     parser.add_argument("--no-voice", action="store_true", help="don't listen for voice commands")
@@ -529,16 +581,41 @@ def main(argv=None):
     parser.add_argument("--selftest", action="store_true", help="start everything, then quit (for builds)")
     args = parser.parse_args(argv)
 
+    if args.do:
+        # The Limitless Sound hub runs this when Zoom is closed, e.g. for its link "one-hand
+        # mode on: zoom keys off". It only passes the action on, so it needs no windows.
+        core = QCoreApplication(sys.argv[:1])   # the socket needs one, alive while it's used
+        core.setApplicationName("Limitless Zoom")
+        sent = send_remote(args.do)
+        log.info("--do %s: %s", args.do, "passed to the Limitless Zoom that's running" if sent
+                 else "Limitless Zoom isn't running, so nothing was done")
+        return 0 if sent else 1
+
+    mac_keys.prepare()   # before anything presses or listens for keys, on this, the main thread
     QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv[:1])
     qapp.setApplicationName("Limitless Zoom")
     qapp.setQuitOnLastWindowClosed(False)
     qapp.setWindowIcon(app_icon())
 
-    if args.do:
-        return 0 if send_remote(args.do) else 1
-    if not args.selftest and send_remote("panel"):
-        return 0  # already running: just show its panel
+    lock = None
+    if not args.selftest:
+        if send_remote(SHOW):
+            log.info("Already running: showed its panel")
+            return 0
+        lock = single_instance()
+        if lock is None:
+            # Another copy is opening right now: show its panel once it's ready, and leave it be.
+            for _ in range(60):
+                if send_remote(SHOW, 250):
+                    log.info("Another copy was opening at the same moment; left it running")
+                    return 0
+                time.sleep(0.25)
+            # Nobody answered for half a minute, so the copy that left the lock is gone. Qt can't
+            # tell when it was left under another computer name (a Mac's name can change with its
+            # network): take the lock over rather than never open again.
+            log.info("The last copy left its lock behind; taking it over")
+            lock = single_instance(take_over=True)
 
     from .platforms import get_backend
 

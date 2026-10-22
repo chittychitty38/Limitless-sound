@@ -5,7 +5,7 @@ import pytest
 
 from limitless_control import profiles
 from limitless_control.engine import Engine
-from limitless_control.suite import INTENT_FOR_ID, Suite, actions
+from limitless_control.suite import INTENT_FOR_ID, OWN_LOOK, Suite, actions, combine
 
 
 class Out:
@@ -127,3 +127,32 @@ def test_action_list_covers_every_mapped_intent():
     ids = {a["id"] for a in actions()}
     assert {i.split(".")[1] for i in INTENT_FOR_ID.values()} <= ids
     assert {"on", "off", "toggle", "layer"} <= ids
+
+
+def test_the_more_accessible_look_wins():
+    assert combine(OWN_LOOK, {}) == OWN_LOOK                    # no hub: the page looks as it always did
+    mine = {"textScale": 1.75, "highContrast": True, "reduceMotion": False}
+    shared = {"textScale": 1.5, "highContrast": False, "reduceMotion": True, "dwellMs": 1200, "speak": False}
+    assert combine(mine, shared) == {"textScale": 1.75, "highContrast": True, "reduceMotion": True}
+    assert combine(OWN_LOOK, shared) == {"textScale": 1.5, "highContrast": False, "reduceMotion": True}
+    assert combine(OWN_LOOK, {"textScale": 9})["textScale"] == 2.0
+    assert combine(OWN_LOOK, {"textScale": "big"})["textScale"] == 1.0
+
+
+def test_shared_settings_are_applied_and_reported(setup):
+    app, s = setup
+    prefs = {"speak": True, "oneVoice": True, "textScale": 1.5, "highContrast": True, "reduceMotion": False,
+             "dwellMs": 800, "scanMs": 1200}
+    s.on_prefs(prefs)
+    look = {"textScale": 1.5, "highContrast": True, "reduceMotion": False}
+    assert app.look == look
+    assert s.link.log == [("state", "prefs.applied", look)]   # only the settings it really honors
+
+    s.on_prefs({**prefs, "dwellMs": 1500})                     # nothing it uses changed: nothing to say
+    assert len(s.link.log) == 1
+    s.on_prefs({**prefs, "reduceMotion": True})
+    assert s.link.log[-1] == ("state", "prefs.applied", {**look, "reduceMotion": True})
+
+    s.on_connected(True)                                       # joining again: say it again
+    s.on_prefs({**prefs, "reduceMotion": True})
+    assert s.link.log[-1] == ("state", "prefs.applied", {**look, "reduceMotion": True})

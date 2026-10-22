@@ -21,7 +21,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import __version__, catalog, launcher as launcher_mod, paths
+from . import __version__, applog, catalog, launcher as launcher_mod, paths
+from . import setup as setup_mod
 from .bus import PROTOCOL, Bus
 from .speech import Speaker
 
@@ -47,6 +48,13 @@ class _TCPServer(socketserver.ThreadingTCPServer):
 class _HTTPServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = not os.name == "nt"
+
+    def server_bind(self):
+        # HTTPServer's own server_bind also looks up the computer's full name
+        # (socket.getfqdn), which nothing here uses. On a Mac that lookup can wait on
+        # multicast DNS for half a minute: Limitless Control took 35 s to start that way.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class Outbox:
@@ -326,6 +334,20 @@ class Hub:
                     except OSError as e:
                         return self._json({"ok": False, "message": str(e)}, 500)
                     return self._json({"ok": True})
+                if p == "/api/setup":
+                    # The guided setup: apply the answers, remember them, open the apps.
+                    if body.get("skip"):
+                        with bus.lock:
+                            hub.settings["setupDone"] = True
+                            hub._save(hub.settings)
+                        return self._json({"ok": True})
+                    plan = setup_mod.plan(body.get("inputs") or [], body.get("look") or {})
+                    with bus.lock:
+                        hub.settings.update(startTools=plan["tools"], setupDone=True, setupInputs=plan["inputs"])
+                        hub._save(hub.settings)
+                    prefs = bus.set_prefs(plan["prefs"])
+                    opened = hub.launcher.open_many(plan["tools"]) if plan["tools"] else {"message": ""}
+                    return self._json({"ok": True, **plan, "prefs": prefs, "message": opened.get("message", "")})
                 if p == "/api/quit":
                     hub.quit.set()
                     return self._json({"ok": True})
@@ -334,6 +356,8 @@ class Hub:
                     if tool not in catalog.TOOLS:
                         return self._json({"ok": False, "message": "Unknown tool."}, 400)
                     return self._json(hub.launcher.open(tool))
+                if p == "/api/open-logs":
+                    return self._json(hub.launcher.open_folder(applog.log_dir()))
                 if p == "/api/install-path":
                     tool = str(body.get("tool") or "")
                     if tool not in catalog.TOOLS:

@@ -179,11 +179,15 @@ class MacBackend(Backend):
             return "unknown"
 
     def _iokit(self):
-        lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/IOKit.framework/IOKit")
-        lib.IOHIDCheckAccess.restype = ctypes.c_int
-        lib.IOHIDCheckAccess.argtypes = [ctypes.c_int]
-        lib.IOHIDRequestAccess.restype = ctypes.c_bool
-        lib.IOHIDRequestAccess.argtypes = [ctypes.c_int]
+        # Loaded once: permissions are checked every second while one is missing.
+        lib = getattr(self, "_iokit_lib", None)
+        if lib is None:
+            lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/IOKit.framework/IOKit")
+            lib.IOHIDCheckAccess.restype = ctypes.c_int
+            lib.IOHIDCheckAccess.argtypes = [ctypes.c_int]
+            lib.IOHIDRequestAccess.restype = ctypes.c_bool
+            lib.IOHIDRequestAccess.argtypes = [ctypes.c_int]
+            self._iokit_lib = lib
         return lib
 
     def _input_monitoring(self):
@@ -202,14 +206,23 @@ class MacBackend(Backend):
         except Exception:
             return "unknown"
 
+    @staticmethod
+    def read_pref(domain, key):
+        """Another app's setting, read in this process, as `defaults read` would see it.
+        (Running `defaults` every second while Setup was open cost a few percent of the CPU.)"""
+        from Foundation import CFPreferencesAppSynchronize, CFPreferencesCopyAppValue
+
+        CFPreferencesAppSynchronize(domain)  # see changes made since by System Settings
+        return CFPreferencesCopyAppValue(key, domain)
+
     def _zoom_shortcuts(self):
         try:
-            out = subprocess.run(["defaults", "read", "com.apple.universalaccess",
-                                  "closeViewHotkeysEnabled"], capture_output=True, text=True,
-                                 timeout=2).stdout.strip()
+            value = self.read_pref("com.apple.universalaccess", "closeViewHotkeysEnabled")
         except Exception:
             return "unknown"
-        return {"1": "ok", "0": "missing"}.get(out, "unknown")
+        if value is None:
+            return "unknown"
+        return "ok" if bool(value) else "missing"
 
     def permissions(self):
         mic = self._microphone()

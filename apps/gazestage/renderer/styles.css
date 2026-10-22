@@ -4,7 +4,9 @@
   --pad: #232833; --pad-hi: #2b3240; --root: #23345a; --accent: #6ea8ff; --accent-ink: #0b0d10;
   --hot: #ffc233; --hot-ink: #14110a; --rec: #ff5a6a; --ok: #3ddc84; --warn: #ffb547;
   --focus: #ffffff; --shadow: 0 10px 40px rgba(0, 0, 0, .45);
-  --radius: 18px; --gap: 14px; --text: 17px;
+  --radius: 18px; --gap: 14px;
+  /* Text size: app.js sets --scale. --past-xl is how far past Extra large (24px) the text is. */
+  --scale: 1; --text: calc(17px * var(--scale)); --past-xl: max(1, var(--scale) * 17 / 24);
   color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -25,12 +27,26 @@
 }
 :root[data-contrast="high"] {
   --bg: #000000; --panel: #000000; --panel-2: #0d0d0d; --ink: #ffffff; --muted: #e6e6e6; --line: #ffffff;
-  --pad: #000000; --pad-hi: #1a1a1a; --root: #001a4d; --accent: #4da3ff; --hot: #ffd400; --rec: #ff4d4d; --ok: #00ff7f;
+  --pad: #000000; --pad-hi: #1a1a1a; --root: #001a4d; --accent: #4da3ff; --accent-ink: #000000;
+  --hot: #ffd400; --hot-ink: #000000; --rec: #ff4d4d; --ok: #00ff7f; --warn: #ffb547; --focus: #ffffff; --shadow: none;
   color-scheme: dark;
 }
-:root[data-size="large"] { --text: 20px; }
-:root[data-size="xlarge"] { --text: 24px; }
 :root[data-spacing="wide"] { --gap: 28px; }
+/* Text past Extra large: the status chips get a row of their own under the buttons, and the
+   transport hint gives up its margins, so the targets keep their room. */
+:root[data-size="huge"] .brand { flex: 1; }
+:root[data-size="huge"] .chips { order: 1; flex-basis: 100%; }
+:root[data-size="huge"] .hint { margin: 0; }
+/* High contrast, whatever the theme: thick borders and focus ring, and switches that show their state. */
+:root[data-contrast="high"] :is(.topbar, .chip, .tool, .preview, select, #settings, #settings header, #settings section, .card, .note, .bigcam, #toast) { border-width: 2px; }
+:root[data-contrast="high"] :focus-visible { outline-width: 4px; }
+:root[data-contrast="high"] .switch { background: var(--bg); box-shadow: inset 0 0 0 2px var(--line); }
+:root[data-contrast="high"] .switch:checked { background: var(--hot); box-shadow: none; }
+:root[data-contrast="high"] .switch:checked::after { background: var(--hot-ink); }
+/* Reduced motion (the system's or the shared setting): nothing slides, fades or bumps, and the
+   dwell ring and bar fill in steps (app.js). */
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { transition: none !important; animation: none !important; }
+:root[data-motion="reduce"] .target.flash { transform: none; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -46,7 +62,7 @@ button, select, input { font: inherit; color: inherit; }
 
 /* ---------- top bar ---------- */
 .topbar {
-  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
   background: var(--panel); border-bottom: 1px solid var(--line); -webkit-app-region: drag;
 }
 .mac .topbar { padding-left: 88px; }
@@ -92,7 +108,7 @@ main { position: relative; display: grid; grid-template-rows: auto 1fr; gap: var
   transition: background-color .12s, border-color .12s, transform .12s;
 }
 .target small { font-size: .55em; font-weight: 500; color: var(--muted); }
-.target .glyph { font-size: 1.7em; line-height: 1; }
+.target .glyph { font-size: calc(1.7em / var(--past-xl)); line-height: 1; }   /* pictures leave the room to bigger words */
 .target .glyph svg { width: 1em; height: 1em; display: block; }
 .target:hover { background: var(--pad-hi); }
 .target.gazed { border-color: var(--hot); background: var(--pad-hi); box-shadow: inset 0 0 0 3px var(--hot); }
@@ -112,7 +128,7 @@ main { position: relative; display: grid; grid-template-rows: auto 1fr; gap: var
 .hint a, .linkish { color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: 0; padding: 0; font-size: inherit; }
 
 #play { grid-template-rows: auto 1fr; gap: var(--gap); }
-.controls { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--gap); }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.6em, 1fr)); gap: var(--gap); }   /* one row unless the text is very large */
 .controls .target { min-height: 76px; font-size: 1em; }
 .controls .target small { font-size: .75em; }
 #pads { display: grid; gap: var(--gap); min-height: 0; }
@@ -168,7 +184,7 @@ input.text { min-width: 200px; background: var(--panel-2); border: 1px solid var
 #calib .tgt.collect { transform: scale(.55); }
 
 /* ---------- settings drawer ---------- */
-#settings { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow); z-index: 600; transform: translateX(105%); transition: transform .2s ease; display: flex; flex-direction: column; }
+#settings { position: fixed; top: 0; right: 0; bottom: 0; width: min(calc(520px * var(--past-xl)), 100vw); background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow); z-index: 600; transform: translateX(105%); transition: transform .2s ease; display: flex; flex-direction: column; }
 #settings.open { transform: none; }
 #settings header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
 #settings header h2 { margin: 0; font-size: 1.2em; }
@@ -224,7 +240,6 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; font-si
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--panel-2); border: 1px solid var(--line); padding: 12px 18px; border-radius: 14px; box-shadow: var(--shadow); opacity: 0; transition: opacity .2s, transform .2s; z-index: 950; pointer-events: none; font-weight: 600; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
 @media (max-width: 1000px) {
   .controls { grid-template-columns: repeat(4, 1fr); }
   #tone { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto; }

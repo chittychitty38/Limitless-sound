@@ -4,6 +4,8 @@ With the Limitless Sound hub running, any other app can zoom (a controller
 button, a glance in GazeStage, a One-Hand key, a voice command), Zoom answers
 the shared "daw.zoomIn / zoomOut / zoomFit" requests, and it tells the suite
 when its zoom keys layer turns on or off so One-Hand can step aside.
+It also follows the suite's shared settings (text size, high contrast, reduced
+motion, dwell time, scan speed) and says which ones it's using.
 Without the hub, none of this does anything.
 """
 
@@ -12,6 +14,7 @@ import weakref
 from . import __version__
 from .actions import LABELS, VOICE_PHRASES
 from .limitless_link import Link
+from .ui import Look
 
 INTENTS = {"in": "daw.zoomIn", "out": "daw.zoomOut", "fit": "daw.zoomFit"}
 EXTRA = {"keysOn": "Zoom keys on", "keysOff": "Zoom keys off"}
@@ -71,13 +74,27 @@ class Suite:
             self.keys_changed(self.app.logic.layer_on)
 
     def on_prefs(self, prefs):
-        """The suite's dwell time and scan speed apply to the zoom panel too."""
+        """The suite's dwell time and scan speed apply to the zoom panel too, and its
+        text size, high contrast and reduced motion to every window. Then Zoom tells
+        the suite what it's using, so the settings page can show it arrived."""
         panel = self.app.panel
         if "dwellMs" in prefs:
             for b in panel.findChildren(type(panel.scan_button)):
                 b.dwell_ms = int(prefs["dwellMs"])
         if "scanMs" in prefs:
             panel.scan_timer.setInterval(int(prefs["scanMs"]))
+        self.app.set_look(Look(float(prefs.get("textScale", 1.0)), bool(prefs.get("highContrast")),
+                               bool(prefs.get("reduceMotion"))))
+        self.link.state("prefs.applied", self.applied(prefs))
+
+    def applied(self, prefs):
+        """Each shared setting Zoom honors (of those the hub sent), with the value in use now.
+        textScale is the size every window uses; the panel can be bigger by its own button_scale."""
+        panel, look = self.app.panel, self.app.look
+        now = {"textScale": look.text_scale, "highContrast": look.high_contrast,
+               "reduceMotion": look.reduce_motion, "dwellMs": panel.scan_button.dwell_ms,
+               "scanMs": panel.scan_timer.interval()}
+        return {k: v for k, v in now.items() if k in prefs}
 
     def say(self, text):
         return self.link.say(text)

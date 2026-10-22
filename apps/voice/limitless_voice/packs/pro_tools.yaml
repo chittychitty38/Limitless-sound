@@ -1,0 +1,147 @@
+# Pro Tools on Mac and Windows, default shortcuts with Commands Keyboard
+# Focus OFF. Written with Mac names; on Windows, cmd becomes Ctrl, opt
+# becomes Alt and ctrl becomes the Start key, matching Avid's own docs.
+# Several commands use the numeric keypad; on a keyboard without one,
+# remap them here or use the Operation preferences in Pro Tools.
+# Shortcuts marked "verify" are worth checking against your Pro Tools version.
+
+name: Pro Tools
+apps: ["Pro Tools", "ProTools"]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+  - say: ["record", "start recording"]
+    fuzzy: false
+    do: {keys: cmd+space}
+    reply: Recording
+    repeatable: false
+  - say: ["loop playback", "toggle loop", "loop"]
+    do: {keys: shift+cmd+l}
+  - say: ["metronome", "click", "toggle click", "toggle metronome"]
+    do: {keys: numpad7}
+  - say: ["go to start", "go to beginning", "back to start", "top"]
+    do: {keys: return}
+  - say: ["go to bar {bar:number}", "bar {bar:number}", "jump to bar {bar:number}"]
+    do:
+      steps:
+        - {keys: "numpad*"}
+        - {wait: 0.2}
+        - {type: "{bar}"}
+        - {keys: return}
+    reply: Bar {bar}
+    repeatable: false
+    help: Focuses the main counter (Bars|Beats), types the bar, presses Return
+  - say: ["new marker", "add marker", "drop marker", "new memory location"]
+    do: {keys: numpadenter}
+  - say: ["go to marker {n:number}", "marker {n:number}", "memory location {n:number}"]
+    do:
+      steps:
+        - {keys: "numpad."}
+        - {type: "{n}"}
+        - {keys: "numpad."}
+    reply: Marker {n}
+    repeatable: false
+    help: Period, number, period on the keypad recalls a memory location
+  - say: ["nudge right", "nudge forward"]
+    do: {keys: "numpad+"}
+  - say: ["nudge left", "nudge back"]
+    do: {keys: "numpad-"}
+
+  # --- windows ----------------------------------------------------------
+  - say: ["mixer", "show [the] mixer", "edit window", "show [the] edit window", "mix window", "switch window", "toggle mix"]
+    do: {keys: cmd+=}
+  - say: ["midi editor", "show [the] midi editor"]
+    do: {keys: ctrl+=}
+    help: Toggle the MIDI Editor window (verify on Windows, where it's Start+=)
+  - say: ["workspace", "show [the] workspace"]
+    do: {keys: opt+;}
+
+  # --- tracks -----------------------------------------------------------
+  - say: ["new track", "new tracks", "add [a] track"]
+    do: {keys: shift+cmd+n}
+  - say: ["solo", "solo track", "solo [the] track", "unsolo"]
+    do: {keys: shift+s}
+    help: Solo selected tracks
+  - say: ["mute", "mute track", "mute [the] track", "unmute"]
+    do: {keys: shift+m}
+    help: Mute selected tracks
+  - say: ["arm", "arm track", "record enable", "disarm"]
+    do: {keys: shift+r}
+    help: Record-enable selected tracks
+  - say: ["next track", "track down"]
+    do: {keys: ";"}
+    help: Move the edit selection down a track (verify)
+  - say: ["previous track", "track up"]
+    do: {keys: p}
+    help: Move the edit selection up a track (verify)
+
+  # --- edit modes and tools ---------------------------------------------
+  - say: ["shuffle mode", "shuffle"]
+    do: {keys: f1}
+  - say: ["slip mode", "slip"]
+    do: {keys: f2}
+  - say: ["spot mode", "spot"]
+    do: {keys: f3}
+  - say: ["grid mode", "grid"]
+    do: {keys: f4}
+  - say: ["zoomer", "zoom tool"]
+    do: {keys: f5}
+  - say: ["trimmer", "trim tool"]
+    do: {keys: f6}
+  - say: ["selector", "selector tool"]
+    do: {keys: f7}
+  - say: ["grabber", "grabber tool", "hand tool"]
+    do: {keys: f8}
+  - say: ["scrubber", "scrub tool"]
+    do: {keys: f9}
+  - say: ["pencil", "pencil tool"]
+    do: {keys: f10}
+
+  # --- editing ----------------------------------------------------------
+  - say: ["redo", "redo that"]
+    do: {keys: cmd+shift+z}
+    reply: Redone
+  - say: ["separate", "split", "split here", "cut here", "separate clip"]
+    do: {keys: cmd+e}
+  - say: ["heal", "heal separation"]
+    do: {keys: cmd+h}
+  - say: ["duplicate", "duplicate that"]
+    repeatable: 3   # one misheard number must never wipe a session
+    do: {keys: cmd+d}
+  - say: ["repeat", "repeat clip"]
+    do: {keys: opt+r}
+  - say: ["trim to selection", "trim"]
+    do: {keys: cmd+t}
+  - say: ["fades", "fade", "make fades"]
+    do: {keys: cmd+f}
+  - say: ["consolidate", "consolidate clip"]
+    do: {keys: opt+shift+3}
+  - say: ["quantize", "quantize that"]
+    do: {keys: opt+0}
+  - say: ["delete", "delete that", "remove that"]
+    repeatable: 3   # one misheard number must never wipe a session
+    fuzzy: false
+    do: {keys: delete}
+  - say: ["tab to transient", "next transient"]
+    do: {keys: tab}
+
+  # --- zoom -------------------------------------------------------------
+  - say: ["zoom in"]
+    do: {keys: "cmd+]"}
+  - say: ["zoom out"]
+    do: {keys: "cmd+["}
+  - say: ["zoom to fit", "zoom to selection", "fit"]
+    do: {keys: opt+f}
+
+  # --- project ----------------------------------------------------------
+  - say: ["bounce", "bounce mix", "export mix", "bounce to disk"]
+    fuzzy: false
+    do: {keys: opt+cmd+b}
+    repeatable: false
+  - say: ["save as"]
+    fuzzy: false
+    do: {keys: shift+cmd+s}
+    repeatable: false
