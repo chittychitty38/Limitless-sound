@@ -102,3 +102,17 @@ def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_opening_settings_never_waits_for_the_browser(app, monkeypatch):
+    """The controller loop runs on the same thread: a slow browser must not hold up a press."""
+    import time
+    import webbrowser
+    from limitless_control import app as app_module
+
+    monkeypatch.setattr(app_module.sys, "platform", "linux")
+    monkeypatch.setattr(webbrowser, "open", lambda url: time.sleep(5))
+    app.url = "http://127.0.0.1:1/?t=x"
+    started = time.monotonic()
+    app.open_settings()
+    assert time.monotonic() - started < 0.5
