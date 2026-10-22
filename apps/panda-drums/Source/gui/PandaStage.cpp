@@ -235,9 +235,9 @@ void PandaStage::layoutPieces()
                 v.squash = 0.36f;
                 if (skin.isLoaded())
                 {
-                    juce::String kind = v.isFloor ? "floor" : "tom";
                     v.slot = v.isFloor ? i - (int) racks : i;
                     skinSlot (v.isFloor ? juce::String ("floor") : "rack" + juce::String (juce::jlimit (1, 4, (int) racks)), v.slot, v.pos, ppi);
+                    auto kind = skinKind (v);
                     v.squash = squashOf (kind, "head", 0.36f);
                     v.flip = mirrored (rendered (kind), v.pos);
                     // Deeper or shallower than the rendered drum: stretch the shell a little.
@@ -283,8 +283,8 @@ void PandaStage::layoutPieces()
                 if (skin.isLoaded())
                 {
                     skinSlot (kind, index, v.pos, ppi);
-                    v.squash = squashOf (kind, "ellipse", 0.19f);
-                    v.flip = mirrored (rendered (kind), v.pos);
+                    v.squash = squashOf (skinKind (v), "ellipse", 0.19f);
+                    v.flip = mirrored (rendered (skinKind (v)), v.pos);
                 }
                 v.radius = size * ppi;
                 v.hand = v.pos.x >= 640.0f ? 1 : 0;
@@ -610,6 +610,7 @@ void PandaStage::spawnHearts (float count)
         p.kind = 1;
         p.spin = (rng.nextFloat() - 0.5f) * 0.8f;
         p.colour = rng.nextBool() ? colour::heart : colour::hot;
+        p.variant = rng.nextInt (3);
         particles.push_back (p);
     }
 }
@@ -709,6 +710,8 @@ void PandaStage::advanceTo (double t)
 
         if (s.hand >= 0)
             land (hands[(size_t) s.hand], s);
+        if (s.hand >= -1 && Skin::get().isLoaded())
+            strikeFx (*v, s.hand, vel);
 
         if (proc.comicFx && now - lastBurst > 0.6)
             if (auto* text = comicFor (v->type, articId, s.vel))
@@ -725,6 +728,15 @@ void PandaStage::advanceTo (double t)
                 lastBurst = now;
             }
     }
+
+    // Back to sitting when the hands have nothing to do; old effects go.
+    if (now > poseHold && poseName != "idle")
+    {
+        lastPoseName = poseName;
+        poseName = "idle";
+        poseAt = now;
+    }
+    fx.erase (std::remove_if (fx.begin(), fx.end(), [this] (auto& f) { return now - f.at > f.life; }), fx.end());
 
     // Springs.
     for (auto& v : views)
@@ -1044,51 +1056,92 @@ juce::String PandaStage::pickFace() const
     if (pose.blink > 0.4f)                         return "blink";
     if (pose.happy > 0.5f)                         return "laugh";
     if (energy > 1.1f)                             return "excited";
-    if (energy > 0.6f)                             return "open_mouth";
-    if (energy > 0.2f)                             return "happy";
+    if (energy > 0.6f)                             return "happy";
+    if (energy > 0.15f)                            return "focused";
     return tPlaying ? "smile" : "neutral";
 }
 
-PandaStage::P PandaStage::elbowFor (P shoulder, P paw)
+juce::String PandaStage::skinKind (const PieceView& v) const
 {
-    // Same elbow as the drawn arm: it bends down and out, and past full reach it stretches.
-    const float reach = 255.0f;
-    auto d = paw - shoulder;
-    auto len = std::max (1.0f, d.getDistanceFromOrigin());
-    P perp (-d.y / len, d.x / len);
-    if (perp.y < 0.0f) perp = -perp;
-    perp.x += (paw.x < shoulder.x ? -1.0f : 1.0f) * 0.35f;
-    perp = normalised (perp);
-    auto bend = std::sqrt (std::max (0.0f, reach * reach * 0.25f - len * len * 0.25f)) + 10.0f;
-    return shoulder + d * 0.5f + perp * bend;
+    // Pieces on the left use their own picture where the art has one ("tom_alt", "crash_alt").
+    auto& skin = Skin::get();
+    auto alt = [&skin, &v] (const juce::String& k)
+    {
+        return v.pos.x < 640.0f && skin.at ("kit/" + k + "_alt").isObject() ? k + "_alt" : k;
+    };
+    switch (v.type)
+    {
+        case PieceType::Kick:   return "kick";
+        case PieceType::Snare:  return "snare";
+        case PieceType::Tom:    return v.isFloor ? juce::String ("floor") : alt ("tom");
+        case PieceType::HiHat:  return "hihat";
+        case PieceType::Crash:  return alt ("crash");
+        case PieceType::Ride:   return "ride";
+        case PieceType::China:  return "china";
+        case PieceType::Splash: return "splash";
+        case PieceType::Perc:   return "snare";
+    }
+    return "tom";
 }
 
-void PandaStage::drawSkinArm (juce::Graphics& g, P shoulder, P paw, P tip, float alpha)
+juce::String PandaStage::poseFor (const PieceView& v) const
 {
-    auto& skin = Skin::get();
-    auto s = pose.radius / Skin::number (skin.at ("panda/head/radius"), pose.radius);
+    auto left = v.pos.x < 640.0f;
+    switch (v.type)
+    {
+        case PieceType::Kick:   return "kick";
+        case PieceType::Snare:
+        case PieceType::Perc:   return "snare";
+        case PieceType::HiHat:
+        case PieceType::Ride:   return "hi_hat";
+        case PieceType::Tom:    return v.isFloor ? "fill" : (left ? "tom_left" : "tom_right");
+        case PieceType::Crash:
+        case PieceType::China:
+        case PieceType::Splash: return left ? "crash_left" : "crash_right";
+    }
+    return "idle";
+}
 
-    auto elbow = elbowFor (shoulder, paw);
+void PandaStage::strikeFx (const PieceView& v, int hand, float vel)
+{
+    // The pose for the drum, held a moment; a kick on its own gets its own, otherwise the hands lead.
+    juce::String next = poseFor (v);
+    if (recentToms >= 3 && v.type == PieceType::Tom)
+        next = "fill";
+    if (hand < 0 && now < poseHold && poseName != "kick")
+        next = poseName;
+    if (next != poseName)
+    {
+        lastPoseName = poseName;
+        poseName = next;
+        poseAt = now;
+    }
+    poseHold = now + (hand < 0 ? 0.2 : 0.36);      // long enough that a groove doesn't flicker back to sitting
 
-    auto arm = skin.sprite ("arm");
-    auto a = Skin::point (skin.at ("panda/arm/a")), b = Skin::point (skin.at ("panda/arm/b"));
-    const float across = 0.86f * s;
-    auto dir = normalised (tip - paw);
-    // Two halves with round furry ends: they overlap into a soft elbow.
-    skin.drawAlong (g, arm, a, b, shoulder, elbow, across, alpha);
-    skin.drawAlong (g, arm, a, b, elbow, paw - dir * 6.0f, across, alpha);
-
-    // Stick, then the paw round it (thumb on top whichever way the stick points).
-    auto butt = Skin::point (skin.at ("panda/stick/butt")), stickTip = Skin::point (skin.at ("panda/stick/tip"));
-    auto back = (stickTip - butt).getDistanceFromOrigin() * 0.12f * s;
-    skin.drawAlong (g, skin.sprite ("stick"), butt, stickTip, paw - dir * back, tip, s, alpha);
-    auto pawSprite = skin.sprite ("paw");
-    auto pc = Skin::point (skin.at ("panda/paw/centre"));
-    auto t = juce::AffineTransform::translation (-pc.x, -pc.y);
-    if (dir.x < 0.0f)
-        t = t.scaled (1.0f, -1.0f);
-    t = t.scaled (s).rotated (std::atan2 (dir.y, dir.x)).translated (paw.x, paw.y);
-    skin.draw (g, pawSprite, t, alpha);
+    if (hand < 0)
+        return;
+    // A streak where the stick came down, and a spark on hard hits.
+    auto at = strikePoint (v, hand);
+    Fx streak;
+    streak.sprite = "blur_" + juce::String (1 + rng.nextInt (3));
+    streak.pos = at.translated ((hand == 0 ? -1.0f : 1.0f) * 30.0f, -34.0f);
+    streak.at = now;
+    streak.life = 0.14f;
+    streak.rot = (hand == 0 ? 0.35f : -0.35f) + (rng.nextFloat() - 0.5f) * 0.3f;
+    streak.scale = 0.7f + 0.4f * vel;
+    streak.flip = hand == 0;
+    fx.push_back (streak);
+    if (vel > 0.7f)
+    {
+        Fx spark;
+        spark.sprite = "hit_spark";
+        spark.pos = at;
+        spark.at = now;
+        spark.life = 0.18f;
+        spark.rot = rng.nextFloat() * 6.28f;
+        spark.scale = 0.5f + 0.6f * vel;
+        fx.push_back (spark);
+    }
 }
 
 void PandaStage::paintSkin (juce::Graphics& g)
@@ -1097,22 +1150,6 @@ void PandaStage::paintSkin (juce::Graphics& g)
     g.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
     auto pt = [&skin] (const juce::String& path) { return Skin::point (skin.at (path)); };
     auto num = [&skin] (const juce::String& path, float fallback) { return Skin::number (skin.at (path), fallback); };
-    auto kindOf = [] (const PieceView& v) -> juce::String
-    {
-        switch (v.type)
-        {
-            case PieceType::Kick:   return "kick";
-            case PieceType::Snare:  return "snare";
-            case PieceType::Tom:    return v.isFloor ? "floor" : "tom";
-            case PieceType::HiHat:  return "hihat";
-            case PieceType::Crash:  return "crash";
-            case PieceType::Ride:   return "ride";
-            case PieceType::China:  return "china";
-            case PieceType::Splash: return "splash";
-            case PieceType::Perc:   return "snare";
-        }
-        return "tom";
-    };
     auto wrapName = [] (art::Wrap w) -> juce::String
     {
         switch (w)
@@ -1126,14 +1163,18 @@ void PandaStage::paintSkin (juce::Graphics& g)
         }
         return "purple";
     };
-    auto layerFor = [&skin, &kindOf, &wrapName] (const PieceView& v)
+    auto layerFor = [this, &skin, &wrapName] (const PieceView& v)
     {
-        auto kind = kindOf (v);
+        auto kind = skinKind (v);
         auto wrap = v.type == PieceType::Perc ? juce::String ("chrome") : wrapName (v.wrap);
         auto name = skin.at ("kit/" + kind + "/wraps/" + wrap).toString();
         if (name.isEmpty())
             name = skin.at ("kit/" + kind + "/wraps/purple").toString();
         return skin.sprite (name);
+    };
+    auto slotKind = [] (const PieceView& v) -> juce::String
+    {
+        return v.type == PieceType::Crash ? "crash" : v.type == PieceType::Ride ? "ride" : v.type == PieceType::China ? "china" : "splash";
     };
 
     // ---- the heart lights glow, twinkle, and flare with the kick
@@ -1146,84 +1187,70 @@ void PandaStage::paintSkin (juce::Graphics& g)
         for (int i = 0; i < bulbs->size(); ++i)
         {
             auto b = (*bulbs)[i];
-            auto p = Skin::point (b.getProperty ("at", {})).translated (0.0f, 4.0f);
+            auto p = Skin::point (b.getProperty ("at", {}));
             auto* c = b.getProperty ("colour", {}).getArray();
             if (c == nullptr || c->size() < 3)
                 continue;
             auto col = juce::Colour::fromFloatRGBA ((float) (double) (*c)[0], (float) (double) (*c)[1], (float) (double) (*c)[2], 1.0f);
             auto twinkle = 0.75f + 0.25f * std::sin ((float) now * 2.3f + (float) i * 1.7f);
-            auto a = juce::jlimit (0.0f, 1.0f, 0.32f * twinkle + 0.35f * kickFlash);
-            auto rr = 24.0f + 10.0f * kickFlash;
+            auto a = juce::jlimit (0.0f, 1.0f, 0.3f * twinkle + 0.35f * kickFlash);
+            auto rr = 26.0f + 12.0f * kickFlash;
             juce::ColourGradient grad (col.withAlpha (a), p, col.withAlpha (0.0f), p.translated (rr, 0.0f), true);
             g.setGradientFill (grad);
             g.fillEllipse (juce::Rectangle<float> (rr * 2.0f, rr * 2.0f).withCentre (p));
         }
     }
 
-    // ---- the panda's body and head, behind the kit
+    // ---- the panda: the pose for what he's playing, his face over it, bouncing with the music
     auto head0 = pt ("panda/head/anchor");
-    auto r0 = num ("panda/head/radius", pose.radius);
-    auto s = pose.radius / r0;
-    auto body = skin.sprite (skin.at ("panda/body").toString());
-    auto bodyBottom = body.bounds.getBottom();
-    auto bodyT = juce::AffineTransform::scale (s, s * (1.0f + 0.012f * pose.breath), head0.x, bodyBottom)
-                     .translated (pose.torso.x - head0.x, pose.torso.y - head0.y + pose.bodyBounce);
-    skin.draw (g, body, bodyT);
-
-    P neck (head0.x, head0.y + r0 * 0.85f);
-    auto headT = juce::AffineTransform::scale (s, s * pose.squash, neck.x, neck.y)
-                     .rotated (pose.tilt, neck.x, neck.y)
-                     .translated (pose.head.x - head0.x, pose.head.y - head0.y + pose.bodyBounce * 0.6f);
-    if (auto* ears = skin.at ("panda/ears").getArray(); ears != nullptr && ears->size() == 2)
-        for (int i = 0; i < 2; ++i)
-        {
-            auto pivot = Skin::point ((*ears)[i].getProperty ("pivot", {}));
-            auto angle = (i == 0 ? -pose.earL : pose.earR) * 1.4f;
-            skin.draw (g, skin.sprite ((*ears)[i].getProperty ("file", {}).toString()),
-                       juce::AffineTransform::rotation (angle, pivot.x, pivot.y).followedBy (headT));
-        }
-    auto fade = juce::jlimit (0.0f, 1.0f, (float) (now - faceAt) / 0.06f);
-    auto headLayer = [&skin] (const juce::String& f)
+    P seat (head0.x, head0.y + pose.radius * 2.1f);
+    auto popIn = 1.0f + 0.025f * std::exp (-(float) (now - poseAt) / 0.06f);   // each new pose lands with a little punch
+    auto panT = juce::AffineTransform::translation (-seat.x, -seat.y)
+                    .scaled ((1.0f + (1.0f - pose.squash) * 0.6f) * popIn, pose.squash * popIn)
+                    .rotated (pose.tilt * 0.6f)
+                    .translated (seat.x + pose.head.x - head0.x, seat.y + pose.head.y - head0.y + pose.bodyBounce);
+    auto poseLayer = [&skin] (const juce::String& name)
     {
-        auto name = skin.at ("panda/heads/" + f).toString();
-        return skin.sprite (name.isNotEmpty() ? name : skin.at ("panda/heads/neutral").toString());
+        auto file = skin.at ("panda/poses/" + name + "/file").toString();
+        return skin.sprite (file.isNotEmpty() ? file : skin.at ("panda/poses/idle/file").toString());
     };
-    if (fade < 1.0f)
-        skin.draw (g, headLayer (lastFace), headT);
-    skin.draw (g, headLayer (face), headT, fade < 1.0f ? fade : 1.0f);
-    // Cheeks glow when he's going for it.
-    if (pose.blushGlow > 0.05f)
-        if (auto* cheeks = skin.at ("panda/cheeks").getArray(); cheeks != nullptr)
-            for (auto& c : *cheeks)
-            {
-                auto p = Skin::point (c).transformedBy (headT);
-                auto rr = pose.radius * 0.2f;
-                juce::ColourGradient grad (juce::Colour (0xffff5c8a).withAlpha (0.4f * pose.blushGlow), p,
-                                           juce::Colour (0xffff5c8a).withAlpha (0.0f), p.translated (rr, 0.0f), true);
-                g.setGradientFill (grad);
-                g.fillEllipse (juce::Rectangle<float> (rr * 2.0f, rr * 1.4f).withCentre (p));
-            }
+    auto shown = now < cheerUntil ? juce::String ("cheer") : poseName;
+    auto blend = juce::jlimit (0.0f, 1.0f, (float) (now - poseAt) / 0.05f);
+    if (blend < 1.0f && shown == poseName)
+        skin.draw (g, poseLayer (lastPoseName), panT);
+    skin.draw (g, poseLayer (shown), panT, shown == poseName ? blend : 1.0f);
+    if (! (bool) skin.at ("panda/poses/" + shown + "/own_face"))
+    {
+        auto* f = skin.at ("panda/poses/" + shown + "/face").getArray();
+        auto faceT = f != nullptr && f->size() == 3
+                       ? juce::AffineTransform::scale ((float) (double) (*f)[0]).translated ((float) (double) (*f)[1], (float) (double) (*f)[2])
+                       : juce::AffineTransform();
+        auto faceLayer = [&skin] (const juce::String& name)
+        {
+            auto file = skin.at ("panda/faces/" + name + "/file").toString();
+            return skin.sprite (file.isNotEmpty() ? file : skin.at ("panda/faces/neutral/file").toString());
+        };
+        auto fade = juce::jlimit (0.0f, 1.0f, (float) (now - faceAt) / 0.06f);
+        if (fade < 1.0f)
+            skin.draw (g, faceLayer (lastFace), faceT.followedBy (panT));
+        skin.draw (g, faceLayer (face), faceT.followedBy (panT), fade);
+    }
 
     // ---- cymbals: stands, then the discs swinging on them
     for (auto& v : views)
         if (isCymbal (v.type) && v.type != PieceType::HiHat)
         {
-            auto kind = kindOf (v);
+            auto kind = skinKind (v);
             auto st = drumState (v);
-            auto stands = skin.at ("kit/stands/" + kind);
+            auto stands = skin.at ("kit/stands/" + slotKind (v));
             juce::var stand;
             if (auto* a = stands.getArray(); a != nullptr && v.slot < a->size())
                 stand = (*a)[v.slot];
             auto standLayer = skin.sprite (stand.getProperty ("file", {}).toString());
             if (standLayer.isValid())
             {
-                drawContactShadow (g, juce::Rectangle<float> (70.0f, 14.0f).withCentre ({ standLayer.bounds.getCentreX() - 6.0f, standLayer.bounds.getBottom() - 6.0f }));
+                drawContactShadow (g, juce::Rectangle<float> (80.0f, 14.0f).withCentre ({ standLayer.bounds.getCentreX(), standLayer.bounds.getBottom() - 6.0f }));
                 skin.draw (g, standLayer, juce::AffineTransform::translation (v.pos - Skin::point (stand.getProperty ("top", {}))));
-            }
-            else
-            {
-                g.setColour (colour::chrome);
-                g.drawLine (v.pos.x, v.pos.y, v.pos.x, floorY - 30.0f, 4.0f);
             }
             auto angle = v.wobble.x * 0.05f;
             auto squash = 1.0f + 0.25f * std::sin (v.wobble.x * 0.4f);
@@ -1248,7 +1275,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
             }
         }
 
-    // ---- drums from the back forward; rack toms sit on the kick
+    // ---- drums from the back forward
     auto kick = std::find_if (views.begin(), views.end(), [] (auto& v) { return v.type == PieceType::Kick; });
     std::vector<const PieceView*> drums;
     for (auto& v : views)
@@ -1258,15 +1285,24 @@ void PandaStage::paintSkin (juce::Graphics& g)
 
     auto drawDrumLayer = [&] (const PieceView& v)
     {
-        auto kind = kindOf (v);
+        auto kind = skinKind (v);
         auto st = drumState (v);
         auto layer = layerFor (v);
         auto t = pieceTransform (v, pt ("kit/" + kind + "/anchor"), num ("kit/" + kind + "/radius", v.radius),
                                  (v.type == PieceType::Perc ? 0.9f : 1.0f) * (1.0f + 0.035f * st.pulse));
-        if (v.isFloor || v.type == PieceType::Snare || v.type == PieceType::Perc)
+        auto still = pieceTransform (v, pt ("kit/" + kind + "/anchor"), num ("kit/" + kind + "/radius", v.radius),
+                                     v.type == PieceType::Perc ? 0.9f : 1.0f);
+        if (auto standName = skin.at ("kit/" + kind + "/stand_file").toString(); standName.isNotEmpty())
+        {
+            auto standLayer = skin.sprite (standName);
+            auto foot = standLayer.bounds.transformedBy (still);
+            drawContactShadow (g, juce::Rectangle<float> (foot.getWidth() * 0.9f, 14.0f).withCentre ({ foot.getCentreX(), foot.getBottom() - 4.0f }));
+            skin.draw (g, standLayer, still);
+        }
+        else if (v.isFloor)
         {
             auto foot = layer.bounds.transformedBy (t);
-            drawContactShadow (g, juce::Rectangle<float> (foot.getWidth() * 0.8f, 16.0f).withCentre ({ foot.getCentreX(), foot.getBottom() - 6.0f }));
+            drawContactShadow (g, juce::Rectangle<float> (foot.getWidth() * 0.85f, 16.0f).withCentre ({ foot.getCentreX(), foot.getBottom() - 6.0f }));
         }
         skin.draw (g, layer, t);
         // The head lights up and a ring runs out across it.
@@ -1284,19 +1320,6 @@ void PandaStage::paintSkin (juce::Graphics& g)
         }
     };
 
-    if (kick != views.end())
-        for (auto* d : drums)
-            if (d->type == PieceType::Tom && ! d->isFloor)
-            {
-                auto bottom = d->pos.translated (0.0f, d->shell * 0.9f);
-                P to (kick->pos.x + (d->pos.x - kick->pos.x) * 0.3f, kick->pos.y - kick->radius * 0.85f);
-                g.setColour (colour::ink.withAlpha (0.8f));
-                g.drawLine (bottom.x, bottom.y, to.x, to.y, 8.0f);
-                g.setColour (juce::Colour (0xffd9d6e6));
-                g.drawLine (bottom.x, bottom.y, to.x, to.y, 4.5f);
-                g.setColour (juce::Colours::white.withAlpha (0.8f));
-                g.drawLine (bottom.x - 1.0f, bottom.y, to.x - 1.0f, to.y, 1.4f);
-            }
     for (auto* d : drums)
         if (d->type == PieceType::Tom && ! d->isFloor)
             drawDrumLayer (*d);
@@ -1308,6 +1331,8 @@ void PandaStage::paintSkin (juce::Graphics& g)
         auto foot = layer.bounds.transformedBy (t);
         drawContactShadow (g, juce::Rectangle<float> (foot.getWidth() * 0.9f, 22.0f).withCentre ({ foot.getCentreX(), foot.getBottom() - 8.0f }), 0.32f);
         skin.draw (g, layer, t);
+        if (auto pedal = skin.sprite (skin.at ("kit/kick/pedal_file").toString()); pedal.isValid())
+            skin.draw (g, pedal, pieceTransform (*kick, pt ("kit/kick/anchor"), num ("kit/kick/radius", kick->radius)));
         auto head = Skin::ellipse (skin.at ("kit/kick/head")).transformedBy (t);
         if (st.flash > 0.02f)
         {
@@ -1333,7 +1358,7 @@ void PandaStage::paintSkin (juce::Graphics& g)
             auto anchor = pt ("kit/hihat/anchor");
             auto move = juce::AffineTransform::translation (v.pos - anchor);
             auto standLayer = skin.sprite (skin.at ("kit/hihat/stand_file").toString());
-            drawContactShadow (g, juce::Rectangle<float> (80.0f, 14.0f).withCentre (P (standLayer.bounds.getCentreX(), standLayer.bounds.getBottom() - 8.0f).transformedBy (move)));
+            drawContactShadow (g, juce::Rectangle<float> (90.0f, 14.0f).withCentre (P (standLayer.bounds.getCentreX(), standLayer.bounds.getBottom() - 6.0f).transformedBy (move)));
             skin.draw (g, standLayer, move);
             auto sc = v.radius / num ("kit/hihat/radius", v.radius);
             auto angle = v.wobble.x * 0.04f;
@@ -1359,44 +1384,24 @@ void PandaStage::paintSkin (juce::Graphics& g)
 
     drawSelection (g);
 
-    // ---- arms over the kit, then the sleeves over the tops of the arms
-    for (auto& hand : hands)
+    // ---- stick streaks and sparks
+    for (auto& f : fx)
     {
-        P paw, tip;
-        handPose (hand, now, paw, tip);
-        auto shoulder = pose.shoulder (hand.side == 0);
-        if (now < hand.smearUntil)
-        {
-            auto a = (float) ((hand.smearUntil - now) / 0.045) * 0.4f;
-            juce::Path streak;
-            streak.startNewSubPath (hand.smearTip);
-            streak.lineTo (tip);
-            streak.lineTo (paw);
-            streak.lineTo (hand.smearPaw);
-            streak.closeSubPath();
-            g.setColour (juce::Colours::white.withAlpha (a * 0.6f));
-            g.fillPath (streak);
-            drawSkinArm (g, shoulder, hand.smearPaw, hand.smearTip, a);
-        }
-        drawSkinArm (g, shoulder, paw, tip, 1.0f);
+        auto age = (float) (now - f.at);
+        if (age < 0.0f || age > f.life)
+            continue;
+        auto sprite = skin.sprite (skin.at ("panda/fx/" + f.sprite).toString());
+        if (! sprite.isValid())
+            continue;
+        auto k = age / f.life;
+        auto grow = f.sprite == "hit_spark" ? 0.6f + 0.6f * k : 1.0f;
+        auto c = sprite.bounds.getCentre();
+        auto t = juce::AffineTransform::translation (-c.x, -c.y);
+        if (f.flip)
+            t = t.scaled (-1.0f, 1.0f);
+        t = t.rotated (f.rot).scaled (f.scale * grow).translated (f.pos.x, f.pos.y);
+        skin.draw (g, sprite, t, 1.0f - k * k);
     }
-    if (auto* sleeves = skin.at ("panda/sleeves").getArray(); sleeves != nullptr && sleeves->size() == 2)
-        for (int i = 0; i < 2; ++i)
-        {
-            auto pivot = Skin::point ((*sleeves)[i].getProperty ("pivot", {}));
-            auto end = Skin::point ((*sleeves)[i].getProperty ("end", {}));
-            auto shoulder = pose.shoulder (i == 0);
-            // The sleeve hangs from the shoulder and turns with the upper arm.
-            P paw, tip;
-            handPose (hands[(size_t) i], now, paw, tip);
-            auto upper = elbowFor (shoulder, paw) - shoulder;
-            auto rest = end - pivot;
-            auto turn = rest.getDistanceFromOrigin() > 0.0f ? std::atan2 (upper.y, upper.x) - std::atan2 (rest.y, rest.x) : 0.0f;
-            auto t = juce::AffineTransform::rotation (turn, pivot.x, pivot.y)
-                         .scaled (s, s, pivot.x, pivot.y)
-                         .translated (shoulder - pivot);
-            skin.draw (g, skin.sprite ((*sleeves)[i].getProperty ("file", {}).toString()), t);
-        }
 }
 
 void PandaStage::drawParticles (juce::Graphics& g)
@@ -1406,6 +1411,15 @@ void PandaStage::drawParticles (juce::Graphics& g)
         auto a = 1.0f - p.age / p.life;
         if (p.kind == 0)
             art::drawSparkle (g, p.pos, p.size * (0.6f + 0.4f * a), a, p.colour);
+        else if (auto& skin = Skin::get(); skin.isLoaded())
+        {
+            static const char* hearts[] = { "heart_red", "heart_pink", "heart_yellow" };
+            auto sprite = skin.sprite (skin.at (juce::String ("panda/fx/") + hearts[(size_t) p.variant % 3]).toString());
+            auto c = sprite.bounds.getCentre();
+            skin.draw (g, sprite, juce::AffineTransform::translation (-c.x, -c.y).rotated (p.spin * p.age)
+                                      .scaled (p.size / std::max (1.0f, sprite.bounds.getHeight()))
+                                      .translated (p.pos.x, p.pos.y), a);
+        }
         else
         {
             juce::Graphics::ScopedSaveState s (g);

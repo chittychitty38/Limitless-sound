@@ -1,58 +1,57 @@
-# The 3D panda
+# The panda, the kit and the room
 
-Everything on the Kit page (the room, every drum and cymbal, the panda's body, its 13 faces,
-ears, sleeves, arms, paws and sticks) is modelled and rendered in Blender by `panda3d.py`, from
-code: no hand-made assets. The plugin animates the rendered parts.
+The Kit page is drawn from the Panda Drums art: `source_sprite_sheet.png` has every piece on a
+transparent background (the twelve faces, eleven poses, paws with sticks and motion streaks, the
+kit, the hardware, the room, the lights, sparks and hearts). Two scripts turn it into the layers
+the plugin animates; `Resources/art` holds the result.
 
-![Test render](../docs/panda3d.jpg)
+![The Panda Drums art](../docs/hero.jpg)
 
-## Render
+## Build the layers
 
-Needs Python 3.11+ with the `bpy` module (Blender as a Python module) and Pillow:
+Needs Python 3.11+ with numpy, Pillow, OpenCV and torch (CPU is fine), and two model files from
+GitHub releases: Real-ESRGAN's `RealESRGAN_x4plus.pth` (xinntao/Real-ESRGAN) and LaMa's
+`big-lama.pt` (Sanster/models).
 
 ```
-python -m venv blender_env && blender_env/bin/pip install bpy pillow
-blender_env/bin/python panda3d.py preview out.png 1920 1104 96 happy   # the whole scene in one picture
-blender_env/bin/python panda3d.py layers out/ 2 48                      # every part on its own layer
-blender_env/bin/python panda3d.py layers out/ 2 48 head_wink,arm        # only some parts
-cp out/*.png out/*.jpg out/manifest.json ../Resources/art/
+python sheet_cut.py source_sprite_sheet.png RealESRGAN_x4plus.pth pieces/     # cut + 4x upscale
+LAMA=big-lama.pt python sheet_stage.py pieces/ out/                           # lay out the stage
+rm -r ../Resources/art && cp -r out ../Resources/art
 ```
 
-`layers` renders each part alone on a transparent background (the room is still there for its
-light, just not seen), trims it, saves it at 2x and 1x the 1280 x 736 stage, and writes
-`manifest.json`: where each layer sat on the stage and where its anchors are (drum head
-ellipses, the cymbal centres, the head centre and radius, shoulders, ear pivots, the two ends
-of the arm and of the stick). A full run takes about an hour on 4 CPU cores.
+- `sheet_cut.py` cuts each piece out by its box on the sheet, bleeds its colours under the
+  transparent edge (so it never gets a dark fringe when scaled) and upscales it 4x with
+  Real-ESRGAN, colour and alpha separately.
+- `sheet_stage.py` builds the room (the background plate, its bamboo kept at the sides, the
+  rug), puts each drum and cymbal where the plugin's slots are at its size in inches, stands
+  under the cymbals, the hi-hat on its stand, the snare on its stand and the pedal on the kick.
+  Each pose came with a drum or a cymbal: those are taken out and LaMa paints back the panda's
+  arm or leg that was behind them. Every pose is lined up on the panda's head. Each face is cut
+  down to its features (brows, glasses, eyes, nose, mouth, cheeks) with a soft edge, and each
+  pose gets the transform that lays a face over its own, lined up on the glasses. The layers are
+  written at 1x and 2x the 1280 x 736 stage with `manifest.json`: where each layer sits, the
+  drum heads and cymbal discs (for the flashes and ripples), the slots, the poses and faces.
 
-## How the plugin uses them
+## How the plugin animates them
 
-`Source/gui/Skin.cpp` loads the layers and the manifest from the binary data;
-`PandaStage::paintSkin` draws them. The camera in `panda3d.py` is matched to the stage, and the
-kit's slots (`SLOTS`) are where the plugin puts each kind of drum, so a layer drawn where it
-was rendered lines up with everything else. The stage then moves layers from there:
+`Source/gui/Skin.cpp` loads the layers from the binary data; `PandaStage::paintSkin` draws them.
 
-| Part | How it moves |
+| Part | What it does |
 |---|---|
-| Room | Drawn once as the background. |
-| Drums, kick | One render per wrap (purple sparkle, brass, maple, chrome, walnut, black), scaled to the drum's size in inches, mirrored when it sits on the other side, the shell stretched for deeper or shallower drums. The head flashes and ripples on a hit. |
-| Cymbals | One disc per kind, swinging on its stand (one stand per slot). Hi-hat: the top cymbal lifts with the pedal. |
-| Body | Bounces on the kick and breathes. |
-| Head | One render per face; tilts and nods to the beat and squashes on hits. The face follows the playing (smile, happy, open mouth, excited; laugh on a big crash, focused through tom fills, surprised by the first hit after a rest, a rock-out scowl on a solid china hit, a wink or tongue when idle, sad for a moment when you mark a hit bad, excited with both sticks up when the song stops) and blinks. |
-| Ears | Wiggle about their roots. |
-| Arms | Two copies of one furry tube with round ends (shoulder to elbow, elbow to paw), turned and stretched; the elbow bends out and down. The paw is turned with the stick so the thumb stays on top. Sleeves go over the tops of the arms and swing with them. |
-
-## Faces
-
-`neutral`, `happy`, `open_mouth`, `smile`, `focused`, `excited`, `wink`, `laugh`, `surprised`,
-`tongue_out`, `angry`, `sad` (the reference sheet's twelve) and `blink`.
+| Room | Drawn once as the background; the heart lights glow, twinkle and flare with the kick. |
+| Drums | Scaled to the drum's size in inches, the shell stretched for deeper or shallower drums; the head flashes and a ring runs across it on every hit. |
+| Cymbals | Swing on their stands; a flash of light across the bronze. The hi-hat opens with the pedal. |
+| Panda | Switches to the pose for what he's playing: hi-hat, snare, left or right tom, left or right crash, kick, a fill when the toms come fast, and the cheer when the song stops. Each new pose lands with a little punch; he bounces with the kick and bobs to the beat. |
+| Face | One of the twelve faces (and a blink) over every pose but the cheer: focused, happy and excited as the playing builds, laughing on a big crash, surprised by the first hit after a rest, a scowl on a solid china hit, sad when you mark a hit bad, a wink or a tongue when idle. |
+| Effects | A stick streak where the stick came down, a spark on hard hits, hearts on big crashes. |
 
 ## Promo video
 
 `promo.py` cuts the 46-second "Purafied – Panda Drums" promo:
 
 ```
-PandaDrumsRender promo promo/                                  # the performance, from the plugin
-python promo.py promo/ ../docs/panda3d.jpg Purafied-Panda-Drums-promo.mp4
+PandaDrumsRender promo promo/                                   # the performance, from the plugin
+python promo.py promo/ ../docs/hero.jpg Purafied-Panda-Drums-promo.mp4
 ```
 
 The render tool plays a groove through D minor, C minor, E major, F# minor and A major (the kit

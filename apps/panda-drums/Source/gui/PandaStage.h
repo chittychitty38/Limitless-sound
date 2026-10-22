@@ -109,7 +109,8 @@ private:
         double twirlAt = -10.0;
     };
 
-    struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; };
+    struct Particle { P pos, vel; float life = 0.0f, age = 0.0f, size = 0.0f; int kind = 0; juce::Colour colour; float spin = 0.0f; int variant = 0; };
+    struct Fx { juce::String sprite; P pos; double at = -10.0; float life = 0.15f, rot = 0.0f, scale = 1.0f; bool flip = false; };
     struct Burst { juce::String text; P pos; double at = -10.0; float rot = 0.0f; juce::Colour colour; };
 
     void timerCallback() override;
@@ -129,8 +130,9 @@ private:
     void paintVector (juce::Graphics&);
     void drawSelection (juce::Graphics&);
     void paintSkin (juce::Graphics&);
-    void drawSkinArm (juce::Graphics&, P shoulder, P paw, P tip, float alpha);
-    static P elbowFor (P shoulder, P paw);
+    juce::String skinKind (const PieceView&) const;        // which picture of the art a piece uses
+    juce::String poseFor (const PieceView&) const;         // the panda's pose for hitting it
+    void strikeFx (const PieceView&, int hand, float vel);
     void drawContactShadow (juce::Graphics&, juce::Rectangle<float> footprint, float alpha = 0.26f);
     pd::art::DrumState drumState (const PieceView&) const;
     juce::AffineTransform pieceTransform (const PieceView&, P anchor, float renderedRadius, float extraScale = 1.0f) const;
@@ -155,6 +157,9 @@ private:
     double moodUntil = -10.0, nextIdleMood = 6.0, cheerUntil = -10.0, playingSince = -10.0;
     bool wasPlaying = false;
     double lastLanded = -10.0;
+    juce::String poseName { "idle" }, lastPoseName { "idle" };   // the art's pose for what he's playing
+    double poseAt = -10.0, poseHold = -10.0;
+    std::vector<Fx> fx;
     int lastBadCount = -1;
     P headBase { 640.0f, 205.0f };
     int recentToms = 0;

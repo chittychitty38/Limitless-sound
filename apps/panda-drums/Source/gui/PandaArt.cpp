@@ -923,25 +923,19 @@ void drawStage (juce::Graphics& g, juce::Rectangle<float> a)
 
 void drawPandaBadge (juce::Graphics& g, juce::Rectangle<float> r)
 {
-    // The rendered head when there is one: ears, then the happy face, fitted to the badge.
+    // The art's happy head when there is one, fitted to the badge.
     if (auto& skin = Skin::get(); skin.isLoaded())
     {
-        auto head = skin.sprite (skin.at ("panda/heads/happy").toString());
+        auto head = skin.sprite (skin.at ("panda/badge").toString());
         if (head.isValid())
         {
             auto all = head.bounds;
-            if (auto* ears = skin.at ("panda/ears").getArray())
-                for (auto& e : *ears)
-                    all = all.getUnion (skin.sprite (e.getProperty ("file", {}).toString()).bounds);
             auto size = std::min (r.getWidth(), r.getHeight()) * 0.9f;
             auto scale = size / std::max (all.getWidth(), all.getHeight());
             auto t = juce::AffineTransform::translation (-all.getCentreX(), -all.getCentreY()).scaled (scale)
                          .translated (r.getCentreX(), r.getCentreY());
             juce::Graphics::ScopedSaveState save (g);
             g.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
-            if (auto* ears = skin.at ("panda/ears").getArray())
-                for (auto& e : *ears)
-                    skin.draw (g, skin.sprite (e.getProperty ("file", {}).toString()), t);
             skin.draw (g, head, t);
             return;
         }
