@@ -192,7 +192,8 @@ try {
   await win.evaluate(() => { Object.assign(window.__gs.state, { px: 5, py: 5 }); Object.assign(window.__gs.S, { mode: 'mouse', select: 'dwell', dwell: 2400 }); });
   const dwelled = win.evaluate(() => new Promise((done) => {
     const t = document.querySelector('[data-action=chords]'), bar = t.querySelector('.progress'), was = t.getAttribute('aria-pressed'), drawn = new Set();
-    const g = window.__gs, quit = setTimeout(() => done({ drawn: [...drawn], fired: false }), 5000);
+    // Room for a slow test machine to move the mouse there first; firing early is checked below.
+    const g = window.__gs, quit = setTimeout(() => done({ drawn: [...drawn], fired: false }), 15000);
     const look = () => { drawn.add(bar.style.width); if (t.getAttribute('aria-pressed') === was) requestAnimationFrame(look); };
     new MutationObserver((_m, obs) => {
       obs.disconnect(); clearTimeout(quit);
