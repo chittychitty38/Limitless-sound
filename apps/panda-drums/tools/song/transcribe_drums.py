@@ -10,8 +10,9 @@ and `songpromo` modes):
    chunks overlapping by half an FFT, the model run on the spectrum and its negation and averaged.
 2. ADTOF (Zehren et al.; the xavriley/ADTOF-pytorch port and its weights) finds the kicks,
    snares, toms, hi-hats and cymbals, on the mix and on the separated drums; the two are averaged.
-3. The song's click: a fixed tempo and phase fitted to the drums' onsets over the whole song.
-   Every hit goes on it, timed to the drums' own attacks (measured on the snares and hats).
+3. The song's grid: a fixed tempo and phase fitted to the drums' onsets over the whole song (a
+   song made to a click keeps it to the millisecond). Every hit goes on it, timed to the drums'
+   own attacks (measured on the snares and hats).
 4. A drummer's reading of it:
    - velocity from each hit's own loudness in its band, against the median of its kind;
    - an open hi-hat (46) where it rings on, else closed (42);
@@ -25,8 +26,8 @@ and `songpromo` modes):
    - a single eighth missing from a steady hat or ride run is put back.
 
 Writes {"bpm", "slot", "start", "bar0", "notes": [[seconds, note, velocity], ...]}: bpm is the
-click's, a slot one step of the part's grid (an eighth of the click), bars of the part start
-bar0 slots after start. Needs numpy, librosa, soundfile, onnxruntime, torch, scikit-learn.
+grid's (a half-time part on a fast click comes out at half the click: the feel the panda bangs
+his head to), a slot one sixteenth of it, bars of the part start bar0 slots after start. Needs numpy, librosa, soundfile, onnxruntime, torch, scikit-learn.
 """
 
 import json
@@ -101,25 +102,38 @@ def peaks_of(acts, src):
 
 
 # ---------------------------------------------------------------------------- 3. the click
-def fit_click(stem, lo=60.0, hi=200.0):
-    """A fixed tempo and phase (of its sixteenths) fitted to the drums' onsets."""
+def fit_click(stem, lo=70.0, hi=200.0):
+    """The song's grid: a fixed tempo and the phase of its sixteenths, fitted to the drums' onsets
+    over the whole song. It's the grid whose every step carries the most onset, so a part played
+    on the eighths of a 165 click comes out as 82.5 in sixteenths (the same grid: its half-time
+    feel), never as a tempo that only some of the hits fall on."""
     y = librosa.to_mono(stem)
     hop = 256
     env = librosa.onset.onset_strength(y=y, sr=SR, hop_length=hop, aggregate=np.median, fmax=16000)
+    env = np.maximum.reduce([np.roll(env, k) for k in (-1, 0, 1)])         # (a hit a frame either side of the step)
     dur = len(y) / SR
-    tempo = float(np.atleast_1d(librosa.beat.beat_track(onset_envelope=env, sr=SR, hop_length=hop)[0])[0])
-    while tempo < lo:
-        tempo *= 2
-    while tempo > hi:
-        tempo /= 2
+    rate = SR / hop
 
-    def score(bpm, ph):
-        g = np.arange(ph, dur, 15.0 / bpm)
-        return env[np.clip(np.round(g * SR / hop).astype(int), 0, len(env) - 1)].mean()
+    def scores(bpm, phases):
+        step = 15.0 / bpm
+        g = np.arange(0.0, dur - step, step)
+        idx = np.clip(np.round((g[None, :] + phases[:, None]) * rate).astype(int), 0, len(env) - 1)
+        return env[idx].mean(1)
 
-    best = max((score(b, p), b, p) for b in np.arange(tempo - 3, tempo + 3, 0.01) for p in np.linspace(0, 15.0 / b, 24, endpoint=False))
+    best = (-1.0, 0.0, 0.0)
+    for bpm in np.arange(lo, hi, 0.05):
+        ph = np.linspace(0, 15.0 / bpm, 32, endpoint=False)
+        sc = scores(bpm, ph)
+        i = int(np.argmax(sc))
+        if sc[i] > best[0]:
+            best = (float(sc[i]), float(bpm), float(ph[i]))
     _, b0, p0 = best
-    best = max((score(b, p), b, p) for b in np.arange(b0 - 0.02, b0 + 0.02, 0.0005) for p in np.arange(p0 - 0.006, p0 + 0.006, 0.0005))
+    for bpm in np.arange(b0 - 0.05, b0 + 0.05, 0.001):
+        ph = np.arange(p0 - 0.008, p0 + 0.008, 0.0005)
+        sc = scores(bpm, ph)
+        i = int(np.argmax(sc))
+        if sc[i] > best[0]:
+            best = (float(sc[i]), float(bpm), float(ph[i]))
     return best[1], best[2]
 
 
@@ -143,8 +157,8 @@ def attack_offset(stem, peaks, grid0, step):
 
 # ---------------------------------------------------------------------------- 4. a drummer's part
 def part(acts, peaks, stem, bpm, phase):
-    E = 60.0 / bpm / 2
-    grid0 = phase + E / 2
+    E = 15.0 / bpm                  # one step: a sixteenth of the fitted grid
+    grid0 = phase
     off = attack_offset(stem, peaks, grid0, E)
     T0 = grid0 + off
     y = librosa.to_mono(stem)
