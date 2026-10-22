@@ -10,8 +10,14 @@ ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / "shared" / "clients" / "python" / "applog.py"
 
 
+def _skipped(path: Path) -> bool:
+    """Not the repository's own copy: hidden folders (other checkouts, virtual envs) and builds."""
+    return any(part.startswith(".") or part in ("node_modules", "build", "dist")
+               for part in path.relative_to(ROOT).parts)
+
+
 def test_every_copy_matches_the_shared_one():
-    copies = [p for p in ROOT.glob("**/applog.py") if p != CANONICAL and "node_modules" not in p.parts]
+    copies = [p for p in ROOT.glob("**/applog.py") if p != CANONICAL and not _skipped(p)]
     assert copies, "the hub at least carries a copy"
     for p in copies:
         assert p.read_text() == CANONICAL.read_text(), f"{p.relative_to(ROOT)} differs from shared/clients/python/applog.py"

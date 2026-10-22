@@ -77,6 +77,22 @@ class Launcher:
         out = (r.stdout or "").strip().splitlines()
         return r.returncode == 0, out[-1] if out else ""
 
+    def open_folder(self, folder: Path) -> dict:
+        """Show a folder in Finder, File Explorer or the desktop's file manager."""
+        if sys.platform == "darwin":
+            opener = "open"
+        elif sys.platform.startswith("win"):
+            opener = "explorer"
+        else:
+            opener = "xdg-open"
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            self.popen([opener, str(folder)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       **_detached_kwargs())
+        except OSError as e:
+            return {"ok": False, "message": f"Couldn't open {folder}: {e}"}
+        return {"ok": True, "message": f"Opening {folder}"}
+
     def open_settings(self) -> dict:
         url = self.settings_url()
         if url:

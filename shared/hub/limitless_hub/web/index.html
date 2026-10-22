@@ -213,6 +213,9 @@
     <h2>Activity</h2>
     <p class="muted">The newest is at the top.</p>
     <ul id="log" aria-live="off"></ul>
+    <h2>Something not working?</h2>
+    <p class="muted">Limitless Sound, Voice, One-Hand, Zoom and Control each keep a log file on this computer. It never leaves it unless you send it. When you ask for help, open the folder and attach the file named after the app.</p>
+    <button id="openLogs">Open the log folder</button>
   </section>
 </main>
 <script>
@@ -460,6 +463,7 @@ async function move(i, d) {
   btns?.[d < 0 ? 0 : 1]?.focus();
 }
 $("openAll").addEventListener("click", async () => say((await api("/api/invoke", { action: "hub.openAll" })).message));
+$("openLogs").addEventListener("click", async () => say((await api("/api/open-logs", {})).message));
 $("quit").addEventListener("click", async () => {
   if (!confirm("Quit Limitless Sound? Your apps keep working, but stop linking to each other.")) return;
   await api("/api/quit", {}); say("Limitless Sound has quit. You can close this page.");
