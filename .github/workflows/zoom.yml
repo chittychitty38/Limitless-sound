@@ -120,3 +120,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*
+          name: Limitless Zoom ${{ github.ref_name }}
+          # The repo's Latest release is the whole-suite download.
+          make_latest: "false"
