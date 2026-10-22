@@ -46,6 +46,7 @@ class MacBackend:
         self._source = Quartz.CGEventSourceCreate(Quartz.kCGEventSourceStatePrivate)
         self._app = (0.0, None)
         self._asked = False
+        self._stopping = None
         self.error = None
 
     # ---- lifecycle ----------------------------------------------------
@@ -66,27 +67,37 @@ class MacBackend:
         mask = (Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown)
                 | Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp)
                 | Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged))
-        self._tap = Quartz.CGEventTapCreate(Quartz.kCGSessionEventTap, Quartz.kCGHeadInsertEventTap,
-                                            Quartz.kCGEventTapOptionDefault, mask, self._callback, None)
-        if not self._tap:
+        tap = Quartz.CGEventTapCreate(Quartz.kCGSessionEventTap, Quartz.kCGHeadInsertEventTap,
+                                      Quartz.kCGEventTapOptionDefault, mask, self._callback, None)
+        if not tap:
             self.error = "macOS has not given Limitless One-Hand permission to use the keyboard yet."
             ready.set()
             return
-        source = Quartz.CFMachPortCreateRunLoopSource(None, self._tap, 0)
-        self._loop = Quartz.CFRunLoopGetCurrent()
-        Quartz.CFRunLoopAddSource(self._loop, source, Quartz.kCFRunLoopCommonModes)
-        Quartz.CGEventTapEnable(self._tap, True)
+        source = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
+        loop = Quartz.CFRunLoopGetCurrent()
+        Quartz.CFRunLoopAddSource(loop, source, Quartz.kCFRunLoopCommonModes)
+        Quartz.CGEventTapEnable(tap, True)
+        self._tap, self._loop = tap, loop
+        stopping = self._stopping = threading.Event()
         ready.set()
-        Quartz.CFRunLoopRun()
+        while not stopping.is_set():   # wakes at least twice a second to notice stop()
+            Quartz.CFRunLoopRunInMode(Quartz.kCFRunLoopDefaultMode, 0.5, False)
+        # Tear down on this thread, after the run loop has stopped, so no
+        # callback can be running while the tap goes away.
+        Quartz.CGEventTapEnable(tap, False)
+        Quartz.CFRunLoopRemoveSource(loop, source, Quartz.kCFRunLoopCommonModes)
+        Quartz.CFMachPortInvalidate(tap)
 
     def stop(self):
-        if self._tap:
-            Quartz.CGEventTapEnable(self._tap, False)
-            Quartz.CFMachPortInvalidate(self._tap)
-            self._tap = None
-        if self._loop:
-            Quartz.CFRunLoopStop(self._loop)
-            self._loop = None
+        loop, thread = self._loop, self._thread
+        self._tap = self._loop = None
+        if self._stopping is not None:
+            self._stopping.set()
+        if loop is not None:
+            Quartz.CFRunLoopStop(loop)
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(2)
+        self._thread = None
 
     @property
     def running(self):
@@ -96,7 +107,9 @@ class MacBackend:
 
     def _callback(self, proxy, etype, event, refcon):
         if etype in (Quartz.kCGEventTapDisabledByTimeout, Quartz.kCGEventTapDisabledByUserInput):
-            Quartz.CGEventTapEnable(self._tap, True)
+            tap = self._tap
+            if tap is not None:
+                Quartz.CGEventTapEnable(tap, True)
             return event
         if Quartz.CGEventGetIntegerValueField(event, Quartz.kCGEventSourceUserData) == MAGIC:
             return event

@@ -10,7 +10,7 @@ from .engine import Tap
 from .keys import MOD_TO_KEY
 from .limitless_link import Link
 
-VERSION = "0.1.0"
+from . import __version__ as VERSION
 
 # Shared DAW intents -> the command label in layouts.json that does that job.
 INTENT_LABELS = {

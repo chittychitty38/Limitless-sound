@@ -62,6 +62,10 @@ def ui_smoke():
 
 
 if __name__ == "__main__":
+    if "--self-test" in sys.argv or "--ui-smoke" in sys.argv:
+        import faulthandler
+        if sys.stderr is not None:   # a windowed Windows build has no stderr
+            faulthandler.enable()    # print where it was if a native crash ever happens
     if "--self-test" in sys.argv:
         sys.exit(self_test())
     if "--ui-smoke" in sys.argv:
