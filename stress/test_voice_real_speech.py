@@ -288,6 +288,8 @@ def test_real_people_saying_command_words():
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
 
+    # Stray words firing commands is the weak spot this test found. Two possible fixes, tried on
+    # what was just heard so their cost and gain can be weighed before changing the app.
     for only_destructive in (False, True):
         t2, _, _ = score(words, jobs, [_agreeing(h, only_destructive) for h in heard], kinds)
         h2, _ = _sums(t2, known)
@@ -298,9 +300,9 @@ def test_real_people_saying_command_words():
               f"{sum(t2[w]['destructive'] for w in words)} (now {destroyed}). Per word: "
               + ", ".join(f"{w} {tally[w]['hits']}→{t2[w]['hits']}" for w in words if t2[w]["hits"] != tally[w]["hits"]))
 
-    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin
-    # for another CPU or another sample size. Measured: 91.2% right; "stop" 96%; the weakest
-    # word, "eight", 82% (people's "eight" often comes back as "a").
+    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin:
+    # results move a little from one runner's CPU to another's. Measured: 91.2% and 91.6% right;
+    # "stop" 96%; the weakest word, "eight", 82% (people's "eight" often comes back as "a").
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in words}
     assert hits / tries >= 0.87, f"only {hits / tries:.1%} of the words Voice listens for were right"
     if "stop" in rate:
@@ -329,9 +331,10 @@ def test_ordinary_talk_rarely_fires_commands():
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud, heard as {utterances} utterances "
           f"in {took:.0f} s with {WORKERS} at once")
 
-    # Most commands an hour of reading aloud may fire. Measured: Logic Pro 1.9 an hour, Pro Tools
-    # 4.7 (2.8 and 5.7 in a first run with shorter pauses between sentences), none destructive.
-    ceiling = {"Logic Pro": 6, "Pro Tools": 10}
+    # Most commands an hour of reading aloud may fire. Measured on two runners: Logic Pro 1.9 and
+    # 4.7 an hour, Pro Tools 4.7 and 7.6, none destructive. Only a handful in the hour, so a
+    # different CPU moves them by two or three.
+    ceiling = {"Logic Pro": 8, "Pro Tools": 12}
     too_many = []
     for app, most in ceiling.items():
         fired = []

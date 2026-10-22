@@ -126,6 +126,5 @@ def test_ordinary_talk_rarely_zooms():
     for action, k in Counter(f[1] for f in fired).most_common():
         utt, _, text = next(f for f in fired if f[1] == action)
         print(f"  {k:>3} × {action:<10} e.g. heard “{text}” (reading about “{said.get(utt, '')[:70]}”)")
-    # Measured on CI: 17.9 an hour (15.1 in a first run with shorter pauses between sentences),
-    # a third of them "again". The ceiling leaves a margin.
+    # Measured on CI: 17.9 and 17.0 an hour, a third of them "again". The ceiling leaves a margin.
     assert len(fired) / hours <= 25, f"Zoom acted {len(fired) / hours:.1f} times an hour of talk"
