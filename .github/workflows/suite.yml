@@ -16,7 +16,7 @@ on:
     paths: ["packaging/VERSION", "packaging/RELEASE.md", "packaging/mac/**", "packaging/windows/**"]
     tags: ["v*"]
   pull_request:
-    paths: ["packaging/**", ".github/workflows/suite.yml"]
+    paths: ["packaging/**", ".github/workflows/suite.yml", ".github/scripts/newest-builds.sh"]
   workflow_dispatch:
 
 concurrency:
@@ -47,15 +47,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p in
-          for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
-            run=$(gh run list -R "$GITHUB_REPOSITORY" -w "$wf" -b main -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
-            if [ -z "$run" ]; then echo "::warning::No successful $wf build on main yet"; continue; fi
-            name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" -q ".artifacts[] | select(.name | endswith(\"-${{ matrix.arch }}\")) | .name" | head -1)
-            if [ -z "$name" ]; then echo "::warning::$wf run $run has no ${{ matrix.arch }} build"; continue; fi
-            echo "$wf: $name (run $run)"
-            gh run download "$run" -R "$GITHUB_REPOSITORY" -n "$name" -D "in/$wf"
-          done
+          bash .github/scripts/newest-builds.sh "${{ matrix.arch }}" in
           find in -maxdepth 3 | sed 's/^/  /'
       - name: Build the suite disk image
         run: packaging/mac/build-suite-dmg.sh in "${{ matrix.arch }}" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg"
@@ -100,15 +92,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p in
-          for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
-            run=$(gh run list -R "$GITHUB_REPOSITORY" -w "$wf" -b main -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
-            if [ -z "$run" ]; then echo "::error::No successful $wf build on main yet"; exit 1; fi
-            name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" -q '.artifacts[] | select(.name | endswith("-windows")) | .name' | head -1)
-            if [ -z "$name" ]; then echo "::error::$wf run $run has no Windows build"; exit 1; fi
-            echo "$wf: $name (run $run)"
-            gh run download "$run" -R "$GITHUB_REPOSITORY" -n "$name" -D "in/$wf"
-          done
+          bash .github/scripts/newest-builds.sh windows in
           find in -name "*.exe" | sed 's/^/  /'
       - name: Build the suite installer
         shell: pwsh
