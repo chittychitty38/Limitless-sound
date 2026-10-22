@@ -215,6 +215,19 @@ class Flow(unittest.TestCase):
         self.assertEqual(normalize("[unk] solo track"), "solo track")
 
 
+class Dictation(unittest.TestCase):
+    def test_misheard_stop_when_dictation_is_off_explains(self):
+        e, p = engine("Logic Pro")
+        r = e.handle("stop dictation")
+        self.assertFalse(e.dictating)
+        self.assertIn("begin dictation", r.message)
+        self.assertEqual(pressed(p), [])
+        e.handle("dictation on")
+        self.assertTrue(e.dictating)
+        e.handle("dictation off")
+        self.assertFalse(e.dictating)
+
+
 class Destructive(unittest.TestCase):
     def test_one_utterance_never_deletes_more_than_three_times(self):
         cases = [("Logic Pro", "mac"), ("Pro Tools", "mac"), ("Pro Tools", "windows")]

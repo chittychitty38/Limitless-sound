@@ -23,8 +23,8 @@ CANCEL = {"cancel", "never mind", "nevermind", "no"}
 YES = {"yes", "confirm", "do it", "yes please"}
 AGAIN = {"again", "repeat that", "do that again", "one more time", "same again"}
 HELP = {"what can i say", "show commands", "help"}
-DICTATION_ON = {"start dictation", "dictation mode", "start typing"}
-DICTATION_OFF = {"stop dictation", "command mode", "stop typing"}
+DICTATION_ON = {"start dictation", "dictation mode", "start typing", "begin dictation", "dictation on", "take dictation"}
+DICTATION_OFF = {"stop dictation", "command mode", "stop typing", "end dictation", "dictation off"}
 # While a take is recording, only these do anything.
 TAKE_STOP = {"stop", "stop recording", "stop playback", "stop the take"}
 TAKE_OFF = {"end take mode", "take mode off", "all commands"}
@@ -193,6 +193,10 @@ class Engine:
         if text in DICTATION_ON:
             self.dictating = True
             return self._reply(raw, "Dictation on. Say stop dictation to go back to commands.")
+        if text in DICTATION_OFF:
+            # "start" and "stop" sound alike to the recognizer; dictation is already off,
+            # so a "stop" here was most likely a "start" misheard
+            return self._reply(raw, "Dictation is off. To start it, say begin dictation.", handled=False)
         if text in HELP:
             return self._help(raw)
         if text in AGAIN:
