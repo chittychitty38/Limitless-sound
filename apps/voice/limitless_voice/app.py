@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QMenu, QVBoxLayout, QWidget,
 )
 
-from . import __version__
+from . import __version__, applog
 from .actions import APP_ALIASES
 from .audio import Listener, list_input_devices
 from .engine import BUILTIN_PHRASES, Engine
@@ -742,6 +742,7 @@ def ensure_model(parent, name=""):
 
 
 def run(argv=None):
+    applog.start("Limitless Voice", __version__)
     # Qt on macOS activates the whole app whenever any window is raised, which
     # would pull focus away from Logic or Pro Tools. Turn that off.
     os.environ.setdefault("QT_MAC_SET_RAISE_PROCESS", "0")
