@@ -414,9 +414,12 @@ def intro_frame(t, hero):
                 band = Image.new("RGBA", (W, h), (12, 2, 14, 0))
                 band.putalpha(Image.fromarray(grad[:, None].repeat(W, 1).astype(np.uint8), "L"))
                 canvas.alpha_composite(band, (0, y0))
-            place(canvas, text("PANDA DRUMS", "display", 150, CREAM, stroke=10), W / 2, 112, pop((t - 2.2) / 0.45))
-            place(canvas, text("CHROMATIC DRUMS  ·  IN KEY WITH ANY SONG", "title", 44, GOLD, stroke=5), W / 2, 1036, 1.0,
-                  clamp((t - 2.6) / 0.3))
+            # Top left, clear of the panda's head; the line under it bottom left.
+            k = pop((t - 2.2) / 0.45)
+            title = text("PANDA DRUMS", "display", 122, CREAM, stroke=9)
+            place(canvas, title, 40 + title.width * (1 - k) / 2, 100, k, 1.0, "l")
+            place(canvas, text("CHROMATIC DRUMS  ·  IN KEY WITH ANY SONG", "title", 40, GOLD, stroke=5), 46, 1036, 1.0,
+                  clamp((t - 2.6) / 0.3), "l")
     return canvas
 
 
