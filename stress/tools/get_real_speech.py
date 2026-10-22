@@ -34,7 +34,12 @@ import wave
 from collections import defaultdict
 from pathlib import Path
 
-SPEECH_COMMANDS = ["https://download.tensorflow.org/data/speech_commands_v0.02.tar.gz"]
+# download.tensorflow.org is a Google Cloud Storage bucket whose own name has no HTTPS
+# certificate, so it's fetched over HTTPS by its storage address, and by plain HTTP if that fails.
+SPEECH_COMMANDS = [
+    "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
+    "http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
+]
 LIBRISPEECH = [
     "https://www.openslr.org/resources/12/dev-clean.tar.gz",
     "https://us.openslr.org/resources/12/dev-clean.tar.gz",

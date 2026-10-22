@@ -37,6 +37,7 @@ jobs:
       voice: ${{ steps.diff.outputs.voice }}
       gazestage: ${{ steps.diff.outputs.gazestage }}
       color: ${{ steps.diff.outputs.color }}
+      zoom: ${{ steps.diff.outputs.zoom }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,12 +46,12 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            for app in voice gazestage color; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            for app in voice gazestage color zoom; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
             exit 0
           fi
           changed="$(git diff --name-only HEAD^1 HEAD)"
           echo "$changed"
-          for app in voice gazestage color; do
+          for app in voice gazestage color zoom; do
             if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
               echo "$app=true" >> "$GITHUB_OUTPUT"
             else
@@ -121,14 +122,14 @@ jobs:
           VOSK_MODEL="$PWD/models/$MODEL" TTS_WAV_DIR="$RUNNER_TEMP/speech" \
             python -m pytest stress/test_voice_stress.py -v -s
 
-  # Real people instead of a synthetic voice: Google Speech Commands (single words, thousands
-  # of speakers) for how often a command is heard, and LibriSpeech (an hour of people reading
-  # aloud) for how often ordinary talk fires one. Both CC BY 4.0, fetched once and cached,
-  # never committed. stress/tools/get_real_speech.py says what's kept.
+  # Voice and Zoom hearing real people instead of a synthetic voice: Google Speech Commands
+  # (single words, thousands of speakers) for how often a command is heard, and LibriSpeech
+  # (an hour of people reading aloud) for how often ordinary talk fires one. Both CC BY 4.0,
+  # fetched once and cached, never committed. stress/tools/get_real_speech.py says what's kept.
   voice-real-speech:
-    name: Voice vs real people (ubuntu-latest)
+    name: Voice and Zoom vs real people (ubuntu-latest)
     needs: changes
-    if: needs.changes.outputs.voice == 'true'
+    if: needs.changes.outputs.voice == 'true' || needs.changes.outputs.zoom == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -177,7 +178,7 @@ jobs:
         run: |
           VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
             LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
-            python -m pytest stress/test_voice_real_speech.py -v -s --durations=5
+            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py -v -s --durations=5
 
   gazestage:
     name: GazeStage soak and focus (${{ matrix.os }})
