@@ -801,8 +801,10 @@ function applyStatus(st){
   if(setup.open&&su.step==="on")renderSetup();
   schedule();
 }
-let pushT=0;
-function pushProfile(){clearTimeout(pushT);pushT=setTimeout(()=>invoke("set_profile",{profile:{S,anchors}}).catch(e=>note(String(e))),120)}
+// Send the profile only when it changed: every status from the app redraws the window, and
+// pushing an unchanged profile back made the app save and send a status again, all the time.
+let pushT=0,lastPushed="";
+function pushProfile(){clearTimeout(pushT);pushT=setTimeout(()=>{const profile={S,anchors},json=JSON.stringify(profile);if(json===lastPushed)return;lastPushed=json;invoke("set_profile",{profile}).catch(e=>{lastPushed="";note(String(e))})},120)}
 async function setScreen(on){try{applyStatus(await invoke("set_filter",{on}))}catch(e){note(String(e))}}
 async function askDesktop(text){
   if(busy)return;busy=true;$("#send").disabled=true;
