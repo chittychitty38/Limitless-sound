@@ -10,6 +10,14 @@ contextBridge.exposeInMainWorld('gazestage', {
     ask: (kind) => ipcRenderer.invoke('media:ask', kind),
     openSettings: (kind) => ipcRenderer.send('media:open-settings', kind),
   },
+  suite: {
+    status: () => ipcRenderer.invoke('suite:status'),
+    did: (action) => ipcRenderer.send('suite:did', action),
+    invoke: (action, args) => ipcRenderer.invoke('suite:invoke', action, args),
+    onInvoke: (cb) => ipcRenderer.on('suite:invoke', (_e, req) => cb(req)),
+    reply: (id, result) => ipcRenderer.send('suite:result', id, result),
+    onConnected: (cb) => ipcRenderer.on('suite:connected', (_e, on) => cb(on)),
+  },
   midi: {
     status: () => ipcRenderer.invoke('midi:status'),
     send: (port, bytes) => ipcRenderer.send('midi:send', port, Array.from(bytes)),

@@ -38,7 +38,7 @@ const tracker = new Tracker($('cam'));
 const synth = new Synth(); synth.setPreset(S.preset);
 const midi = new MidiRouter(store);
 const onset = new OnsetDetector();
-window.__gs = { state, S, synth, midi };   // for the smoke test
+window.__gs = { state, S, synth, midi, suite: () => suiteOn };   // for the smoke test
 
 // ---------- display ----------
 function applyDisplay() {
@@ -451,7 +451,8 @@ function press(t, source) {
   if (d.goto) return showPage(d.goto);
   if (d.hui) {
     const port = HUI.PORT[d.hui];
-    if (!midi.transport(port, true)) { toast('Not connected to Pro Tools yet. See Settings › Pro Tools and MIDI.', 4000); return; }
+    if (!midi.transport(port, true)) { askSuite(d.hui); return; }
+    if (SUITE_TRANSPORT[d.hui]) bridge?.suite?.did(d.hui);
     if (isHoldable(t)) { state.heldHui = { t, port }; if (source !== 'gaze' && source !== 'mouse') setTimeout(() => release(t), 400); }
     else setTimeout(() => midi.transport(port, false), 90);
     return;
@@ -468,6 +469,47 @@ function release(t) {
   }
   if (state.heldHui && state.heldHui.t === t) { midi.transport(state.heldHui.port, false); state.heldHui = null; }
 }
+
+// ---------- Limitless Sound ----------
+// Other suite apps (Voice, the controller, a Stream Deck) can drive GazeStage, and when
+// Pro Tools isn't linked, GazeStage's transport asks whichever suite app can do it.
+const SUITE_TRANSPORT = { play: 'Playing', stop: 'Stopped', record: 'Recording' };
+const SUITE_DO = {
+  pads: () => showPage('play'), transport: () => showPage('transport'),
+  octaveUp: () => action('octup'), octaveDown: () => action('octdown'), scale: () => action('scale'),
+  latch: () => action('hold'), panic: () => action('panic'),
+};
+let suiteOn = false;
+
+function suiteInvoke(name) {
+  if (SUITE_TRANSPORT[name]) {
+    const port = HUI.PORT[name];
+    if (!midi.transport(port, true)) return { ok: false, message: 'GazeStage isn’t linked to Pro Tools.' };
+    setTimeout(() => midi.transport(port, false), 90);
+    const t = document.querySelector(`[data-hui="${name}"]`);
+    if (t) feedback(t);
+    return { ok: true, message: SUITE_TRANSPORT[name] };
+  }
+  const run = SUITE_DO[name];
+  if (!run) return { ok: false, message: `GazeStage has no action “${name}”.` };
+  run();
+  return { ok: true, message: '' };
+}
+
+async function askSuite(hui) {
+  const notLinked = 'Not connected to Pro Tools yet. See Settings › Pro Tools and MIDI.';
+  if (!SUITE_TRANSPORT[hui] || !suiteOn) return toast(notLinked, 4000);
+  const r = await bridge.suite.invoke(`daw.${hui}`);
+  toast(r.ok ? (r.message || SUITE_TRANSPORT[hui]) : notLinked, r.ok ? 1800 : 4000);
+}
+
+bridge?.suite?.onInvoke(({ id, action: name }) => {
+  let result;
+  try { result = suiteInvoke(String(name)); } catch (e) { result = { ok: false, message: String(e?.message || e) }; }
+  bridge.suite.reply(id, result);
+});
+bridge?.suite?.onConnected((on) => { suiteOn = !!on; });
+bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; });
 
 function action(a) {
   switch (a) {

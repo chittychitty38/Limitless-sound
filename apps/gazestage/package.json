@@ -33,6 +33,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "limitless-link.js",
       "renderer/**/*",
       "package.json"
     ],
