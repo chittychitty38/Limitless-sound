@@ -14,7 +14,7 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QLabel, QSystemTrayIcon,  # noqa: E402
                                QWidget)
 
-from limitless_zoom import words  # noqa: E402
+from limitless_zoom import voice, words  # noqa: E402
 from limitless_zoom.actions import LABELS, PANEL_BUTTONS  # noqa: E402
 from limitless_zoom.app import ZoomApp  # noqa: E402
 from limitless_zoom.keymaps import TARGETS  # noqa: E402
@@ -157,6 +157,9 @@ def qapp():
 @pytest.fixture
 def make(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", staticmethod(lambda: True))   # the menu too
+    # The computer's microphones ("Apple Virtual Sound Device" on a CI Mac) are names, the same in
+    # every language, so leave them out as Linux does.
+    monkeypatch.setattr(voice, "list_microphones", lambda: [])
     made = []
 
     def make():
@@ -177,6 +180,9 @@ def make(qapp, tmp_path, monkeypatch):
             w.hide()
         app.poll.stop()
         app.perm_timer.stop()
+        # On Windows a second server can take the same pipe name and the first one still gets
+        # the calls: a later test's "--do out" would land in this app.
+        app.server.close()
 
 
 def busy(app):

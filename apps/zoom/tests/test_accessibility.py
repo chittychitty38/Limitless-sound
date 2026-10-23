@@ -151,6 +151,7 @@ def zoom(request, qapp, tmp_path, monkeypatch):
         w.hide()
     app.poll.stop()
     app.perm_timer.stop()
+    app.server.close()   # see test_spanish.py: a later test's "--do" must reach its own app
 
 
 def test_every_window_names_its_controls(zoom):
