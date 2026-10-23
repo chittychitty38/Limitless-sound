@@ -96,7 +96,7 @@ def _start(listener, heard):
 
 def _feed(listener, recs, pcm):
     for i in range(0, len(pcm), BLOCK):
-        listener._feed(recs, pcm[i:i + BLOCK])
+        listener.hear(recs, pcm[i:i + BLOCK])
 
 
 def _read(path):
@@ -134,7 +134,7 @@ def hear_word(path):
     for _ in range(60):
         if heard:
             break
-        listener._feed(recs, QUIET)
+        listener.hear(recs, QUIET)
         blocks += 1
     if heard:
         _waited[path] = len(pcm) / 2 / RATE - _speech_end(pcm) + blocks * len(QUIET) / 2 / RATE

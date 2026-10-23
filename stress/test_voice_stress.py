@@ -165,8 +165,9 @@ def _recognize(chunks):
     block = RATE // 10
     for chunk in chunks:
         for i in range(0, len(chunk), block * 2):
-            listener._feed(recs, chunk[i:i + block * 2])
-    listener._feed(recs, b"\0\0" * RATE)  # a second of silence ends the last utterance
+            listener.hear(recs, chunk[i:i + block * 2])
+    for _ in range(20):   # two seconds of silence end the last utterance, through the app's gate
+        listener.hear(recs, b"\0\0" * block)
     e, p = engine()
     fired, handled = [], []
     for c, o in heard:

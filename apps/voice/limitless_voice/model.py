@@ -17,10 +17,13 @@ from .settings import data_dir
 DEFAULT_MODEL = "vosk-model-small-en-us-0.15"
 MODEL_URL = "https://alphacephei.com/vosk/models/{name}.zip"
 
-# Bigger, more accurate models users can choose in Settings. Size is the download.
+# Models users can choose in Settings. Size is the download. On real people's recordings the
+# larger English model heard no more of Voice's words than the small one (90.6% against 91.6%),
+# and kept a processor core about six times as busy (stress/test_voice_real_speech.py, October
+# 2026), so it isn't offered as more accurate.
 MODELS = {
     "vosk-model-small-en-us-0.15": ("English (US), fast", "40 MB"),
-    "vosk-model-en-us-0.22-lgraph": ("English (US), more accurate", "128 MB"),
+    "vosk-model-en-us-0.22-lgraph": ("English (US), large, slower", "128 MB"),
     "vosk-model-small-en-in-0.4": ("English (India), fast", "36 MB"),
 }
 

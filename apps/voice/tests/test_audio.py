@@ -50,7 +50,7 @@ class Recognition(unittest.TestCase):
         self.heard.clear()
         block = int(rate * 0.1) * 2
         for i in range(0, len(pcm), block):
-            self.listener._feed(recs, pcm[i:i + block])
+            self.listener.hear(recs, pcm[i:i + block])
         self.assertTrue(self.heard, f"nothing recognized for {text!r}")
         platform = DryRunPlatform("mac", app=app)
         engine = Engine(platform, self.packs)
