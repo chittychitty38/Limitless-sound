@@ -360,20 +360,21 @@ class ZoomApp(QObject):
         English while another language's speech model is still downloading."""
         return self.voice.language if self.voice else self.listening_language()
 
-    def start_voice(self):
+    def start_voice(self, keep=False):
         """Listen in the language wanted. Its speech model is downloaded once, the first time;
-        until it's here, Zoom listens in English and says so."""
+        until it's here, Zoom listens in English and says so. keep: a listener already running
+        with the model and language wanted carries on (see _start_voice_with)."""
         want = self.voice_wanted = self.listening_language()
         self._voice_note = None
         model = voice.find_model(self.settings["voice_model"], model_dirs(), want)
         if model:
-            self._start_voice_with(str(model), want.code)
+            self._start_voice_with(str(model), want.code, keep)
             return
         english = None if want is voice.ENGLISH else voice.find_model(self.settings["voice_model"], model_dirs())
         if english:
             self._voice_note = t("until the {language} voice model is downloaded ({size}, one time only), "
                                  "say the commands in English", language=t(want.english_name), size=want.size)
-            self._start_voice_with(str(english), voice.ENGLISH.code)
+            self._start_voice_with(str(english), voice.ENGLISH.code, keep)
         else:
             self.stop_voice()
             self._voice_status(t("downloading the voice model (about 40 MB), one time only…") if want is voice.ENGLISH
@@ -436,7 +437,18 @@ class ZoomApp(QObject):
         self._listener_said = text
         self.bus.voice_status.emit(self._noted(text))
 
-    def _start_voice_with(self, model_path, code=voice.ENGLISH.code):
+    def _start_voice_with(self, model_path, code=voice.ENGLISH.code, keep=False):
+        lang = voice.LANGUAGES[code]
+        if (keep and self.voice is not None and self.voice.is_alive()
+                and self.voice.model_path == model_path and self.voice.language is lang):
+            # The suite's language changed but voice would listen with the same model: to Spanish
+            # while its model is still downloading, or back. Loading it again costs a second of CPU
+            # and about 150 MB Python doesn't give back (the 0.2.7 proof saw Zoom double its
+            # memory), so only what the status says changes.
+            if self._listener_said is not None:
+                self.bus.voice_status.emit(self._noted(self._listener_said))
+            self._show_phrases()
+            return
         self.stop_voice()
         self.voice = voice.VoiceListener(model_path, self.bus.action.emit, self._listener_status,
                                          self.settings["voice_device"],
@@ -456,7 +468,7 @@ class ZoomApp(QObject):
         """The suite's language changed, or the one chosen for voice: listen in it, and show
         what can be said in it."""
         if self.use_voice and self.settings["voice_enabled"] and self.listening_language() is not self.voice_wanted:
-            self.start_voice()
+            self.start_voice(keep=True)
         self._show_phrases()
 
     def set_voice_language(self, code):
