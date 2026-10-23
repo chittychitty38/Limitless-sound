@@ -79,6 +79,26 @@ def test_intent_missing_from_this_daw():
     assert not ok and "Pro Tools" in msg
 
 
+def test_fl_studio_never_answers_record_or_redo():
+    # R only switches FL Studio's record mode, and Ctrl/Cmd+Z undoes and redoes in turn: the
+    # suite's Record and Redo aren't FL Studio's to press, and Undo steps back through the history.
+    for front, platform, back in [("com.image-line.flstudio", "mac", ("cmd_l", "alt_l")),
+                                  ("fl64.exe", "windows", ("ctrl_l", "alt_l"))]:
+        s, b, _, _ = make(front=front, platform=platform)
+        assert not s.invoke("record", {}, "gaze")[0]
+        assert not s.invoke("redo", {}, "gaze")[0]
+        assert s.invoke("undo", {}, "gaze")[0]
+        assert b.sent == [Tap("z", back)]
+
+
+def test_reaper_and_garageband_record():
+    s, b, _, _ = make(front="reaper.exe", platform="windows")
+    assert s.invoke("record", {}, "gaze") == (True, "Record in REAPER")
+    assert b.sent == [Tap("r", ("ctrl_l",))]
+    s, b, _, _ = make(front="com.apple.garageband10")
+    assert s.invoke("record", {}, "gaze")[0] and b.sent == [Tap("r", ())]
+
+
 def test_mixer_in_pro_tools_uses_edit_mix_window():
     s, b, _, _ = make(front="com.avid.ProTools")
     assert s.invoke("mixer", {}, "voice")[0]

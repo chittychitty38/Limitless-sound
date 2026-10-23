@@ -1,0 +1,39 @@
+# GarageBand 10 on a Mac, default shortcuts. Only keys Apple's GarageBand for Mac User Guide
+# gives (support.apple.com/guide/garageband) are here; DAW-SHORTCUTS.md has each page.
+# Undo (Command-Z), redo (Shift-Command-Z) and save come from the everyday commands, and Apple's
+# "Undo and redo edits in GarageBand on Mac" gives the same keys.
+#
+# Apple's page of main window shortcuts couldn't be read, so cycle, metronome, go to start,
+# bars, track selection, mute, solo, split, join, the editors, the Library and zoom aren't
+# here yet: they need checking on a real Mac first.
+#
+# A (automation) plays a note instead while the Musical Typing window is open.
+
+name: GarageBand
+apps: ["GarageBand"]
+platforms: [mac]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+    instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  - say: ["record", "start recording"]
+    fuzzy: false
+    instant: true
+    do: {keys: r}
+    reply: Recording
+    repeatable: false
+
+  # --- tracks -----------------------------------------------------------
+  # Opens the New Track dialog: say "press enter" to create the track it shows.
+  - say: ["new track", "new tracks", "add [a] track"]
+    do: {keys: opt+cmd+n}
+    help: Opens the New Track dialog
+
+  # --- views ------------------------------------------------------------
+  - say: ["automation", "show automation"]
+    do: {keys: a}
+  - say: ["musical typing"]
+    do: {keys: cmd+k}

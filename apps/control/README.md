@@ -1,17 +1,18 @@
 # Limitless Control
 
 Play, record and mix with an **Xbox Adaptive Controller**, accessibility switches, or any
-gamepad. Each switch becomes a key command for Logic Pro, Pro Tools, Ableton Live or the rest
-of your computer. Part of **Limitless Sound**: music technology with no one left behind.
+gamepad. Each switch becomes a key command for Logic Pro, Pro Tools, Ableton Live, GarageBand,
+REAPER, FL Studio or the rest of your computer. Part of **Limitless Sound**: music technology
+with no one left behind.
 
 **Runs on:** Mac (Apple silicon and Intel), Windows 10 and 11, and Linux (X11).
 **For musicians:** see [INSTALL.md](INSTALL.md). It covers install, setup and the default buttons in plain language.
 
 ## What it does
 
-- **Follows the app in front.** Built-in profiles for Logic Pro, Pro Tools and Ableton Live,
-  plus an "Everyday" profile for everything else. It switches profiles automatically and
-  says the name out loud.
+- **Follows the app in front.** Built-in profiles for Logic Pro, Pro Tools, Ableton Live,
+  GarageBand, REAPER and FL Studio, plus an "Everyday" profile for everything else. It
+  switches profiles automatically and says the name out loud.
 - **Every input counts.** Buttons, all the 3.5 mm switch jacks, triggers and stick directions.
 - **Layer switch.** One switch gives the next switch a second job (like Sticky Keys), so
   one hand gets twice the commands.

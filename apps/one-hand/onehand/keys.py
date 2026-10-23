@@ -20,6 +20,9 @@ MAC_CODES = {
     "shift_r": 60, "alt_r": 61, "ctrl_r": 62,
     "f12": 111, "f13": 105, "f14": 107, "f15": 113, "f16": 106, "f17": 64, "f18": 79, "f19": 80,
     "left_arrow": 123, "right_arrow": 124, "down_arrow": 125, "up_arrow": 126,
+    # For FL Studio's windows and zoom, and REAPER's go to end and zoom to project.
+    "f5": 96, "f6": 97, "f7": 98, "f8": 100, "f9": 101,
+    "home": 115, "page_up": 116, "end": 119, "page_down": 121,
 }
 
 # Canonical name -> Windows virtual-key code.
@@ -35,13 +38,15 @@ WIN_CODES = {
     "shift_l": 0xA0, "shift_r": 0xA1, "ctrl_l": 0xA2, "ctrl_r": 0xA3,
     "alt_l": 0xA4, "alt_r": 0xA5, "cmd_l": 0x5B, "cmd_r": 0x5C,
     "f12": 0x7B, "f13": 0x7C, "f14": 0x7D, "f15": 0x7E, "f16": 0x7F, "f17": 0x80, "f18": 0x81, "f19": 0x82,
+    "f5": 0x74, "f6": 0x75, "f7": 0x76, "f8": 0x77, "f9": 0x78,
+    "home": 0x24, "end": 0x23, "page_up": 0x21, "page_down": 0x22,
 }
 # Windows also reports generic Shift/Ctrl/Alt codes from some devices.
 WIN_GENERIC = {0x10: "shift_l", 0x11: "ctrl_l", 0x12: "alt_l"}
 
 # Keys that need the "extended" flag when sent on Windows.
 WIN_EXTENDED = {"left_arrow", "right_arrow", "up_arrow", "down_arrow", "ctrl_r", "alt_r",
-                "cmd_l", "cmd_r"}
+                "cmd_l", "cmd_r", "home", "end", "page_up", "page_down"}
 
 MODIFIER_KEYS = {"shift_l", "shift_r", "ctrl_l", "ctrl_r", "alt_l", "alt_r", "cmd_l", "cmd_r"}
 SHIFT_KEYS = {"shift_l", "shift_r"}
@@ -77,6 +82,7 @@ KEY_CAPS = {
     "spacebar": "Space", "left_arrow": "←", "right_arrow": "→", "up_arrow": "↑",
     "down_arrow": "↓", "equal_sign": "=", "open_bracket": "[", "close_bracket": "]",
     "hyphen": "-", "grave": "`", "backslash": "\\", "caps_lock": "Caps Lock", "escape": "Esc",
+    "home": "Home", "end": "End", "page_up": "Page Up", "page_down": "Page Down",
 }
 MOD_CAPS = {
     "mac": {"command": "⌘", "shift": "⇧", "option": "⌥", "control": "⌃"},

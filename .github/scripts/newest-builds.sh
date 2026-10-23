@@ -57,6 +57,19 @@ from_release() {  # <workflow> <run> <folder>
   done <<<"$files"
 }
 
+# A build with no release to take it from (Limitless Sound itself releases only on a hub-v tag):
+# the storage's refusals have passed within minutes before, so ask again a few times.
+download_again() {  # <run> <artifact name> <folder>
+  local wait
+  for wait in 30 60 120; do
+    echo "  asking for $2 again in ${wait}s"
+    sleep "$wait"
+    rm -rf "${3:?}"
+    gh run download "$1" -R "$repo" -n "$2" -D "$3" && return 0
+  done
+  return 1
+}
+
 mkdir -p "$out"
 for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
   found=""
@@ -89,8 +102,8 @@ for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazes
   [ "$list_only" = --list ] && continue
   if ! gh run download "$run" -R "$repo" -n "$name" -D "$out/$wf"; then
     rm -rf "${out:?}/$wf"
-    if ! from_release "$wf" "$run" "$out/$wf"; then
-      echo "::error::Couldn't download $name (run $run), and it has no release to take it from"
+    if ! from_release "$wf" "$run" "$out/$wf" && ! download_again "$run" "$name" "$out/$wf"; then
+      echo "::error::Couldn't download $name (run $run) after asking four times, and it has no release to take it from"
       exit 1
     fi
   fi

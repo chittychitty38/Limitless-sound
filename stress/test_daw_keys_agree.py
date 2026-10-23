@@ -10,11 +10,16 @@ time one of them was wrong:
 - Control went to the end of a Pro Tools session with Command+Return instead of Option+Return.
 - Control redid in Ableton Live on Windows with Ctrl+Shift+Z instead of Ctrl+Y.
 A musician would get a different result from the same request depending on which app they used.
+
+GarageBand, REAPER and FL Studio were added to every app at once (apps/voice/DAW-SHORTCUTS.md has
+each key's source), and are held to the same rule from the start.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import json
+from pathlib import Path
 
 import pytest
 
@@ -26,10 +31,11 @@ need("zoom")
 need("onehand")
 
 from limitless_control import keys as control_keys  # noqa: E402
-from limitless_control.profiles import CATALOG  # noqa: E402
+from limitless_control.profiles import APPS, CATALOG  # noqa: E402
 from limitless_voice.engine import Engine  # noqa: E402
 from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs  # noqa: E402
 from limitless_voice.platforms.dryrun import DryRunPlatform  # noqa: E402
+from limitless_voice.platforms.windows import EXE_NAMES  # noqa: E402
 from limitless_zoom.keymaps import TARGETS  # noqa: E402
 
 # For each DAW: what Voice is told, and the same thing in Control's profile.
@@ -53,13 +59,36 @@ SAME = {
         "play": "play", "record": "record", "undo": "undo", "redo": "redo", "loop selection": "loop",
         "zoom in": "zoom_in", "zoom out": "zoom_out", "mute": "activate", "save": "save",
     },
+    "GarageBand": {
+        "play": "play", "record": "record", "undo": "undo", "redo": "redo", "new track": "new_track",
+        "automation": "automation", "musical typing": "musical_typing", "save": "save",
+    },
+    "REAPER": {
+        "play": "play", "record": "record", "go to start": "start", "go to end": "end", "undo": "undo",
+        "redo": "redo", "loop": "loop", "previous track": "track_up", "next track": "track_down",
+        "new track": "new_track", "split": "split", "mixer": "mixer", "zoom to fit": "zoom_fit",
+        "add marker": "marker", "save": "save",
+    },
+    # FL Studio has no "record" or "redo" (R only switches record mode; Ctrl/Cmd+Z undoes and
+    # redoes in turn), in any app.
+    "FL Studio": {
+        "play": "play", "record mode": "record_mode", "go to start": "start", "undo": "undo",
+        "metronome": "metronome", "previous channel": "track_up", "next channel": "track_down", "solo": "solo",
+        "mixer": "mixer", "playlist": "playlist", "channel rack": "channel_rack", "piano roll": "piano_roll",
+        "browser": "browser", "zoom in": "zoom_in", "zoom out": "zoom_out", "zoom to fit": "zoom_fit",
+        "add marker": "marker", "save": "save",
+    },
 }
+# DAWs that only run on a Mac.
+MAC_ONLY = {"Logic Pro", "GarageBand"}
 # The same with Zoom's key maps: Voice's words, and Zoom's.
 ZOOM = {
     "Logic Pro": ("logic", {"zoom in": "in", "zoom out": "out", "zoom in vertical": "taller",
                             "zoom out vertical": "shorter", "zoom to fit": "fit"}),
     "Pro Tools": ("protools", {"zoom in": "in", "zoom out": "out"}),
     "Ableton Live": ("ableton", {"zoom in": "in", "zoom out": "out", "zoom to selection": "fit"}),
+    "REAPER": ("reaper", {"zoom to fit": "fit"}),
+    "FL Studio": ("flstudio", {"zoom in": "in", "zoom out": "out", "zoom to fit": "fit"}),
 }
 # One-Hand's labels, and the same thing told to Voice.
 ONE_HAND = {
@@ -77,11 +106,28 @@ ONE_HAND = {
         "Save": "save", "Zoom out": "zoom out", "Zoom in": "zoom in", "Cut": "cut", "Heal separation": "heal",
         "Delete": "delete",
     },
+    "GarageBand": {
+        "Undo": "undo", "Redo": "redo", "Record": "record", "New track": "new track", "Save": "save",
+        "Automation": "automation", "Musical Typing": "musical typing",
+    },
+    "REAPER": {
+        "Go to start": "go to start", "Go to end": "go to end", "Add marker": "add marker",
+        "Loop playback": "loop playback", "Undo": "undo", "Redo": "redo", "Record": "record",
+        "Split at edit cursor": "split", "New track": "new track", "Previous track": "previous track",
+        "Next track": "next track", "Zoom to fit": "zoom to fit", "Save": "save", "Mixer": "mixer",
+    },
+    "FL Studio": {
+        "Go to start": "go to start", "Add marker": "add marker", "Playlist": "playlist",
+        "Metronome on/off": "metronome", "Undo": "undo", "Record mode on/off": "record mode",
+        "Channel Rack": "channel rack", "Previous channel": "previous channel", "Solo track": "solo",
+        "Next channel": "next channel", "Zoom to fit": "zoom to fit", "Save": "save", "Zoom out": "zoom out",
+        "Zoom in": "zoom in", "Mixer": "mixer", "Piano roll": "piano roll", "Browser": "browser",
+    },
 }
 ONE_HAND_KEYS = {"return_or_enter": "return", "comma": ",", "period": ".", "spacebar": "space", "equal_sign": "=",
                  "hyphen": "-", "open_bracket": "[", "close_bracket": "]", "semicolon": ";",
                  "delete_or_backspace": "delete", "left_arrow": "left", "right_arrow": "right",
-                 "up_arrow": "up", "down_arrow": "down"}
+                 "up_arrow": "up", "down_arrow": "down", "page_up": "pageup", "page_down": "pagedown"}
 ONE_HAND_MODS = {"command": "cmd", "option": "alt", "control": "ctrl", "shift": "shift"}
 SYSTEMS = {"mac": "mac", "windows": "win"}   # Voice's and Control's name, Zoom's name
 PACKS = {os_name: load_packs([DEFAULT_PACK_DIR], os_name) for os_name in SYSTEMS}
@@ -108,7 +154,7 @@ def voice_presses(daw: str, said: str, os_name: str) -> str | None:
 def cases():
     for daw, pairs in SAME.items():
         for os_name in SYSTEMS:
-            if daw == "Logic Pro" and os_name == "windows":
+            if daw in MAC_ONLY and os_name == "windows":
                 continue
             for said, action in pairs.items():
                 yield daw, os_name, said, action
@@ -153,7 +199,7 @@ def one_hand_chord(command: dict, os_name: str) -> str:
 def test_voice_and_one_hand_press_the_same_key(daw):
     layouts = one_hand_layouts()[daw]
     for os_name in SYSTEMS:
-        if daw == "Logic Pro" and os_name == "windows":
+        if daw in MAC_ONLY and os_name == "windows":
             continue
         for label, said in ONE_HAND[daw].items():
             theirs = one_hand_chord(layouts[label], os_name)
@@ -161,6 +207,25 @@ def test_voice_and_one_hand_press_the_same_key(daw):
             assert ours is not None, f'Voice did nothing for "{said}" in {daw} on {os_name}'
             assert same_chord(ours, os_name) == same_chord(theirs, os_name), \
                 f'{daw} on {os_name}: Voice presses {ours} for "{said}", One-Hand presses {theirs} for {label}'
+
+
+@pytest.mark.parametrize("daw", ["GarageBand", "REAPER", "FL Studio"])
+def test_every_app_finds_the_same_daw(daw):
+    """The Mac bundle ID and Windows program each app looks for, so the keys above reach the DAW."""
+    voice = next(p for p in PACKS["mac"] if p.name == daw)
+    control = APPS[daw]
+    one_hand = next(a for a in json.loads((ROOT / "apps" / "one-hand" / "onehand" / "layouts.json")
+                                          .read_text(encoding="utf-8"))["apps"] if a["name"] == daw)
+    zoom = next((t for t in TARGETS.values() if t["name"] == daw), None)
+    for app_id in one_hand["mac"] + one_hand["windows"]:
+        assert any(fnmatch.fnmatch(app_id, p) for p in control), f"Control doesn't know {app_id} as {daw}"
+        if zoom:
+            assert any(m in app_id for m in zoom["match"]), f"Zoom doesn't know {app_id} as {daw}"
+    # Voice goes by the app's name: the Mac's, and on Windows the program's (EXE_NAMES).
+    names = {"GarageBand": ["GarageBand"], "REAPER": ["REAPER", "REAPER64"], "FL Studio": ["FL Studio 2024"]}[daw]
+    names += [EXE_NAMES.get(exe) or Path(exe).stem for exe in one_hand["windows"]]
+    for name in names:
+        assert voice.applies_to(name), f"Voice doesn't know {name} as {daw}"
 
 
 def test_control_and_one_hand_go_to_the_end_the_same_way():

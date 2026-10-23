@@ -120,6 +120,61 @@ class Matching(unittest.TestCase):
                 self.assertTrue(e.handle(phrase, phrase).handled, f"{os_name}: {phrase}")
             self.assertEqual([k.replace("alt+ctrl", "ctrl+alt") for k in pressed(p)], keys, os_name)
 
+    def test_garageband_on_a_mac(self):
+        # Only the keys Apple's GarageBand for Mac guide gives; undo and redo are the everyday ones.
+        said = ["play", "record", "new track", "show automation", "musical typing", "undo", "redo", "save"]
+        e, p = engine("GarageBand")
+        for phrase in said:
+            self.assertTrue(e.handle(phrase, phrase).handled, phrase)
+        self.assertEqual(pressed(p), ["space", "r", "opt+cmd+n", "a", "cmd+k", "cmd+z", "cmd+shift+z", "cmd+s"])
+        # GarageBand is Mac only: on Windows no app of that name gets its commands.
+        e, p = engine("GarageBand", "windows")
+        self.assertFalse(e.handle("musical typing", "musical typing").handled)
+
+    def test_reaper_mac_and_windows(self):
+        said = ["play", "record", "loop", "go to start", "go to end", "add marker", "new track", "next track",
+                "previous track", "split", "show the mixer", "zoom to fit", "render", "undo", "redo", "save",
+                "select all"]
+        mac = ["space", "cmd+r", "r", "w", "end", "m", "cmd+t", "cmd+opt+down", "cmd+opt+up", "s", "cmd+m",
+               "cmd+pagedown", "cmd+opt+r", "cmd+z", "cmd+shift+z", "cmd+s", "cmd+a"]
+        # Older Macs name the app REAPER64; Windows reports reaper.exe, shown as REAPER.
+        windows = [k.replace("cmd", "ctrl").replace("opt", "alt") for k in mac]
+        for app, os_name, keys in [("REAPER", "mac", mac), ("REAPER64", "mac", mac), ("REAPER", "windows", windows)]:
+            e, p = engine(app, os_name)
+            for phrase in said:
+                self.assertTrue(e.handle(phrase, phrase).handled, f"{app} on {os_name}: {phrase}")
+            self.assertEqual(pressed(p), keys, f"{app} on {os_name}")
+
+    def test_fl_studio_mac_and_windows(self):
+        said = ["play", "record mode", "metronome", "go to start", "next bar", "previous bar", "add marker",
+                "next channel", "previous track", "solo", "undo", "show the mixer", "piano roll", "playlist",
+                "channel rack", "browser", "zoom in", "zoom out", "zoom to fit", "export", "save"]
+        mac = ["space", "r", "cmd+m", "home", "numpad*", "numpad/", "opt+t", "down", "up", "s", "cmd+opt+z", "f9",
+               "f7", "f5", "f6", "opt+f8", "pageup", "pagedown", "shift+4", "cmd+r", "cmd+s"]
+        windows = [k.replace("cmd", "ctrl").replace("opt", "alt") for k in mac]
+        # The Mac shows "FL Studio 2024" (its process is OsxFL); Windows runs FL64.exe, shown as FL Studio.
+        for app, os_name, keys in [("FL Studio 2024", "mac", mac), ("OsxFL", "mac", mac),
+                                   ("FL Studio", "windows", windows), ("FL64 (scaled)", "windows", windows)]:
+            e, p = engine(app, os_name)
+            for phrase in said:
+                self.assertTrue(e.handle(phrase, phrase).handled, f"{app} on {os_name}: {phrase}")
+            self.assertEqual(pressed(p), keys, f"{app} on {os_name}")
+
+    def test_fl_studio_undo_steps_back_and_redo_presses_nothing(self):
+        # Ctrl/Cmd+Z undoes and redoes the last edit in turn: two "undo"s must not cancel out.
+        for os_name, back in (("mac", "cmd+opt+z"), ("windows", "ctrl+alt+z")):
+            e, p = engine("FL Studio", os_name)
+            e.handle("undo", "undo")
+            e.handle("undo", "undo")
+            r = e.handle("redo", "redo")
+            self.assertTrue(r.handled)
+            self.assertIn("no redo key", r.message)
+            self.assertEqual(pressed(p), [back, back], os_name)
+        # R only switches record mode, so "record" isn't FL Studio's: it says where it works.
+        e, p = engine("FL Studio")
+        self.assertFalse(e.handle("record", "record").handled)
+        self.assertEqual(pressed(p), [])
+
     def test_keys_that_act_on_tracks_not_regions_or_spotlight(self):
         # Logic: M and S mute and solo the track; Control-M and Control-S act on regions.
         e, p = engine("Logic Pro")
@@ -191,15 +246,16 @@ class Matching(unittest.TestCase):
         e, p = engine("Finder")
         r = e.handle("play")
         self.assertFalse(r.handled)
-        self.assertEqual(r.message, '"play" works in Ableton Live, Logic Pro and Pro Tools. '
-                                    'Bring one of them to the front, then say it again.')
+        self.assertEqual(r.message, '"play" works in Ableton Live, FL Studio, GarageBand, Logic Pro, Pro Tools '
+                                    'and REAPER. Bring one of them to the front, then say it again.')
         self.assertEqual(p.log, [])
-        r = e.handle("show the piano roll")
-        self.assertEqual(r.message, '"show the piano roll" works in Logic Pro. '
+        r = e.handle("show the inspector")
+        self.assertEqual(r.message, '"show the inspector" works in Logic Pro. '
                                     'Bring it to the front, then say it again.')
-        # Logic is Mac only, so Windows offers Live and Pro Tools.
+        # Logic and GarageBand are Mac only, and FL Studio's R is "record mode", so Windows offers
+        # Live, Pro Tools and REAPER.
         e, _ = engine("Notepad", os_name="windows")
-        self.assertEqual(e.handle("record").message, '"record" works in Ableton Live and Pro Tools. '
+        self.assertEqual(e.handle("record").message, '"record" works in Ableton Live, Pro Tools and REAPER. '
                                                      'Bring one of them to the front, then say it again.')
         # Something no app knows still says it wasn't caught.
         e, _ = engine("Finder")

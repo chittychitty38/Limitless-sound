@@ -86,6 +86,65 @@ CATALOG: dict[str, dict[str, dict]] = {
         "activate": {"label": "Track on/off (mute)", "keys": "0", "say": "Track on off"},
         "save": {"label": "Save", "keys": "mod+s", "say": "Saved"},
     },
+    # GarageBand 10, Mac only. Apple's GarageBand for Mac guide gives these keys; its cycle,
+    # metronome, track and zoom keys couldn't be confirmed (apps/voice/DAW-SHORTCUTS.md).
+    "GarageBand": {
+        "play": {"label": "Play / stop", "keys": "space", "say": "Play stop"},
+        "record": {"label": "Record", "keys": "r", "say": "Record"},
+        "undo": {"label": "Undo", "keys": "mod+z", "say": "Undo"},
+        "redo": {"label": "Redo", "keys": "mod+shift+z", "say": "Redo"},
+        "new_track": {"label": "New track (opens a dialog)", "keys": "mod+alt+n", "say": "New track"},
+        "automation": {"label": "Show automation", "keys": "a", "say": "Automation"},
+        "musical_typing": {"label": "Show Musical Typing", "keys": "mod+k", "say": "Musical typing"},
+        "save": {"label": "Save", "keys": "mod+s", "say": "Saved"},
+        "enter": {"label": "Enter / OK", "keys": "return"},
+        "up": {"label": "Up arrow", "keys": "up"},
+        "down": {"label": "Down arrow", "keys": "down"},
+        "left": {"label": "Left arrow", "keys": "left"},
+        "right": {"label": "Right arrow", "keys": "right"},
+    },
+    # REAPER 7's default key map, from Cockos' guides (Ctrl on Windows is Command on a Mac).
+    # REAPER has no default key for the metronome, track mute, solo or arm.
+    "REAPER": {
+        "play": {"label": "Play / stop", "keys": "space", "say": "Play stop"},
+        "record": {"label": "Record", "keys": "mod+r", "say": "Record"},
+        "start": {"label": "Go to start", "keys": "w", "say": "Start"},
+        "end": {"label": "Go to end", "keys": "end", "say": "End"},
+        "undo": {"label": "Undo", "keys": "mod+z", "say": "Undo"},
+        "redo": {"label": "Redo", "keys": "mod+shift+z", "say": "Redo"},
+        "loop": {"label": "Loop playback on/off", "keys": "r", "say": "Loop"},
+        "track_up": {"label": "Previous track", "keys": "mod+alt+up"},
+        "track_down": {"label": "Next track", "keys": "mod+alt+down"},
+        "new_track": {"label": "New track", "keys": "mod+t", "say": "New track"},
+        "split": {"label": "Split items at the edit cursor", "keys": "s", "say": "Split"},
+        "mixer": {"label": "Show mixer", "keys": "mod+m", "say": "Mixer"},
+        "zoom_fit": {"label": "Zoom to project", "keys": "mod+pagedown", "say": "Zoom to fit"},
+        "marker": {"label": "Add marker", "keys": "m", "say": "Marker"},
+        "save": {"label": "Save", "keys": "mod+s", "say": "Saved"},
+    },
+    # FL Studio, from Image-Line's manual. Its keys depend on the window in front, and R only
+    # switches record mode (play then records), so it isn't "record". Ctrl/Cmd+Z undoes and redoes
+    # in turn, so undo steps back through the history, and there's no redo.
+    "FL Studio": {
+        "play": {"label": "Play / stop", "keys": "space", "say": "Play stop"},
+        "record_mode": {"label": "Record mode on/off", "keys": "r", "say": "Record mode"},
+        "start": {"label": "Go to start (Playlist)", "keys": "home", "say": "Start"},
+        "undo": {"label": "Undo (steps back)", "keys": "mod+alt+z", "say": "Undo"},
+        "metronome": {"label": "Metronome on/off", "keys": "mod+m", "say": "Metronome"},
+        "track_up": {"label": "Previous channel", "keys": "up"},
+        "track_down": {"label": "Next channel", "keys": "down"},
+        "solo": {"label": "Solo mixer track", "keys": "s", "say": "Solo"},
+        "mixer": {"label": "Show mixer", "keys": "f9", "say": "Mixer"},
+        "playlist": {"label": "Show playlist", "keys": "f5", "say": "Playlist"},
+        "channel_rack": {"label": "Show channel rack", "keys": "f6", "say": "Channel rack"},
+        "piano_roll": {"label": "Show piano roll", "keys": "f7", "say": "Piano roll"},
+        "browser": {"label": "Show browser", "keys": "alt+f8", "say": "Browser"},
+        "zoom_in": {"label": "Zoom in", "keys": "pageup"},
+        "zoom_out": {"label": "Zoom out", "keys": "pagedown"},
+        "zoom_fit": {"label": "Zoom to fit", "keys": "shift+4", "say": "Zoom to fit"},
+        "marker": {"label": "Add marker", "keys": "alt+t", "say": "Marker"},
+        "save": {"label": "Save", "keys": "mod+s", "say": "Saved"},
+    },
     "Everyday": {
         "enter": {"label": "Enter / OK", "keys": "return"},
         "escape": {"label": "Escape / cancel", "keys": "escape"},
@@ -116,6 +175,11 @@ APPS = {
     "Logic Pro": ["com.apple.logic10"],
     "Pro Tools": ["com.avid.protools", "protools.exe"],
     "Ableton Live": ["com.ableton.live", "ableton live*.exe"],
+    "GarageBand": ["com.apple.garageband10"],
+    # Older Macs name the app REAPER64.
+    "REAPER": ["com.cockos.reaper*", "reaper.exe"],
+    # FL64.exe, or "FL64 (scaled).exe" for blurry plugins on big screens.
+    "FL Studio": ["com.image-line.flstudio", "fl64*.exe"],
     "Everyday": ["*"],
 }
 
@@ -167,6 +231,40 @@ _LAYOUTS = {
             "lt": ("zoom_out", None, True), "rt": ("zoom_in", None, True),
         },
         {"a": ("save", None, False)},
+    ],
+    "GarageBand": [
+        {
+            "a": ("play", None, False), "b": (None, "record", False),
+            "x": ("undo", "redo", False), "y": ("automation", None, False),
+            "dpad_up": ("up", None, True), "dpad_down": ("down", None, True),
+            "dpad_left": ("left", None, True), "dpad_right": ("right", None, True),
+            "lb": ("enter", None, False), "rb": ("new_track", None, False),
+        },
+        {"a": ("save", None, False), "x": ("musical_typing", None, False)},
+    ],
+    "REAPER": [
+        {
+            "a": ("play", None, False), "b": ("start", "record", False),
+            "x": ("undo", "redo", False), "y": ("loop", None, False),
+            "dpad_up": ("track_up", None, True), "dpad_down": ("track_down", None, True),
+            "lb": ("split", None, False), "rb": ("marker", None, False),
+            "ls": ("zoom_fit", None, False), "rs": ("mixer", None, False),
+        },
+        {"a": ("save", None, False), "b": ("new_track", None, False), "y": ("end", None, False)},
+    ],
+    "FL Studio": [
+        {
+            "a": ("play", None, False), "b": ("start", "record_mode", False),
+            "x": ("undo", None, False), "y": ("metronome", None, False),
+            "dpad_up": ("track_up", None, True), "dpad_down": ("track_down", None, True),
+            "lb": ("solo", None, False), "rb": ("mixer", None, False),
+            "lt": ("zoom_out", None, True), "rt": ("zoom_in", None, True),
+            "ls": ("piano_roll", None, False), "rs": ("playlist", None, False),
+        },
+        {
+            "a": ("save", None, False), "b": ("channel_rack", None, False), "x": ("zoom_fit", None, False),
+            "y": ("browser", None, False), "lb": ("marker", None, False),
+        },
     ],
     "Everyday": [
         {
@@ -264,12 +362,25 @@ def config_path() -> Path:
     return Path(os.environ.get("LIMITLESS_CONFIG", config_dir() / "settings.json"))
 
 
+def add_new_profiles(config: dict) -> dict:
+    """Give settings saved by an older version the built-in profiles added since (GarageBand,
+    REAPER, FL Studio), before the catch-all one. Profiles already there are left as they are."""
+    have = {p.get("name") for p in config["profiles"]}
+    new = [p for p in default_config()["profiles"] if p["name"] not in have]
+    if new:
+        at = next((i for i, p in enumerate(config["profiles"]) if "*" in p.get("apps", [])), len(config["profiles"]))
+        config["profiles"][at:at] = new
+    return config
+
+
 def load(path: Path | None = None) -> dict:
     path = path or config_path()
     try:
         with open(path, encoding="utf-8") as f:
             config = json.load(f)
         if isinstance(config, dict) and config.get("profiles"):
+            if isinstance(config["profiles"], list):
+                add_new_profiles(config)
             return config
     except FileNotFoundError:
         pass

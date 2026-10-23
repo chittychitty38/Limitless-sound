@@ -16,6 +16,8 @@ TARGETS = {
                     "shorter": "cmd+up", "fit": "z"},
         },
     },
+    # Logic Pro's keys. Apple's GarageBand guide only describes the zoom slider, so check these on
+    # a real Mac (apps/voice/DAW-SHORTCUTS.md).
     "garageband": {
         "name": "GarageBand",
         "match": ["com.apple.garageband10"],
@@ -45,6 +47,26 @@ TARGETS = {
         "keys": {
             "mac": {"in": "=", "out": "-", "fit": "z"},
             "win": {"in": "=", "out": "-", "fit": "z"},
+        },
+    },
+    # REAPER's "zoom to project" (Cockos' Quick Start). Its guides disagree on which way + and -
+    # zoom, so zoom in and out drive the screen magnifier until that's checked.
+    "reaper": {
+        "name": "REAPER",
+        "match": ["com.cockos.reaper", "reaper.exe"],
+        "keys": {
+            "mac": {"fit": "cmd+pagedown"},
+            "win": {"fit": "ctrl+pagedown"},
+        },
+    },
+    # FL Studio's Playlist and Piano roll (Image-Line's manual): Page Up / Page Down zoom,
+    # Shift+4 shows the whole song. FL64.exe, or "FL64 (scaled).exe", on Windows.
+    "flstudio": {
+        "name": "FL Studio",
+        "match": ["com.image-line.flstudio", "fl64"],
+        "keys": {
+            "mac": {"in": "pageup", "out": "pagedown", "fit": "shift+4"},
+            "win": {"in": "pageup", "out": "pagedown", "fit": "shift+4"},
         },
     },
     # The operating system's own screen magnifier. Used for magnifier actions

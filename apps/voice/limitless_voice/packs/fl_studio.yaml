@@ -1,0 +1,100 @@
+# FL Studio on Mac and Windows, default shortcuts, from Image-Line's FL Studio manual
+# ("Keyboard & Mouse Shortcuts", and the Options, View and File menus); DAW-SHORTCUTS.md has
+# each key's source. Written with Mac names; on Windows, cmd becomes Ctrl and opt becomes Alt,
+# as in Image-Line's own table.
+#
+# FL Studio's shortcuts depend on the window in front (Playlist, Piano roll, Channel Rack,
+# Mixer), and single keys (R, S) only work while "Typing keyboard to piano" (Ctrl/Cmd+T) is off.
+# Voice never switches it, since it can't see whether it's on.
+#
+# Not here, on purpose:
+# - R only switches record mode on and off; play then records. So it's "record mode", not
+#   "record", which would also put Limitless Sound's take mode on before anything records.
+# - Ctrl/Cmd+Z undoes and redoes the last edit in turn, so "undo" steps back through the
+#   history instead, and "redo" presses nothing (it would undo when there's nothing to redo).
+# - FL Studio has no default key for loop, go to end, new track, track mute or record arm.
+#   Delete in the Playlist deletes a clip's source data, Ctrl/Cmd+B means duplicate in one window
+#   and blend recording in another, Insert slices where the mouse is, and quantize is a
+#   different key per window, so delete, duplicate, split and quantize aren't here either.
+
+name: FL Studio
+# The Mac calls the app "FL Studio 2024" (or 21, 20...) and its process OsxFL; Windows runs
+# FL64.exe, or "FL64 (scaled).exe" for blurry plugins on big screens.
+apps: ["FL Studio", "FL64", "OsxFL"]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+    instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  - say: ["record mode", "toggle record mode", "arm recording"]
+    fuzzy: false
+    do: {keys: r}
+    reply: Record mode
+    repeatable: false
+    help: Switches record mode on or off; say play to start recording
+  # In the Piano roll, Ctrl/Cmd+M imports a MIDI file instead.
+  - say: ["metronome", "click", "toggle click", "toggle metronome"]
+    do: {keys: cmd+m}
+    help: Toggle the metronome (not from the Piano roll)
+  # Not "top" alone: real people's "stop" came back as "top" (stress/test_command_words.py).
+  - say: ["go to start", "go to beginning", "back to start", "go to the top"]
+    do: {keys: home}
+    help: Move the playback marker to the start (Playlist)
+  # The number pad's * and /, in Song mode.
+  - say: ["forward", "next bar", "forward [a] bar"]
+    do: {keys: "numpad*"}
+    help: Next bar (Song mode)
+  - say: ["back", "previous bar", "back [a] bar", "rewind"]
+    do: {keys: "numpad/"}
+    help: Previous bar (Song mode)
+  - say: ["new marker", "add marker", "drop marker"]
+    do: {keys: opt+t}
+
+  # --- channels and the mixer -------------------------------------------
+  - say: ["next channel", "next track", "channel down", "track down"]
+    do: {keys: down}
+    help: Select the next channel in the Channel Rack
+  - say: ["previous channel", "previous track", "channel up", "track up"]
+    do: {keys: up}
+    help: Select the previous channel in the Channel Rack
+  - say: ["solo", "solo track", "solo [the] track", "unsolo"]
+    do: {keys: s}
+    help: Solo the selected Mixer track (with the Mixer in front)
+
+  # --- editing ----------------------------------------------------------
+  - say: ["undo", "undo that"]
+    do: {keys: cmd+opt+z}
+    reply: Undone
+    help: Step back through FL Studio's undo history
+  - say: ["redo", "redo that"]
+    do: {steps: []}
+    reply: FL Studio has no redo key. To step forward again, say press command z.
+
+  # --- windows ----------------------------------------------------------
+  - say: ["mixer", "show [the] mixer", "hide [the] mixer"]
+    do: {keys: f9}
+  - say: ["piano roll", "show [the] piano roll", "editor", "show [the] editor"]
+    do: {keys: f7}
+  - say: ["playlist", "show [the] playlist"]
+    do: {keys: f5}
+  - say: ["channel rack", "show [the] channel rack", "step sequencer"]
+    do: {keys: f6}
+  - say: ["browser", "show [the] browser", "hide [the] browser"]
+    do: {keys: opt+f8}
+
+  # --- zoom (Playlist and Piano roll) -----------------------------------
+  - say: ["zoom in"]
+    do: {keys: pageup}
+  - say: ["zoom out"]
+    do: {keys: pagedown}
+  - say: ["zoom to fit", "fit", "show everything"]
+    do: {keys: shift+4}
+
+  # --- project ----------------------------------------------------------
+  - say: ["export", "export audio", "export mix", "render"]
+    fuzzy: false
+    do: {keys: cmd+r}
+    repeatable: false
+    help: Opens the render options for a WAV file
