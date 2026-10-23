@@ -219,15 +219,38 @@ def test_a_silent_microphone_costs_nothing():
     assert got["status"] == ["Listening on Fake Mic"]
 
 
+class Waits(threading.Event):
+    """The listener's halt event, noting how long each wait between tries asked for."""
+
+    def __init__(self):
+        super().__init__()
+        self.asked = []
+
+    def wait(self, timeout=None):
+        if timeout is not None:
+            self.asked.append(timeout)
+        return super().wait(timeout)
+
+
 def test_a_missing_microphone_is_tried_less_and_less_often(monkeypatch):
     monkeypatch.setattr(voice, "RETRY_FIRST", 0.02)
     monkeypatch.setattr(voice, "RETRY_MOST", 0.16)
     mic, vosk = FakeMic(fail="Error querying device -1"), FakeVosk()
-    lis, got = listen(mic, vosk, 1.0, monkeypatch)
-    gaps = [b - a for a, b in zip(mic.queried, mic.queried[1:])]
-    assert 4 <= len(mic.queried) <= 12, gaps
-    assert gaps[0] < gaps[2] and max(gaps) < 0.3
-    assert got["status"] == ["Microphone problem: Error querying device -1. Retrying."]   # said once
+    monkeypatch.setitem(sys.modules, "sounddevice", mic)
+    monkeypatch.setitem(sys.modules, "vosk", vosk)
+    status = []
+    lis = voice.VoiceListener("model", lambda a: None, status.append)
+    lis._halt = waits = Waits()
+    t = threading.Thread(target=lis.run, daemon=True)
+    t.start()
+    time.sleep(1.0)
+    lis.stop()
+    t.join(2)
+    # The waits asked for, not the clock: a busy test machine can add 100 ms to any wait.
+    assert len(waits.asked) >= 4 and len(mic.queried) in (len(waits.asked), len(waits.asked) + 1)
+    assert waits.asked[:4] == pytest.approx([0.02, 0.04, 0.08, 0.16])
+    assert waits.asked[4:] == pytest.approx([0.16] * len(waits.asked[4:]))
+    assert status == ["Microphone problem: Error querying device -1. Retrying."]   # said once
     assert vosk.made == []   # no recognizer is built for a microphone that never opened
 
 
