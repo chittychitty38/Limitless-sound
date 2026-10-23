@@ -12,7 +12,9 @@ With the Limitless Sound hub running:
   hears another app's announcement.
 - The suite's shared text size, high contrast and reduced motion settings
   apply to every Voice window (see look.py), and Voice tells the suite the
-  values it's using.
+  values it's using. So does its language, unless one is chosen in Voice.
+- The suite talks in English: the intents and phrases other apps send are
+  English, and what Voice reports is too, whatever language it listens in.
 Without the hub, none of this does anything.
 """
 
@@ -165,38 +167,43 @@ class Suite:
         elif action == "do":
             phrase = str(args.get("phrase") or "").strip()
             if not phrase:
-                return False, 'Which command? Send the words to run, like "solo track".'
+                return False, e.lang.text('Which command? Send the words to run, like "solo track".')
             return self._run_phrase(phrase)
         elif f"daw.{action}" in INTENT_PHRASES:
-            ok, message = self._run_phrase(INTENT_PHRASES[f"daw.{action}"])
-            if not ok and not message.startswith("That command needs"):
+            ok, message, asked = self._run_phrase(INTENT_PHRASES[f"daw.{action}"], with_asked=True)
+            if not ok and not asked:
                 # The DAW commands only exist while Logic Pro or Pro Tools is in front.
-                message = (f"{INTENT_PHRASES[f'daw.{action}'].capitalize()} works when Logic Pro "
-                           f"or Pro Tools is in front.")
+                said = e.from_english(INTENT_PHRASES[f"daw.{action}"], everywhere=True)
+                message = e.lang.text("{command} works when Logic Pro or Pro Tools is in front.",
+                                      command=said[:1].upper() + said[1:])
             return ok, message
         else:
-            return False, f"Limitless Voice has no action {action!r}."
+            return False, e.lang.text("Limitless Voice has no action {action}.", action=repr(action))
         self.on_change()
         self.report_state()
-        return True, {"sleep": "Asleep", "wake": "Listening", "toggle": "Listening" if e.awake else "Asleep",
-                      "takeGuard": "Take mode: say stop to end the take", "takeGuardOff": "All commands back on"}[action]
+        return True, e.lang.text({"sleep": "Asleep", "wake": "Listening", "toggle": "Listening" if e.awake else "Asleep",
+                                  "takeGuard": "Take mode: say stop to end the take",
+                                  "takeGuardOff": "All commands back on"}[action])
 
-    def _run_phrase(self, phrase):
-        """Run a command for another app, whatever state Voice is in, without changing that state."""
+    def _run_phrase(self, phrase, with_asked=False):
+        """Run a command for another app, whatever state Voice is in, without changing that state.
+        The phrase is English, as the suite talks, or in Voice's own language."""
         e = self.engine
         saved = (e.awake, e.take, e.dictating, e.pending)
         e.awake, e.take, e.dictating, e.pending = True, False, False, None
         try:
-            result = e.handle(phrase)
+            result = e.handle(e.from_english(phrase))
             needs_yes = e.pending is not None
         finally:
             e.awake, e.take, e.dictating, e.pending = saved
         if needs_yes:
             # quit, close and the like need the person's own spoken "yes"
-            return False, "That command needs a spoken yes, so it can't be run from another app."
-        if result.handled:
-            self.report(result)
-        return result.handled, result.message
+            out = False, e.lang.text("That command needs a spoken yes, so it can't be run from another app.")
+        else:
+            if result.handled:
+                self.report(result)
+            out = result.handled, result.message
+        return (*out, needs_yes) if with_asked else out
 
     # -- telling the suite ---------------------------------------------------
 
@@ -204,9 +211,11 @@ class Suite:
         """After a command ran (from speech or another app), tell the suite what it did."""
         if not result.handled or result.command is None:
             return
-        intent = SPOKEN_INTENTS.get(normalize(result.heard or ""))
+        # what was said, in English: in another language, the English phrase it stands for
+        said = result.heard if result.english is None else result.english
+        intent = SPOKEN_INTENTS.get(normalize(said or ""))
         if intent is None:
-            intent = next((SPOKEN_INTENTS[p] for p in result.command.phrases if p in SPOKEN_INTENTS), None)
+            intent = next((SPOKEN_INTENTS[p] for p in result.command.english if p in SPOKEN_INTENTS), None)
         if intent:
             self.link.did(intent.split(".")[1], intent)
 

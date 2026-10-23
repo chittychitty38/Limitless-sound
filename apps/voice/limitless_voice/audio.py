@@ -128,8 +128,9 @@ class SpeechGate:
 
 
 def build_grammar(phrases):
-    """The command recognizer's phrase list. [unk] soaks up everything else."""
-    return sorted(p for p in phrases if p and p.isascii()) + ["[unk]"]
+    """The command recognizer's phrase list. [unk] soaks up everything else. Only words: letters
+    in any language ("compás"), digits, apostrophes and spaces."""
+    return sorted(p for p in phrases if p and all(c.isalnum() or c in " '" for c in p)) + ["[unk]"]
 
 
 class Listener:

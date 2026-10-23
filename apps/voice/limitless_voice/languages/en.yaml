@@ -1,0 +1,126 @@
+# English: the language the command packs are written in, so it needs no
+# commands or texts sections. Every other language copies this file's shape.
+# See language.py for what each section is.
+
+code: en
+name: English
+
+# Speech models, the one to use first. Size is the download. On real people's recordings the
+# larger English model heard no more of Voice's words than the small one (90.6% against 91.6%),
+# and kept a processor core about six times as busy (stress/test_voice_real_speech.py, October
+# 2026), so it isn't offered as more accurate. The installers ship the first one.
+models:
+  vosk-model-small-en-us-0.15: {label: "English (US), fast", size: "40 MB"}
+  vosk-model-en-us-0.22-lgraph: {label: "English (US), large, slower", size: "128 MB"}
+  vosk-model-small-en-in-0.4: {label: "English (India), fast", size: "36 MB"}
+
+# Replies in English use the computer's own system voice.
+voice: {system: true}
+
+words:
+  wake: [wake up, start listening, computer wake up]
+  sleep: [go to sleep, stop listening]
+  cancel: [cancel, never mind, nevermind, "no"]
+  "yes": ["yes", confirm, do it, yes please]
+  again: [again, repeat that, do that again, one more time, same again]
+  help: [what can i say, show commands, help]
+  dictation_on: [start dictation, dictation mode, start typing, begin dictation, dictation on, take dictation]
+  dictation_off: [stop dictation, command mode, stop typing, end dictation, dictation off]
+  # While a take is recording, only these do anything.
+  take_stop: [stop, stop recording, stop playback, stop the take]
+  take_off: [end take mode, take mode off, all commands]
+  # In dictation.
+  scratch: [scratch that, delete that]
+  new_line: [new line, newline]
+  new_paragraph: [new paragraph]
+  # "nudge right 4 times", "zoom in twice"
+  times: [times, time]
+  twice: [twice]
+  # Said around a command, and left out: "um, solo the track, please".
+  filler_start: [please, um, uh, okay, ok, hey computer, computer]
+  filler_end: [please, thanks, thank you]
+  # Other words the command recognizer listens for.
+  recognize: [scratch that, delete that, new line, new paragraph, times, twice, please, and]
+
+# Spoken punctuation in dictation.
+punctuation:
+  comma: ","
+  period: "."
+  full stop: "."
+  question mark: "?"
+  exclamation mark: "!"
+  exclamation point: "!"
+  colon: ":"
+  semicolon: ";"
+  dash: " -"
+  open quote: ' "'
+  close quote: '"'
+
+numbers:
+  units: {zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+          ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+          seventeen: 17, eighteen: 18, nineteen: 19}
+  tens: {twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90}
+  scales: {hundred: 100, thousand: 1000}
+  joiners: {and: [scales]}
+  # Words recognizers commonly hear in place of a number.
+  homophones: {won: one, too: two, to: two, for: four, ate: eight, fore: four}
+  expects_number: [bar, track, marker, location, tempo, channel, number]
+  misheard: {two: to}
+  misheard_unless_before: [times, time, and]
+
+keys:
+  # What people say -> chord token, for "press ...". F1 to F20 are known as well.
+  names:
+    command: cmd
+    commands: cmd
+    control: ctrl
+    option: opt
+    alt: opt
+    shift: shift
+    windows: win
+    return: return
+    enter: return
+    tab: tab
+    space: space
+    spacebar: space
+    delete: delete
+    backspace: delete
+    escape: escape
+    home: home
+    end: end
+    left: left
+    right: right
+    up: up
+    down: down
+    period: "."
+    dot: "."
+    comma: ","
+    slash: /
+    minus: "-"
+    dash: "-"
+    equals: "="
+    plus: "="
+    semicolon: ;
+    quote: "'"
+    backslash: \
+    bracket: "["
+    close bracket: "]"
+  # NATO alphabet so letters survive noisy rooms ("press command shift november")
+  letters: {alpha: a, bravo: b, charlie: c, delta: d, echo: e, foxtrot: f, golf: g, hotel: h,
+            india: i, juliet: j, kilo: k, lima: l, mike: m, november: n, oscar: o, papa: p,
+            quebec: q, romeo: r, sierra: s, tango: t, uniform: u, victor: v, whiskey: w, xray: x,
+            yankee: y, zulu: z}
+  f: [f]   # F-keys are said "f five"
+
+# Words the small speech model doesn't know, spelled as words it does.
+# The recognizer listens for these spellings; normalize() turns them back.
+sounds_like:
+  quantize: [quant ties, kwan ties]
+  unmute: [un mute]
+  unsolo: [un solo]
+  playhead: [play head]
+  backspace: [back space]
+  spacebar: [space bar]
+  xray: [x ray]
+  zoomer: [zoom her]

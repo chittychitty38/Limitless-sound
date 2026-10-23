@@ -1,6 +1,6 @@
 """Fetch real people saying Limitless Voice's and Zoom's command words, for stress/test_command_words.py.
 
-    python stress/tools/get_command_words.py OUT_DIR [--per-word 500] [--words cut,paste,delete]
+    python stress/tools/get_command_words.py OUT_DIR [--lang es] [--per-word 500] [--words cut,paste,delete]
 
 Makes OUT_DIR/<word>/<speaker>_nohash_<take>.wav: 16 kHz mono 16-bit WAV, one second each, named
 the way Google Speech Commands names its clips, so the tests pick them the same way (everyone's
@@ -14,10 +14,12 @@ its own as a command, and the alignment sometimes cuts a clip a little early or 
 Its English has no "redo" or "metronome", and no word shorter than three letters ("up").
 "stop" and "forward" are fetched too: Speech Commands has them, so the two sources can be compared.
 "zoom" is too: Zoom's commands start with it, but alone it isn't one.
+--lang es fetches Voice's Spanish command words instead (WORDS below says which), and words that
+sound like them but aren't commands ("grabación", "pagar", "corte"), to check those stay quiet.
 Who said each clip comes from MSWC's split lists (an anonymous id and a gender per clip).
 
-How it gets only these words: MSWC's English audio is one 35 GB .tar.gz of 6.6 million clips, in
-exactly the order its metadata.json lists them. A gzip file can't normally be read from the
+How it gets only these words: MSWC's English audio is one 35 GB .tar.gz of 6.6 million clips
+(each language is one such file), in exactly the order its metadata.json lists them. A gzip file can't normally be read from the
 middle, because each part copies bytes from the 32 KiB before it. So this jumps to a little before
 each word, finds where a compressed block starts, and decompresses from there four times with four
 different stand-ins for the missing 32 KiB: bytes that come out the same every time are right,
@@ -52,13 +54,24 @@ from pathlib import Path
 import numpy as np
 
 MSWC = "https://storage.googleapis.com/public-datasets-mswc"
+METADATA = f"{MSWC}/metadata.json.gz"
+LANG = "en"   # set by --lang
 AUDIO = f"{MSWC}/audio/en.tar.gz"
 SPLITS = f"{MSWC}/splits/en.tar.gz"
-METADATA = f"{MSWC}/metadata.json.gz"
 
-COMMANDS = ("record play undo redo save solo mute cut copy paste delete metronome cycle mixer "
-            "louder quieter zoom fit taller shorter again").split()
-ALSO = ["stop", "forward"]  # in Speech Commands too
+# The words fetched for each language. MSWC only has words said at least five times in Common
+# Voice, and none shorter than three letters, so not every command is here ("sí", "deshacer").
+WORDS = {
+    "en": ("record play undo redo save solo mute cut copy paste delete metronome cycle mixer "
+           "louder quieter zoom fit taller shorter again stop forward").split(),
+    # Voice's Spanish commands that work alone with Logic Pro in front, then words that sound
+    # like one but aren't ("grabación" and "grabar", "pagar" and "pega", "corte" and "corta").
+    "es": ("grabar graba reproduce play parar detener guardar guarda solo cortar corta pega copia eliminar "
+           "elimina borrar ciclo adelante avanzar atrás dividir divide unir une biblioteca inspector editor "
+           "partitura ayuda arriba abajo izquierda derecha escape arma ampliar reducir explorador "
+           "grabación grabado grabó pagar paga corte corto guardia silencio mezcla parada sola unión "
+           "reproducción dividido").split(),
+}
 
 PROBE = 256 * 1024  # bytes read to find out where in the archive a spot is
 CHUNK = 2 * 1024 * 1024  # bytes read at a time once there
@@ -99,10 +112,11 @@ class Archive:
 
     def __init__(self):
         raw = gzip.decompress(get(METADATA, what="metadata"))
-        at = raw.find(b'"en": {"language": "English"')
+        key = f'"{LANG}": '.encode()
+        at = raw.find(key + b'{"language": ')
         if at < 0:
-            sys.exit("metadata.json has no English")
-        en, _ = json.JSONDecoder().raw_decode(raw[at + 6:].decode())
+            sys.exit(f"metadata.json has no {LANG}")
+        en, _ = json.JSONDecoder().raw_decode(raw[at + len(key):].decode())
         del raw
         self.files = en["filenames"]
         self.words = list(self.files)
@@ -112,7 +126,7 @@ class Archive:
             self.first[w] = g
             starts.append(g)
             ids.append("")
-            ids += [f.removeprefix("common_voice_en_").removesuffix(".opus") for f in self.files[w]]
+            ids += [f.removeprefix(f"common_voice_{LANG}_").removesuffix(".opus") for f in self.files[w]]
             g += 1 + len(self.files[w])
         self.total = g
         self.starts = np.array(starts)
@@ -123,7 +137,7 @@ class Archive:
     def name(self, g):
         i = int(np.searchsorted(self.starts, g, "right")) - 1
         w, k = self.words[i], g - self.starts[i]
-        return f"en/clips/{w}/" if k == 0 else f"en/clips/{w}/{self.files[w][k - 1]}"
+        return f"{LANG}/clips/{w}/" if k == 0 else f"{LANG}/clips/{w}/{self.files[w][k - 1]}"
 
     def find(self, pattern, lo, hi):
         """The member between lo and hi whose name fits pattern (100 bytes, -1 where unknown)."""
@@ -168,7 +182,8 @@ class Layout:
             clip = head[pos + 512:pos + 512 + size]
             if len(clip) < size:
                 break
-            if h[156:157] == b"5" and h.startswith(b"en/clips/") and h[9:100].strip(b"\0").count(b"/") == 1:
+            prefix = f"{LANG}/clips/".encode()
+            if h[156:157] == b"5" and h.startswith(prefix) and h[len(prefix):100].strip(b"\0").count(b"/") == 1:
                 if self.dir is None:
                     self.dir = np.frombuffer(h, np.uint8).astype(np.int16)
             elif h[156:157] == b"0" and self.dir is not None:
@@ -621,11 +636,11 @@ def speakers(words):
             with urllib.request.urlopen(SPLITS, timeout=60) as resp, \
                     tarfile.open(fileobj=Counted(resp, "splits"), mode="r|gz") as tar:
                 for member in tar:
-                    if member.name != "en_splits.csv":
+                    if member.name != f"{LANG}_splits.csv":
                         continue
                     f = tar.extractfile(member)
                     if f.readline().strip() != b"SET,LINK,WORD,VALID,SPEAKER,GENDER":
-                        sys.exit("en_splits.csv has different columns now")
+                        sys.exit(f"{LANG}_splits.csv has different columns now")
                     for line in f:
                         part = line.split(b",", 3)
                         if part[2] in want:
@@ -686,9 +701,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("out", type=Path)
     ap.add_argument("--per-word", type=int, default=500, help="most clips to keep of a word (default 500)")
-    ap.add_argument("--words", help="comma-separated words instead of Voice's commands and stop, forward")
+    ap.add_argument("--lang", default="en", help="MSWC language code (default en)")
+    ap.add_argument("--words", help="comma-separated words instead of Voice's words for the language")
     args = ap.parse_args()
-    words = args.words.split(",") if args.words else COMMANDS + ALSO
+    global LANG, AUDIO, SPLITS
+    LANG = args.lang
+    AUDIO, SPLITS = f"{MSWC}/audio/{LANG}.tar.gz", f"{MSWC}/splits/{LANG}.tar.gz"
+    words = args.words.split(",") if args.words else WORDS[LANG]
     started = time.monotonic()
 
     print("metadata: what's in the archive, in order", flush=True)
@@ -696,7 +715,7 @@ def main():
     missing = [w for w in words if w not in archive.first]
     words = [w for w in words if w in archive.first]
     if missing:
-        print(f"  not in MSWC English: {', '.join(missing)}")
+        print(f"  not in MSWC {LANG}: {', '.join(missing)}")
     print("split lists: who said each clip", flush=True)
     rows = speakers(words)
     chosen = {w: choose(rows[w], args.per_word) for w in words}

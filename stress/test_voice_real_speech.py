@@ -14,6 +14,10 @@ recordings of real people, through the app's own two recognizers and its command
 
 Needs VOSK_MODEL (the model folder the app ships) and SPEECH_COMMANDS_DIR and
 LIBRISPEECH_DIR, which stress/tools/get_real_speech.py makes. Skipped otherwise.
+
+VOICE_LANGUAGE runs it in another of Voice's languages ("es"), with VOSK_MODEL that language's
+model and TALK_DIR an hour of people reading aloud in it (stress/tools/get_fleurs.py). Speech
+Commands is English only, so then only the talk is heard.
 """
 
 from __future__ import annotations
@@ -34,17 +38,17 @@ from conftest import need
 
 need("voice")
 
-from limitless_voice.actions import APP_ALIASES  # noqa: E402
-from limitless_voice.engine import BUILTIN_PHRASES, DESTRUCTIVE_KEYS, Engine, normalize  # noqa: E402
-from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases  # noqa: E402
-from limitless_voice.keys import spoken_vocabulary  # noqa: E402
-from limitless_voice.numbers import HOMOPHONES, NUMBER_WORDS  # noqa: E402
+from limitless_voice import engine as _engine_module  # noqa: E402
+from limitless_voice.engine import DESTRUCTIVE_KEYS, Engine  # noqa: E402
+from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs  # noqa: E402
+from limitless_voice.language import load  # noqa: E402
 from limitless_voice.platforms.dryrun import DryRunPlatform  # noqa: E402
 from test_voice_stress import DESTRUCTIVE  # noqa: E402
 
+LANG = load(os.environ.get("VOICE_LANGUAGE") or "en")
 MODEL = os.environ.get("VOSK_MODEL")
-WORDS_DIR = os.environ.get("SPEECH_COMMANDS_DIR")
-TALK_DIR = os.environ.get("LIBRISPEECH_DIR")
+WORDS_DIR = os.environ.get("SPEECH_COMMANDS_DIR") if LANG.is_english else None
+TALK_DIR = os.environ.get("TALK_DIR") or os.environ.get("LIBRISPEECH_DIR")
 PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 
@@ -52,17 +56,22 @@ RATE = 16000
 BLOCK = RATE // 10 * 2              # 100 ms of 16-bit audio: what the app takes from the mic at a time
 QUIET = b"\0\0" * (RATE // 10)      # 100 ms of silence
 
-PACKS = load_packs([DEFAULT_PACK_DIR], "mac")
-# What the app's command recognizer listens for. A copy of app.command_phrases, because
-# importing app.py needs Qt.
-PHRASES = recognizer_phrases(
-    PACKS, BUILTIN_PHRASES | NUMBER_WORDS | spoken_vocabulary() | set(APP_ALIASES) | {"please", "and"})
+PACKS = LANG.translate(load_packs([DEFAULT_PACK_DIR], "mac"))
+# What the app's command recognizer listens for (app.command_phrases, without importing Qt).
+PHRASES = LANG.recognizer_phrases(PACKS)
+# How Voice asks before it cuts, pastes or deletes on a word it isn't sure of.
+ASK = LANG.text("Say yes to {what}, or cancel").split("{")[0]
 # Keys that throw work away: this suite's list and the engine's own.
 DESTRUCTIVE_PRESSES = {k.replace(" ", "").lower() for k in DESTRUCTIVE | DESTRUCTIVE_KEYS}
 LISTENING = (True, False, False, False)   # awake, not dictating, not asking "say yes to ...", no take
 
-needs_words = pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MODEL and SPEECH_COMMANDS_DIR")
-needs_talk = pytest.mark.skipif(not (MODEL and TALK_DIR), reason="set VOSK_MODEL and LIBRISPEECH_DIR")
+needs_words = pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MODEL and SPEECH_COMMANDS_DIR (English)")
+needs_talk = pytest.mark.skipif(not (MODEL and TALK_DIR), reason="set VOSK_MODEL and LIBRISPEECH_DIR or TALK_DIR")
+
+
+def normalize(text):
+    """What the engine reads, in the language under test."""
+    return _engine_module.normalize(text, LANG)
 
 
 # ---------------------------------------------------------------- hearing, the app's way
@@ -163,7 +172,7 @@ def hear_talk(folder):
 
 def _engine(app):
     p = DryRunPlatform("mac", app=app)
-    return Engine(p, PACKS, own_names=["Limitless Voice"]), p
+    return Engine(p, PACKS, own_names=["Limitless Voice"], language=LANG), p
 
 
 def _state(e):
@@ -201,9 +210,10 @@ def _heard_word(heard, word):
     was heard as a word the engine itself reads as that number after "bar", "track",
     "tempo" and the like: "to" for "two", "for" for "four"."""
     want = normalize(word)
+    numbers = LANG.numbers
     for c, o in heard:
         text = normalize(c) or normalize(o)
-        if text == want or (word in NUMBER_WORDS and normalize(HOMOPHONES.get(text, text)) == want):
+        if text == want or (word in numbers.words and normalize(numbers.homophones.get(text, text)) == want):
             return True
     return False
 
@@ -230,7 +240,7 @@ def _shown(heard):
 def asked(got):
     """Whether the app asked first ("Say yes to cut, or cancel") and did nothing yet. Voice 0.3.8
     asks when a command would cut, paste or delete and its two recognizers didn't agree."""
-    return not got[1] and bool(got[0]) and got[0][-1].startswith("Say yes to")
+    return not got[1] and bool(got[0]) and got[0][-1].startswith(ASK)
 
 
 def right(word, h, kind):
@@ -377,7 +387,8 @@ def test_real_people_saying_command_words():
 def test_ordinary_talk_rarely_fires_commands():
     """An hour of people reading aloud with Voice listening: how many commands fire?"""
     root = Path(TALK_DIR)
-    said = dict(line.partition(" ")[::2] for line in (root / "transcripts.txt").read_text().splitlines() if line)
+    said = dict(line.partition(" ")[::2] for line in (root / "transcripts.txt").read_text(encoding="utf-8").splitlines()
+                if line)
     people = sorted(d for d in root.iterdir() if d.is_dir())
     started = time.monotonic()
     with ThreadPoolExecutor(WORKERS) as pool:
@@ -385,13 +396,18 @@ def test_ordinary_talk_rarely_fires_commands():
     took = time.monotonic() - started
     hours = sum(s for s, _ in streams) / 3600
     utterances = sum(len(h) for _, h in streams)
-    print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud, heard as {utterances} utterances "
-          f"in {took:.0f} s with {WORKERS} at once")
+    print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud in {LANG.english_name}, heard as "
+          f"{utterances} utterances in {took:.0f} s with {WORKERS} at once")
 
-    # Most commands an hour of reading aloud may fire. Measured: Logic Pro 0 an hour, Pro Tools 3.8,
-    # none destructive (Voice 0.3.4: 1.9 to 4.7, and 4.7 to 7.6). Only a handful in the hour, so a
-    # different CPU moves them by two or three.
-    ceiling = {"Logic Pro": 3, "Pro Tools": 7}
+    # Most commands an hour of reading aloud may fire. Only a handful in the hour, so a different
+    # CPU moves them by two or three.
+    ceiling = {
+        # Measured: Logic Pro 0 an hour, Pro Tools 3.8, none destructive (Voice 0.3.4: 1.9 to 4.7,
+        # and 4.7 to 7.6).
+        "en": {"Logic Pro": 3, "Pro Tools": 7},
+        # FLEURS es_419, the first hour of its dev split. Not yet measured on CI.
+        "es": {"Logic Pro": 30, "Pro Tools": 30},
+    }[LANG.code]
     too_many = []
     for app, most in ceiling.items():
         fired, questions = [], []
@@ -402,7 +418,7 @@ def test_ordinary_talk_rarely_fires_commands():
                 before = len(p.log)
                 r = e.handle(c, o)
                 acts = p.log[before:]
-                if not acts and e.pending is not None and r.message.startswith("Say yes to"):
+                if not acts and e.pending is not None and r.kind == "ask":
                     questions.append((utt, c, o, r.message))   # a question, not an action
                     e.pending = None
                 elif acts or _state(e) != LISTENING:

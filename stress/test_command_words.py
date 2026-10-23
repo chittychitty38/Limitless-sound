@@ -18,6 +18,11 @@ compare with Speech Commands.
 
 Needs VOSK_MODEL and COMMAND_WORDS_DIR, which stress/tools/get_command_words.py makes.
 Skipped otherwise. REAL_SPEECH_PER_WORD sets the clips a word (default 100).
+
+VOICE_LANGUAGE runs Voice in another of its languages ("es"), with VOSK_MODEL that language's
+model and COMMAND_WORDS_DIR its words (get_command_words.py --lang es). Then the stray words
+are ones that sound like a command and aren't ("grabación", "pagar"), and Zoom, which listens
+in English, is left out.
 """
 
 from __future__ import annotations
@@ -35,14 +40,21 @@ from conftest import need
 need("voice")
 need("zoom")
 
-from limitless_voice.engine import normalize  # noqa: E402
 from limitless_zoom.voice import recognize_file  # noqa: E402
 from test_voice_real_speech import (  # noqa: E402
-    MODEL, WORKERS, _agreeing, _making, _pick, _sums, _waited, hear_word, kind, right, score)
+    LANG, MODEL, WORKERS, _agreeing, _making, _pick, _sums, _waited, hear_word, kind, normalize, right, score)
 from test_zoom_real_speech import _model  # noqa: E402
 
 WORDS_DIR = os.environ.get("COMMAND_WORDS_DIR")
 needs_words = pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MODEL and COMMAND_WORDS_DIR")
+needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom listens in English")
+
+# What each language's run must reach (see the comments where they're checked).
+FLOORS = {
+    "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03},
+    # Not yet measured on CI: these only catch a collapse.
+    "es": {"right": 0.40, "worst": 0.05, "with_yes": 0.45, "worst_with_yes": 0.05, "stray": 0.25},
+}
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
 ZOOM = {"fit": "fit", "taller": "taller", "shorter": "shorter", "again": "again", "zoom": None}
@@ -84,21 +96,21 @@ def test_real_people_saying_voice_commands():
         if kinds[w] == "command" and f in _waited and right(w, h, kinds[w])[0]:
             soon[w].append(_waited[f])
 
-    print(f"\n{len(jobs)} clips of {len(used)} words, heard in {took:.0f} s with {WORKERS} at once "
+    print(f"\n{len(jobs)} clips of {len(used)} {LANG.english_name} words, heard in {took:.0f} s with {WORKERS} at once "
           f"({sum(_making):.0f} s of it building recognizers). In front: Logic Pro. Heard as "
           f"“command transcript / open transcript”. "
           + (f"Left out, as Voice listens for them but alone they do nothing: {', '.join(left_out)}." if left_out else ""))
-    print(f"\n{'word':<9} {'right':>13}  {'asked':>5}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
+    print(f"\n{'word':<12} {'right':>13}  {'asked':>5}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
     for w in commands:
         t = tally[w]
         wrong_cmd = f"{t['wrong']}" + (f" ({t['destructive']} destr.)" if t["destructive"] else "")
         after = f"{_median(soon[w]) * 1000:.0f} ms" if soon[w] else "-"
         miss = ", ".join(f"“{k}” ×{n}" for k, n in instead[w].most_common(3))
-        print(f"{w:<9} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {t['asked']:>5}  {wrong_cmd:>12}  {after:>10}  "
+        print(f"{w:<12} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {t['asked']:>5}  {wrong_cmd:>12}  {after:>10}  "
               f"{what_if[w]['hits'] / t['tries']:>7.0%}  {miss}")
     for w in strays:
         t = tally[w]
-        print(f"{w:<9} stray word: fired a command {t['tries'] - t['hits']}/{t['tries']}"
+        print(f"{w:<12} stray word: fired a command {t['tries'] - t['hits']}/{t['tries']}"
               + (f", {t['destructive']} destructive" if t["destructive"] else "")
               + (f"; e.g. {', '.join(f'“{k}” ×{n}' for k, n in instead[w].most_common(3))}" if instead[w] else ""))
 
@@ -137,18 +149,21 @@ def test_real_people_saying_voice_commands():
     # median 1.11 to 1.12 s. Voice 0.3.8 asks instead of refusing when the open recognizer
     # disagrees: 73.0% right at once and 82.0% at once or with a yes; the weakest at once,
     # "delete", 37%, and with a yes, "mute", 71%; still no destructive key from a wrong word.
+    floor = FLOORS[LANG.code]
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
-    assert hits / tries >= 0.69, f"only {hits / tries:.1%} of the command words were right"
+    assert hits / tries >= floor["right"], f"only {hits / tries:.1%} of the command words were right"
     worst = min(commands, key=rate.get)
-    assert rate[worst] >= 0.32, f"“{worst}” was right only {rate[worst]:.0%} of the time"
-    assert (hits + asked_more) / tries >= 0.78, \
+    assert rate[worst] >= floor["worst"], f"“{worst}” was right only {rate[worst]:.0%} of the time"
+    assert (hits + asked_more) / tries >= floor["with_yes"], \
         f"only {(hits + asked_more) / tries:.1%} of the command words were right at once or with a yes"
     with_yes = {w: (tally[w]["hits"] + tally[w]["asked"]) / tally[w]["tries"] for w in commands}
     worst = min(commands, key=with_yes.get)
-    assert with_yes[worst] >= 0.62, f"“{worst}” was right only {with_yes[worst]:.0%} of the time, even with a yes"
+    assert with_yes[worst] >= floor["worst_with_yes"], \
+        f"“{worst}” was right only {with_yes[worst]:.0%} of the time, even with a yes"
     assert destroyed == 0, f"a word that wasn't said pressed a destructive key {destroyed} times"
     if strays:
-        assert 1 - quiet / stray_tries <= 0.03, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
+        assert 1 - quiet / stray_tries <= floor["stray"], \
+            f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
     instant = [x for w in ("record", "play", "stop") for x in soon[w]]
     if instant:
         assert _median(instant) <= 0.8, f"record, play and stop went a median {_median(instant):.2f} s after the word"
@@ -156,6 +171,7 @@ def test_real_people_saying_voice_commands():
 
 
 @needs_words
+@needs_english
 def test_real_people_saying_zoom_commands():
     """Real people saying Zoom's commands, and "zoom" alone, which shouldn't do anything."""
     root = Path(WORDS_DIR)

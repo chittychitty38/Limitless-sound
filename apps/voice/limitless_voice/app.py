@@ -23,12 +23,11 @@ from PySide6.QtWidgets import (
 from . import __version__, applog, mac_keys
 from .actions import APP_ALIASES
 from .audio import Listener, list_input_devices
-from .engine import BUILTIN_PHRASES, Engine
-from .grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases
-from .keys import spoken_vocabulary
+from .engine import Engine
+from .grammar import DEFAULT_PACK_DIR, load_packs
 from .look import LiveText, grow, in_use, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
-from .numbers import NUMBER_WORDS
+from .language import ENGLISH
 from .platforms import current_os, get_platform
 from .settings import APP_NAME, Settings, user_packs_dir
 from .hud import Hud, state_icon
@@ -61,10 +60,9 @@ QProgressBar::chunk { background: #00e5ff; }
 """
 
 
-def command_phrases(packs):
+def command_phrases(packs, language=ENGLISH):
     """Everything the command recognizer should listen for."""
-    extra = BUILTIN_PHRASES | NUMBER_WORDS | spoken_vocabulary() | set(APP_ALIASES) | {"please", "and"}
-    return recognizer_phrases(packs, extra)
+    return language.recognizer_phrases(packs)
 
 
 def announce(widget, text):

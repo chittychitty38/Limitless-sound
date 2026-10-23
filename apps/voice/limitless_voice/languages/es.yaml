@@ -1,0 +1,378 @@
+# Spanish, for Latin America and Spain alike: where the two say it differently
+# ("añadir" and "agregar", "ordenador" and "computadora", "intro" and "enter"), both are here.
+# Many musicians keep the English names (solo, mute, loop, bounce, click), so those are here too.
+# See language.py for what each section is, and en.yaml for the English it follows.
+
+code: es
+name: Español
+english_name: Spanish
+
+# vosk-model-small-es-0.42, Apache 2.0 (Alpha Cephei, alphacephei.com/vosk/models).
+# Downloaded once when Spanish is chosen; the installers ship only English.
+models:
+  vosk-model-small-es-0.42: {label: "Spanish, fast", size: "39 MB"}
+
+# Replies are read by a Spanish system voice: on a Mac the first of these that's installed, else
+# any voice for "es"; on Windows any voice whose name or language says Spanish.
+voice:
+  locale: es
+  mac: [Paulina, Mónica, Juan, Jorge, Diego, Marisol, Angélica, Francisca]
+  match: [spanish, español, es-, es_]
+
+words:
+  wake: [despierta, despiértate, empieza a escuchar, empezar a escuchar, computadora despierta, ordenador despierta]
+  sleep: [a dormir, duérmete, ve a dormir, deja de escuchar, dejar de escuchar]
+  cancel: [cancelar, cancela, "no", olvídalo, déjalo, nada]
+  "yes": [sí, si, confirmar, confirma, hazlo, sí hazlo, sí por favor]
+  again: [otra vez, de nuevo, repite eso, repetir eso, repítelo, una vez más, lo mismo]
+  help: [qué puedo decir, que puedo decir, mostrar comandos, muestra los comandos, ayuda]
+  dictation_on: [empezar dictado, empieza el dictado, iniciar dictado, inicia el dictado, modo dictado,
+                 activar dictado, activa el dictado, dictado activado]
+  dictation_off: [terminar dictado, termina el dictado, parar dictado, para el dictado, detener dictado,
+                  modo comandos, desactivar dictado, desactiva el dictado, dictado desactivado]
+  take_stop: [parar, detener, detén, stop, parar grabación, parar la grabación, detener la grabación,
+              parar reproducción, para la reproducción, para la toma]
+  take_off: [salir del modo toma, modo toma desactivado, todos los comandos]
+  scratch: [borra eso, borrar eso, tacha eso]
+  new_line: [nueva línea, salto de línea]
+  new_paragraph: [nuevo párrafo]
+  times: [veces, vez]
+  twice: []
+  filler_start: [por favor, eh, em, este, bueno, oye, oye computadora, oye ordenador, computadora, ordenador,
+                 ok, okey, vale]
+  filler_end: [por favor, gracias]
+  recognize: [borra eso, borrar eso, tacha eso, nueva línea, salto de línea, nuevo párrafo, veces, vez, por favor, "y"]
+
+punctuation:
+  coma: ","
+  punto: "."
+  punto y seguido: "."
+  punto final: "."
+  signo de interrogación: "?"
+  abrir interrogación: " ¿"
+  cerrar interrogación: "?"
+  signo de exclamación: "!"
+  abrir exclamación: " ¡"
+  cerrar exclamación: "!"
+  dos puntos: ":"
+  punto y coma: ";"
+  guion: " -"
+  abrir comillas: ' "'
+  cerrar comillas: '"'
+
+numbers:
+  units: {cero: 0, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9,
+          diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciséis: 16, diecisiete: 17,
+          dieciocho: 18, diecinueve: 19, veintiuno: 21, veintidós: 22, veintitrés: 23, veinticuatro: 24,
+          veinticinco: 25, veintiséis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29}
+  tens: {veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90}
+  hundreds: {cien: 100, ciento: 100, doscientos: 200, trescientos: 300, cuatrocientos: 400, quinientos: 500,
+             seiscientos: 600, setecientos: 700, ochocientos: 800, novecientos: 900}
+  scales: {mil: 1000}
+  joiners: {"y": [tens]}
+  # "marcador un": the article, heard in place of "uno" after a word that wants a number
+  homophones: {un: uno, una: uno}
+  expects_number: [compás, pista, marcador, tempo, canal, número, ubicación]
+
+keys:
+  names:
+    comando: cmd
+    command: cmd
+    control: ctrl
+    opción: opt
+    option: opt
+    alt: opt
+    mayúsculas: shift
+    mayús: shift
+    shift: shift
+    windows: win
+    intro: return
+    enter: return
+    retorno: return
+    tabulador: tab
+    tab: tab
+    espacio: space
+    barra espaciadora: space
+    borrar: delete
+    retroceso: delete
+    suprimir: forwarddelete
+    escape: escape
+    inicio: home
+    fin: end
+    izquierda: left
+    derecha: right
+    arriba: up
+    abajo: down
+    punto: "."
+    coma: ","
+    barra: /
+    menos: "-"
+    guion: "-"
+    igual: "="
+    más: "="
+    punto y coma: ;
+    comilla: "'"
+    barra invertida: \
+    corchete: "["
+    abrir corchete: "["
+    cerrar corchete: "]"
+  # The letters' Spanish names, and the radio alphabet as it's said in Spanish.
+  letters: {a: a, be: b, ce: c, de: d, e: e, efe: f, ge: g, hache: h, i: i, jota: j, ka: k, ele: l,
+            eme: m, ene: n, o: o, pe: p, cu: q, erre: r, ese: s, te: t, u: u, uve: v, uve doble: w,
+            doble uve: w, equis: x, ye: "y", i griega: "y", zeta: z,
+            alfa: a, bravo: b, charlie: c, delta: d, eco: e, foxtrot: f, golf: g, hotel: h, india: i,
+            julieta: j, kilo: k, lima: l, mike: m, noviembre: n, óscar: o, papa: p, quebec: q, romeo: r,
+            sierra: s, tango: t, uniforme: u, víctor: v, whisky: w, yanqui: "y", zulú: z}
+  f: [efe, f]
+
+sounds_like: {}
+
+# Every reply and help line, by its English words. {names} are filled in after.
+texts:
+  # the engine
+  Listening: Escuchando
+  Going to sleep: Dejo de escuchar
+  All commands back on: Todos los comandos funcionan otra vez
+  Cancelled: Cancelado
+  Dictation on. Say stop dictation to go back to commands.: Dictado activado. Di terminar dictado para volver a los comandos.
+  Dictation is off. To start it, say begin dictation.: El dictado está desactivado. Para empezarlo, di empezar dictado.
+  Nothing to repeat yet: Todavía no hay nada que repetir
+  OK: De acuerdo
+  "{some} and {last}": "{some} y {last}"
+  '"{text}" works in {apps}. Bring it to the front, then say it again.': '"{text}" funciona en {apps}. Ponlo al frente y dilo otra vez.'
+  '"{text}" works in {apps}. Bring one of them to the front, then say it again.': '"{text}" funciona en {apps}. Pon uno de ellos al frente y dilo otra vez.'
+  Didn't catch a command in "{text}": No entendí ningún comando en "{text}"
+  Didn't catch that: No lo entendí
+  Didn't catch a command: No entendí ningún comando
+  Say yes to {what}, or cancel: Di sí para {what}, o cancela
+  ", {n} times": ", {n} veces"
+  Dictation on: Dictado activado
+  Back to commands: De vuelta a los comandos
+  Scratched: Borrado
+  New line: Nueva línea
+  New paragraph: Nuevo párrafo
+  "Typed: {text}": "Escrito: {text}"
+  "Commands for {app}:": "Comandos para {app}:"
+  any app: cualquier aplicación
+  "{n} commands available. They're listed on screen.": "{n} comandos disponibles. Están en la pantalla."
+  # for the rest of the suite
+  Which command? Send the words to run, like "solo track".: ¿Qué comando? Envía las palabras que hay que decir, como "solo".
+  "{command} works when Logic Pro or Pro Tools is in front.": "{command} funciona cuando Logic Pro o Pro Tools está al frente."
+  "Limitless Voice has no action {action}.": "Limitless Voice no tiene la acción {action}."
+  Asleep: En pausa
+  "Take mode: say stop to end the take": "Modo toma: di parar para terminar la toma"
+  That command needs a spoken yes, so it can't be run from another app.: Ese comando necesita que digas sí, así que no se puede usar desde otra aplicación.
+  # the window and the floating display
+  'Listening: say "{sleep}" to pause': 'Escuchando: di "{sleep}" para hacer una pausa'
+  'Asleep: say "{wake}" or press here to start': 'En pausa: di "{wake}" o pulsa aquí para empezar'
+  'Dictating: say "{stop}" to go back to commands': 'Dictando: di "{stop}" para volver a los comandos'
+  'Take mode: only "{stop}" works until the take ends': 'Modo toma: solo "{stop}" funciona hasta que termine la toma'
+  Take mode: Modo toma
+  Dictating: Dictando
+  "Heard: “{text}”": "Oído: “{text}”"
+  "Sending commands to: {app}": "Enviando comandos a: {app}"
+  Click into the app you want to control (Logic, Pro Tools…): Haz clic en la aplicación que quieras controlar (Logic, Pro Tools…)
+  That didn't work: Eso no funcionó
+  Still listening from the menu bar: Sigo escuchando desde la barra de menús
+  # what can I say
+  "Commands for {app}. Words in [brackets] are optional; {number} means say a number.": "Comandos para {app}. Las palabras entre [corchetes] son opcionales; {number} significa decir un número."
+  always: siempre
+  repeats the last command: repite el último comando
+  "... N times   (e.g. nudge right 4 times)": "... N veces   (por ejemplo, desplazar a la derecha 4 veces)"
+  # replies from the packs
+  "{chord}": "{chord}"
+  Undone: Deshecho
+  Redone: Rehecho
+  Saved: Guardado
+  "Opening {name}": "Abriendo {name}"
+  "Volume {level}": "Volumen {level}"
+  Recording: Grabando
+  Captured: Capturado
+  "Bar {bar}": "Compás {bar}"
+  New audio track: Nueva pista de audio
+  New instrument track: Nueva pista de instrumento
+  Quantized: Cuantizado
+  "Marker {n}": "Marcador {n}"
+  # help lines from the packs
+  'Press any key or shortcut, e.g. "press command shift n"': 'Pulsa cualquier tecla o atajo, por ejemplo "pulsa comando mayúsculas ene"'
+  Type the words that follow: Escribe las palabras que siguen
+  'Open or switch to an app, e.g. "open logic pro"': 'Abre una aplicación o cambia a ella, por ejemplo "abre logic pro"'
+  close this window: cerrar esta ventana
+  quit this app: salir de esta aplicación
+  Opens Go to Position, types the bar, presses Return: Abre Ir a la posición, escribe el compás y pulsa Intro
+  Toggle solo on the selected track (verify): Activa o quita el solo de la pista seleccionada (comprobar)
+  Toggle mute on the selected track (verify): Silencia la pista seleccionada o le quita el silencio (comprobar)
+  Toggle record enable on the selected track (verify): Activa o desactiva la grabación de la pista seleccionada (comprobar)
+  Focuses the main counter (Bars|Beats), types the bar, presses Return: Va al contador principal (compases y tiempos), escribe el compás y pulsa Intro
+  Period, number, period on the keypad recalls a memory location: Punto, número y punto en el teclado numérico recuperan una ubicación de memoria
+  Toggle the MIDI Editor window (verify on Windows, where it's Start+=): Muestra u oculta la ventana del editor MIDI (comprobar en Windows, donde es Inicio+=)
+  Solo selected tracks: Solo de las pistas seleccionadas
+  Mute selected tracks: Silencia las pistas seleccionadas
+  Record-enable selected tracks: Activa la grabación de las pistas seleccionadas
+  Move the edit selection down a track (verify): Baja la selección de edición una pista (comprobar)
+  Move the edit selection up a track (verify): Sube la selección de edición una pista (comprobar)
+
+# For each built-in pack, for each command by its first English phrase: what to say in Spanish.
+# A list is every way to say the command; a mapping gives them per English phrase, where the
+# suite needs to know which was meant (play or stop). Shared lists are written once (&name) and
+# reused (*name).
+commands:
+  Everywhere:
+    press {chord:keys}: ["pulsa {chord:keys}", "presiona {chord:keys}", "pulsar {chord:keys}",
+                         "presionar {chord:keys}", "tecla {chord:keys}"]
+    type {words:text}: ["escribe {words:text}", "escribir {words:text}", "teclea {words:text}"]
+    undo: ["deshacer", "deshaz", "deshacer eso", "deshaz eso", "deshazlo"]
+    redo: &redo ["rehacer", "rehaz", "rehacer eso", "rehaz eso", "rehazlo"]
+    copy: ["copiar", "copia", "copiar eso", "copia eso", "cópialo"]
+    cut: ["cortar", "corta", "cortar eso", "corta eso", "córtalo"]
+    paste: ["pegar", "pega", "pegar eso", "pega eso", "pégalo"]
+    select all: ["seleccionar todo", "selecciona todo"]
+    save: ["guardar", "guarda", "guardar [el] proyecto", "guarda [el] proyecto", "guardar [la] sesión",
+           "guarda [la] sesión", "guardar eso", "guárdalo"]
+    press enter: ["pulsa intro", "pulsa enter", "intro", "enter"]
+    escape: ["escape", "pulsa escape", "tecla escape"]
+    tab: ["tabulador", "tab", "siguiente campo", "campo siguiente"]
+    previous field: ["campo anterior"]
+    move up: ["arriba", "flecha arriba", "flecha hacia arriba"]
+    move down: ["abajo", "flecha abajo", "flecha hacia abajo"]
+    move left: ["izquierda", "flecha izquierda", "flecha a la izquierda"]
+    move right: ["derecha", "flecha derecha", "flecha a la derecha"]
+    page up: ["página arriba", "subir página", "página anterior"]
+    page down: ["página abajo", "bajar página", "página siguiente"]
+    open {name:text}: ["abre {name:text}", "abrir {name:text}", "cambia a {name:text}",
+                       "cambiar a {name:text}"]
+    next window: ["siguiente ventana", "ventana siguiente", "cambiar de ventana", "cambia de ventana"]
+    close [the] window: ["cerrar [la] ventana", "cierra [la] ventana"]
+    quit [the] app: ["salir de [la] aplicación", "sal de [la] aplicación", "cerrar [la] aplicación",
+                     "cierra [la] aplicación"]
+    mission control: ["mission control", "mostrar todas las ventanas", "todas las ventanas", "vista de tareas"]
+    show desktop: ["mostrar [el] escritorio", "ver [el] escritorio"]
+    spotlight: ["spotlight", "buscar en [el] ordenador", "buscar en [la] computadora", "menú inicio",
+                "menú de inicio"]
+    volume up: ["subir [el] volumen", "sube [el] volumen", "más volumen", "más alto", "más fuerte"]
+    volume down: ["bajar [el] volumen", "baja [el] volumen", "menos volumen", "más bajo", "más suave"]
+    mute volume: ["silenciar [el] sonido", "quitar [el] sonido", "activar [el] sonido", "silenciar [el] audio"]
+    set volume to {level:number}: ["volumen al {level:number}", "volumen a {level:number}",
+                                   "pon [el] volumen al {level:number}",
+                                   "poner [el] volumen al {level:number}"]
+    zoom screen in: ["ampliar [la] pantalla", "acercar [la] pantalla"]
+    zoom screen out: ["reducir [la] pantalla", "alejar [la] pantalla"]
+
+  Logic Pro:
+    play: &play
+      play: ["reproducir", "reproduce", "play"]
+      stop: ["parar", "detener", "detén", "stop"]
+      start playback: ["iniciar reproducción", "empezar reproducción", "inicia la reproducción"]
+      stop playback: ["parar reproducción", "para la reproducción", "detener reproducción",
+                      "detén la reproducción"]
+    record: &record ["grabar", "graba", "empezar a grabar", "empieza a grabar", "iniciar grabación"]
+    capture [the] recording: ["capturar [la] grabación", "captura [la] grabación", "capturar eso",
+                              "captura eso"]
+    cycle: ["ciclo", "loop", "bucle", "activar ciclo", "activar loop", "modo ciclo"]
+    metronome: &metronome ["metrónomo", "click", "clic", "activar metrónomo", "activar click"]
+    go to start: &start ["ir al principio", "ir al inicio", "volver al principio", "volver al inicio",
+                         "al principio", "al inicio"]
+    forward: ["adelante", "avanzar", "siguiente compás", "compás siguiente", "avanzar [un] compás"]
+    back: ["atrás", "retroceder", "compás anterior", "retroceder [un] compás", "rebobinar"]
+    go to bar {bar:number}: &bar ["ir al compás {bar:number}", "compás {bar:number}",
+                                  "saltar al compás {bar:number}",
+                                  "ve al compás {bar:number}"]
+    new track: &new_track ["nueva pista", "pista nueva", "nuevas pistas", "añadir [una] pista",
+                           "agregar [una] pista"]
+    new audio track: ["nueva pista de audio", "añadir [una] pista de audio", "agregar [una] pista de audio"]
+    new instrument track: ["nueva pista de instrumento", "nuevo instrumento de software",
+                           "añadir [una] pista de instrumento",
+                           "agregar [una] pista de instrumento"]
+    duplicate track: ["duplicar pista", "duplicar la pista", "duplica [la] pista",
+                      "nueva pista con los mismos ajustes"]
+    next track: &next_track ["siguiente pista", "pista siguiente", "pista abajo"]
+    previous track: &previous_track ["pista anterior", "pista arriba"]
+    solo: &solo ["solo", "solo pista", "poner en solo", "pon en solo", "quitar [el] solo", "quita [el] solo"]
+    mute: &mute ["silenciar", "silencia", "silenciar [la] pista", "silencia [la] pista", "mute", "mutear",
+                 "mutea", "mutear [la] pista", "mutea [la] pista", "quitar [el] silencio",
+                 "quita [el] silencio"]
+    arm: &arm ["armar", "arma", "armar [la] pista", "arma [la] pista", "activar grabación", "desarmar",
+               "desarma"]
+    split: ["dividir", "divide", "dividir aquí", "divide aquí", "dividir en [el] cursor", "cortar aquí",
+            "corta aquí"]
+    join: ["unir", "une", "unir regiones", "une [las] regiones"]
+    repeat region: ["repetir región", "repetir regiones", "repite [la] región"]
+    quantize: &quantize ["cuantizar", "cuantiza", "cuantizar eso", "cuantiza eso"]
+    delete: &delete ["eliminar", "elimina", "borrar", "borra", "eliminar eso", "elimina eso", "borrar eso",
+                     "borra eso", "quitar eso", "quita eso", "suprimir"]
+    set locators: ["ajustar localizadores", "fijar localizadores", "ciclo a [la] selección",
+                   "loop a [la] selección"]
+    mixer: ["mezclador", "mixer", "mostrar [el] mezclador", "ocultar [el] mezclador", "ver [el] mezclador"]
+    library: ["biblioteca", "mostrar [la] biblioteca", "ver [la] biblioteca", "ocultar [la] biblioteca"]
+    inspector: ["inspector", "mostrar [el] inspector", "ver [el] inspector"]
+    editor: ["editor", "editores", "mostrar [el] editor", "ver [el] editor"]
+    piano roll: ["piano roll", "editor de teclado", "mostrar [el] piano roll",
+                 "mostrar [el] editor de teclado"]
+    score: ["partitura", "editor de partituras", "mostrar [la] partitura"]
+    smart controls: ["controles inteligentes", "mostrar [los] controles inteligentes"]
+    loops: ["loops", "navegador de loops", "explorador de loops", "loops de apple"]
+    browser: ["navegador", "navegadores", "explorador", "explorador de archivos", "navegador de archivos"]
+    global tracks: ["pistas globales", "pista de tempo", "mostrar [las] pistas globales"]
+    automation: ["automatización", "mostrar [la] automatización", "ver [la] automatización"]
+    musical typing: ["teclado musical", "teclado de escritura musical", "escritura musical"]
+    zoom in: &zoom_in ["acercar", "ampliar", "más zoom", "acercar zoom"]
+    zoom out: &zoom_out ["alejar", "reducir", "menos zoom", "alejar zoom"]
+    zoom in vertical: ["acercar en vertical", "ampliar en vertical", "pistas más altas"]
+    zoom out vertical: ["alejar en vertical", "reducir en vertical", "pistas más bajas"]
+    zoom to fit: &fit ["ajustar a [la] ventana", "ajustar a [la] selección", "zoom a [la] selección",
+                       "ajustar zoom"]
+    bounce: ["bounce", "exportar [la] mezcla", "exportar [el] proyecto", "hacer [el] bounce",
+             "bounce [del] proyecto"]
+
+  Pro Tools:
+    play: *play
+    record: *record
+    loop playback: ["reproducción en bucle", "reproducción en loop", "activar loop", "loop", "bucle"]
+    metronome: *metronome
+    go to start: *start
+    go to bar {bar:number}: *bar
+    new marker: ["nuevo marcador", "marcador nuevo", "añadir [un] marcador", "agregar [un] marcador",
+                 "poner [un] marcador", "nueva ubicación de memoria"]
+    go to marker {n:number}: ["ir al marcador {n:number}", "marcador {n:number}", "ve al marcador {n:number}",
+                              "ubicación de memoria {n:number}"]
+    nudge right: ["desplazar a la derecha", "desplaza a la derecha", "mover a la derecha",
+                  "mueve a la derecha", "empujar a la derecha", "empuja a la derecha"]
+    nudge left: ["desplazar a la izquierda", "desplaza a la izquierda", "mover a la izquierda",
+                 "mueve a la izquierda", "empujar a la izquierda", "empuja a la izquierda"]
+    mixer: ["mezclador", "mixer", "mostrar [el] mezclador", "ventana de edición",
+            "mostrar [la] ventana de edición", "ventana de mezcla", "alternar mezcla"]
+    midi editor: ["editor midi", "editor de midi", "mostrar [el] editor midi"]
+    workspace: ["espacio de trabajo", "mostrar [el] espacio de trabajo"]
+    new track: *new_track
+    solo: *solo
+    mute: *mute
+    arm: *arm
+    next track: *next_track
+    previous track: *previous_track
+    shuffle mode: ["modo shuffle", "shuffle"]
+    slip mode: ["modo slip", "slip", "modo libre"]
+    spot mode: ["modo spot", "spot"]
+    grid mode: ["modo grid", "grid", "modo cuadrícula", "cuadrícula", "modo rejilla", "rejilla"]
+    zoomer: ["herramienta zoom", "herramienta de zoom", "lupa"]
+    trimmer: ["herramienta de recorte", "herramienta recortar", "recortador"]
+    selector: ["selector", "herramienta selector", "herramienta de selección"]
+    grabber: ["herramienta mano", "herramienta de mano", "agarrador"]
+    scrubber: ["herramienta scrub", "herramienta de arrastre", "scrubber"]
+    pencil: ["lápiz", "herramienta lápiz", "herramienta de lápiz"]
+    redo: *redo
+    separate: ["separar", "separa", "separar clip", "dividir", "divide", "dividir aquí", "cortar aquí",
+               "corta aquí"]
+    heal: ["reparar", "repara", "reparar [la] separación", "repara [la] separación"]
+    duplicate: ["duplicar", "duplica", "duplicar eso", "duplica eso", "duplícalo"]
+    repeat: ["repetir", "repetir clip", "repite [el] clip"]
+    trim to selection: ["recortar a [la] selección", "recortar", "recorta"]
+    fades: ["fundidos", "fundido", "crear fundidos", "hacer fundidos", "fades", "fade"]
+    consolidate: ["consolidar", "consolida", "consolidar clip"]
+    quantize: *quantize
+    delete: *delete
+    tab to transient: ["siguiente transitorio", "ir al siguiente transitorio", "transitorio siguiente"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
+    zoom to fit: *fit
+    bounce: ["bounce", "exportar [la] mezcla", "exportar mezcla", "bounce a disco", "hacer [el] bounce"]
+    save as: ["guardar como", "guarda como"]
