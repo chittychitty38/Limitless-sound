@@ -392,7 +392,7 @@ footer p { margin: 0; }
     <div class="wrap">
       <p class="kicker label">Proof, every night</p>
       <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
-      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
+      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds, and the suite has to work together: a command from one app reaching another, and every app following the suite into Spanish and back. If anything fails, it shows here.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
         <p class="fine">Loading last night&rsquo;s results&hellip;</p>
       </div>
@@ -492,6 +492,14 @@ footer p { margin: 0; }
       && ["connected", "proof"].includes(x.level || "proof"));
     return bad ? `${bad.check}: ${bad.detail || "failed"}` : "";
   };
+  // The suite's own checks (S1...): the apps together, the shared language.
+  const together = (suite) => {
+    if (!suite || !suite.length) return "";
+    const items = suite.map((s) => `<li class="${s.ok ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${s.ok ? "✓" : "✕"}</span>`
+      + `<span><b>${esc(s.check)}<span class="vh">: ${s.ok ? "passed" : "failed"}</span></b><span class="how">${esc(s.detail)}</span></span></li>`).join("");
+    return `<p class="fine" style="margin:12px 0 6px">The suite together: ${suite.filter((s) => s.ok).length} of ${suite.length} checks passed.</p>`
+      + `<ul class="prooflist">${items}</ul>`;
+  };
   fetch("proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
     .then((data) => {
       const link = document.getElementById("proof-run");
@@ -514,7 +522,7 @@ footer p { margin: 0; }
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
           + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
-          + `<ul class="prooflist">${apps}</ul></div>`;
+          + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
     .catch(() => { box.innerHTML = `<p class="fine">The first nightly results haven&rsquo;t been published yet.</p>`; });

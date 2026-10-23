@@ -394,7 +394,7 @@ footer p { margin: 0; }
     <div class="wrap">
       <p class="kicker label">La prueba, cada noche</p>
       <h2 id="proof-title">Instalado y probado en un equipo <span class="accent">nuevo</span>, cada noche.</h2>
-      <p class="section-lede">Cada noche, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. También se comprueba que el idioma de la suite se puede cambiar a español y volver al inglés. Si algo falla, aparece aquí.</p>
+      <p class="section-lede">Cada noche, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. Y la suite tiene que funcionar unida: el comando de una app llega a otra, y todas las apps siguen a la suite al español y de vuelta. Si algo falla, aparece aquí.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
         <p class="fine">Cargando los resultados de anoche&hellip;</p>
       </div>
@@ -498,6 +498,13 @@ footer p { margin: 0; }
     P1: "Lista poco después de abrirla",
     P2: "Sigue funcionando después de pulsar todas sus acciones",
     P4: "Cada acción se hizo o se rechazó con un motivo, sin quedarse sin respuesta",
+    S1: "Todas las apps se conectaron a la suite a la vez",
+    S2: "Un comando del DAW compartido (acercar) llega a una app y responde en menos de 3 segundos",
+    S3: "El hub sabe qué apps están abiertas",
+    S4: "La página de Limitless Sound se abre",
+    S5: "El idioma de la suite se puede poner en español y volver",
+    S6: "Cada app con ventanas en español sigue a la suite al español y de vuelta",
+    S7: "El portugués, una versión previa solo en Limitless Voice, deja las demás apps en inglés",
   };
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const en = (t) => `<span lang="en">${esc(t)}</span>`;
@@ -507,6 +514,14 @@ footer p { margin: 0; }
       && ["connected", "proof"].includes(x.level || "proof"));
     if (!bad) return "";
     return `${checks[bad.id] ? esc(checks[bad.id]) : en(bad.check)}: ${bad.detail ? en(bad.detail) : "falló"}`;
+  };
+  // Las comprobaciones de la suite (S1...): las apps juntas, el idioma compartido.
+  const together = (suite) => {
+    if (!suite || !suite.length) return "";
+    const items = suite.map((s) => `<li class="${s.ok ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${s.ok ? "✓" : "✕"}</span>`
+      + `<span><b>${checks[s.id] ? esc(checks[s.id]) : en(s.check)}<span class="vh">: ${s.ok ? "pasó" : "no pasó"}</span></b><span class="how">${en(s.detail)}</span></span></li>`).join("");
+    return `<p class="fine" style="margin:12px 0 6px">La suite junta: ${suite.filter((s) => s.ok).length} de ${suite.length} comprobaciones pasaron.</p>`
+      + `<ul class="prooflist">${items}</ul>`;
   };
   fetch("../proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
     .then((data) => {
@@ -529,7 +544,7 @@ footer p { margin: 0; }
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
           + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.</p>`
-          + `<ul class="prooflist">${apps}</ul></div>`;
+          + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
     .catch(() => { box.innerHTML = `<p class="fine">Todavía no se han publicado los primeros resultados nocturnos.</p>`; });

@@ -5,6 +5,8 @@ play, record and mix in Logic Pro, Pro Tools, Ableton Live and the rest of their
 ordinary Mac or Windows PC, with their voice, one hand, their eyes, a single switch, a foot pedal
 or an adaptive controller. From the [Limitless Sound Foundation](https://chittychitty38.github.io/Limitless-sound/).
 
+[![Proof on fresh computers: the public download, installed and driven on a new Apple silicon Mac, Intel Mac and Windows PC](https://chittychitty38.github.io/Limitless-sound/proof/badge.svg)](https://chittychitty38.github.io/Limitless-sound/#proof)
+
 ## Get it
 
 | Your computer | Download |
