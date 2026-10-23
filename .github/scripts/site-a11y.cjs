@@ -4,13 +4,15 @@
 // proof unreachable (the page's own fallbacks), and with the answers in site-sample.json, so the
 // newest-release links and the proof results are checked as they're shown. In every run, the page
 // must not scroll sideways (WCAG 1.4.10, down to 320 px), and its link to the other language must be
-// there, reachable by keyboard and right.
+// there, reachable by keyboard and right. The Spanish page must have no English left and the same
+// styles as the English one (site-spanish.cjs).
 // Any problem fails. The site is the front door for musicians with disabilities.
 //   node .github/scripts/site-a11y.cjs
 const { chromium } = require('playwright');
 const { readFileSync, statSync } = require('fs');
 const { join, extname, resolve, sep } = require('path');
 const http = require('http');
+const spanish = require('./site-spanish.cjs');
 
 const axe = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const docs = resolve(__dirname, '..', '..', 'docs');
@@ -43,7 +45,12 @@ function serve() {
   let problems = 0;
   const fail = (msg) => { problems++; console.log(`  ${msg}`); };
 
+  const styles = spanish.stylesDiffer(readFileSync(join(docs, 'index.html'), 'utf8'), readFileSync(join(docs, 'es', 'index.html'), 'utf8'));
+  console.log(`es: the same styles as en: ${styles ? 'no' : 'yes'}`);
+  if (styles) fail(`the Spanish page's styles differ from the English page's, at ${styles}`);
+
   for (const online of [false, true]) {
+    let englishTexts = [];
     for (const pg of pages) {
       for (const [scheme, width] of modes) {
         const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width, height: 900 } });
@@ -93,6 +100,13 @@ function serve() {
           reached = await p.evaluate((name) => document.activeElement?.textContent.trim() === name, pg.otherName);
         }
         if (!reached) fail(`Tab doesn't reach "${pg.otherName}" in 12 presses`);
+
+        // Every word is in the page's language (the text doesn't change with the width or the colors).
+        if (scheme === modes[0][0] && width === modes[0][1]) {
+          const texts = await p.evaluate(spanish.pageTexts);
+          if (pg.lang === 'en') englishTexts = texts;
+          else for (const left of spanish.englishLeft(texts, englishTexts)) fail(`English on the Spanish page: ${left}`);
+        }
 
         if (online) {
           for (const [app, href, ver] of page.links) {
