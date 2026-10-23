@@ -4,10 +4,13 @@
 # (sounds_like below). It doesn't know "play", "shift" or "tab" in any spelling, so those are
 # "tocar", "maiúsculas" and "tabulação" here.
 # Every word must be one the model knows: stress/test_voice_language.py checks, and for a word it
-# doesn't know prints the nearest it does. Destructive commands (Cut, Paste, Delete, Duplicate)
-# are said alone only as infinitives, as the menus name them ("recortar", "colar", "apagar",
-# "excluir", "duplicar"), never "corta" or "apaga": in Spanish, real people's "corte" and "corto"
-# came back as "corta" and pressed Cut (stress/test_command_words.py).
+# doesn't know prints the nearest it does. A command said alone is the infinitive, as the menus name
+# it ("tocar", "voltar", "recortar", "apagar"), never "toca", "volta", "corta" or "apaga": the small
+# speech model hears real people's short imperatives far less often (toca 32%, volta 41%, aproxima
+# 29%, against tocar 63%, voltar 63%, juntar 90%; stress/test_command_words.py), and for Cut, Paste,
+# Delete and Duplicate a word that sounds like one must never throw work away (in Spanish, real
+# people's "corte" came back as "corta" and pressed Cut). Imperatives are fine before more words
+# ("silencia a faixa", "divide aqui").
 # See language.py for what each section is, and en.yaml for the English it follows.
 
 code: pt
@@ -39,7 +42,7 @@ words:
   dictation_off: [parar ditado, parar o ditado, terminar ditado, terminar o ditado, encerrar ditado,
                   encerrar o ditado, modo comandos, modo comando, desativar ditado, desativar o ditado,
                   ditado desligado]
-  take_stop: [parar, pare, para, stop, parar gravação, parar a gravação, pare a gravação, parar reprodução,
+  take_stop: [parar, pare, stop, parar gravação, parar a gravação, pare a gravação, parar reprodução,
               parar a reprodução, pare a reprodução, parar o take]
   take_off: [sair do modo take, modo take desligado, todos os comandos]
   scratch: [apaga isso, apagar isso, risca isso]
@@ -431,9 +434,9 @@ commands:
                          "pressione {chord:keys}", "pressionar {chord:keys}", "tecla {chord:keys}"]
     type {words:text}: ["escreva {words:text}", "escreve {words:text}", "escrever {words:text}",
                         "digite {words:text}", "digita {words:text}", "digitar {words:text}"]
-    undo: ["desfazer", "desfaz", "desfazer isso", "desfaz isso"]
-    redo: &redo ["refazer", "refaz", "refazer isso", "refaz isso"]
-    copy: ["copiar", "copia", "copiar isso", "copia isso"]
+    undo: ["desfazer", "desfazer isso", "desfaz isso"]
+    redo: &redo ["refazer", "refazer isso", "refaz isso"]
+    copy: ["copiar", "copiar isso", "copia isso"]
     cut: ["recortar", "cortar", "recortar isso", "recorta isso", "cortar isso", "corta isso"]
     paste: ["colar", "colar isso", "cola isso"]
     select all: ["selecionar tudo", "seleciona tudo", "selecione tudo"]
@@ -473,13 +476,13 @@ commands:
 
   Logic Pro:
     play: &play
-      play: ["tocar", "toca", "reproduzir"]
-      # "para" is also "for", said all the time, but a sentence with it in isn't a command
-      # (sentence_words), and people's "parar" and "pare" came back as "para" 10 times in 63.
-      stop: ["parar", "pare", "para", "stop"]
+      play: ["tocar", "reproduzir"]
+      # Not "para": it's also "for", said all the time, the model heard real people's "para" only
+      # 29 times in 100, and a reader's "para" pressed Play 4 times an hour. "pare" is the stop sign.
+      stop: ["parar", "pare", "stop"]
       start playback: ["iniciar [a] reprodução", "começar [a] reprodução"]
       stop playback: ["parar [a] reprodução", "pare [a] reprodução", "parar de tocar", "para de tocar"]
-    record: &record ["gravar", "grava", "começar a gravar", "comece a gravar", "começa a gravar",
+    record: &record ["gravar", "começar a gravar", "comece a gravar", "começa a gravar",
                      "iniciar [a] gravação"]
     capture [the] recording: ["capturar [a] gravação", "captura [a] gravação", "capturar isso", "captura isso"]
     cycle: ["ciclo", "loop", "ativar [o] ciclo", "ativar [o] loop", "modo ciclo"]
@@ -487,9 +490,9 @@ commands:
     go to start: &start ["ir para o início", "ir pro início", "voltar para o início", "voltar pro início",
                          "voltar ao início", "ir para o começo", "voltar para o começo", "voltar pro começo",
                          "voltar ao começo", "ao início", "pro início"]
-    forward: ["avançar", "avança", "para frente", "pra frente", "próximo compasso", "compasso seguinte",
+    forward: ["avançar", "para frente", "pra frente", "próximo compasso", "compasso seguinte",
               "avançar [um] compasso"]
-    back: ["voltar", "volta", "retroceder", "para trás", "pra trás", "compasso anterior", "voltar [um] compasso"]
+    back: ["voltar", "retroceder", "para trás", "pra trás", "compasso anterior", "voltar [um] compasso"]
     go to bar {bar:number}: &bar ["ir para o compasso {bar:number}", "ir pro compasso {bar:number}",
                                   "ir ao compasso {bar:number}", "compasso {bar:number}",
                                   "pular para o compasso {bar:number}", "vai para o compasso {bar:number}",
@@ -507,12 +510,12 @@ commands:
     solo: &solo ["solo", "solo na faixa", "solar [a] faixa", "colocar em solo", "coloca em solo", "dar solo",
                  "tirar [o] solo", "tira [o] solo"]
     # Not "muta" alone: people's "muita" (much) came back as "muta".
-    mute: &mute ["mute", "silenciar", "silencia", "silenciar [a] faixa", "silencia [a] faixa",
+    mute: &mute ["mute", "silenciar", "silenciar [a] faixa", "silencia [a] faixa",
                  "muta [a] faixa", "dar mute", "tirar [o] mute", "tira [o] mute"]
     # Not "arma" alone: it's also a weapon, and the model hears it right only 4 times in 24.
     arm: &arm ["armar", "armar [a] faixa", "arma [a] faixa", "ativar [a] gravação", "desarmar"]
-    split: ["dividir", "divide", "dividir aqui", "divide aqui", "dividir no cursor", "cortar aqui", "corta aqui"]
-    join: ["unir", "une", "unir [as] regiões", "une [as] regiões", "juntar", "junta", "juntar [as] regiões"]
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir no cursor", "cortar aqui", "corta aqui"]
+    join: ["unir", "unir [as] regiões", "une [as] regiões", "juntar", "juntar [as] regiões"]
     repeat region: ["repetir [a] região", "repetir [as] regiões", "repete [a] região"]
     quantize: &quantize ["quantizar", "quantizar isso", "quantificar"]
     delete: &delete ["apagar", "excluir", "deletar", "apagar isso", "apaga isso", "excluir isso", "exclui isso",
@@ -530,8 +533,8 @@ commands:
     global tracks: ["faixas globais", "trilhas globais", "faixa de tempo", "mostrar [as] faixas globais"]
     automation: ["automação", "mostrar [a] automação", "ver [a] automação"]
     musical typing: ["teclado musical", "digitação musical"]
-    zoom in: &zoom_in ["aproximar", "aproxima", "ampliar", "mais zoom", "aumentar [o] zoom"]
-    zoom out: &zoom_out ["afastar", "afasta", "reduzir", "menos zoom", "diminuir [o] zoom"]
+    zoom in: &zoom_in ["aproximar", "ampliar", "mais zoom", "aumentar [o] zoom"]
+    zoom out: &zoom_out ["afastar", "reduzir", "menos zoom", "diminuir [o] zoom"]
     zoom in vertical: &taller ["aproximar na vertical", "ampliar na vertical", "faixas mais altas"]
     zoom out vertical: &shorter ["afastar na vertical", "reduzir na vertical", "faixas mais baixas"]
     zoom to fit: &fit ["ajustar à janela", "ajustar à seleção", "zoom na seleção", "ajustar [o] zoom"]
@@ -575,15 +578,15 @@ commands:
     scrubber: ["ferramenta de arrasto"]
     pencil: ["lápis", "ferramenta lápis", "ferramenta de lápis"]
     redo: *redo
-    separate: ["separar", "separa", "separar [o] clipe", "dividir", "divide", "dividir aqui", "cortar aqui",
+    separate: ["separar", "separar [o] clipe", "dividir", "dividir aqui", "cortar aqui",
                "corta aqui"]
-    heal: ["reparar", "repara", "reparar [a] separação", "repara [a] separação"]
+    heal: ["reparar", "reparar [a] separação", "repara [a] separação"]
     duplicate: ["duplicar", "duplicar isso", "duplica isso"]
     repeat: ["repetir", "repetir [o] clipe", "repete [o] clipe"]
     # Not "recortar": it's Cut.
     trim to selection: ["aparar na seleção", "apara na seleção", "aparar [o] clipe"]
     fades: ["fade", "criar [o] fade", "fazer [o] fade"]
-    consolidate: ["consolidar", "consolida", "consolidar [o] clipe"]
+    consolidate: ["consolidar", "consolidar [o] clipe"]
     quantize: *quantize
     delete: *delete
     tab to transient: ["próximo transiente", "ir para o próximo transiente", "transiente seguinte"]
@@ -610,9 +613,8 @@ commands:
     solo: *solo
     mute: *mute
     arm: *arm
-    split: ["dividir", "divide", "dividir aqui", "divide aqui", "dividir [o] clipe", "divide [o] clipe"]
-    consolidate: ["consolidar", "consolida", "consolidar [os] clipes", "unir", "une", "unir [os] clipes", "juntar",
-                  "junta", "juntar [os] clipes"]
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir [o] clipe", "divide [o] clipe"]
+    consolidate: ["consolidar", "consolidar [os] clipes", "unir", "unir [os] clipes", "juntar", "juntar [os] clipes"]
     quantize: *quantize
     delete: *delete
     mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]

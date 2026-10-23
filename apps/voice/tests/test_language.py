@@ -309,7 +309,7 @@ class PortugueseFile(unittest.TestCase):
         logic = next(p for p in PORTUGUESE["mac"] if p.name == "Logic Pro")
         play = next(c for c in logic.commands if "tocar" in c.phrases)
         self.assertEqual(play.english_of("parar"), "stop")
-        self.assertEqual(play.english_of("toca"), "play")
+        self.assertEqual(play.english_of("reproduzir"), "play")
         self.assertEqual(play.english_of("parar a reprodução"), "stop playback")
 
     def test_english_names_spelled_as_words_the_model_knows(self):
@@ -360,7 +360,7 @@ class PortugueseEngine(unittest.TestCase):
             ("Pro Tools", "marcador um", ["numpad.", "1", "numpad."]),
             ("Logic Pro", "aperte comando maiúsculas n", ["cmd+shift+n"]),
             ("Logic Pro", "tocar", ["space"]),
-            ("Logic Pro", "toca", ["space"]),
+            ("Logic Pro", "reproduzir", ["space"]),
             ("Pro Tools", "parar", ["space"]),
             ("Logic Pro", "gravar", ["r"]),
             ("Logic Pro", "por favor salva o projeto obrigado", ["cmd+s"]),
@@ -370,10 +370,15 @@ class PortugueseEngine(unittest.TestCase):
             ("Logic Pro", "solo", ["s"]),
             ("Logic Pro", "clique", ["k"]),
             ("Logic Pro", "lupi", ["c"]),
-            ("Logic Pro", "para", ["space"]),
+            ("Logic Pro", "pare", ["space"]),
             ("Logic Pro", "sala", []),                   # a letter from "salva", but another word
             ("Logic Pro", "parte", []),
             ("Logic Pro", "salva", []),                  # "sala" came back as it
+            ("Logic Pro", "toca", []),                   # said alone, a command is the infinitive
+            ("Logic Pro", "volta", []),
+            ("Logic Pro", "para", []),                   # also "for"
+            ("Logic Pro", "toca a partir daqui", []),
+            ("Logic Pro", "silencia a faixa", ["m"]),
             ("Logic Pro", "muta", []),                   # and "muita" as this
             ("Logic Pro", "arma", []),                   # a weapon
             ("Logic Pro", "salva o projeto", ["cmd+s"]),
@@ -400,8 +405,8 @@ class PortugueseEngine(unittest.TestCase):
         for heard, open_, keys in [("parar", "quando você liga para alguém que", []),
                                    ("solo", "polo químicas", []),
                                    ("dividir", "o que alguns casos", []),
-                                   ("para", "e acampamento para famílias com", []),   # three more words
-                                   ("para", "para o", ["space"]),
+                                   ("parar", "e acampamento parar famílias com", []),   # three more words
+                                   ("parar", "parar o", ["space"]),
                                    ("parar", "parar", ["space"]), ("parar", "", ["space"]),
                                    ("parar", "pare", ["space"]),            # one word: could be it
                                    ("tocar", "tocar agora", ["space"]),     # the command is in it
@@ -474,7 +479,7 @@ class PortugueseEngine(unittest.TestCase):
         self.assertTrue(r.handled)
         self.assertEqual((pressed(p), r.english), (["space"], "stop"))
         e.take = True
-        self.assertEqual(e.handle("para").english, "stop")
+        self.assertEqual(e.handle("pare").english, "stop")
 
     def test_dictation(self):
         e, p = pt_engine()

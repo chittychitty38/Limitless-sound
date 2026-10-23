@@ -77,14 +77,14 @@ WORDS = {
            "grabación grabado grabó pagar paga corte corto guardia silencio mezcla parada sola unión "
            "reproducción dividido detenido cola paso nada este").split(),
     # The same for Brazilian Portuguese: its commands that work alone with Logic Pro in front
-    # ("não" is cancel, "dormir" sleep, "ajuda" help, "para" stop); numbers; other forms of command
-    # words and words said alone all the time, which Voice listens for so they're written as
-    # themselves ("gravação", "pagar", which is a letter from "apagar", "isso"); and words a letter
-    # from a command, or a command's other meaning, that shouldn't do anything ("parte" and "pare",
-    # "sala" and "salvar", "muita" and "muta", "arma", a weapon). Not "corta", "cola" or "apaga":
-    # they're Cut, Paste and Delete too, only not said alone.
-    "pt": ("gravar toca tocar reproduzir parar pare para salvar solo cortar colar apagar ciclo avançar "
-           "volta voltar dividir juntar junta biblioteca navegador ajuda aproxima afasta afastar reduzir "
+    # ("não" is cancel, "dormir" sleep, "ajuda" help); numbers; other forms of command words and
+    # words said alone all the time, which Voice listens for so they're written as themselves
+    # ("gravação", "pagar", which is a letter from "apagar", "isso"); and words a letter from a
+    # command, or a command's other meaning, that shouldn't do anything ("parte" and "pare", "sala"
+    # and "salvar", "muita" and "muta", "arma", a weapon). Not the imperatives "toca", "volta",
+    # "corta" or "apaga": they're the same commands, only not said alone.
+    "pt": ("gravar tocar reproduzir parar pare salvar solo cortar colar apagar ciclo avançar "
+           "voltar dividir juntar biblioteca navegador ajuda afastar reduzir "
            "dormir esquece não "
            "uma dois duas três quatro cinco seis sete oito nove dez vinte trinta "
            "gravação grave tocando toque parado parada parou salvou corte cortado divisão união silêncio "
