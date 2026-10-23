@@ -128,7 +128,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .inputs li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-family: var(--mono); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--cream); }
 
 /* Apps */
-.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
 .app { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
 .app:hover { border-color: #4a4766; }
 .app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 18px; display: flex; justify-content: space-between; }
@@ -245,7 +245,7 @@ footer p { margin: 0; }
             <span>Windows<small>Windows 10 and 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version 0.1.0. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.5</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
       </div>
 
       <div class="flex" aria-hidden="true">
@@ -442,14 +442,16 @@ footer p { margin: 0; }
   </div>
 </footer>
 <script>
-// Each Download button goes to that app's newest release, looked up when the page opens.
-// The link written above is kept when GitHub can't be reached.
+// Each Download button goes to that app's newest release, looked up when the page opens, and the
+// suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
 (async () => {
   const links = [...document.querySelectorAll('a[data-app]')];
   try {
     const res = await fetch('https://api.github.com/repos/chittychitty38/limitless-sound/releases?per_page=100');
     if (!res.ok) return;
     const releases = (await res.json()).filter((r) => !r.draft && !r.prerelease);
+    const suite = releases.find((x) => /^v\d/.test(x.tag_name));
+    if (suite) for (const s of document.querySelectorAll('[data-suite]')) s.textContent = suite.tag_name.slice(1);
     for (const a of links) {
       const r = releases.find((x) => x.tag_name.startsWith(a.dataset.app + '-v'));
       if (!r) continue;
