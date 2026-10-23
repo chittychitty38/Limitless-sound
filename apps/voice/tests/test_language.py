@@ -148,6 +148,19 @@ class SpanishEngine(unittest.TestCase):
             ("Ableton Live", "ir al compás treinta y dos", []),   # Live has no key for it
             ("Logic Pro", "loop", ["c"]),
             ("Pro Tools", "loop", ["shift+cmd+l"]),
+            ("GarageBand", "grabar", ["r"]),
+            ("GarageBand", "añadir una pista", ["opt+cmd+n"]),
+            ("GarageBand", "teclado musical", ["cmd+k"]),
+            ("REAPER", "loop", ["r"]),
+            ("REAPER", "ir al fin", ["end"]),
+            ("REAPER", "rehacer", ["cmd+shift+z"]),
+            ("REAPER", "pista siguiente", ["cmd+opt+down"]),
+            ("FL Studio 2024", "modo de grabación", ["r"]),
+            ("FL Studio 2024", "grabar", []),             # R only switches record mode
+            ("FL Studio 2024", "deshacer", ["cmd+opt+z"]),
+            ("FL Studio 2024", "rehacer", []),            # FL Studio has no redo key
+            ("FL Studio 2024", "mostrar los canales", ["f6"]),
+            ("FL Studio 2024", "mostrar el mezclador", ["f9"]),
             ("Logic Pro", "flecha arriba", ["up"]),
             ("Finder", "deshacer", ["cmd+z"]),
             ("Logic Pro", "arriba", []),                 # said all the time, so not alone
@@ -162,8 +175,8 @@ class SpanishEngine(unittest.TestCase):
         e, _ = engine("Finder")
         r = e.handle("reproducir", "reproducir")
         self.assertFalse(r.handled)
-        self.assertEqual(r.message, '"reproducir" funciona en Ableton Live, Logic Pro y Pro Tools. '
-                                    "Pon uno de ellos al frente y dilo otra vez.")
+        self.assertEqual(r.message, '"reproducir" funciona en Ableton Live, FL Studio, GarageBand, Logic Pro, '
+                                    "Pro Tools y REAPER. Pon uno de ellos al frente y dilo otra vez.")
 
     def test_yes_and_cancel(self):
         e, p = engine()

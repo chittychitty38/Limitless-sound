@@ -7,7 +7,7 @@ accessibility switches, or any game controller.
 
 - A Mac (macOS 11 or newer), or a Windows 10 or 11 PC
 - An Xbox Adaptive Controller, or any Xbox-style controller
-- Logic Pro, Pro Tools or Ableton Live. It also works in any other app.
+- Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER or FL Studio. It also works in any other app.
 
 ## 1. Connect the controller
 
@@ -88,6 +88,16 @@ settings page.
   keys if they don't work.
 - **Pro Tools:** record uses F12 (⌘Space would open Spotlight on a Mac).
 - **Ableton Live:** record uses F9.
+- **GarageBand:** play, record, undo, redo, new track (it opens the New Track dialog: LB is
+  Enter), automation and Musical Typing. The D-pad presses the arrow keys.
+- **REAPER:** go to start is W and loop is R, as REAPER sets them. REAPER has no key for mute,
+  solo, record arm or the metronome until you give it one; if you change REAPER's keys, change
+  them here too.
+- **FL Studio:** holding B switches **record mode**; then A plays and records. Undo steps back
+  through FL Studio's history, and there's no redo key. The D-pad moves between Channel Rack
+  channels, LB solos the selected Mixer track, and the F-keys open its windows: on a Mac, set
+  the F-keys to work as standard function keys if they don't. Keys only work while **Typing
+  keyboard to piano** is off.
 
 ## Help
 

@@ -1,6 +1,7 @@
 # Limitless Voice
 
-Control Logic Pro, Pro Tools, Ableton Live and the rest of your computer with your voice.
+Control Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the rest of your
+computer with your voice.
 Built for musicians who can't use, or can't always use, a mouse and keyboard.
 
 Say "go to bar thirty two", "solo track", "nudge right four times", "show the
@@ -17,7 +18,7 @@ installed, and your voice never leaves the machine.
 | **Microphone** | Any mic the computer already recognises: the built-in laptop mic, a USB mic, a headset, a webcam mic or an audio interface input. Any sample rate. A headset or a mic close to your mouth works best when speakers are playing. Bluetooth headsets work, but drop to phone-call quality, so expect more misses. |
 | **Computer** | Anything from roughly the last ten years. Recognition uses about 300 MB of memory and a small share of one CPU core. About 300 MB of disk space. |
 | **Language** | English (US) built in. Spanish, for Latin America and Spain, is a 39 MB download from Settings, once. A larger English model and an Indian English model can be downloaded from Settings too. |
-| **Apps** | Ready-made commands for Logic Pro (Mac), Pro Tools and Ableton Live 12 (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
+| **Apps** | Ready-made commands for Logic Pro and GarageBand 10 (Mac), Pro Tools, Ableton Live 12, REAPER 7 and FL Studio (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
 
 Not covered yet: Linux, Chromebooks, iPad.
 
@@ -159,6 +160,9 @@ commands:
 
 The built-in commands live in `limitless_voice/packs/` and use each app's
 **default** shortcuts. Lines marked "verify" are worth checking.
+[DAW-SHORTCUTS.md](DAW-SHORTCUTS.md) gives the official source for each key in
+the Ableton Live, GarageBand, REAPER and FL Studio packs, and what's still
+unconfirmed.
 
 ## Other ways to trigger commands
 
@@ -238,11 +242,14 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
    accessibility interfaces Logic and Pro Tools expose to screen readers.
 4. **Mixer values by voice** ("track three volume minus six") through a
    virtual Mackie Control / HUI surface, which both DAWs support.
-5. **More apps and languages:** command files for Studio One, REAPER,
-   GarageBand and FL Studio; Vosk has models for 20+ languages (see Adding a
-   language above). Ableton Live's
+5. **More apps and languages:** a command file for Studio One; Vosk has
+   models for 20+ languages (see Adding a language above). Ableton Live's
    single-letter keys (S solo, C arm, O metronome, A automation) do nothing
    while Live's Computer MIDI Keyboard is on: check them on a real Live 12.
+6. **Check GarageBand, REAPER and FL Studio on real computers**, and add the
+   keys their official guides couldn't confirm from here (GarageBand's cycle,
+   metronome and zoom; REAPER's zoom). The list is in
+   [DAW-SHORTCUTS.md](DAW-SHORTCUTS.md).
 
 ## Works with the rest of Limitless Sound
 

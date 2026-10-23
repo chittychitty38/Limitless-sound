@@ -2,14 +2,19 @@
 
 Part of **Limitless Sound**: music software that leaves no one out.
 
-Limitless One-Hand lets you run Logic Pro and Pro Tools with one hand. Switch on one-hand mode and the keys under your hand become the DAW commands you use most: play, record, undo, split, mute, solo, zoom, save. Switch it off and your keyboard is normal again.
+Limitless One-Hand lets you run Logic Pro, Pro Tools, GarageBand, REAPER and FL Studio with one hand. Switch on one-hand mode and the keys under your hand become the DAW commands you use most: play, record, undo, split, mute, solo, zoom, save. Switch it off and your keyboard is normal again.
 
 ![](docs/screenshot.png)
 
 ## Works on
 
-- **macOS 12 or later**, Apple Silicon and Intel: Logic Pro and Pro Tools
-- **Windows 10 and 11**: Pro Tools
+- **macOS 12 or later**, Apple Silicon and Intel: Logic Pro, Pro Tools, GarageBand 10, REAPER 7 and FL Studio
+- **Windows 10 and 11**: Pro Tools, REAPER 7 and FL Studio
+
+GarageBand, REAPER and FL Studio get only the keys their makers' guides give
+([apps/voice/DAW-SHORTCUTS.md](../voice/DAW-SHORTCUTS.md)), so they have fewer commands than Logic
+and Pro Tools. In FL Studio, E switches record mode (Space then plays and records), Q undoes one
+step back through the history, and single keys only work while its "Typing keyboard to piano" is off.
 
 Any keyboard works. Nothing else to install.
 
@@ -36,7 +41,7 @@ Windows may show "Windows protected your PC" because the app is new. Choose **Mo
 - **Pick your hand:** Left hand or Right hand. The right-hand layout is the mirror image, so each finger does the same job.
 - **Space still plays and stops.** Hold Space and press a key to type the letter from the other half of the keyboard, handy for naming tracks. (Space now acts when you let go.)
 - Real shortcuts still work: if you hold ⌘/Ctrl, Option/Alt or Shift, keys pass straight through.
-- Keys only change while Logic Pro or Pro Tools is in front. Every other app types normally.
+- Keys only change while one of those DAWs is in front. Every other app types normally.
 - **Try it here:** with one-hand mode on, press keys while the One-Hand window is in front. Each key's card lights up and tells you what it would do, without pressing anything.
 - **Menu bar:** One-Hand keeps running in the menu bar (the 1H key) when you close its window. Click the icon to switch the mode or the hand, or to quit.
 - **ON badge:** a yellow badge at the top of the screen shows when one-hand mode is on, even over a full-screen DAW.

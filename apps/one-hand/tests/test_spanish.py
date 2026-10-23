@@ -164,7 +164,7 @@ def on_screen(w):
 
 
 # Names, and words that read the same in Spanish.
-SAME_EVERYWHERE = {APP_NAME, "Logic Pro", "Pro Tools", "Editor", "Tab", "Esc"}
+SAME_EVERYWHERE = {APP_NAME, "Logic Pro", "Pro Tools", "GarageBand", "REAPER", "FL Studio", "Editor", "Tab", "Esc"}
 
 
 def untranslated(english, spanish):

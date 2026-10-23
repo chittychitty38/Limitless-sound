@@ -45,6 +45,11 @@ def test_find_target():
     assert find_target("ProTools.exe") == "protools"
     assert find_target("com.avid.ProTools") == "protools"
     assert find_target("Ableton Live 12 Suite.exe") == "ableton"
+    assert find_target("com.cockos.reaper") == "reaper"
+    assert find_target("reaper.exe") == "reaper"
+    assert find_target("com.image-line.flstudio") == "flstudio"
+    assert find_target("FL64.exe") == "flstudio"
+    assert find_target("FL64 (scaled).exe") == "flstudio"
     assert find_target("com.google.Chrome") == "magnifier"
     assert find_target(None) == "magnifier"
 
@@ -52,6 +57,17 @@ def test_find_target():
 def test_logic_zoom():
     p = Router("mac").plan("in", "com.apple.logic10")
     assert p.ok and p.target == "logic" and p.combos == [(("cmd",), "right")]
+
+
+def test_fl_studio_and_reaper_zoom():
+    for os_name in ("mac", "win"):
+        p = Router(os_name).plan("in", "FL64.exe" if os_name == "win" else "com.image-line.flstudio")
+        assert p.ok and p.target == "flstudio" and p.combos == [((), "pageup")]
+        assert Router(os_name).plan("fit", "com.image-line.flstudio").combos == [(("shift",), "4")]
+    assert Router("mac").plan("fit", "com.cockos.reaper").combos == [(("cmd",), "pagedown")]
+    assert Router("win").plan("fit", "reaper.exe").combos == [(("ctrl",), "pagedown")]
+    # REAPER's guides disagree on which way + and - zoom: zoom in magnifies the screen instead.
+    assert Router("mac").plan("in", "com.cockos.reaper").target == "magnifier"
 
 
 def test_big_steps_repeat():

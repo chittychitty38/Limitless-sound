@@ -1,0 +1,67 @@
+# REAPER 7 on Mac and Windows, with REAPER's default key map (Options > Keyboard shortcuts).
+# From Cockos' REAPER Quick Start and user guides; DAW-SHORTCUTS.md has each key's source.
+# Written with Mac names: Cockos' guides give the keys for Windows and say Ctrl becomes Command
+# and Alt becomes Option on a Mac, the same rule Voice uses.
+#
+# REAPER has no default key for the metronome, track mute, solo or record arm, and Cockos'
+# guides disagree on which way + and - zoom, so those aren't here. Many people change REAPER's
+# key map (OSARA, the screen reader extension, brings its own): if yours is changed, change the
+# matching "keys" line here.
+
+name: REAPER
+# "REAPER" on both systems; older Macs name the app REAPER64, which this covers too.
+apps: ["REAPER"]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+    instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  - say: ["record", "start recording"]
+    fuzzy: false
+    instant: true
+    do: {keys: cmd+r}
+    reply: Recording
+    repeatable: false
+  # REAPER calls it repeat: it loops the time selection.
+  - say: ["loop", "toggle loop", "loop playback", "toggle repeat"]
+    do: {keys: r}
+  # Not "top" alone: real people's "stop" came back as "top" (stress/test_command_words.py).
+  - say: ["go to start", "go to beginning", "back to start", "go to the top"]
+    do: {keys: w}
+  - say: ["go to end", "go to the end"]
+    do: {keys: end}
+  - say: ["new marker", "add marker", "drop marker"]
+    do: {keys: m}
+
+  # --- tracks -----------------------------------------------------------
+  - say: ["new track", "new tracks", "add [a] track"]
+    do: {keys: cmd+t}
+  - say: ["next track", "track down"]
+    do: {keys: cmd+opt+down}
+  - say: ["previous track", "track up"]
+    do: {keys: cmd+opt+up}
+
+  # --- editing ----------------------------------------------------------
+  # Windows' everyday redo is Ctrl+Y; REAPER's is Ctrl+Shift+Z.
+  - say: ["redo", "redo that"]
+    do: {keys: cmd+shift+z}
+    reply: Redone
+  # With no item selected, REAPER splits every item under the edit cursor.
+  - say: ["split", "split here", "split items", "split at cursor"]
+    do: {keys: s}
+    help: Split items at the edit cursor
+
+  # --- views ------------------------------------------------------------
+  - say: ["mixer", "show [the] mixer", "hide [the] mixer"]
+    do: {keys: cmd+m}
+  - say: ["zoom to fit", "zoom to project", "fit", "show everything"]
+    do: {keys: cmd+pagedown}
+
+  # --- project ----------------------------------------------------------
+  - say: ["render", "export", "export mix", "bounce"]
+    fuzzy: false
+    do: {keys: cmd+opt+r}
+    repeatable: false
+    help: Opens the Render dialog

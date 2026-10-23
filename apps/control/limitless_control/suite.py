@@ -29,7 +29,7 @@ INTENT_FOR_ID = {
     "metronome": "daw.metronome", "click": "daw.metronome",
     "mixer": "daw.mixer", "mix_edit": "daw.mixer",
 }
-DAWS = {"Logic Pro", "Pro Tools", "Ableton Live"}
+DAWS = {"Logic Pro", "Pro Tools", "Ableton Live", "GarageBand", "REAPER", "FL Studio"}
 
 OWN = [
     {"id": "on", "label": "Controller on"},

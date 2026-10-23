@@ -31,6 +31,8 @@ CLASS_FLAGS = {
     "alt": Quartz.kCGEventFlagMaskAlternate, "ctrl": Quartz.kCGEventFlagMaskControl,
 }
 ARROWS = {"left_arrow", "right_arrow", "up_arrow", "down_arrow"}
+# Home, End, Page Up and Page Down come from a Mac keyboard with the Fn flag set, like the arrows.
+NAV_KEYS = {"home", "end", "page_up", "page_down"}
 
 ACCESSIBILITY_URL = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
 INPUT_MONITORING_URL = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
@@ -148,6 +150,8 @@ class MacBackend:
             flags |= MOD_FLAGS[m]
         if tap.key in ARROWS:
             flags |= Quartz.kCGEventFlagMaskNumericPad | Quartz.kCGEventFlagMaskSecondaryFn
+        elif tap.key in NAV_KEYS:
+            flags |= Quartz.kCGEventFlagMaskSecondaryFn
         for down in (True, False):
             ev = Quartz.CGEventCreateKeyboardEvent(self._source, MAC_CODES[tap.key], down)
             Quartz.CGEventSetFlags(ev, flags)

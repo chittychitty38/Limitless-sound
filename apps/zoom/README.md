@@ -70,13 +70,18 @@ screen redraws while nothing changes.
 
 The app looks at which program is in front and presses that program's own zoom keys:
 
-| | Logic Pro / GarageBand | Pro Tools (Mac / Windows) | Ableton Live | Anything else |
-|---|---|---|---|---|
-| Zoom in / out | Cmd+→ / Cmd+← | Cmd+] / Cmd+[ · Ctrl+] / Ctrl+[ | + / − | Screen magnifier |
-| Taller / shorter tracks | Cmd+↓ / Cmd+↑ | Ctrl+↓/↑ · Start+↓/↑ | | |
-| Fit | Z (Logic) | Option+A · Alt+A | Z | |
-| Waveform bigger / smaller | | Option+Cmd+] / [ · Ctrl+Alt+] / [ | | |
-| Zoom presets 1–5 | | Ctrl+1–5 · Start+1–5 | | |
+| | Logic Pro / GarageBand | Pro Tools (Mac / Windows) | Ableton Live | REAPER | FL Studio | Anything else |
+|---|---|---|---|---|---|---|
+| Zoom in / out | Cmd+→ / Cmd+← | Cmd+] / Cmd+[ · Ctrl+] / Ctrl+[ | + / − | Screen magnifier | Page Up / Page Down | Screen magnifier |
+| Taller / shorter tracks | Cmd+↓ / Cmd+↑ | Ctrl+↓/↑ · Start+↓/↑ | | | | |
+| Fit | Z (Logic) | Option+A · Alt+A | Z | Cmd+Page Down · Ctrl+Page Down | Shift+4 | |
+| Waveform bigger / smaller | | Option+Cmd+] / [ · Ctrl+Alt+] / [ | | | | |
+| Zoom presets 1–5 | | Ctrl+1–5 · Start+1–5 | | | | |
+
+GarageBand uses Logic Pro's keys, which Apple's GarageBand guide doesn't list: check them on a
+real Mac. REAPER's guides disagree on which way + and − zoom, so there zoom in and out use the
+screen magnifier until that's checked. FL Studio's keys work in its Playlist and Piano roll.
+Where each key comes from: [apps/voice/DAW-SHORTCUTS.md](../voice/DAW-SHORTCUTS.md).
 
 Screen magnifier: macOS Zoom (Option+Cmd+8 / = / −) or Windows Magnifier (Win+Plus / Win+Minus / Win+Esc).
 

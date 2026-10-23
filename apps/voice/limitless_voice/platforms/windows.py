@@ -16,7 +16,7 @@ EXE_NAMES = {
     "protools.exe": "Pro Tools",
     "ableton live 12 suite.exe": "Ableton Live", "ableton live 11 suite.exe": "Ableton Live",
     "studio one.exe": "Studio One", "reaper.exe": "REAPER", "cubase14.exe": "Cubase",
-    "fl64.exe": "FL Studio", "bitwig studio.exe": "Bitwig Studio",
+    "fl64.exe": "FL Studio", "fl64 (scaled).exe": "FL Studio", "bitwig studio.exe": "Bitwig Studio",
 }
 
 
