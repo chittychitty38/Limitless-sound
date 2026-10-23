@@ -70,6 +70,12 @@ jobs:
           } >> "$GITHUB_ENV"
           rm -f ./*.key
 
+      # productsign only signs with an identity macOS trusts; codesign doesn't mind. A real
+      # Developer ID Installer certificate chains to Apple's root through the intermediates
+      # mac-sign.sh adds, so only this throwaway one needs trusting, and only for packages.
+      - name: Trust the throwaway installer certificate for signing packages, as Apple's chain would be
+        run: sudo security add-trusted-cert -d -r trustRoot -p pkgSign -p basic -k /Library/Keychains/System.keychain "$RUNNER_TEMP/test-certs/installer.crt"
+
       - name: A wrong certificate name is refused with what to put instead
         run: |
           if APPLE_SIGNING_IDENTITY="Developer ID Application: Someone Else (XXXXXXXXXX)" \
