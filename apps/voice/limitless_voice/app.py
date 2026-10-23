@@ -576,7 +576,7 @@ class MainWindow(QMainWindow):
         name = model_for(want, self.settings.model)
         path = find_model(name)
         if path is None and download:
-            path = ensure_model(self, name, want)
+            path = ensure_model(self, name, want, ask=False)   # asked for just now, in Settings or here
         if path is None:
             size = MODELS[name][1]
             self._language_note(want.text("To listen in {language}, Limitless Voice needs to download its speech "
@@ -875,19 +875,18 @@ def ensure_user_packs_dir():
     return folder
 
 
-def ensure_model(parent, name="", lang=ENGLISH):
+def ensure_model(parent, name="", lang=ENGLISH, ask=True):
     """Return the model folder, downloading it (with a progress window) if needed. lang is the
-    language the questions are asked in: the model's."""
+    language it talks in: the model's. ask=False when the person has just asked for it."""
     name = name or DEFAULT_MODEL
     path = find_model(name)
     if path:
         return path
     label, size = MODELS.get(name, (name, "?"))
-    answer = QMessageBox.question(
-        parent, lang.text("Download speech model"),
-        lang.text("Limitless Voice needs the {label} speech model ({size}). "
-                  "It's downloaded once and then works without internet. Download it now?", label=label, size=size))
-    if answer != QMessageBox.Yes:
+    if ask and QMessageBox.question(
+            parent, lang.text("Download speech model"),
+            lang.text("Limitless Voice needs the {label} speech model ({size}). It's downloaded once and then "
+                      "works without internet. Download it now?", label=label, size=size)) != QMessageBox.Yes:
         return None
     dlg = QProgressDialog(lang.text("Downloading speech model…"), lang.text("Cancel"), 0, 100, parent)
     dlg.setWindowModality(Qt.WindowModal)

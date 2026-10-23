@@ -319,8 +319,9 @@ class ChoosingTheLanguage(unittest.TestCase):
         self.assertEqual(w.language_download.text(), "Descargar español (39 MB)")
         self.assertEqual(self.applied(), ["en"])                 # so the hub reads it in English
         self.assertEqual(self.s.extra["suite_language"], "es")   # and next time starts in it
-        from test_accessibility import problems
+        from test_accessibility import problems, tab_stops
         self.assertEqual(problems(w), [])
+        self.assertIn(w.language_download, tab_stops(w))        # the keyboard reaches it
 
     def test_offline_the_offer_stays(self):
         w = self.w
@@ -334,8 +335,10 @@ class ChoosingTheLanguage(unittest.TestCase):
     def test_once_downloaded_it_listens_and_answers_in_spanish(self):
         w = self.w
         self.hub("welcome", language="es")
-        with mock.patch.object(app_module, "ensure_model", side_effect=lambda *a: self.download() or self.model):
+        with mock.patch.object(app_module, "ensure_model", side_effect=lambda *a, **k: self.download() or self.model) \
+                as ensure:
             w.language_download.click()
+        self.assertEqual(ensure.call_args.kwargs, {"ask": False})   # pressing Download was the yes
         self.assertEqual((w.lang.code, w.engine.lang.code), ("es", "es"))
         self.assertEqual(w.listener.model_path, self.model)
         self.assertTrue(w.language_box.isHidden())
