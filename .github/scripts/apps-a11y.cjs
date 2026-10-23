@@ -393,6 +393,26 @@ async function checkHub(browser) {
     await checkStates(page, s, name, { sizes, setScheme, setLook });
   }
   await sharedLook('standard');
+
+  // The page in Spanish: longer words in the same space, and the page's language set for screen
+  // readers. The guided setup, then the tabs with the most words.
+  await hubApi('/api/prefs', { prefs: { language: 'es' } });
+  await page.waitForFunction(() => document.documentElement.lang === 'es');
+  await page.click('#t-tools');
+  await page.click('#setup-again');
+  await page.waitForSelector('#setup:not([hidden])');
+  await checkStates(page, s, 'guided setup, in Spanish', { looks: ['standard', 'largest text'], sizes, setScheme,
+    setLook: async (look) => { await page.selectOption('#setup-size', String(LOOKS[look].textScale)); await sleep(100); } });
+  await page.selectOption('#setup-size', '1');
+  await page.click('#setup-skip');
+  await page.waitForSelector('#setup[hidden]', { state: 'attached' });
+  for (const [tab, name] of [['t-tools', 'My apps'], ['t-settings', 'Settings']]) {
+    await page.click('#' + tab);
+    await settled(page);
+    await checkStates(page, s, `${name}, in Spanish`, { looks: ['standard', 'largest text'], sizes, setScheme, setLook });
+  }
+  await sharedLook('standard');
+  await hubApi('/api/prefs', { prefs: { language: 'en' } });
   await ctx.close();
 }
 

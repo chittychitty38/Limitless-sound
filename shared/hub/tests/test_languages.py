@@ -1,10 +1,13 @@
 """The suite's language: one choice every app follows, and replies read by a voice for it."""
 
+import json
+import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 from test_bus import TOKEN, FakeLauncher, FakeSpeaker, bus, connect  # noqa: F401 (bus is a fixture)
 
-from limitless_hub import languages, setup, speech
+from limitless_hub import catalog, languages, setup, speech
 from limitless_hub.bus import Bus
 
 
@@ -126,3 +129,62 @@ def test_the_page_offers_every_language_in_its_own_name():
     page = (Path(languages.__file__).parent / "web" / "index.html").read_text(encoding="utf-8")
     for code, name in languages.LANGUAGES.items():
         assert page.count(f'<option value="{code}" lang="{code}">{name}</option>') == 2  # setup and settings
+
+
+def _page():
+    return (Path(languages.__file__).parent / "web" / "index.html").read_text(encoding="utf-8")
+
+
+def _spanish(page):
+    start = page.index('<script type="application/json" id="strings-es">') + len('<script type="application/json" id="strings-es">')
+    return json.loads(page[start:page.index("</script>", start)].replace("<\\/", "</"))
+
+
+class _Text(HTMLParser):
+    """The page's own words: text in the body outside scripts, and aria-labels."""
+
+    def __init__(self):
+        super().__init__()
+        self.words, self.skip, self.body = [], 0, False
+
+    def handle_starttag(self, tag, attrs):
+        self.body |= tag == "body"
+        self.skip += tag in ("script", "style")
+        if self.body and dict(attrs).get("aria-label"):
+            self.words.append(dict(attrs)["aria-label"])
+
+    def handle_endtag(self, tag):
+        self.skip -= tag in ("script", "style")
+
+    def handle_data(self, data):
+        if self.body and not self.skip and data.strip():
+            self.words.append(data.strip())
+
+
+# Names and the language picker read the same in every language.
+SAME_EVERYWHERE = {"Limitless Sound", "Language ·", "Idioma", *languages.LANGUAGES.values()}
+
+
+def test_every_word_on_the_page_has_spanish():
+    page = _page()
+    es = _spanish(page)
+    parser = _Text()
+    parser.feed(page)
+    missing = [w for w in parser.words if w not in es and w not in SAME_EVERYWHERE]
+    assert not missing, f"no Spanish for: {missing}"
+    script = page[page.rindex("<script>"):]
+    said = [json.loads(f'"{m}"') for m in re.findall(r'\bt\("((?:[^"\\]|\\.)*)"', script)]
+    said += re.findall(r'\["[\w.]+(?:=\w+)?", "([^"]+)"\]', script)  # the link events
+    assert said and not [s for s in said if s not in es], [s for s in said if s not in es]
+
+
+def test_the_hubs_own_words_have_spanish_too():
+    es = _spanish(_page())
+    words = [w for c in setup.choices() for w in (c["label"], c["about"])]
+    words += [spec["about"] for spec in catalog.TOOLS.values()]
+    assert not [w for w in words if w not in es], [w for w in words if w not in es]
+
+
+def test_spanish_keeps_every_placeholder():
+    for en, es in _spanish(_page()).items():
+        assert sorted(re.findall(r"\{\w+\}", en)) == sorted(re.findall(r"\{\w+\}", es)), en
