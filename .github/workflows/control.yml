@@ -47,6 +47,10 @@ jobs:
           - os: ubuntu-22.04
             name: linux
     runs-on: ${{ matrix.os }}
+    # Signing happens only when these secrets exist (SIGNING.md); without them the build is unsigned.
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12 != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,6 +58,27 @@ jobs:
           python-version: "3.12"
       - run: pip install ".[dev]"
       - run: pyinstaller --noconfirm packaging/limitless_control.spec
+
+      - name: Sign and notarize (macOS, only if the Apple secrets are set)
+        if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" keychain
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" app "dist/Limitless Control.app"
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" notarize "dist/Limitless Control.app"
+      - name: Sign the program (Windows, only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\Limitless Control\Limitless Control.exe"'
 
       - name: Smoke test the built app
         shell: bash
@@ -105,6 +130,13 @@ jobs:
           }
           $version = python -c "import limitless_control; print(limitless_control.__version__)"
           iscc /DMyVersion=$version packaging\windows\installer.iss
+      - name: Sign the installer (Windows, only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\*Setup.exe"'
 
       - name: Make the Linux archive
         if: runner.os == 'Linux'

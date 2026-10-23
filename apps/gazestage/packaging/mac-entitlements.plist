@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Used only when GazeStage is signed with the Developer ID (gazestage.yml, the suite's
+     .github/scripts/mac-sign.sh, SIGNING.md), for the app and its helpers. The hardened runtime
+     that notarization needs turns off what these turn back on. The first three are
+     electron-builder's own defaults for Electron. -->
+<plist version="1.0">
+<dict>
+    <!-- V8, the JavaScript engine, compiles as it runs -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <!-- and writes that code to memory -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- the native MIDI module and Electron's own libraries -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- the camera, to follow head and eyes -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <!-- the microphone, for a short sound as a switch -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>

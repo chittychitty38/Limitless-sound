@@ -48,7 +48,11 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       # electron-builder skips signing on pull requests by default, which leaves the Mac app
       # with a broken signature. Ours is an ad-hoc signature with no secrets, so it is safe here.
+      # (With the secrets below, pull requests from forks still get no secrets, so no signing.)
       CSC_FOR_PULL_REQUEST: "true"
+      # Signing with certificates happens only when these secrets exist (SIGNING.md).
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12 != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,10 +61,59 @@ jobs:
           cache: npm
           cache-dependency-path: apps/gazestage/package-lock.json
       - run: npm ci
-      - run: npm run ${{ matrix.script }}
+      # Without the secrets: exactly `npm run <script>`, ad-hoc signed on the Mac. With them,
+      # electron-builder signs with the Developer ID (hardened runtime, the camera and microphone
+      # entitlements) and notarizes the app, and signs the Windows app and installer.
+      - name: Build
+        shell: bash
+        env:
+          LS_APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          LS_APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          LS_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          LS_APPLE_ID: ${{ secrets.APPLE_ID }}
+          LS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          LS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          LS_WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          LS_WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          signing=()
+          if [ "$RUNNER_OS" = macOS ] && [ "$HAS_APPLE_CERT" = true ]; then
+            [ -n "$LS_APPLE_SIGNING_IDENTITY" ] || { echo "::error::Set the APPLE_SIGNING_IDENTITY secret too (SIGNING.md)"; exit 1; }
+            export CSC_LINK="$LS_APPLE_CERT_P12" CSC_KEY_PASSWORD="$LS_APPLE_CERT_PASSWORD"
+            # electron-builder wants the name without its "Developer ID Application: " start.
+            signing+=("-c.mac.identity=${LS_APPLE_SIGNING_IDENTITY#Developer ID Application: }"
+                      -c.mac.hardenedRuntime=true -c.forceCodeSigning=true
+                      -c.mac.entitlements=packaging/mac-entitlements.plist
+                      -c.mac.entitlementsInherit=packaging/mac-entitlements.plist)
+            if [ -n "$LS_APPLE_ID" ]; then
+              export APPLE_ID="$LS_APPLE_ID" APPLE_TEAM_ID="$LS_APPLE_TEAM_ID" APPLE_APP_SPECIFIC_PASSWORD="$LS_APPLE_APP_PASSWORD"
+            else
+              echo "::notice title=Signing::Notarization skipped: APPLE_ID isn't set"
+            fi
+          fi
+          if [ "$RUNNER_OS" = Windows ] && [ "$HAS_WINDOWS_CERT" = true ]; then
+            export WIN_CSC_LINK="$LS_WINDOWS_CERT_PFX" WIN_CSC_KEY_PASSWORD="$LS_WINDOWS_CERT_PASSWORD"
+            signing+=(-c.forceCodeSigning=true)
+          fi
+          if [ ${#signing[@]} -gt 0 ]; then
+            npm run ${{ matrix.script }} -- "${signing[@]}"
+          else
+            npm run ${{ matrix.script }}
+          fi
       # Ad-hoc signed until the project has an Apple Developer ID; check the signature holds.
       - if: runner.os == 'macOS'
         run: codesign --verify --deep --strict --verbose=2 dist/mac*/GazeStage.app
+      - name: Check the Developer ID signature (macOS, only if the Apple secrets are set)
+        if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
+        run: '"$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" verify dist/mac*/GazeStage.app'
+      - name: Check the signatures (Windows, only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        run: |
+          foreach ($sig in Get-ChildItem dist\*.exe, dist\win-unpacked\GazeStage.exe | Get-AuthenticodeSignature) {
+            "$(Split-Path -Leaf $sig.Path): $($sig.Status), $($sig.SignerCertificate.Subject)"
+            if (-not $sig.SignerCertificate) { throw "$($sig.Path) isn't signed" }
+          }
       - run: npm run test:packaged
       - uses: actions/upload-artifact@v4
         with:

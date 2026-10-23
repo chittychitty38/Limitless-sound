@@ -3,10 +3,17 @@
 #   Limitless-Sound-Suite-<arch>.pkg  the standard Mac installer, with every app
 #   Limitless-Sound-Suite-<arch>.dmg  the same installer in a disk image ($3)
 # Each app arrives as a .dmg (or .zip / .app); every .app inside is copied in.
+#
+# Signing (SIGNING.md), after .github/scripts/mac-sign.sh keychain:
+#   SIGN_APPS=true  every app is signed with the Developer ID (an app whose own build already
+#                   was is kept as it is); otherwise apps get an ad-hoc signature, as before
+#   SIGN_PKG=true   the installer is signed with the Developer ID Installer certificate and,
+#                   with APPLE_ID, APPLE_TEAM_ID and APPLE_APP_PASSWORD, notarized
 set -euo pipefail
 IN="$1"; ARCH="$2"; OUT="$3"
 PKG="${OUT%.dmg}.pkg"
 HERE="$(cd "$(dirname "$0")" && pwd)"
+SIGN="$HERE/../../.github/scripts/mac-sign.sh"
 VERSION="$(tr -d '[:space:]' < "$HERE/../VERSION")"
 WORK="$(mktemp -d)"
 STAGE="$WORK/apps"
@@ -47,10 +54,17 @@ count=$(find "$STAGE" -maxdepth 1 -name "*.app" | wc -l | tr -d ' ')
 echo "$count apps staged"
 [ "$count" -ge 1 ] || { echo "No apps found"; exit 1; }
 
-# Unsigned builds still need an ad-hoc signature to run on Apple Silicon.
-for app in "$STAGE"/*.app; do
-  codesign --verify "$app" 2>/dev/null || codesign --force --deep --sign - "$app"
-done
+if [ "${SIGN_APPS:-}" = true ]; then
+  # The Developer ID: an app built before the certificates existed is signed here.
+  for app in "$STAGE"/*.app; do
+    "$SIGN" app --keep-signed "$app"
+  done
+else
+  # Unsigned builds still need an ad-hoc signature to run on Apple Silicon.
+  for app in "$STAGE"/*.app; do
+    codesign --verify "$app" 2>/dev/null || codesign --force --deep --sign - "$app"
+  done
+fi
 
 # The installer package. Its apps always go to /Applications: Installer's default is to
 # "relocate" an app to wherever another copy of it already is (an old download, say).
@@ -69,9 +83,14 @@ pkgutil --expand "$PKG" "$WORK/expanded"
 for page in en.lproj/welcome en.lproj/conclusion es.lproj/welcome es.lproj/conclusion; do
   [ -f "$WORK/expanded/Resources/$page.html" ] || { echo "The installer is missing $page.html"; exit 1; }
 done
+if [ "${SIGN_PKG:-}" = true ]; then
+  "$SIGN" pkg "$PKG"
+  "$SIGN" notarize "$PKG"  # Apple checks every app inside too; the ticket is stapled to the .pkg
+fi
 echo "Built $PKG"
 
-# The same installer in a disk image, for the download links that point at the .dmg.
+# The same installer in a disk image, for the download links that point at the .dmg. The image
+# itself stays unsigned: the installer in it carries the signature and Apple's ticket.
 DMG_STAGE="$WORK/Limitless Sound"
 mkdir -p "$DMG_STAGE"
 cp "$PKG" "$DMG_STAGE/Install Limitless Sound.pkg"

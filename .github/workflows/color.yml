@@ -48,6 +48,9 @@ jobs:
             swift_arch: x86_64
             artifact: Limitless-Color-mac-intel
     runs-on: ${{ matrix.runner }}
+    # Signing with a certificate happens only when these secrets exist (SIGNING.md).
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -70,9 +73,42 @@ jobs:
           perm=$(perl -e "alarm 30; exec @ARGV" app/src-tauri/binaries/limitless-overlay-${{ matrix.arch }}-apple-darwin --check-permission)
           echo "permission check said: $perm"
           echo "$perm" | grep -Eq '^(granted|denied)$'
+      # Without the secrets: exactly as before, ad-hoc signed (tauri.conf.json). With them, Tauri
+      # signs the app, its helper and the disk image with the Developer ID and the hardened
+      # runtime, and notarizes the app. It reads these names; an empty APPLE_SIGNING_IDENTITY
+      # would replace the ad-hoc "-", so they're set only with the secrets.
       - name: Build the app
         working-directory: apps/color/app
-        run: npx --yes @tauri-apps/cli@2.9.4 build
+        env:
+          LS_APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          LS_APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          LS_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          LS_APPLE_ID: ${{ secrets.APPLE_ID }}
+          LS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          LS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ "$HAS_APPLE_CERT" = true ]; then
+            export APPLE_CERTIFICATE="$LS_APPLE_CERT_P12" APPLE_CERTIFICATE_PASSWORD="$LS_APPLE_CERT_PASSWORD"
+            export APPLE_SIGNING_IDENTITY="$LS_APPLE_SIGNING_IDENTITY"
+            if [ -n "$LS_APPLE_ID" ]; then
+              export APPLE_ID="$LS_APPLE_ID" APPLE_TEAM_ID="$LS_APPLE_TEAM_ID" APPLE_PASSWORD="$LS_APPLE_APP_PASSWORD"
+            else
+              echo "::notice title=Signing::Notarization skipped: APPLE_ID isn't set"
+            fi
+          fi
+          npx --yes @tauri-apps/cli@2.9.4 build
+      - name: Check the signature and notarize the disk image (only if the Apple secrets are set)
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" verify "target/release/bundle/macos/Limitless Color.app"
+          # Tauri signs the disk image but notarizes only the app inside it.
+          for dmg in target/release/bundle/dmg/*.dmg; do
+            "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" notarize "$dmg"
+          done
       - name: Smoke test the app
         run: |
           set -e
@@ -95,15 +131,32 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    # Signing happens only when these secrets exist (SIGNING.md); without them the build is unsigned.
+    env:
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # With the secrets, Tauri signs the app, the installer and its uninstaller through
+      # .github/scripts/win-sign.ps1 (its bundle.windows.signCommand, added for this build only).
       - name: Build the app
         working-directory: apps/color/app
-        run: npx --yes @tauri-apps/cli@2.9.4 build
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $signing = @()
+          if ($env:HAS_WINDOWS_CERT -eq 'true') {
+            $script = Join-Path $env:GITHUB_WORKSPACE '.github\scripts\win-sign.ps1'
+            $config = @{ bundle = @{ windows = @{ signCommand = @{ cmd = 'pwsh'; args = @('-NoProfile', '-File', $script, '%1') } } } }
+            $file = Join-Path $env:RUNNER_TEMP 'tauri-signing.json'
+            [IO.File]::WriteAllText($file, (ConvertTo-Json $config -Depth 8))
+            $signing = @('--config', $file)
+          }
+          npx --yes @tauri-apps/cli@2.9.4 build @signing
       - name: Smoke test the app and installer
         shell: pwsh
         run: |

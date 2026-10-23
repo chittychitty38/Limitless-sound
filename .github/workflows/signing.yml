@@ -1,0 +1,246 @@
+# Tries the signing scripts with throwaway certificates made on the spot, so they're known to work
+# before the real ones exist (SIGNING.md). No computer trusts these certificates, which is fine:
+# the check is that the scripts sign real apps and installers that still verify, install and run.
+# Notarization can't be tried without Apple, so it runs its "APPLE_ID isn't set" path here.
+name: Signing check
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/scripts/mac-sign.sh", ".github/scripts/win-sign.ps1", ".github/workflows/signing.yml",
+            "packaging/mac/build-suite-dmg.sh", "**/mac-entitlements.plist"]
+  pull_request:
+    paths: [".github/scripts/mac-sign.sh", ".github/scripts/win-sign.ps1", ".github/workflows/signing.yml",
+            "packaging/mac/build-suite-dmg.sh", "**/mac-entitlements.plist"]
+  workflow_dispatch:
+
+concurrency:
+  group: signing-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15        # Apple silicon
+            arch: mac-apple-silicon
+            gazestage: dist:mac-arm64
+          - os: macos-15-intel
+            arch: mac-intel
+            gazestage: dist:mac-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      TEST_APP_IDENTITY: "Developer ID Application: Limitless Sound Test (TESTTEAM00)"
+      TEST_PKG_IDENTITY: "Developer ID Installer: Limitless Sound Test (TESTTEAM00)"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+
+      - name: Make throwaway Developer ID certificates, as .p12 in base64 like the secrets
+        run: |
+          d="$RUNNER_TEMP/test-certs"; mkdir -p "$d"; cd "$d"
+          make_cert() {  # <file> <name> <Apple's marker for the kind> <extended key usage>
+            printf '%s\n' '[req]' 'distinguished_name = dn' 'prompt = no' 'x509_extensions = ext' \
+              '[dn]' "CN = $2" 'OU = TESTTEAM00' 'O = Limitless Sound test' 'C = US' \
+              '[ext]' 'basicConstraints = critical, CA:false' 'keyUsage = critical, digitalSignature' \
+              "extendedKeyUsage = $4" 'subjectKeyIdentifier = hash' "$3 = ASN1:NULL" > "$1.cnf"
+            /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 2 -config "$1.cnf" -keyout "$1.key" -out "$1.crt"
+            /usr/bin/openssl pkcs12 -export -inkey "$1.key" -in "$1.crt" -name "$2" -passout pass:test-password -out "$1.p12"
+          }
+          make_cert app "$TEST_APP_IDENTITY" 1.2.840.113635.100.6.1.13 codeSigning
+          make_cert installer "$TEST_PKG_IDENTITY" 1.2.840.113635.100.6.1.14 "codeSigning, 1.2.840.113635.100.4.13"
+          {
+            echo "APPLE_CERT_P12=$(base64 -i app.p12 | tr -d '\n')"
+            echo "APPLE_CERT_PASSWORD=test-password"
+            echo "APPLE_INSTALLER_CERT_P12=$(base64 -i installer.p12 | tr -d '\n')"
+            echo "APPLE_INSTALLER_CERT_PASSWORD=test-password"
+          } >> "$GITHUB_ENV"
+          rm -f ./*.key
+
+      - name: A wrong certificate name is refused with what to put instead
+        run: |
+          if APPLE_SIGNING_IDENTITY="Developer ID Application: Someone Else (XXXXXXXXXX)" \
+             .github/scripts/mac-sign.sh keychain > out.txt 2>&1; then
+            cat out.txt; echo "::error::The wrong name was accepted"; exit 1
+          fi
+          sed 's/^::/(expected) /' out.txt
+          grep -q 'Copy that name, exactly' out.txt
+          rm out.txt
+
+      - name: Put the certificates in a keychain, as a release build does
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ env.TEST_APP_IDENTITY }}
+          APPLE_INSTALLER_IDENTITY: ${{ env.TEST_PKG_IDENTITY }}
+        run: .github/scripts/mac-sign.sh keychain
+
+      - name: Build Limitless Sound (Python) and Limitless One-Hand (Python and Qt) as their workflows do
+        run: |
+          (cd shared/hub && pip install pyinstaller==6.16.0 && pyinstaller --noconfirm packaging/limitless_hub.spec)
+          (cd apps/one-hand && pip install -r requirements.txt pyinstaller==6.22.3 pillow==11.3.0 &&
+            pyinstaller --noconfirm onehand.spec)
+
+      - name: Build GazeStage (Electron) as its workflow does, ad-hoc signed
+        working-directory: apps/gazestage
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_FOR_PULL_REQUEST: "true"
+        run: |
+          npm ci
+          npm run ${{ matrix.gazestage }}
+
+      - name: Sign One-Hand as its release build does, and run it under the hardened runtime
+        timeout-minutes: 10
+        run: |
+          app="apps/one-hand/dist/Limitless One-Hand.app"
+          .github/scripts/mac-sign.sh app "$app"
+          codesign --verify --deep --strict "$app"
+          codesign -dvv "$app" 2>&1 | grep -qxF "Authority=$TEST_APP_IDENTITY"
+          codesign -d --entitlements - "$app" | grep -q allow-unsigned-executable-memory
+          "$app/Contents/MacOS/Limitless One-Hand" --self-test
+          "$app/Contents/MacOS/Limitless One-Hand" --ui-smoke
+
+      - name: Sign GazeStage as the suite does an app built before the certificates, and run it
+        timeout-minutes: 15
+        run: |
+          app=$(ls -d apps/gazestage/dist/mac*/GazeStage.app)
+          .github/scripts/mac-sign.sh app "$app"
+          codesign -dvv "$app" 2>&1 | grep -qxF "Authority=$TEST_APP_IDENTITY"
+          codesign -d --entitlements - "$app" | grep -q device.camera
+          (cd apps/gazestage && npm run test:packaged)
+
+      - name: Build a signed suite installer from these three, as the suite workflow does
+        env:
+          SIGN_APPS: "true"
+          SIGN_PKG: "true"
+        run: |
+          mkdir suite-in
+          # Limitless Sound as built (ad-hoc): the suite signs it. The other two are kept as signed.
+          ditto "shared/hub/dist/Limitless Sound.app" "suite-in/Limitless Sound.app"
+          ditto "apps/one-hand/dist/Limitless One-Hand.app" "suite-in/Limitless One-Hand.app"
+          ditto "$(ls -d apps/gazestage/dist/mac*/GazeStage.app)" "suite-in/GazeStage.app"
+          packaging/mac/build-suite-dmg.sh suite-in "${{ matrix.arch }}" "Limitless-Sound-Suite-${{ matrix.arch }}.dmg" | tee suite.log
+          grep -q "Limitless One-Hand.app: already signed" suite.log
+          grep -q "GazeStage.app: already signed" suite.log
+          grep -q "Signing Limitless Sound.app" suite.log
+          grep -q "Notarization skipped" suite.log
+          pkgutil --check-signature "Limitless-Sound-Suite-${{ matrix.arch }}.pkg" | tee pkg.txt
+          grep -qF "$TEST_PKG_IDENTITY" pkg.txt
+
+      - name: Install it (allowing the untrusted test certificate) and check and run what it installed
+        run: |
+          sudo installer -allowUntrusted -pkg "Limitless-Sound-Suite-${{ matrix.arch }}.pkg" -target /
+          for app in "Limitless Sound" "Limitless One-Hand" "GazeStage"; do
+            .github/scripts/mac-sign.sh verify "/Applications/$app.app"
+            codesign -dvv "/Applications/$app.app" 2>&1 | grep -qxF "Authority=$TEST_APP_IDENTITY"
+          done
+          # Limitless Sound, signed by the suite, starts and answers (as in shared.yml).
+          export LIMITLESS_SOUND_HOME="$RUNNER_TEMP/ls-home"
+          "/Applications/Limitless Sound.app/Contents/MacOS/Limitless Sound" --background --port 48900 --http-port 48901 &
+          for i in $(seq 1 40); do [ -f "$LIMITLESS_SOUND_HOME/link.json" ] && break; sleep 0.5; done
+          TOKEN=$(python -c "import json,os;print(json.load(open(os.path.join(os.environ['LIMITLESS_SOUND_HOME'],'link.json')))['token'])")
+          curl -sf -H "X-Limitless-Token: $TOKEN" http://127.0.0.1:48901/api/state | python -c "import json,sys; s=json.load(sys.stdin); assert len(s['tools'])>=6; print('hub ok,', len(s['actions']), 'actions')"
+          curl -sf -X POST -H "X-Limitless-Token: $TOKEN" -H "Content-Type: application/json" -d '{}' http://127.0.0.1:48901/api/quit
+
+      - name: Delete the keychain
+        if: always()
+        run: .github/scripts/mac-sign.sh cleanup
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Make a throwaway code-signing certificate, as a .pfx in base64 like the secret
+        shell: powershell  # Windows PowerShell has the PKI commands built in
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Limitless Sound Test" `
+            -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddDays(2)
+          $pfx = Join-Path $env:RUNNER_TEMP test.pfx
+          $null = Export-PfxCertificate -Cert $cert -FilePath $pfx -Password (ConvertTo-SecureString test-password -AsPlainText -Force)
+          # Out of the certificate store again: the script must sign from the .pfx, as in a release build.
+          Remove-Item "Cert:\CurrentUser\My\$($cert.Thumbprint)"
+          Add-Content $env:GITHUB_ENV "WINDOWS_CERT_PFX=$([Convert]::ToBase64String([IO.File]::ReadAllBytes($pfx)))"
+          Add-Content $env:GITHUB_ENV "WINDOWS_CERT_PASSWORD=test-password"
+          Add-Content $env:GITHUB_ENV "TEST_THUMBPRINT=$($cert.Thumbprint)"
+          Remove-Item $pfx
+
+      - name: Build a small program (PyInstaller, one file, like One-Hand) and an Inno Setup installer for it
+        run: |
+          pip install pyinstaller==6.22.3
+          New-Item -ItemType Directory -Force test | Out-Null
+          Set-Content test\hello.py 'print("hello from a signed program")'
+          pyinstaller --noconfirm --onefile --distpath "test\Limitless Test" --workpath test\build --specpath test test\hello.py
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+            $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
+          }
+          @(
+            '[Setup]', 'AppName=Limitless Signing Test', 'AppVersion=1.0', 'DefaultDirName={localappdata}\Limitless Signing Test',
+            'PrivilegesRequired=lowest', 'Uninstallable=no', 'OutputDir=.', 'OutputBaseFilename=Limitless-Test-Setup',
+            '[Files]', 'Source: "Limitless Test\hello.exe"; DestDir: "{app}"'
+          ) | Set-Content test\test.iss
+          iscc test\test.iss
+          if ($LASTEXITCODE -ne 0) { throw "iscc failed" }
+
+      - name: A wrong password is refused, with a failing exit code (what Tauri's sign command sees)
+        run: |
+          $env:WINDOWS_CERT_PASSWORD = 'not-the-password'
+          pwsh -NoProfile -File .github\scripts\win-sign.ps1 "test\Limitless Test\hello.exe" *> out.txt
+          $code = $LASTEXITCODE
+          Get-Content out.txt
+          if ($code -eq 0) { throw "A wrong password was accepted" }
+          if (-not (Select-String -Path out.txt -SimpleMatch "WINDOWS_CERT_PASSWORD" -Quiet)) { throw "The message doesn't name the password secret" }
+          if ((Get-AuthenticodeSignature "test\Limitless Test\hello.exe").Status -ne 'NotSigned') { throw "Signed anyway" }
+          $global:LASTEXITCODE = 0  # the failure above was the point
+
+      - name: Sign both as a release build does (the way Tauri calls it, and a wildcard like Control's)
+        run: |
+          pwsh -NoProfile -File .github\scripts\win-sign.ps1 "test\Limitless Test\hello.exe"
+          if ($LASTEXITCODE -ne 0) { throw "win-sign.ps1 failed with $LASTEXITCODE" }
+          & .github\scripts\win-sign.ps1 "test\*Setup.exe"
+
+      - name: Check the signatures, then run the signed program and installer
+        run: |
+          foreach ($file in "test\Limitless Test\hello.exe", "test\Limitless-Test-Setup.exe") {
+            $sig = Get-AuthenticodeSignature $file
+            "$file`n  signer: $($sig.SignerCertificate.Subject) ($($sig.SignerCertificate.Thumbprint))`n  timestamp: $($sig.TimeStamperCertificate.Subject)`n  Windows says: $($sig.Status) (untrusted is expected for a test certificate)"
+            if ($sig.SignerCertificate.Thumbprint -ne $env:TEST_THUMBPRINT) { throw "$file isn't signed with the test certificate" }
+            if (-not $sig.TimeStamperCertificate) { throw "$file has no timestamp" }
+          }
+          # signtool's own reading of the signature: present, though the test root isn't trusted
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
+          & $signtool verify /pa /v "test\Limitless-Test-Setup.exe" | Select-String "Issued to|Signing Certificate Chain|timestamp" | Out-Host
+          $out = & "test\Limitless Test\hello.exe"
+          if ($out -ne "hello from a signed program") { throw "The signed one-file program didn't run: $out" }
+          $p = Start-Process test\Limitless-Test-Setup.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -PassThru
+          $null = $p.Handle
+          if (-not $p.WaitForExit(300000) -or $p.ExitCode -ne 0) { throw "The signed installer failed" }
+          $installed = Join-Path $env:LOCALAPPDATA "Limitless Signing Test\hello.exe"
+          if ((& $installed) -ne "hello from a signed program") { throw "The installed program didn't run" }
+          "The signed program and installer both run."
+
+      - name: An installer already signed is kept as it is (the suite's -SkipSigned)
+        run: |
+          $hash = (Get-FileHash test\Limitless-Test-Setup.exe).Hash
+          & .github\scripts\win-sign.ps1 -SkipSigned test\Limitless-Test-Setup.exe
+          if ((Get-FileHash test\Limitless-Test-Setup.exe).Hash -ne $hash) { throw "-SkipSigned signed it again" }
