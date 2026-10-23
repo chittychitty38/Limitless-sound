@@ -1,6 +1,11 @@
 # Spanish, for Latin America and Spain alike: where the two say it differently
 # ("añadir" and "agregar", "ordenador" and "computadora", "intro" and "enter"), both are here.
-# Many musicians keep the English names (solo, mute, loop, bounce, click), so those are here too.
+# Many musicians keep the English names (solo, mute, loop, click), so those are here too, where
+# the speech model knows them ("bounce" and "mixer" it doesn't).
+# Every word must be one the model knows: stress/test_voice_language.py checks, and for a word it
+# doesn't know prints the nearest it does. Destructive commands (Cut, Paste, Delete, Duplicate)
+# are said alone only as infinitives, as Spanish menus name them: real people's "corte" and
+# "corto" came back as "corta" from both recognizers, and pressed Cut (test_command_words.py).
 # See language.py for what each section is, and en.yaml for the English it follows.
 
 code: es
@@ -40,7 +45,13 @@ words:
   filler_start: [por favor, eh, em, bueno, oye, oye computadora, oye ordenador, computadora, ordenador,
                  ok, okey, vale]
   filler_end: [por favor, gracias]
-  recognize: [borra eso, borrar eso, tacha eso, nueva línea, salto de línea, nuevo párrafo, veces, vez, por favor, "y"]
+  recognize: [borra eso, borrar eso, tacha eso, nueva línea, salto de línea, nuevo párrafo, veces, vez, por favor, "y",
+              # Said alone, these do nothing: they're here so the command recognizer can write them
+              # down instead of the command they sound like. Other forms of the command words
+              # ("grabado" isn't "grabar"), and words said alone all the time ("este", "nada").
+              grabado, grabada, grabación, grabó, reproducción, dividido, división, unido, unión, parado,
+              parada, paró, detenido, guardado, cortado, corte, pegado, borrado, eliminado, silencio, sola,
+              este, nada]
 
 punctuation:
   coma: ","
@@ -82,16 +93,13 @@ keys:
     option: opt
     alt: opt
     mayúsculas: shift
-    mayús: shift
     shift: shift
     windows: win
     intro: return
     enter: return
     retorno: return
-    tabulador: tab
     tab: tab
     espacio: space
-    barra espaciadora: space
     borrar: delete
     retroceso: delete
     suprimir: forwarddelete
@@ -110,7 +118,6 @@ keys:
     igual: "="
     más: "="
     punto y coma: ;
-    comilla: "'"
     barra invertida: \
     corchete: "["
     abrir corchete: "["
@@ -120,12 +127,22 @@ keys:
   letters: {a: a, be: b, ce: c, de: d, e: e, efe: f, ge: g, hache: h, i: i, jota: j, ka: k, ele: l,
             eme: m, ene: n, o: o, pe: p, cu: q, erre: r, ese: s, te: t, u: u, uve: v, ve: v, uve doble: w,
             doble uve: w, doble ve: w, doble u: w, equis: x, ye: "y", i griega: "y", zeta: z,
-            alfa: a, bravo: b, charlie: c, delta: d, eco: e, foxtrot: f, golf: g, hotel: h, india: i,
+            alfa: a, bravo: b, charlie: c, delta: d, eco: e, golf: g, hotel: h, india: i,
             julieta: j, kilo: k, lima: l, mike: m, noviembre: n, óscar: o, papa: p, quebec: q, romeo: r,
-            sierra: s, tango: t, uniforme: u, víctor: v, whisky: w, yanqui: "y", zulú: z}
+            sierra: s, tango: t, uniforme: u, víctor: v, whisky: w, yanqui: "y"}
   f: [efe, f]
 
-sounds_like: {}
+# The command recognizer can write a whole sentence in Spanish command words ("abrir te garage de
+# al ir al en ese punto", from FLEURS): "abre ..." and "escribe ..." take their words from the
+# open recognizer only.
+free_text_needs_both: true
+# A near miss never cuts, pastes or deletes: "corta" is one letter from "cortar".
+exact_destructive: true
+
+# Words the speech model doesn't know, spelled as words it does. The recognizer listens for
+# these spellings; normalize() turns them back.
+sounds_like:
+  metrónomo: [metronomo, metro nomo]
 
 # Every reply and help line, by its English words. {names} are filled in after.
 texts:
@@ -241,18 +258,18 @@ commands:
   Everywhere:
     press {chord:keys}: ["pulsa {chord:keys}", "presiona {chord:keys}", "pulsar {chord:keys}",
                          "presionar {chord:keys}", "tecla {chord:keys}"]
-    type {words:text}: ["escribe {words:text}", "escribir {words:text}", "teclea {words:text}"]
-    undo: ["deshacer", "deshaz", "deshacer eso", "deshaz eso", "deshazlo"]
-    redo: &redo ["rehacer", "rehaz", "rehacer eso", "rehaz eso", "rehazlo"]
-    copy: ["copiar", "copia", "copiar eso", "copia eso", "cópialo"]
-    cut: ["cortar", "corta", "cortar eso", "corta eso", "córtalo"]
-    paste: ["pegar", "pega", "pegar eso", "pega eso", "pégalo"]
+    type {words:text}: ["escribe {words:text}", "escribir {words:text}"]
+    undo: ["deshacer", "deshacer eso"]
+    redo: &redo ["rehacer", "rehacer eso"]
+    copy: ["copiar", "copia", "copiar eso", "copia eso"]
+    cut: ["cortar", "cortar eso", "corta eso", "córtalo"]
+    paste: ["pegar", "pegar eso", "pega eso"]
     select all: ["seleccionar todo", "selecciona todo"]
     save: ["guardar", "guarda", "guardar [el] proyecto", "guarda [el] proyecto", "guardar [la] sesión",
            "guarda [la] sesión", "guardar eso", "guárdalo"]
     press enter: ["pulsa intro", "pulsa enter", "intro", "enter"]
     escape: ["escape", "pulsa escape", "tecla escape"]
-    tab: ["tabulador", "tab", "siguiente campo", "campo siguiente"]
+    tab: ["tab", "siguiente campo", "campo siguiente"]
     previous field: ["campo anterior"]
     # Not "arriba" or "derecha" alone, as English isn't "up" or "right" alone: they're said all the time.
     move up: ["mover arriba", "mueve arriba", "flecha arriba", "flecha hacia arriba"]
@@ -295,7 +312,7 @@ commands:
     go to start: &start ["ir al principio", "ir al inicio", "volver al principio", "volver al inicio",
                          "al principio", "al inicio"]
     forward: ["adelante", "avanzar", "siguiente compás", "compás siguiente", "avanzar [un] compás"]
-    back: ["atrás", "retroceder", "compás anterior", "retroceder [un] compás", "rebobinar"]
+    back: ["atrás", "retroceder", "compás anterior", "retroceder [un] compás"]
     go to bar {bar:number}: &bar ["ir al compás {bar:number}", "compás {bar:number}",
                                   "saltar al compás {bar:number}",
                                   "ve al compás {bar:number}"]
@@ -310,8 +327,8 @@ commands:
     next track: &next_track ["siguiente pista", "pista siguiente", "pista abajo"]
     previous track: &previous_track ["pista anterior", "pista arriba"]
     solo: &solo ["solo", "solo pista", "poner en solo", "pon en solo", "quitar [el] solo", "quita [el] solo"]
-    mute: &mute ["silenciar", "silencia", "silenciar [la] pista", "silencia [la] pista", "mute", "mutear",
-                 "mutea", "mutear [la] pista", "mutea [la] pista", "quitar [el] silencio",
+    mute: &mute ["silenciar", "silencia", "silenciar [la] pista", "silencia [la] pista", "mute",
+                 "mute [la] pista", "poner mute", "quitar [el] silencio",
                  "quita [el] silencio"]
     arm: &arm ["armar", "arma", "armar [la] pista", "arma [la] pista", "activar grabación", "desarmar",
                "desarma"]
@@ -319,12 +336,11 @@ commands:
             "corta aquí"]
     join: ["unir", "une", "unir regiones", "une [las] regiones"]
     repeat region: ["repetir región", "repetir regiones", "repite [la] región"]
-    quantize: &quantize ["cuantizar", "cuantiza", "cuantizar eso", "cuantiza eso"]
-    delete: &delete ["eliminar", "elimina", "borrar", "borra", "eliminar eso", "elimina eso", "borrar eso",
-                     "borra eso", "quitar eso", "quita eso", "suprimir"]
-    set locators: ["ajustar localizadores", "fijar localizadores", "ciclo a [la] selección",
-                   "loop a [la] selección"]
-    mixer: ["mezclador", "mixer", "mostrar [el] mezclador", "ocultar [el] mezclador", "ver [el] mezclador"]
+    quantize: &quantize ["cuantizar", "cuantiza", "cuantificar", "cuantizar eso", "cuantiza eso", "cuantificar eso"]
+    delete: &delete ["eliminar", "borrar", "suprimir", "eliminar eso", "elimina eso", "borrar eso", "borra eso",
+                     "quitar eso", "quita eso"]
+    set locators: ["ciclo a [la] selección", "loop a [la] selección"]
+    mixer: ["mezclador", "mostrar [el] mezclador", "ocultar [el] mezclador", "ver [el] mezclador"]
     library: ["biblioteca", "mostrar [la] biblioteca", "ver [la] biblioteca", "ocultar [la] biblioteca"]
     inspector: ["inspector", "mostrar [el] inspector", "ver [el] inspector"]
     editor: ["editor", "editores", "mostrar [el] editor", "ver [el] editor"]
@@ -343,8 +359,7 @@ commands:
     zoom out vertical: ["alejar en vertical", "reducir en vertical", "pistas más bajas"]
     zoom to fit: &fit ["ajustar a [la] ventana", "ajustar a [la] selección", "zoom a [la] selección",
                        "ajustar zoom"]
-    bounce: ["bounce", "exportar [la] mezcla", "exportar [el] proyecto", "hacer [el] bounce",
-             "bounce [del] proyecto"]
+    bounce: ["exportar [la] mezcla", "exportar [el] proyecto"]
 
   Pro Tools:
     play: *play
@@ -362,7 +377,7 @@ commands:
                   "empuja a la derecha", "desplazar adelante"]
     nudge left: ["desplazar a la izquierda", "desplaza a la izquierda", "empujar a la izquierda",
                  "empuja a la izquierda", "desplazar atrás"]
-    mixer: ["mezclador", "mixer", "mostrar [el] mezclador", "ventana de edición",
+    mixer: ["mezclador", "mostrar [el] mezclador", "ventana de edición",
             "mostrar [la] ventana de edición", "ventana de mezcla", "alternar mezcla"]
     midi editor: ["editor midi", "editor de midi", "mostrar [el] editor midi"]
     workspace: ["espacio de trabajo", "mostrar [el] espacio de trabajo"]
@@ -377,20 +392,20 @@ commands:
     spot mode: ["modo spot", "spot"]
     grid mode: ["modo grid", "grid", "modo cuadrícula", "cuadrícula", "modo rejilla", "rejilla"]
     zoomer: ["herramienta zoom", "herramienta de zoom", "lupa"]
-    trimmer: ["herramienta de recorte", "herramienta recortar", "recortador"]
+    trimmer: ["herramienta de recorte", "herramienta recortar"]
     selector: ["selector", "herramienta selector", "herramienta de selección"]
-    grabber: ["herramienta mano", "herramienta de mano", "agarrador"]
-    scrubber: ["herramienta scrub", "herramienta de arrastre", "scrubber"]
+    grabber: ["herramienta mano", "herramienta de mano"]
+    scrubber: ["herramienta de arrastre"]
     pencil: ["lápiz", "herramienta lápiz", "herramienta de lápiz"]
     redo: *redo
     separate: ["separar", "separa", "separar clip", "dividir", "divide", "dividir aquí", "cortar aquí",
                "corta aquí"]
     heal: ["reparar", "repara", "reparar [la] separación", "repara [la] separación"]
-    duplicate: ["duplicar", "duplica", "duplicar eso", "duplica eso", "duplícalo"]
+    duplicate: ["duplicar", "duplicar eso", "duplica eso"]
     repeat: ["repetir", "repetir clip", "repite [el] clip"]
     # Not "recorta" alone: it sounds like "corta", which cuts.
     trim to selection: ["recortar a [la] selección", "recorta a [la] selección", "recortar [el] clip"]
-    fades: ["fundidos", "fundido", "crear fundidos", "hacer fundidos", "fades", "fade"]
+    fades: ["fundidos", "fundido", "crear fundidos", "hacer fundidos", "fade"]
     consolidate: ["consolidar", "consolida", "consolidar clip"]
     quantize: *quantize
     delete: *delete
@@ -398,5 +413,5 @@ commands:
     zoom in: *zoom_in
     zoom out: *zoom_out
     zoom to fit: *fit
-    bounce: ["bounce", "exportar [la] mezcla", "exportar mezcla", "bounce a disco", "hacer [el] bounce"]
+    bounce: ["exportar [la] mezcla", "exportar a disco"]
     save as: ["guardar como", "guarda como"]

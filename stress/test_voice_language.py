@@ -4,7 +4,8 @@ The command recognizer can only hear a word its model knows: given one it doesn'
 word and warns ("Ignoring word missing in vocabulary"), and the open recognizer can never write
 it down. So every word of every phrase in a language must be one its model knows, spelled the
 model's way ("compás", not "compas"). Words it doesn't know are spelled as words it does in the
-language's sounds_like ("quantize" as "quant ties"); app names for "open ..." are left out.
+language's sounds_like ("quantize" as "quant ties"); app names for "open ..." are left out. For
+each word it doesn't know, the nearest words it does are printed.
 
 Reads the vocabulary from the model's graph (graph/Gr.fst), so it needs no recognizer. Needs
 VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
@@ -12,6 +13,7 @@ VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
 
 from __future__ import annotations
 
+import difflib
 import os
 import struct
 from pathlib import Path
@@ -74,6 +76,9 @@ def test_every_word_voice_listens_for_is_known():
     readme = Path(MODEL) / "README"
     print(f"\n{Path(MODEL).name}: {len(known)} words. {LANG.english_name}: {len(words)} words Voice listens for, "
           f"{len(unknown)} unknown: {', '.join(unknown) or 'none'}")
+    for w in unknown:
+        # what to write instead: the model's own spellings nearest to it
+        print(f"  {w}: closest it knows: {', '.join(difflib.get_close_matches(w, known, n=6, cutoff=0.6)) or '-'}")
     if readme.is_file():
         lines = [x.strip() for x in readme.read_text(errors="replace").splitlines() if x.strip()]
         print("Its README: " + " / ".join(lines[:4] + [x for x in lines[4:] if "licen" in x.lower()]))

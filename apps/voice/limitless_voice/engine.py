@@ -240,8 +240,10 @@ class Engine:
         cmd, params = found
         # Free text from the command recognizer is only the command words it could place: "open the
         # [unk] [unk] that" tried to open an app called "the that". When it missed words, the
-        # words come from the open recognizer, or the command doesn't run.
-        if (cmd.free_text and alternative is not None and "[unk]" in heard.lower()
+        # words come from the open recognizer, or the command doesn't run. In a language whose
+        # command words include everyday ones (Spanish "de", "la", "al"), a whole sentence can come
+        # back in command words with none missed, so there the words always come from the open one.
+        if (cmd.free_text and alternative is not None and ("[unk]" in heard.lower() or lang.free_text_needs_both)
                 and said == normalize(heard) != normalize(alternative)):
             heard_open = normalize(alternative)
             again = self._match(split_repeat(heard_open, lang)[0], [cmd])

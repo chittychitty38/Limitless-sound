@@ -207,7 +207,8 @@ class Listener:
         self._gate = SpeechGate()
         recs = {"open": vosk.KaldiRecognizer(model, rate)}
         if self.use_command_vocabulary:
-            grammar = json.dumps(build_grammar(self.phrases))
+            # As UTF-8: Vosk reads "comp\u00e1s" as those letters, not as "compás"
+            grammar = json.dumps(build_grammar(self.phrases), ensure_ascii=False)
             recs["commands"] = vosk.KaldiRecognizer(model, rate, grammar)
         return recs
 

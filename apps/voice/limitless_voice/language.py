@@ -11,6 +11,10 @@ file, languages/<code>.yaml, with:
   keys         key names for "press ...", and letters
   sounds_like  words the speech model doesn't know, spelled as words it does
   texts        every reply and help line, keyed by its English words
+  free_text_needs_both   true when "open ..." and "type ..." take their words only from the
+               open recognizer (see engine.py)
+  exact_destructive      true when Cut, Paste, Delete and the like run only on their exact
+               words, never a near miss
   commands     for each built-in pack, for each command (by its first English phrase),
                the phrases to say in this language
 
@@ -56,6 +60,8 @@ class Language:
         self.sounds_like = {w: list(a) for w, a in (data.get("sounds_like") or {}).items()}
         self.texts = dict(data.get("texts") or {})
         self.commands = data.get("commands") or {}
+        self.free_text_needs_both = bool(data.get("free_text_needs_both"))
+        self.exact_destructive = bool(data.get("exact_destructive"))
         self._sounds = [(re.compile(rf"\b{re.escape(a)}\b"), w)
                         for w, aliases in self.sounds_like.items() for a in aliases]
 
@@ -133,9 +139,11 @@ class Language:
         else:
             spoken = {cmd.phrases[0]: [spec] if isinstance(spec, str) else spec}
         phrases = [p for ps in spoken.values() for p in ps]
+        from .engine import Engine
+        fuzzy = cmd.fuzzy and not (self.exact_destructive and Engine._destroys(cmd, {}))
         out = Command(phrases=phrases, action=cmd.action, pack=cmd.pack, reply=self.text(cmd.reply),
                       confirm=cmd.confirm, repeatable=cmd.repeatable, help=self.text(cmd.help),
-                      fuzzy=cmd.fuzzy, instant=cmd.instant, english=cmd.phrases, language=self)
+                      fuzzy=fuzzy, instant=cmd.instant, english=cmd.phrases, language=self)
         out.to_english = [(compile_phrase(p)[0], eng) for eng, ps in spoken.items() for p in ps]
         return out
 

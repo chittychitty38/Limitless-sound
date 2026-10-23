@@ -170,14 +170,32 @@ class SpanishEngine(unittest.TestCase):
 
     def test_a_cut_not_heard_twice_asks_first(self):
         e, p = engine()
-        r = e.handle("corta", "corte")           # the open recognizer heard another word
+        r = e.handle("cortar", "portal")         # the open recognizer heard another word
         self.assertEqual(r.kind, "ask")
         self.assertEqual(pressed(p), [])
         e.handle("sí", "sí")
         self.assertEqual(pressed(p), ["cmd+x"])
         e, p = engine()
-        e.handle("borra cincuenta veces", "borra cincuenta veces")
+        e.handle("borrar cincuenta veces", "borrar cincuenta veces")
         self.assertEqual(pressed(p), ["delete"] * 3)   # never more than three at once
+
+    def test_destructive_commands_alone_are_infinitives(self):
+        """People's "corte" and "corto" came back as "corta" from both recognizers."""
+        for said in ("corta", "pega", "borra", "elimina", "duplica"):
+            for app in ("Logic Pro", "Pro Tools"):
+                e, p = engine(app)
+                e.handle(said, said)
+                self.assertEqual(pressed(p), [], f"{said} in {app}")
+
+    def test_free_text_needs_the_open_recognizer_too(self):
+        """A sentence can come back all in command words ("de", "la", "al"): then the free text is
+        the open recognizer's, or nothing happens."""
+        e, p = engine()
+        r = e.handle("abrir te garage de al ir al en ese punto", "advierte que nadie puede dar garantía")
+        self.assertFalse(r.handled)
+        self.assertEqual(p.log, [])
+        e.handle("abre logic", "abre logic")
+        self.assertEqual([x for x in p.log if x[0] == "open"], [("open", "Logic Pro")])
 
     def test_sleep_wake_help_again(self):
         e, p = engine()
