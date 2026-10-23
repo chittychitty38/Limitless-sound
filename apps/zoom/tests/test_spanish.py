@@ -169,7 +169,10 @@ def make(qapp, tmp_path, monkeypatch):
         app.sent = []
         app.suite.link._send = lambda msg: app.sent.append(msg) or True   # no hub: keep what it would send
         app.start()   # first run: the panel, then setup
-        QTest.qWait(400)
+        for _ in range(150):   # setup opens 0.3 s after the panel, later on a busy runner
+            QTest.qWait(20)
+            if app.setup_window is not None:
+                break
         assert app.setup_window is not None
         made.append(app)
         return app
