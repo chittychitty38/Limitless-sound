@@ -3,6 +3,7 @@
 from .actions import LABELS, ZOOM_ACTIONS
 from .keymaps import TARGETS, find_target, keys_for
 from .keys import parse_combo
+from .words import t
 
 
 class Plan:
@@ -23,7 +24,7 @@ class Router:
 
     def plan(self, action, app_id):
         if action not in ZOOM_ACTIONS:
-            return Plan(action, None, [], f"Unknown action {action}", ok=False)
+            return Plan(action, None, [], t("Unknown action {action}", action=action), ok=False)
 
         target = find_target(app_id)
         base, steps = action, 1
@@ -44,10 +45,10 @@ class Router:
             combo = self._magnifier_combo(mag_action, mag)
             used = "magnifier"
 
-        label = LABELS[action]
+        label = t(LABELS[action])   # what the toast shows and the voice says: actions.py is in the Spanish table
         if combo is None:
-            name = TARGETS[target]["name"]
-            return Plan(action, target, [], f"{label} isn't available in {name}", ok=False)
+            name = t(TARGETS[target]["name"])
+            return Plan(action, target, [], t("{action} isn't available in {app}", action=label, app=name), ok=False)
 
         if used == "magnifier" and base in ("in", "out", "magIn"):
             self.magnifier_on = True
