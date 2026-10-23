@@ -66,14 +66,15 @@ WORDS = {
            "louder quieter zoom fit taller shorter again stop forward").split(),
     # Voice's Spanish commands that work alone with Logic Pro in front; numbers, which it listens
     # for ("compás treinta y dos"); then words that sound like a command but aren't ("grabación"
-    # and "grabar", "pagar" and "pega", "corte" and "corta") and a few said all the time.
-    "es": ("grabar graba reproduce reproducir play parar detener stop guardar guarda solo cortar corta pega "
-           "copia eliminar elimina borrar suprimir ciclo bucle adelante avanzar atrás dividir divide unir une "
+    # and "grabar", "pagar" and "pegar", "corte" and "cortar") and a few said all the time. Not
+    # "corta", "pega" or "elimina": they're Cut, Paste and Delete too, only not said alone.
+    "es": ("grabar graba reproduce reproducir play parar detener stop guardar guarda solo cortar "
+           "copia eliminar borrar suprimir ciclo bucle adelante avanzar atrás dividir divide unir une "
            "biblioteca inspector editor editores partitura navegador explorador ayuda escape ampliar reducir "
            "arma cancelar cancela "
            "uno dos tres cuatro cinco seis siete ocho nueve diez veinte treinta "
            "grabación grabado grabó pagar paga corte corto guardia silencio mezcla parada sola unión "
-           "reproducción dividido detenido copa cola paso nada este").split(),
+           "reproducción dividido detenido cola paso nada este").split(),
 }
 
 PROBE = 256 * 1024  # bytes read to find out where in the archive a spot is

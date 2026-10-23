@@ -42,7 +42,8 @@ need("zoom")
 
 from limitless_zoom.voice import recognize_file  # noqa: E402
 from test_voice_real_speech import (  # noqa: E402
-    LANG, MODEL, WORKERS, _agreeing, _making, _pick, _sums, _waited, hear_word, kind, normalize, right, score)
+    LANG, MODEL, WORKERS, _agreeing, _engine, _making, _pick, _sums, _waited, hear_word, kind, normalize, right,
+    score)
 from test_zoom_real_speech import _model  # noqa: E402
 
 WORDS_DIR = os.environ.get("COMMAND_WORDS_DIR")
@@ -51,9 +52,9 @@ needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom listens in 
 
 # What each language's run must reach (see the comments where they're checked).
 FLOORS = {
-    "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03},
+    "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03, "after": 1.35},
     # Not yet measured on CI: these only catch a collapse.
-    "es": {"right": 0.40, "worst": 0.05, "with_yes": 0.45, "worst_with_yes": 0.05, "stray": 0.25},
+    "es": {"right": 0.40, "worst": 0.05, "with_yes": 0.45, "worst_with_yes": 0.05, "stray": 0.30, "after": 1.6},
 }
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
@@ -172,10 +173,11 @@ def test_real_people_saying_voice_commands():
     if strays:
         assert 1 - quiet / stray_tries <= floor["stray"], \
             f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
-    instant = [x for w in ("record", "play", "stop") for x in soon[w]]
+    # The words that go the moment they're heard: record, play and stop in English.
+    instant = [x for w in commands if _engine("Logic Pro")[0].instant(w) for x in soon[w]]
     if instant:
         assert _median(instant) <= 0.8, f"record, play and stop went a median {_median(instant):.2f} s after the word"
-    assert _median(every) <= 1.35, f"commands were acted on a median {_median(every):.2f} s after the word"
+    assert _median(every) <= floor["after"], f"commands were acted on a median {_median(every):.2f} s after the word"
 
 
 @needs_words

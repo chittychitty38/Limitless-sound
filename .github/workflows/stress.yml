@@ -18,9 +18,9 @@ on:
         description: "How long each soak runs, in seconds"
         default: "600"
       only:
-        description: "Run everything, or only the ubuntu jobs that hear real people (Voice in each language, and Zoom)"
+        description: "Run everything, only the ubuntu jobs that hear real people (Voice in each language, and Zoom), or only Voice in Spanish"
         type: choice
-        options: [everything, voice-real-people]
+        options: [everything, voice-real-people, voice-spanish]
         default: everything
 
 # A newer push to the same pull request replaces the run still going for the older one.
@@ -56,9 +56,11 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [ "${{ github.event.inputs.only }}" = "voice-real-people" ]; then
+          only="${{ github.event.inputs.only }}"
+          if [ "$only" = "voice-real-people" ] || [ "$only" = "voice-spanish" ]; then
             for job in engines voice gazestage color zoom; do echo "$job=false" >> "$GITHUB_OUTPUT"; done
-            for job in real_people spanish; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
+            [ "$only" = "voice-real-people" ] && echo "real_people=true" >> "$GITHUB_OUTPUT" || echo "real_people=false" >> "$GITHUB_OUTPUT"
+            echo "spanish=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "${{ github.event_name }}" != "pull_request" ]; then

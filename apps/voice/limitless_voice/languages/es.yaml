@@ -142,7 +142,9 @@ exact_destructive: true
 # Words the speech model doesn't know, spelled as words it does. The recognizer listens for
 # these spellings; normalize() turns them back.
 sounds_like:
-  metrónomo: [metronomo, metro nomo]
+  metrónomo: [metro nomo]
+  cuantizar: [cuan ti zar]
+  cuantiza: [cuan tiza]
 
 # Every reply and help line, by its English words. {names} are filled in after.
 texts:
