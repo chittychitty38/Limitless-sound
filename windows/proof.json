@@ -1,8 +1,8 @@
 {
-  "when": "2026-10-23T08:08:49Z",
+  "when": "2026-10-23T09:14:53Z",
   "standard": "0.1",
-  "suiteVersion": "v0.2.6",
-  "installSeconds": 48.0,
+  "suiteVersion": "v0.2.7",
+  "installSeconds": 49.0,
   "computer": {
     "os": "Windows 10.0.26100",
     "arch": "AMD64",
@@ -15,7 +15,7 @@
       "name": "Limitless One-Hand",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless One-Hand",
-      "joinedSeconds": 6.2,
+      "joinedSeconds": 12.8,
       "screenshot": "shots/onehand.png",
       "level": "adaptive",
       "checks": [
@@ -88,7 +88,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "6.2 s"
+          "detail": "12.8 s"
         },
         {
           "id": "P2",
@@ -115,7 +115,12 @@
       "idle": {
         "cpuPercent": 0.1,
         "memoryMB": 129,
-        "busiest": []
+        "busiest": [
+          {
+            "process": "LimitlessOneHand.exe",
+            "cpuPercent": 0.1
+          }
+        ]
       }
     },
     {
@@ -231,7 +236,7 @@
       "name": "Limitless Zoom",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Zoom",
-      "joinedSeconds": 1.0,
+      "joinedSeconds": 1.1,
       "screenshot": "shots/zoom.png",
       "level": "adaptive",
       "checks": [
@@ -304,7 +309,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "1.0 s"
+          "detail": "1.1 s"
         },
         {
           "id": "P2",
@@ -323,15 +328,20 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "0.0%"
+          "detail": "2.3%"
         }
       ],
       "actionsTried": 22,
-      "version": "0.1.5",
+      "version": "0.1.6",
       "idle": {
-        "cpuPercent": 0.0,
-        "memoryMB": 242,
-        "busiest": []
+        "cpuPercent": 2.3,
+        "memoryMB": 375,
+        "busiest": [
+          {
+            "process": "Limitless Zoom.exe",
+            "cpuPercent": 2.3
+          }
+        ]
       }
     },
     {
@@ -339,7 +349,7 @@
       "name": "Limitless Color",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Color",
-      "joinedSeconds": 4.1,
+      "joinedSeconds": 3.7,
       "screenshot": "shots/color.png",
       "level": "adaptive",
       "checks": [
@@ -412,7 +422,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "4.1 s"
+          "detail": "3.7 s"
         },
         {
           "id": "P2",
@@ -435,10 +445,10 @@
         }
       ],
       "actionsTried": 4,
-      "version": "0.1.4",
+      "version": "0.1.5",
       "idle": {
         "cpuPercent": 0.0,
-        "memoryMB": 34,
+        "memoryMB": 31,
         "busiest": []
       }
     },
@@ -447,7 +457,7 @@
       "name": "Limitless Control",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Control",
-      "joinedSeconds": 3.1,
+      "joinedSeconds": 2.6,
       "screenshot": "shots/control.png",
       "level": "adaptive",
       "checks": [
@@ -520,7 +530,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "3.1 s"
+          "detail": "2.6 s"
         },
         {
           "id": "P2",
@@ -539,18 +549,18 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "0.2%"
+          "detail": "0.1%"
         }
       ],
       "actionsTried": 20,
       "version": "0.2.7",
       "idle": {
-        "cpuPercent": 0.2,
+        "cpuPercent": 0.1,
         "memoryMB": 83,
         "busiest": [
           {
             "process": "Limitless Control.exe",
-            "cpuPercent": 0.2
+            "cpuPercent": 0.1
           }
         ]
       }
@@ -560,7 +570,7 @@
       "name": "GazeStage",
       "openedBy": "hub",
       "hubAnswer": "Opening GazeStage",
-      "joinedSeconds": 1.1,
+      "joinedSeconds": 1.2,
       "screenshot": "shots/gaze.png",
       "level": "adaptive",
       "checks": [
@@ -633,7 +643,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "1.1 s"
+          "detail": "1.2 s"
         },
         {
           "id": "P2",
@@ -659,11 +669,19 @@
       "version": "0.4.4",
       "idle": {
         "cpuPercent": 0.4,
-        "memoryMB": 506,
+        "memoryMB": 505,
         "busiest": [
           {
             "process": "GazeStage.exe",
             "cpuPercent": 0.2
+          },
+          {
+            "process": "GazeStage.exe",
+            "cpuPercent": 0.1
+          },
+          {
+            "process": "GazeStage.exe",
+            "cpuPercent": 0.1
           }
         ]
       }
@@ -680,7 +698,7 @@
       "id": "S2",
       "ok": true,
       "check": "A shared DAW command (zoom in) reaches an app and is answered within 3 seconds",
-      "detail": "Zoom in (0.02 s)"
+      "detail": "Zoom in (0.14 s)"
     },
     {
       "id": "S3",
@@ -704,12 +722,17 @@
       "id": "S6",
       "ok": true,
       "check": "Every app with Spanish windows follows the suite into Espa\u00f1ol and back",
-      "detail": "in Spanish: control, gaze, onehand, zoom; not yet: color (its windows are English only for now), voice (listens in English until its Spanish model is downloaded)"
+      "detail": "in Spanish: color, control, gaze, onehand, zoom; not yet: voice (listens in English until its Spanish model is downloaded)"
     }
   ],
   "hubIdle": {
     "cpuPercent": 0.1,
     "memoryMB": 33,
-    "busiest": []
+    "busiest": [
+      {
+        "process": "Limitless Sound.exe",
+        "cpuPercent": 0.1
+      }
+    ]
   }
 }

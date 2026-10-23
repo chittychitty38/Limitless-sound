@@ -1,4 +1,5 @@
-2026-10-23 08:08:59,359 INFO    Limitless Zoom: Started Limitless Zoom 0.1.5 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 08:08:59,360 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
-2026-10-23 08:09:05,183 INFO    Limitless Zoom: Started Limitless Zoom 0.1.5 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 08:09:06,516 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 09:15:10,661 INFO    Limitless Zoom: Started Limitless Zoom 0.1.6 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 09:15:10,663 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
+2026-10-23 09:15:16,354 INFO    Limitless Zoom: Started Limitless Zoom 0.1.6 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 09:15:17,675 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 09:15:44,611 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.

@@ -1,99 +1,99 @@
-﻿2026-10-23 08:07:57.222   Log opened. (Time zone: UTC+00:00)
-2026-10-23 08:07:57.222   Setup version: Inno Setup version 6.7.1
-2026-10-23 08:07:57.222   Original Setup EXE: D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe
-2026-10-23 08:07:57.222   Setup command line: /SL5="$20190,327802347,867840,D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log
-2026-10-23 08:07:57.222   Windows version: 10.0.26100
-2026-10-23 08:07:57.222   Windows architecture: x64 (64-bit)
-2026-10-23 08:07:57.222   Machine types supported by system: x86 x64
-2026-10-23 08:07:57.222   User privileges: Administrative
-2026-10-23 08:07:57.226   Administrative install mode: No
-2026-10-23 08:07:57.226   Install mode root key: HKEY_CURRENT_USER
-2026-10-23 08:07:57.226   64-bit install mode: No
-2026-10-23 08:07:57.226   RedirectionGuard status for current process: Enabled in enforcing mode
-2026-10-23 08:07:57.228   Created protected temporary directory: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp
-2026-10-23 08:07:57.794   Found 7 files to register with RestartManager.
-2026-10-23 08:07:57.794   Calling RestartManager's RmGetList.
-2026-10-23 08:07:57.800   RmGetList finished successfully.
-2026-10-23 08:07:57.800   RestartManager found no applications using one of our files.
-2026-10-23 08:07:57.814   Starting the installation process.
-2026-10-23 08:07:57.816   -- File entry --
-2026-10-23 08:07:57.816   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app0.exe
-2026-10-23 08:07:57.961   Time stamp of our file: 2026-10-23 07:56:42.000
-2026-10-23 08:07:57.961   Installing the file.
-2026-10-23 08:07:58.181   Successfully installed the file.
-2026-10-23 08:07:58.181   -- File entry --
-2026-10-23 08:07:58.181   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app1.exe
-2026-10-23 08:07:58.183   Time stamp of our file: 2026-10-23 07:56:46.000
-2026-10-23 08:07:58.183   Installing the file.
-2026-10-23 08:07:59.053   Successfully installed the file.
-2026-10-23 08:07:59.053   -- File entry --
-2026-10-23 08:07:59.053   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app2.exe
-2026-10-23 08:07:59.053   Time stamp of our file: 2026-10-23 07:56:50.000
-2026-10-23 08:07:59.053   Installing the file.
-2026-10-23 08:07:59.795   Successfully installed the file.
-2026-10-23 08:07:59.795   -- File entry --
-2026-10-23 08:07:59.795   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app3.exe
-2026-10-23 08:07:59.797   Time stamp of our file: 2026-10-23 07:56:54.000
-2026-10-23 08:07:59.797   Installing the file.
-2026-10-23 08:08:01.196   Successfully installed the file.
-2026-10-23 08:08:01.196   -- File entry --
-2026-10-23 08:08:01.196   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app4.exe
-2026-10-23 08:08:01.196   Time stamp of our file: 2026-10-23 07:56:56.000
-2026-10-23 08:08:01.196   Installing the file.
-2026-10-23 08:08:01.241   Successfully installed the file.
-2026-10-23 08:08:01.241   -- File entry --
-2026-10-23 08:08:01.241   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app5.exe
-2026-10-23 08:08:01.241   Time stamp of our file: 2026-10-23 07:57:00.000
-2026-10-23 08:08:01.241   Installing the file.
-2026-10-23 08:08:01.430   Successfully installed the file.
-2026-10-23 08:08:01.430   -- File entry --
-2026-10-23 08:08:01.430   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app6.exe
-2026-10-23 08:08:01.430   Time stamp of our file: 2026-10-23 07:57:04.000
-2026-10-23 08:08:01.430   Installing the file.
-2026-10-23 08:08:02.861   Successfully installed the file.
-2026-10-23 08:08:02.861   Installation process succeeded.
-2026-10-23 08:08:02.865   -- Run entry --
-2026-10-23 08:08:02.865   Run as: Current user
-2026-10-23 08:08:02.865   Type: Exec
-2026-10-23 08:08:02.865   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app0.exe
-2026-10-23 08:08:02.865   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /TASKS=startup
-2026-10-23 08:08:04.427   Process exit code: 0
-2026-10-23 08:08:04.427   -- Run entry --
-2026-10-23 08:08:04.427   Run as: Current user
-2026-10-23 08:08:04.427   Type: Exec
-2026-10-23 08:08:04.427   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app1.exe
-2026-10-23 08:08:04.427   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 08:08:12.424   Process exit code: 0
-2026-10-23 08:08:12.424   -- Run entry --
-2026-10-23 08:08:12.424   Run as: Current user
-2026-10-23 08:08:12.424   Type: Exec
-2026-10-23 08:08:12.424   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app2.exe
-2026-10-23 08:08:12.424   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 08:08:13.668   Process exit code: 0
-2026-10-23 08:08:13.668   -- Run entry --
-2026-10-23 08:08:13.668   Run as: Current user
-2026-10-23 08:08:13.668   Type: Exec
-2026-10-23 08:08:13.668   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app3.exe
-2026-10-23 08:08:13.668   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 08:08:23.006   Process exit code: 0
-2026-10-23 08:08:23.006   -- Run entry --
-2026-10-23 08:08:23.006   Run as: Current user
-2026-10-23 08:08:23.006   Type: Exec
-2026-10-23 08:08:23.006   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app4.exe
-2026-10-23 08:08:23.006   Parameters: /S
-2026-10-23 08:08:24.152   Process exit code: 0
-2026-10-23 08:08:24.152   -- Run entry --
-2026-10-23 08:08:24.152   Run as: Current user
-2026-10-23 08:08:24.152   Type: Exec
-2026-10-23 08:08:24.152   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app5.exe
-2026-10-23 08:08:24.152   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 08:08:26.074   Process exit code: 0
-2026-10-23 08:08:26.074   -- Run entry --
-2026-10-23 08:08:26.074   Run as: Current user
-2026-10-23 08:08:26.074   Type: Exec
-2026-10-23 08:08:26.074   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-9AFAE0FS4C.tmp\app6.exe
-2026-10-23 08:08:26.074   Parameters: /S
-2026-10-23 08:08:44.291   Process exit code: 0
-2026-10-23 08:08:44.292   Need to restart Windows? No
-2026-10-23 08:08:44.295   Deinitializing Setup.
-2026-10-23 08:08:44.318   Log closed.
+﻿2026-10-23 09:13:55.922   Log opened. (Time zone: UTC+00:00)
+2026-10-23 09:13:55.922   Setup version: Inno Setup version 6.7.1
+2026-10-23 09:13:55.922   Original Setup EXE: D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe
+2026-10-23 09:13:55.922   Setup command line: /SL5="$4015E,327864411,867840,D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log
+2026-10-23 09:13:55.922   Windows version: 10.0.26100
+2026-10-23 09:13:55.922   Windows architecture: x64 (64-bit)
+2026-10-23 09:13:55.922   Machine types supported by system: x86 x64
+2026-10-23 09:13:55.922   User privileges: Administrative
+2026-10-23 09:13:55.926   Administrative install mode: No
+2026-10-23 09:13:55.926   Install mode root key: HKEY_CURRENT_USER
+2026-10-23 09:13:55.926   64-bit install mode: No
+2026-10-23 09:13:55.926   RedirectionGuard status for current process: Enabled in enforcing mode
+2026-10-23 09:13:55.928   Created protected temporary directory: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp
+2026-10-23 09:13:56.480   Found 7 files to register with RestartManager.
+2026-10-23 09:13:56.480   Calling RestartManager's RmGetList.
+2026-10-23 09:13:56.484   RmGetList finished successfully.
+2026-10-23 09:13:56.484   RestartManager found no applications using one of our files.
+2026-10-23 09:13:56.496   Starting the installation process.
+2026-10-23 09:13:56.498   -- File entry --
+2026-10-23 09:13:56.498   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app0.exe
+2026-10-23 09:13:56.603   Time stamp of our file: 2026-10-23 08:54:10.000
+2026-10-23 09:13:56.603   Installing the file.
+2026-10-23 09:13:56.815   Successfully installed the file.
+2026-10-23 09:13:56.815   -- File entry --
+2026-10-23 09:13:56.815   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app1.exe
+2026-10-23 09:13:56.815   Time stamp of our file: 2026-10-23 08:54:16.000
+2026-10-23 09:13:56.815   Installing the file.
+2026-10-23 09:13:57.835   Successfully installed the file.
+2026-10-23 09:13:57.835   -- File entry --
+2026-10-23 09:13:57.835   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app2.exe
+2026-10-23 09:13:57.835   Time stamp of our file: 2026-10-23 08:54:20.000
+2026-10-23 09:13:57.835   Installing the file.
+2026-10-23 09:13:58.328   Successfully installed the file.
+2026-10-23 09:13:58.330   -- File entry --
+2026-10-23 09:13:58.330   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app3.exe
+2026-10-23 09:13:58.330   Time stamp of our file: 2026-10-23 08:54:24.000
+2026-10-23 09:13:58.330   Installing the file.
+2026-10-23 09:13:59.575   Successfully installed the file.
+2026-10-23 09:13:59.575   -- File entry --
+2026-10-23 09:13:59.575   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app4.exe
+2026-10-23 09:13:59.575   Time stamp of our file: 2026-10-23 08:54:26.000
+2026-10-23 09:13:59.575   Installing the file.
+2026-10-23 09:13:59.617   Successfully installed the file.
+2026-10-23 09:13:59.617   -- File entry --
+2026-10-23 09:13:59.617   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app5.exe
+2026-10-23 09:13:59.617   Time stamp of our file: 2026-10-23 08:54:28.000
+2026-10-23 09:13:59.617   Installing the file.
+2026-10-23 09:13:59.805   Successfully installed the file.
+2026-10-23 09:13:59.805   -- File entry --
+2026-10-23 09:13:59.805   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app6.exe
+2026-10-23 09:13:59.805   Time stamp of our file: 2026-10-23 08:54:34.000
+2026-10-23 09:13:59.805   Installing the file.
+2026-10-23 09:14:00.970   Successfully installed the file.
+2026-10-23 09:14:00.970   Installation process succeeded.
+2026-10-23 09:14:00.972   -- Run entry --
+2026-10-23 09:14:00.972   Run as: Current user
+2026-10-23 09:14:00.972   Type: Exec
+2026-10-23 09:14:00.972   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app0.exe
+2026-10-23 09:14:00.972   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /TASKS=startup
+2026-10-23 09:14:02.794   Process exit code: 0
+2026-10-23 09:14:02.794   -- Run entry --
+2026-10-23 09:14:02.794   Run as: Current user
+2026-10-23 09:14:02.794   Type: Exec
+2026-10-23 09:14:02.794   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app1.exe
+2026-10-23 09:14:02.794   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 09:14:10.457   Process exit code: 0
+2026-10-23 09:14:10.457   -- Run entry --
+2026-10-23 09:14:10.457   Run as: Current user
+2026-10-23 09:14:10.457   Type: Exec
+2026-10-23 09:14:10.457   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app2.exe
+2026-10-23 09:14:10.457   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 09:14:11.697   Process exit code: 0
+2026-10-23 09:14:11.697   -- Run entry --
+2026-10-23 09:14:11.697   Run as: Current user
+2026-10-23 09:14:11.697   Type: Exec
+2026-10-23 09:14:11.697   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app3.exe
+2026-10-23 09:14:11.697   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 09:14:21.709   Process exit code: 0
+2026-10-23 09:14:21.709   -- Run entry --
+2026-10-23 09:14:21.709   Run as: Current user
+2026-10-23 09:14:21.709   Type: Exec
+2026-10-23 09:14:21.709   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app4.exe
+2026-10-23 09:14:21.709   Parameters: /S
+2026-10-23 09:14:22.502   Process exit code: 0
+2026-10-23 09:14:22.502   -- Run entry --
+2026-10-23 09:14:22.502   Run as: Current user
+2026-10-23 09:14:22.502   Type: Exec
+2026-10-23 09:14:22.502   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app5.exe
+2026-10-23 09:14:22.502   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 09:14:24.618   Process exit code: 0
+2026-10-23 09:14:24.619   -- Run entry --
+2026-10-23 09:14:24.619   Run as: Current user
+2026-10-23 09:14:24.619   Type: Exec
+2026-10-23 09:14:24.619   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-NIGC8P1JO1.tmp\app6.exe
+2026-10-23 09:14:24.619   Parameters: /S
+2026-10-23 09:14:43.952   Process exit code: 0
+2026-10-23 09:14:43.954   Need to restart Windows? No
+2026-10-23 09:14:43.956   Deinitializing Setup.
+2026-10-23 09:14:43.979   Log closed.
