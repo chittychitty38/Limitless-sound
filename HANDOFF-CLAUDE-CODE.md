@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.8 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.9 release. Everything below is the state of the project then.
 
 ---
 
@@ -51,14 +51,14 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.4, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.2 |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.5, in the suite |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.3 |
 | Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.6 |
 | Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.8 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.8 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.8** (the repo's Latest release) |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.9** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -68,7 +68,9 @@ Every screen works with a screen reader and the keyboard alone, and CI checks it
 screens (Limitless Sound's page, Control's page, GazeStage, Color, the Mac installer) pass WCAG 2.2
 AA in every look with a keyboard walk (`.github/scripts/apps-a11y.cjs`, `screens.yml`, #79), and
 the Qt apps have `tests/test_accessibility.py` (#75). Every app presses the same key for the
-same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85).
+same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85). Voice's setup guide and main
+window grow as wide as their words need and scroll up and down for the rest (`look.UpAndDown`,
+#103): before, at double text, the setup guide cut off parts of 24 lines.
 
 **English and Spanish.** One shared language (`language`, "en" or "es") in Limitless Sound's
 settings, chosen in the first two questions or from the computer's language, and every app
@@ -88,6 +90,19 @@ follows it live, in place, without moving the keyboard focus:
 - Every one has a test that fails on English with no Spanish, and the Spanish fits at double
   text size wherever the English does.
 - Not yet in Spanish: the guides on GitHub.
+
+**A Brazilian Portuguese preview, in Voice only** (0.4.3, #103). Limitless Sound's language list
+offers «Português (prévia: só o Limitless Voice)» (hub 0.2.5); the page and every other app stay
+in English for it.
+- Voice's Portuguese is one file, `apps/voice/limitless_voice/languages/pt.yaml`, with Alpha
+  Cephei's `vosk-model-small-pt-0.3` (31 MB, Apache 2.0; their only other Portuguese model is
+  1.6 GB and GPL).
+- On real Brazilian speakers it gets 62% of command words right at once, against 83.5% in
+  Spanish. The speech model is the limit: it hears nothing in 33% of clips (Spanish's: 4%), and
+  gets 27.4% of read words wrong (Spanish's: 14.8%). Settings says so in Portuguese.
+- The same safety rules as Spanish: Cut, Paste and Delete only on the exact word, a command word
+  inside a sentence is talk. One command an hour of Portuguese read aloud, none destructive.
+- `stress.yml` measures it (MSWC pt and FLEURS pt_br) on every Voice change.
 
 Release links (permanent; they always point at the newest suite):
 - https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
@@ -229,9 +244,9 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   command words themselves ("cut", "record", "solo"; MLCommons' Multilingual Spoken Words, #77),
   and an hour of 40 people reading aloud (LibriSpeech). Nobody has spoken to them in a real room
   with a real DAW running.
-- Nobody who speaks Spanish has used any of the Spanish: Voice was measured on recordings of
-  Spanish speakers (Common Voice, FLEURS), and every Spanish word was written without a native
-  speaker's read.
+- Nobody who speaks Spanish or Portuguese has used any of it: Voice was measured on recordings
+  of Spanish and Brazilian speakers (Common Voice, FLEURS, MSWC), and every word was written
+  without a native speaker's read.
 - No DAW key has been pressed in a real DAW. The keys come from the vendors' guides, and every
   app agrees with every other (`stress/test_daw_keys_agree.py`).
 - The C++ client has only been tested against the hub, not inside a real plug-in host.
@@ -313,6 +328,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
      (39 MB) and that replies come in a Spanish voice (System Settings › Accessibility › Spoken
      Content › System voice › Manage Voices adds one), and that VoiceOver reads each window in
      Spanish.
+   - Portuguese (Brazilian): `apps/voice/limitless_voice/languages/pt.yaml`, the preview note in
+     Settings, and the hub's «Português (prévia: só o Limitless Voice)». Several labels were
+     shortened to fit at double text («Abrir o Limitless Voice ao fazer login», «Agora não (sem
+     isso os comandos não funcionam)», `Ouvindo: "vai dormir" para pausar`); a better phrase
+     must fit too (`test_portuguese.py` holds it to the English). Is the preview worth keeping at
+     62%, or should it wait for a better free model?
 10. **Try the three new DAWs** (#99): Voice, Control, One-Hand and Zoom work in GarageBand 10,
     REAPER 7 and FL Studio, besides Logic Pro, Pro Tools and Ableton Live 12. Every key came
     from the maker's guide (Apple's, Cockos', Image-Line's), read through excerpts because the
@@ -417,6 +438,13 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   `texts` in Voice). GazeStage's smoke test holds the Spanish to the English at double text size
   on the computer's own fonts. Ubuntu CI has DejaVu Sans, wider than a Mac's: to see what CI
   sees, run the smoke test with a fontconfig file that offers only DejaVu (`FONTCONFIG_FILE`).
+- A Qt window doesn't make room for wrapped lines by itself, and Voice's setup window had a fixed
+  620 x 520 minimum: at large text its pages squeezed their lines, and which label lost out
+  flipped with the font, so Portuguese failed on Windows' CI where the English beside it happened
+  to fit. Shortening words couldn't fix that. A window's contents go in `look.UpAndDown` (scrolls
+  up and down, asks for the width they need), and no fixed minimum size stops a window growing.
+  Compare a translation with English on the same machine, and check a few fonts locally
+  (DejaVu Sans, Carlito, Liberation Sans) at 1x to 2.3x text before pushing.
 - GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
   account limit"), after a day of many suite builds: each one downloads every app for three
   computers. On 2026-10-23 it refused Control's builds for over an hour. The suite build now takes
