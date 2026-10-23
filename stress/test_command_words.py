@@ -88,13 +88,13 @@ def test_real_people_saying_voice_commands():
           f"({sum(_making):.0f} s of it building recognizers). In front: Logic Pro. Heard as "
           f"“command transcript / open transcript”. "
           + (f"Left out, as Voice listens for them but alone they do nothing: {', '.join(left_out)}." if left_out else ""))
-    print(f"\n{'word':<9} {'right':>13}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
+    print(f"\n{'word':<9} {'right':>13}  {'asked':>5}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
     for w in commands:
         t = tally[w]
         wrong_cmd = f"{t['wrong']}" + (f" ({t['destructive']} destr.)" if t["destructive"] else "")
         after = f"{_median(soon[w]) * 1000:.0f} ms" if soon[w] else "-"
         miss = ", ".join(f"“{k}” ×{n}" for k, n in instead[w].most_common(3))
-        print(f"{w:<9} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {wrong_cmd:>12}  {after:>10}  "
+        print(f"{w:<9} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {t['asked']:>5}  {wrong_cmd:>12}  {after:>10}  "
               f"{what_if[w]['hits'] / t['tries']:>7.0%}  {miss}")
     for w in strays:
         t = tally[w]
@@ -111,6 +111,10 @@ def test_real_people_saying_voice_commands():
           f"after the word ended, 9 in 10 within {every[int(len(every) * 0.9)] * 1000:.0f} ms ({len(every)} clips).")
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
+    asked_more = sum(tally[w]["asked"] for w in commands)
+    print(f"Asked to confirm instead (\"Say yes to cut, or cancel\"): {asked_more} times, so "
+          f"{(hits + asked_more) / tries:.1%} were right at once or with a yes. Per word: "
+          + ", ".join(f"{w} {tally[w]['asked']}" for w in commands if tally[w]["asked"]))
     if strays:
         quiet, stray_tries = _sums(tally, strays)
         q2, _ = _sums(what_if, strays)

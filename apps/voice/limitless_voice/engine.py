@@ -194,7 +194,9 @@ class Engine:
             self.pending = None
             if text in YES:
                 return self._run(raw, cmd, params, times)
-            return self._reply(raw, "Cancelled")
+            if text in CANCEL:
+                return self._reply(raw, "Cancelled")
+            # Anything else is the next command: a question asked by mistake mustn't eat it.
 
         if text in DICTATION_ON:
             self.dictating = True
@@ -249,22 +251,22 @@ class Engine:
                 return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
                               else "Didn't catch that")
             params, raw = again[1], heard_open
-        # A stray word must never throw work away. The command recognizer can only answer with
-        # command words, so real people's "cat" came back as "cut" 64 times in 100, and once as
-        # "cut that" (stress/test_voice_real_speech.py). A command that would press Cut, Paste or
-        # Delete counts only if the open recognizer heard its first word too.
-        if (alternative is not None and self._destroys(cmd, params)
-                and said.split()[0] not in normalize(alternative).split()):
-            heard_open = normalize(alternative)
-            return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
-                          else "Didn't catch that")
         if cmd.repeatable is False:
             times = 1
         elif not isinstance(cmd.repeatable, bool) and isinstance(cmd.repeatable, int):
             times = min(times, max(1, cmd.repeatable))
         if any(str(v).lower() in DESTRUCTIVE_KEYS for v in params.values()):
             times = min(times, MAX_DESTRUCTIVE)
-        if cmd.confirm:
+        # A stray word must never throw work away. The command recognizer can only answer with
+        # command words, so real people's "cat" came back as "cut" 64 times in 100, and once as
+        # "cut that" (stress/test_voice_real_speech.py). A command that would press Cut, Paste or
+        # Delete runs at once only if the open recognizer heard its first word too; otherwise Voice
+        # asks. Refusing instead missed most of real people's "cut", "paste" and "delete" (40 to 46%
+        # right, against 78 to 92% without the check: stress/test_command_words.py), since the open
+        # recognizer hears "cut" as "god" and "delete" as "the lead".
+        unsure = (alternative is not None and self._destroys(cmd, params)
+                  and said.split()[0] not in normalize(alternative).split())
+        if cmd.confirm or unsure:
             self.pending = (cmd, params, times)
             return self._reply(raw, f"Say yes to {cmd.help or cmd.phrases[0]}, or cancel")
         return self._run(raw, cmd, params, times)
