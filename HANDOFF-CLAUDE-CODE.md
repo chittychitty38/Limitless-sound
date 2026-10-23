@@ -139,13 +139,19 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.2 passes it
-on all three computers with nothing left to improve**: every app ready in 1-13 s, at Access
-Standard level 2, every action answered, no timeouts (check P4), every suite check green, and
-**every app under 3% of the CPU sitting idle** (GazeStage 1.0% on both Macs, from 7.5%; Zoom 1.1%
-on Intel; the busiest is Control at 2.8% on Intel). Run 39838823103, on the website. An app over
-the limit names its busiest processes (#62). To run it again before the default branch is
-`main`, open a PR that touches `packaging/proof/`.
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.4 passes it
+on all three computers with nothing left to improve** (run 39900701509, on the website):
+- Every app is ready in 0.6–11 s, at Access Standard level 2, with every action answered and no
+  timeouts.
+- Every suite check is green, including Limitless Sound's own page opening (S4, #86).
+- Every app is at or under 1.1% of the CPU sitting idle: Control 1.1% on the Intel Mac, down
+  from 2.8% in 0.2.2; GazeStage 0.3–0.7%.
+- The installer takes 7 s on Apple silicon, 14 s on Intel and 63 s on Windows.
+
+An app over the limit names its busiest processes (#62). To run it again before the default
+branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
+`proof-results` branch at a commit with the tree of `proof-results-test` (`git commit-tree`), and
+copy its `latest.json` to `proof/latest.json` on `gh-pages`.
 
 ## Public website and branding
 
