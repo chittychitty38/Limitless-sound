@@ -23,6 +23,7 @@ import os
 import threading
 import time
 import wave
+from array import array
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -75,7 +76,8 @@ def _listener():
         from limitless_voice.audio import Listener
         heard = []
         _mine.heard = heard
-        _mine.listener = Listener(MODEL, PHRASES, on_text=lambda c, o: heard.append((c, o)))
+        _mine.listener = Listener(MODEL, PHRASES, on_text=lambda c, o: heard.append((c, o)),
+                                  instant=_engine("Logic Pro")[0].instant)
         _mine.listener.load_model()
     return _mine.listener, _mine.heard
 
@@ -85,7 +87,7 @@ _making = []    # seconds each worker spent building recognizers, to see where t
 
 def _start(listener, heard):
     heard.clear()
-    listener._cmd_parts = []
+    listener._forget()
     started = time.perf_counter()
     recs = listener._make_recognizers(RATE)
     _making.append(time.perf_counter() - started)
@@ -103,18 +105,39 @@ def _read(path):
         return w.readframes(w.getnframes())
 
 
+_waited = {}   # clip -> seconds from the end of the spoken word until Voice reported it
+
+
+def _speech_end(pcm):
+    """Seconds into a recording where the speech ends: the end of the last 10 ms that comes
+    within 20 dB of the recording's loudest."""
+    samples = array("h")
+    samples.frombytes(pcm)
+    n = RATE // 100
+    peaks = [max(map(abs, samples[i:i + n]), default=0) for i in range(0, len(samples), n)]
+    loudest = max(peaks, default=0)
+    last = max((i for i, p in enumerate(peaks) if p >= loudest / 10), default=0)
+    return (last + 1) * n / RATE
+
+
 def hear_word(path):
     """One clip through fresh recognizers, as apps/voice/tests/test_audio.py does: half a
     second of quiet, the clip, then quiet until the app reports what it heard. Once it has
     heard a word the recognizer ends the utterance after half a second of quiet; if it heard
-    nothing it could write down, only after five seconds. So wait up to six, as the app would."""
+    nothing it could write down, only after five seconds. So wait up to six, as the app would.
+    How long after the word ended Voice reported it goes in _waited."""
     listener, heard = _listener()
     recs = _start(listener, heard)
-    _feed(listener, recs, QUIET * 5 + _read(path))
+    pcm = _read(path)
+    _feed(listener, recs, QUIET * 5 + pcm)
+    blocks = 0
     for _ in range(60):
         if heard:
             break
         listener._feed(recs, QUIET)
+        blocks += 1
+    if heard:
+        _waited[path] = len(pcm) / 2 / RATE - _speech_end(pcm) + blocks * len(QUIET) / 2 / RATE
     return list(heard)
 
 
@@ -204,18 +227,22 @@ def _shown(heard):
     return " | ".join(parts) or "(nothing)"
 
 
+def right(word, h, kind):
+    """Whether one clip went right, and whether it made the app do anything."""
+    want, got = outcome([(word, word)]), outcome(h)
+    fired = bool(got[1]) or got[2]
+    if kind == "command":
+        return got == want, fired, want, got
+    if kind == "word":
+        return got == want and _heard_word(h, word), fired, want, got
+    return not fired, fired, want, got
+
+
 def score(words, jobs, heard, kinds):
     """Per word: tries, right, wrong command fired, destructive; and what was heard instead."""
     tally, instead, wrong = defaultdict(Counter), defaultdict(Counter), Counter()
     for (word, _), h in zip(jobs, heard):
-        want, got = outcome([(word, word)]), outcome(h)
-        fired = bool(got[1]) or got[2]
-        if kinds[word] == "command":
-            hit = got == want
-        elif kinds[word] == "word":
-            hit = got == want and _heard_word(h, word)
-        else:
-            hit = not fired
+        hit, fired, want, got = right(word, h, kinds[word])
         t = tally[word]
         t["tries"] += 1
         t["hits"] += hit
@@ -287,6 +314,28 @@ def test_real_people_saying_command_words():
           f"({1 - quiet / stray_tries:.1%})")
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
+
+    # How soon Voice acts: from the end of the spoken word until Voice reports it, for the words
+    # it got right. A musician's "stop" ends a take; every tenth of a second late is heard.
+    soon = defaultdict(list)
+    for (word, f), h in zip(jobs, heard):
+        if kinds[word] != "other" and f in _waited and right(word, h, kinds[word])[0]:
+            soon[word].append(_waited[f])
+
+    def spread(xs):
+        xs = sorted(xs)
+        return f"median {xs[len(xs) // 2] * 1000:.0f} ms, 9 in 10 within {xs[int(len(xs) * 0.9)] * 1000:.0f} ms"
+    every = [x for xs in soon.values() for x in xs]
+    if every:
+        print(f"\nHow soon Voice reports a word it got right, after the word ends: {spread(every)} "
+              f"({len(every)} clips). " + "; ".join(f"{w} {spread(soon[w])}" for w in ("stop", "no", "yes") if soon[w]))
+        # Measured on CI: "stop", which goes the moment it's heard (Voice 0.3.6), a median 0.67 s
+        # after the word ended, 9 in 10 within 0.77 s (1.19 s and 1.36 s when it waited for the
+        # end of the utterance); words that still wait, a median 1.13 s.
+        median = lambda xs: sorted(xs)[len(xs) // 2]  # noqa: E731
+        if soon["stop"]:
+            assert median(soon["stop"]) <= 0.85, f"“stop” went a median {median(soon['stop']):.2f} s after it was said"
+        assert median(every) <= 1.35, f"words were acted on a median {median(every):.2f} s after they were said"
 
     # Stray words firing commands is the weak spot this test found. Two possible fixes, tried on
     # what was just heard so their cost and gain can be weighed before changing the app.

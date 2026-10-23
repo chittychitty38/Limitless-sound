@@ -11,8 +11,10 @@ commands:
   - say: ["play", "stop", "play stop", "start playback", "stop playback"]
     do: {keys: space}
     repeatable: false
+    instant: true   # timing matters: runs as soon as it's heard (audio.py)
   - say: ["record", "start recording"]
     fuzzy: false
+    instant: true
     do: {keys: r}
     reply: Recording
     repeatable: false

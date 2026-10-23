@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
             on_text=self.bridge.heard.emit, on_level=self.bridge.level.emit,
             on_error=self.bridge.error.emit,
             device=self._device_index(settings.mic_name),
-            use_command_vocabulary=settings.command_vocabulary,
+            use_command_vocabulary=settings.command_vocabulary, instant=self.engine.instant,
         )
         self.bridge.heard.connect(self.on_heard)
         self.bridge.level.connect(self._on_level)

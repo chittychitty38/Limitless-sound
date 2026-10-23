@@ -41,6 +41,7 @@ class Command:
     repeatable: object = True    # True, False, or the most times one utterance may run it
     help: str = ""
     fuzzy: bool = True
+    instant: bool = False       # run the moment it's heard, before the utterance is over
     _compiled: list = field(default_factory=list, repr=False)
 
     def __post_init__(self):
@@ -171,6 +172,7 @@ def load_pack(path, os_name="mac"):
             repeatable=entry.get("repeatable", True),
             help=entry.get("help", ""),
             fuzzy=entry.get("fuzzy", not entry.get("confirm", False)),
+            instant=bool(entry.get("instant", False)),
         ))
     return Pack(name=name, apps=data.get("apps") or [], commands=commands)
 

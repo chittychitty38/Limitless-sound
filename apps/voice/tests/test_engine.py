@@ -283,8 +283,13 @@ class Destructive(unittest.TestCase):
             self.assertTrue(e.handle(said).handled, said)                    # typed, or from another app
             self.assertEqual(pressed(p), keys)
         e, p = engine("Logic Pro")
-        self.assertTrue(e.handle("cut that", "cat that").handled)          # two words: as before
+        self.assertFalse(e.handle("cut that", "cat").handled)              # longer, the same: one
+        self.assertEqual(pressed(p), [])                                   # person's "cat" did that
+        self.assertTrue(e.handle("cut that", "cut that").handled)
         self.assertEqual(pressed(p), ["cmd+x"])
+        e, p = engine("Logic Pro")
+        self.assertTrue(e.handle("delete 3 times", "delete three time").handled)   # the verb is enough
+        self.assertEqual(pressed(p), ["delete"] * 3)
         e, p = engine("Logic Pro")
         self.assertTrue(e.handle("copy", "happy").handled)                 # harmless: as before
         self.assertEqual(pressed(p), ["cmd+c"])

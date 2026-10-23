@@ -250,11 +250,11 @@ class Engine:
                               else "Didn't catch that")
             params, raw = again[1], heard_open
         # A stray word must never throw work away. The command recognizer can only answer with
-        # command words, so real people's "cat" came back as "cut" 64 times in 100 (stress/
-        # test_voice_real_speech.py). One word that would press Cut, Paste or Delete counts only
-        # if the open recognizer heard that word too.
-        if (alternative is not None and len(said.split()) == 1 and self._destroys(cmd, params)
-                and said not in normalize(alternative).split()):
+        # command words, so real people's "cat" came back as "cut" 64 times in 100, and once as
+        # "cut that" (stress/test_voice_real_speech.py). A command that would press Cut, Paste or
+        # Delete counts only if the open recognizer heard its first word too.
+        if (alternative is not None and self._destroys(cmd, params)
+                and said.split()[0] not in normalize(alternative).split()):
             heard_open = normalize(alternative)
             return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
                           else "Didn't catch that")
@@ -268,6 +268,18 @@ class Engine:
             self.pending = (cmd, params, times)
             return self._reply(raw, f"Say yes to {cmd.help or cmd.phrases[0]}, or cancel")
         return self._run(raw, cmd, params, times)
+
+    def instant(self, heard):
+        """Whether the command recognizer's words so far are, exactly, a command to run the moment
+        it's said (play, stop, record; stop in take mode), so the listener needn't wait for the
+        end of the utterance. Called from the listener's thread, so it only reads, and doesn't
+        ask which app is in front: handle() decides that on the main thread as usual."""
+        if not self.awake or self.dictating or self.pending or "[unk]" in heard:
+            return False
+        text = normalize(heard)
+        if self.take:
+            return text in TAKE_STOP
+        return any(cmd.instant and cmd.match(text) is not None for pack in self.packs for cmd in pack.commands)
 
     # -- helpers -------------------------------------------------------
 
