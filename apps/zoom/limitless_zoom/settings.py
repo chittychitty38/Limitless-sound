@@ -20,6 +20,7 @@ DEFAULTS = {
     "voice_device": None,      # microphone name, or None for the system default
     "voice_confidence": 0.55,  # 0-1, raise it if music triggers commands by mistake
     "voice_model": None,       # folder of a Vosk model, or None for the bundled one
+    "voice_language": None,    # "en" or "es" for voice commands; None: the windows' language
     "show_panel_on_start": True,
     "first_run": True,
     "layer_map": DEFAULT_LAYER_MAP,
@@ -44,6 +45,19 @@ def config_dir():
     else:
         base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     return base / "Limitless Zoom"
+
+
+def voice_app_models():
+    """Where Limitless Voice keeps the speech models it downloads (its user data folder, as
+    platformdirs names it), so a model Voice already has isn't downloaded again for Zoom."""
+    name = os_name()
+    if name == "mac":
+        base = Path.home() / "Library" / "Application Support"
+    elif name == "win":
+        base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", "").strip() or Path.home() / ".local" / "share")
+    return base / "Limitless Voice" / "models"
 
 
 class Settings(dict):

@@ -19,7 +19,7 @@ from .actions import APP_ACTIONS, LABELS
 from .hotkeys import GlobalKeys, KeyLogic
 from .keys import format_key
 from .router import Router
-from .settings import Settings, config_dir
+from .settings import Settings, config_dir, voice_app_models
 from .suite import Suite
 from .ui import KeyCaptureDialog, Look, Panel, Setup, Toast
 from .words import t
@@ -38,7 +38,8 @@ class Bus(QObject):
     switch = Signal()
     status = Signal(object)
     captured = Signal(str)
-    voice_ready = Signal(str)
+    voice_ready = Signal(str, str)      # a speech model downloaded: its folder, its language
+    voice_failed = Signal(str, object)  # one that couldn't be: its language, the problem
     heard = Signal(object)
     voice_status = Signal(object)
     level = Signal(float)
@@ -80,6 +81,12 @@ def bundled_dirs():
     return dirs
 
 
+def model_dirs():
+    """Folders that may hold a speech model: Zoom's own, then Limitless Voice's, which has the
+    Spanish model once Voice has listened in Spanish."""
+    return bundled_dirs() + [voice_app_models()]
+
+
 class ZoomApp(QObject):
     def __init__(self, settings, backend, use_keys=True, use_voice=True, use_tray=True):
         super().__init__()
@@ -90,6 +97,10 @@ class ZoomApp(QObject):
         self.last_app = (None, None)
         self.last_action = None
         self.voice = None
+        self.voice_wanted = None        # the language voice was last started for
+        self._voice_note = None         # what to add to the listener's status, as words
+        self._listener_said = None      # the listener's last status
+        self._downloading = set()       # languages whose speech model is downloading
         self.setup_window = None
         self.capture_dialog = None
         self._perms_ok = None
@@ -115,7 +126,8 @@ class ZoomApp(QObject):
         self.bus.layer.connect(self._layer_changed)
         self.bus.switch.connect(self.panel.switch_pressed)
         self.bus.status.connect(self._status)
-        self.bus.voice_ready.connect(self._start_voice_with)
+        self.bus.voice_ready.connect(self._voice_ready)
+        self.bus.voice_failed.connect(self._voice_failed)
         self.bus.heard.connect(self._heard)
         self.bus.voice_status.connect(self._voice_status)
         self.bus.level.connect(self._level)
@@ -331,38 +343,132 @@ class ZoomApp(QObject):
             self._tray_tip()
         self._perms_shown = None   # the permissions, named in the new language
         self._check_permissions()
+        self.follow_language()     # voice commands in it too, unless another was chosen for them
         self.set_look(self.look)   # room for the new words, each window where it was
 
     # Voice -----------------------------------------------------------------
 
+    def listening_language(self):
+        """The language voice commands are said in: the one chosen for them (voice_language in
+        the settings, or the menu), else the language Zoom's windows are in, which is the
+        suite's (or the computer's until the hub says)."""
+        code = words.tag(self.settings["voice_language"]) or words.language()
+        return voice.LANGUAGES.get(code, voice.ENGLISH)
+
+    def heard_language(self):
+        """The language voice commands work in right now: the one being listened in, which is
+        English while another language's speech model is still downloading."""
+        return self.voice.language if self.voice else self.listening_language()
+
     def start_voice(self):
-        model = voice.find_model(self.settings["voice_model"], bundled_dirs())
+        """Listen in the language wanted. Its speech model is downloaded once, the first time;
+        until it's here, Zoom listens in English and says so."""
+        want = self.voice_wanted = self.listening_language()
+        self._voice_note = None
+        model = voice.find_model(self.settings["voice_model"], model_dirs(), want)
         if model:
-            self._start_voice_with(str(model))
+            self._start_voice_with(str(model), want.code)
             return
-        self._voice_status(t("downloading the voice model (about 40 MB), one time only…"))
+        english = None if want is voice.ENGLISH else voice.find_model(self.settings["voice_model"], model_dirs())
+        if english:
+            self._voice_note = t("until the {language} voice model is downloaded ({size}, one time only), "
+                                 "say the commands in English", language=t(want.english_name), size=want.size)
+            self._start_voice_with(str(english), voice.ENGLISH.code)
+        else:
+            self.stop_voice()
+            self._voice_status(t("downloading the voice model (about 40 MB), one time only…") if want is voice.ENGLISH
+                               else t("downloading the {language} voice model (about {size}), one time only…",
+                                      language=t(want.english_name), size=want.size))
+        self._download(want)
+
+    def _download(self, lang):
+        if lang.code in self._downloading:
+            return
+        self._downloading.add(lang.code)
 
         def fetch():
             try:
-                path = voice.download_model(config_dir() / "models")
-                self.bus.voice_ready.emit(str(path))
+                path = voice.download_model(config_dir() / "models", language=lang)
             except Exception as e:
-                self.bus.voice_status.emit(t("couldn't download the voice model: {problem}", problem=e))
+                done = (self.bus.voice_failed, (lang.code, e))
+            else:
+                done = (self.bus.voice_ready, (str(path), lang.code))
+            try:
+                done[0].emit(*done[1])
+            except RuntimeError:   # Zoom quit while it downloaded
+                pass
 
         threading.Thread(target=fetch, daemon=True).start()
 
-    def _start_voice_with(self, model_path):
+    def _voice_ready(self, path, code):
+        """A speech model finished downloading: listen with it if it's still the one wanted."""
+        self._downloading.discard(code)
+        if not (self.use_voice and self.settings["voice_enabled"]) or self.listening_language().code != code:
+            return   # kept for when it's wanted
+        waited = self.voice is not None   # it listened in English meanwhile
+        self._voice_note = None
+        self._start_voice_with(path, code)
+        if waited:
+            self.feedback(t("Voice commands in {language}", language=t(voice.LANGUAGES[code].english_name)))
+
+    def _voice_failed(self, code, problem):
+        self._downloading.discard(code)
+        lang = voice.LANGUAGES[code]
+        if not (self.use_voice and self.settings["voice_enabled"]) or self.listening_language() is not lang:
+            return
+        if self.voice is not None:   # still listening in English: say why, and that it is
+            self._voice_note = t("the {language} voice model couldn't be downloaded ({problem}), so say the "
+                                 "commands in English", language=t(lang.english_name), problem=problem)
+            if self._listener_said is not None:
+                self._voice_status(self._noted(self._listener_said))
+        elif lang is voice.ENGLISH:
+            self._voice_status(t("couldn't download the voice model: {problem}", problem=problem))
+        else:
+            self._voice_status(t("couldn't download the {language} voice model: {problem}",
+                                 language=t(lang.english_name), problem=problem))
+
+    def _noted(self, status):
+        """The listener's status, with what Zoom has to add to it (still downloading a language)."""
+        return t("{status}; {note}", status=status, note=self._voice_note) if self._voice_note else status
+
+    def _listener_status(self, text):
+        """The listener's status (said on its own thread), with the note added."""
+        self._listener_said = text
+        self.bus.voice_status.emit(self._noted(text))
+
+    def _start_voice_with(self, model_path, code=voice.ENGLISH.code):
         self.stop_voice()
-        self.voice = voice.VoiceListener(model_path, self.bus.action.emit, self.bus.voice_status.emit,
+        self.voice = voice.VoiceListener(model_path, self.bus.action.emit, self._listener_status,
                                          self.settings["voice_device"],
                                          self.settings["voice_confidence"],
-                                         on_heard=self.bus.heard.emit, on_level=self.bus.level.emit)
+                                         on_heard=self.bus.heard.emit, on_level=self.bus.level.emit,
+                                         language=voice.LANGUAGES[code])
         self.voice.start()
+        self._show_phrases()
 
     def stop_voice(self):
         if self.voice:
             self.voice.stop()
             self.voice = None
+        self._listener_said = None
+
+    def follow_language(self):
+        """The suite's language changed, or the one chosen for voice: listen in it, and show
+        what can be said in it."""
+        if self.use_voice and self.settings["voice_enabled"] and self.listening_language() is not self.voice_wanted:
+            self.start_voice()
+        self._show_phrases()
+
+    def set_voice_language(self, code):
+        """Voice commands in this language ("en", "es"), or None for the windows' language."""
+        self.settings["voice_language"] = code
+        self.settings.save()
+        self.follow_language()
+
+    def _show_phrases(self):
+        """What can be said, in the language voice works in now, in Setup."""
+        if self.setup_window is not None:
+            self.setup_window.set_phrases(self.heard_language())
 
     def set_voice(self, on):
         self.settings["voice_enabled"] = on
@@ -437,6 +543,7 @@ class ZoomApp(QObject):
         if self.voice is None:
             w.set_voice_status(t("off") if not self.settings["voice_enabled"] else t("starting…"))
         self.setup_window = w
+        self._show_phrases()
         self._perms_shown = None
         self._check_permissions()
         screen = w.screen().availableGeometry()
@@ -449,7 +556,8 @@ class ZoomApp(QObject):
     def _setup_done(self):
         self.settings["first_run"] = False
         self.settings.save()
-        self.feedback(t("Ready. Say zoom in, or tap {key}", key=self.key_text()))
+        self.feedback(t("Ready. Say {phrase}, or tap {key}", phrase=self.heard_language().first("in"),
+                        key=self.key_text()))
 
     def set_open_at_login(self, on):
         try:
@@ -479,6 +587,9 @@ class ZoomApp(QObject):
         voice_action.setChecked(self.settings["voice_enabled"])
         voice_action.triggered.connect(self.set_voice)
         menu.addAction(voice_action)
+        lang_menu = self.language_menu = menu.addMenu("")
+        words.show(lang_menu.setTitle, t("Voice command language"))
+        lang_menu.aboutToShow.connect(lambda: self._fill_languages(lang_menu))
         speak_action = item(t("Speak each action"), checkable=True)
         speak_action.setChecked(self.settings["speak"])
         speak_action.triggered.connect(lambda on: (self.settings.__setitem__("speak", on), self.settings.save()))
@@ -513,6 +624,18 @@ class ZoomApp(QObject):
             a = QAction(name or t("System default"), menu, checkable=True)
             a.setChecked(name == self.settings["voice_device"])
             a.triggered.connect(lambda _=False, n=name: self.set_mic(n))
+            menu.addAction(a)
+
+    def _fill_languages(self, menu):
+        """Voice commands in the windows' language, or in one chosen for them. Each language by
+        its name in itself, so someone who reads only that language finds it."""
+        menu.clear()
+        same = t("Same as Limitless Sound ({language})",
+                 language=t(voice.LANGUAGES.get(words.language(), voice.ENGLISH).english_name))
+        for code, name in [(None, same)] + [(c, lang.name) for c, lang in voice.LANGUAGES.items()]:
+            a = QAction(name, menu, checkable=True)
+            a.setChecked(code == (words.tag(self.settings["voice_language"]) or None))
+            a.triggered.connect(lambda _=False, c=code: self.set_voice_language(c))
             menu.addAction(a)
 
     def _remote_command(self):

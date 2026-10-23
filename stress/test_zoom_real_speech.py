@@ -35,7 +35,7 @@ from conftest import need
 
 need("zoom")
 
-from limitless_zoom.voice import LANGUAGES, Hearing, Language, VoiceListener, recognize_file  # noqa: E402
+from limitless_zoom.voice import LANGUAGES, Hearing, VoiceListener, recognize_file, without  # noqa: E402
 
 LANG = LANGUAGES[os.environ.get("ZOOM_LANGUAGE") or "en"]
 MODEL = os.environ.get("VOSK_MODEL")
@@ -45,14 +45,24 @@ PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 RATE = 16000
 
-# Other ways to say Zoom's commands, measured but not listened for by the app: what Zoom would
-# hear of real people saying them (test_zoom_language.py), and what an hour of ordinary talk
-# would set off, if it listened for them too.
-CANDIDATES = {
-    "es": {"acerca": "in", "aleja": "out", "reduce": "out", "aumenta": "magIn", "disminuye": "magOut",
-           "ajusta": "fit", "repetir": "again", "de nuevo": "again", "más zoom": "in", "menos zoom": "out",
-           "encajar": "fit", "agrandar": "in", "achicar": "out"},
-}.get(LANG.code, {})
+MIN_CONF = 0.55                      # the app's default
+THRESHOLDS = (0.55, 0.7, 0.8, 0.9)   # what a higher one would do, measured here
+
+
+def variants():
+    """Other ways Zoom could listen in the language, measured here and not in the app: what Zoom
+    would hear of real people saying its words (test_zoom_language.py), and what an hour of
+    ordinary talk would set off. "others" are words listened for only to be written down instead
+    of a command they sound like."""
+    if LANG.code != "es":
+        return {}
+    from zoom_trial_words import NEAR, SHORT, TOP300, TOP1000
+    return {
+        "+ near": LANG.adding(others=NEAR + SHORT),
+        "+ near, 300 common": LANG.adding(others=NEAR + SHORT + TOP300),
+        "+ near, 1000 common": LANG.adding(others=NEAR + SHORT + TOP1000),
+        "+ 1000 common": LANG.adding(others=SHORT + TOP1000),
+    }
 
 _mine = threading.local()
 
@@ -72,12 +82,6 @@ def _pick(folder):
         speaker, _, take = f.stem.partition("_nohash_")
         return int(take or 0), hashlib.sha1(speaker.encode()).hexdigest()
     return sorted(folder.glob("*.wav"), key=order)[:PER_WORD]
-
-
-def trying(language, extra):
-    """The language with extra phrases listened for too."""
-    return Language(language.code, language.name, language.model, language.size, {**language.phrases, **extra},
-                    language.fillers, language.others)
 
 
 @pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MODEL and SPEECH_COMMANDS_DIR (English)")
@@ -101,17 +105,19 @@ def test_stray_words_do_not_zoom():
 def hear(folder, language=LANG):
     """One person reading, as one stretch of microphone audio with a short pause between
     sentences, through Zoom's gate and recognizer. Actions are judged by Zoom's own
-    listener; a "go to sleep" counts as fired, and listening starts again after it.
-    Returns the seconds heard and [(recording, action, what was heard)]."""
+    listener, at any confidence (see MIN_CONF); a "go to sleep" counts as fired, and listening
+    starts again after it. Returns the seconds heard and
+    [(recording, action, what was heard, how sure the recognizer was)]."""
     import vosk
     rec = vosk.KaldiRecognizer(_model(), RATE, language.grammar())
     rec.SetWords(True)
     fired, now = [], {}
-    zoom = VoiceListener(MODEL, lambda action: fired.append((now["utt"], action, now["text"])),
-                         lambda status: None, language=language)
+    zoom = VoiceListener(MODEL, lambda action: fired.append((now["utt"], action, now["text"], now["conf"])),
+                         lambda status: None, min_conf=0.0, language=language)
 
     def result(res):
         now["text"] = res.get("text", "")
+        now["conf"] = language.confidence(res.get("result"))
         zoom._result(res)
         zoom.asleep = False
 
@@ -135,13 +141,21 @@ def hear(folder, language=LANG):
 
 def _phrase(text, language):
     """The phrase in what was heard: without [unk] and fillers."""
-    return " ".join(w for w in text.split() if w != "[unk]" and w not in language.filler_words)
+    return " ".join(w for w in without(text.split(), language.fillers) if w != "[unk]")
 
 
-def _report(fired, said, language):
-    for phrase, k in Counter(_phrase(f[2], language) for f in fired).most_common():
-        utt, action, text = next(f for f in fired if _phrase(f[2], language) == phrase)
-        print(f"  {k:>3} × “{phrase}” → {action:<9} e.g. heard “{text}” (reading about “{said.get(utt, '')[:70]}”)")
+def _report(fired, said, language, most=40):
+    counted = Counter(_phrase(f[2], language) for f in fired)
+    for phrase, k in counted.most_common(most):
+        utt, action, text, conf = next(f for f in fired if _phrase(f[2], language) == phrase)
+        print(f"  {k:>3} × “{phrase}” → {action:<9} e.g. heard “{text}” ({conf:.2f} sure; reading about "
+              f"“{said.get(utt, '')[:60]}”)")
+
+
+def _hear_all(people, language):
+    with ThreadPoolExecutor(WORKERS) as pool:
+        streams = list(pool.map(lambda folder: hear(folder, language), people))
+    return sum(s for s, _ in streams) / 3600, [f for _, fs in streams for f in fs]
 
 
 @pytest.mark.skipif(not (MODEL and TALK_DIR), reason="set VOSK_MODEL and LIBRISPEECH_DIR or TALK_DIR")
@@ -151,21 +165,24 @@ def test_ordinary_talk_rarely_zooms():
                 for line in (root / "transcripts.txt").read_text(encoding="utf-8").splitlines() if line)
     people = sorted(d for d in root.iterdir() if d.is_dir())
     started = time.monotonic()
-    with ThreadPoolExecutor(WORKERS) as pool:
-        streams = list(pool.map(hear, people))
-    hours = sum(s for s, _ in streams) / 3600
-    fired = [f for _, fs in streams for f in fs]
+    hours, heard = _hear_all(people, LANG)
+    fired = [f for f in heard if f[3] >= MIN_CONF]
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud in {LANG.name} in "
           f"{time.monotonic() - started:.0f} s: Zoom acted {len(fired)} times ({len(fired) / hours:.1f} an hour)")
     _report(fired, said, LANG)
 
-    if CANDIDATES:
-        lang = trying(LANG, CANDIDATES)
-        with ThreadPoolExecutor(WORKERS) as pool:
-            more = [f for _, fs in pool.map(lambda folder: hear(folder, lang), people) for f in fs]
-        print(f"\nWhat if Zoom listened for {', '.join(f'“{p}”' for p in CANDIDATES)} too? It would act "
-              f"{len(more)} times ({len(more) / hours:.1f} an hour):")
-        _report(more, said, lang)
+    def per_hour(acts):
+        return " / ".join(f"{sum(f[3] >= th for f in acts) / hours:.1f}" for th in THRESHOLDS)
+
+    tried = variants()
+    if tried:
+        print(f"\nActed an hour, at {' / '.join(map(str, THRESHOLDS))} sure or more:")
+        print(f"  {'as the app listens':<24} {per_hour(heard)}")
+        for name, lang in tried.items():
+            started = time.monotonic()
+            _, acts = _hear_all(people, lang)
+            print(f"  {name:<24} {per_hour(acts)}   ({len(lang.others)} other words, {time.monotonic() - started:.0f} s)")
+            _report([f for f in acts if f[3] >= MIN_CONF], said, lang, most=6)
 
     # Most Zoom may act in an hour of reading aloud. Only a handful in the hour, so a different
     # CPU moves them by one or two.

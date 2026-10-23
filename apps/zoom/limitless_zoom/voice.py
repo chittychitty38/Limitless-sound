@@ -45,21 +45,27 @@ class Language:
     phrases  spoken phrase -> action
     fillers  words people put around a command ("zoom in please", "uh, fit"). The recognizer
              knows them, so they never count as other words around a command, and they're
-             ignored. A filler can be two words ("por favor"): the recognizer only ever writes
-             them down together.
+             ignored. A filler can be two words ("por favor"), ignored only where they come
+             together: "por" alone is another word.
     others   words listened for only so that the recognizer can write them down instead of the
              command they sound like; said alone, they do nothing."""
 
-    def __init__(self, code, name, model, size, phrases, fillers=(), others=()):
-        self.code, self.name, self.model, self.size = code, name, model, size
+    def __init__(self, code, name, english_name, model, size, phrases, fillers=(), others=()):
+        self.code, self.name, self.english_name = code, name, english_name   # "es", "Español", "Spanish"
+        self.model, self.size = model, size
         self.phrases = dict(phrases)
         self.fillers = tuple(fillers)
         self.others = tuple(others)
-        self.filler_words = frozenset(w for f in self.fillers for w in f.split())
         self.url = MODEL_URL.format(name=model)
 
     def __repr__(self):
         return f"<Language {self.code}>"
+
+    def adding(self, phrases=None, others=()):
+        """The same language with more phrases or other words listened for (the stress tests try
+        some)."""
+        return Language(self.code, self.name, self.english_name, self.model, self.size,
+                        {**self.phrases, **(phrases or {})}, self.fillers, (*self.others, *others))
 
     def grammar(self):
         """The recognizer's vocabulary: Zoom's phrases, the fillers, the other words, [unk]."""
@@ -78,19 +84,19 @@ class Language:
         # sentence isn't one: two unknown words together, or other words running
         # straight on from it ("...had to see again"). In an hour of people reading
         # aloud, that was nearly everything that zoomed (stress/test_zoom_real_speech.py).
-        tokens = [t for t in text.split() if t not in self.filler_words]
-        if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])) or runs_on(words, fillers=self.filler_words):
+        tokens = without(text.split(), self.fillers)
+        if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])) or runs_on(words, fillers=self.fillers):
             return None
-        text = " ".join(w for w in tokens if w != "[unk]")
-        action = self.phrases.get(text)
-        if action is None:
+        action = self.phrases.get(" ".join(w for w in tokens if w != "[unk]"))
+        if action is None or self.confidence(words) < min_conf:
             return None
-        words = [w for w in (words or []) if w.get("word") != "[unk]" and w.get("word") not in self.filler_words]
-        if words:
-            conf = sum(w.get("conf", 1.0) for w in words) / len(words)
-            if conf < min_conf:
-                return None
         return action
+
+    def confidence(self, words):
+        """How sure the recognizer was of the words in Vosk's per-word result, fillers and [unk]
+        left out: the mean of their 'conf' scores (1 when there are none)."""
+        words = [w for w in without(words or [], self.fillers) if w.get("word") != "[unk]"]
+        return sum(w.get("conf", 1.0) for w in words) / len(words) if words else 1.0
 
     def first(self, action):
         """The first phrase that does an action: what to suggest saying for it."""
@@ -104,11 +110,11 @@ class Language:
         return out
 
 
-ENGLISH = Language("en", "English", "vosk-model-small-en-us-0.15", "40 MB", VOICE_PHRASES,
+ENGLISH = Language("en", "English", "English", "vosk-model-small-en-us-0.15", "40 MB", VOICE_PHRASES,
                    fillers=("please", "thanks", "okay", "um", "uh"))
 # vosk-model-small-es-0.42, Apache 2.0 (Alpha Cephei): the same model Limitless Voice uses for
 # Spanish, so a computer that has it for Voice already has it for Zoom (app.py looks there).
-SPANISH = Language("es", "Español", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
+SPANISH = Language("es", "Español", "Spanish", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
                    fillers=("por favor", "gracias"))
 LANGUAGES = {lang.code: lang for lang in (ENGLISH, SPANISH)}
 
@@ -117,11 +123,27 @@ MODEL_NAME = ENGLISH.model
 FILLERS = ENGLISH.fillers
 
 
-def runs_on(words, gap=RUN_ON, fillers=ENGLISH.filler_words):
+def without(items, fillers):
+    """Words (or Vosk's per-word results) without the fillers among them: a filler of two words
+    only where the two come together."""
+    fillers = sorted((f.split() for f in fillers), key=len, reverse=True)
+    out, i = [], 0
+    while i < len(items):
+        n = next((len(f) for f in fillers if [x.get("word") if isinstance(x, dict) else x
+                                              for x in items[i:i + len(f)]] == f), 0)
+        if n:
+            i += n
+        else:
+            out.append(items[i])
+            i += 1
+    return out
+
+
+def runs_on(words, gap=RUN_ON, fillers=ENGLISH.fillers):
     """Whether the command in Vosk's per-word result runs straight on from other words, with less
     than gap seconds between: said inside a sentence, not on its own. Vosk times every word,
     unknown ones too."""
-    words = [w for w in (words or []) if w.get("word") not in fillers]
+    words = without(words or [], fillers)
     known = [i for i, w in enumerate(words) if w.get("word") != "[unk]"]
     if not known or "start" not in words[known[0]]:
         return False
