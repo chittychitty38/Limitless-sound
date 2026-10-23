@@ -332,13 +332,14 @@ texts:
   Say what happened out loud: Decir en voz alta lo que pasa
   Speaking speed: Velocidad de la voz
   Start listening when the app opens: Empezar a escuchar al abrir la aplicación
-  Listen for command words only (more accurate; turn off if commands are missed): Escuchar solo las palabras de los comandos (más preciso; desactívalo si no se reconocen los comandos)
+  Listen for command words only: Escuchar solo las palabras de los comandos
+  More accurate. Turn it off if commands are missed.: Más preciso. Desactívalo si no se reconocen los comandos.
   Keep this window on top of other apps: Mantener esta ventana por encima de las demás aplicaciones
   Text size: Tamaño del texto
   High contrast colours: Colores de alto contraste
   "e.g. {example}, or {other}": "p. ej., {example} o {other}"
   Keyboard shortcut to turn listening on and off: Atajo de teclado para activar y desactivar la escucha
-  Listen on/off shortcut: Atajo para activar o desactivar la escucha
+  Listen on/off shortcut: Atajo de escucha
   Language to listen and answer in: Idioma en el que escucha y responde
   "Same as Limitless Sound ({language})": "Igual que Limitless Sound ({language})"
   "{language} ({size} download)": "{language} (descarga de {size})"

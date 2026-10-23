@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFormLayout, QFrame, QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QProgressBar, QProgressDialog, QPushButton, QSlider, QSystemTrayIcon,
-    QMenu, QVBoxLayout, QWidget,
+    QMenu, QStyle, QVBoxLayout, QWidget,
 )
 
 from . import __version__, applog, mac_keys, words
@@ -144,7 +144,9 @@ class SettingsDialog(QDialog):
         words.show(self.setWindowTitle, ui.text("Settings"))
         self.settings = settings
         self.suite_language = suite_language or wanted("", None, settings.extra.get("suite_language", ""))
-        form = QFormLayout(self)
+        body = QWidget()
+        form = QFormLayout(body)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)   # a field under its label when side by side is too wide
 
         self.speak = QCheckBox()
         words.show(self.speak.setText, ui.text("Say what happened out loud"))
@@ -162,11 +164,20 @@ class SettingsDialog(QDialog):
         self.start_listening.setChecked(settings.start_listening)
         form.addRow(self.start_listening)
 
+        # Its why on a line of its own, under it: a checkbox's words don't wrap, and at a large
+        # text size they made Settings wider than the screen.
         self.vocab = QCheckBox()
-        words.show(self.vocab.setText,
-                   ui.text("Listen for command words only (more accurate; turn off if commands are missed)"))
+        words.show(self.vocab.setText, ui.text("Listen for command words only"))
+        why = ui.text("More accurate. Turn it off if commands are missed.")
+        words.show(self.vocab.setAccessibleDescription, why)
         self.vocab.setChecked(settings.command_vocabulary)
         form.addRow(self.vocab)
+        self.vocab_why = label(why)
+        self.vocab_why.setWordWrap(True)
+        style = self.vocab.style()
+        self.vocab_why.setContentsMargins(style.pixelMetric(QStyle.PM_IndicatorWidth)
+                                          + style.pixelMetric(QStyle.PM_CheckBoxLabelSpacing), 0, 0, 0)
+        form.addRow(self.vocab_why)
 
         self.on_top = QCheckBox()
         words.show(self.on_top.setText, ui.text("Keep this window on top of other apps"))
@@ -224,7 +235,9 @@ class SettingsDialog(QDialog):
         words.show(buttons.button(QDialogButtonBox.Cancel).setText, ui.text("Cancel"))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
+        layout = QVBoxLayout(self)
+        layout.addWidget(UpAndDown(body), 1)   # scrolls at a large text size; Save and Cancel stay in view
+        layout.addWidget(buttons)
 
     def chosen_language(self):
         return load_language(self.language.currentData() or self.suite_language)
