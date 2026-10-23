@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -234,6 +235,29 @@ def suite_checks(hub: las_check.Hub, tools: list[str]) -> list[dict]:
         r, ok = {"message": str(e)}, False
     checks.append({"id": "S3", "ok": ok, "check": "The hub can say which apps are open",
                    "detail": r.get("message", "")})
+    # The page a musician sees first: the guided setup, then every setting. It's a file inside
+    # the installed hub, so a build that left it out would only show here.
+    try:
+        req = urllib.request.Request(f"{hub.base}/?t={hub.token}")
+        with urllib.request.urlopen(req, timeout=10) as page:
+            html = page.read().decode("utf-8", "replace")
+        ok = "<title>Limitless Sound</title>" in html and 'id="setup"' in html
+        spanish = 'id="strings-es"' in html
+        detail = (f"{len(html) // 1024} KB, with the guided setup" + (", in English and Spanish" if spanish else "")
+                  if ok else "it opened without the guided setup")
+    except Exception as e:
+        ok, detail = False, str(e)
+    checks.append({"id": "S4", "ok": ok, "check": "Limitless Sound's page opens", "detail": detail})
+    # The shared language reaches every app the way any setting does: change it, and back.
+    try:
+        before = hub.state()["prefs"].get("language", "en")
+        there = hub.prefs({"language": "es"}).get("language")
+        back = hub.prefs({"language": before}).get("language")
+        ok = there == "es" and back == before
+        detail = f"{before} → {there} → {back}"
+    except Exception as e:
+        ok, detail = False, str(e)
+    checks.append({"id": "S5", "ok": ok, "check": "The suite's language can be set to Español and back", "detail": detail})
     return checks
 
 

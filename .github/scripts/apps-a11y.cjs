@@ -697,7 +697,8 @@ async function checkInstaller(browser) {
   const s = screenOf('Mac installer (welcome and conclusion)');
   // Installer.app shows them in a pane about 620 px wide, in the Mac's light or dark appearance,
   // with no text size or contrast setting of its own.
-  for (const name of ['welcome', 'conclusion']) {
+  // Installer shows the English pages, or the Spanish ones on a Mac set to Spanish.
+  for (const name of ['en.lproj/welcome', 'en.lproj/conclusion', 'es.lproj/welcome', 'es.lproj/conclusion']) {
     const ctx = await browser.newContext({ viewport: { width: 620, height: 420 } });
     const page = await ctx.newPage();
     await page.goto('file://' + path.join(ROOT, 'packaging', 'mac', 'installer', 'resources', `${name}.html`));

@@ -60,12 +60,14 @@ commands:
     do: {keys: down}
   - say: ["previous track", "track up"]
     do: {keys: up}
+  # S and M, from Apple's Logic Pro guide ("Toggle Track Mute key command (M)"). Control-S and
+  # Control-M are Solo mode and Mute Regions, which act on regions instead.
   - say: ["solo", "solo track", "solo [the] track", "unsolo"]
-    do: {keys: ctrl+s}
-    help: Toggle solo on the selected track (verify)
+    do: {keys: s}
+    help: Toggle solo on the selected track
   - say: ["mute", "mute track", "mute [the] track", "unmute"]
-    do: {keys: ctrl+m}
-    help: Toggle mute on the selected track (verify)
+    do: {keys: m}
+    help: Toggle mute on the selected track
   - say: ["arm", "arm track", "record enable", "disarm"]
     do: {keys: ctrl+r}
     help: Toggle record enable on the selected track (verify)
