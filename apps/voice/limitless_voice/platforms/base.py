@@ -128,7 +128,7 @@ class Platform:
 
     def permission_problems(self):
         """Things the user must allow before we can work, as (title, how-to, settings link),
-        in the language Voice shows (words.t)."""
+        in the language Voice shows (ui.text)."""
         problems = []
         if self.mic_permission() == "denied":
             problems.append((
