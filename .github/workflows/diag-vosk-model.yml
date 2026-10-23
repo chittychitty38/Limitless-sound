@@ -1,0 +1,192 @@
+name: Diag - which Vosk model
+
+# Throwaway (branch diag/vosk-model, never merged). Would a larger offline Vosk model make
+# Voice and Zoom hear real people better, and what would it cost on an older laptop?
+# The real-people job from stress.yml, once per model, plus each model's cost: load and
+# recognizer build time, decode CPU per second of audio, memory, size on disk.
+# Voice is 0.3.5 (pull request #71, pinned below), the version the current numbers came from;
+# Zoom is main's.
+
+on:
+  push:
+    branches: [diag/vosk-model]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PYTHONUTF8: "1"
+  VOICE_SHA: 5856780e850ddd00df70e2cd8ab26b06e7e23bdc   # voice/stray-words: Voice 0.3.5
+
+jobs:
+  fetch-model:
+    name: Fetch ${{ matrix.model }}
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - vosk-model-small-en-us-0.15
+          - vosk-model-en-us-0.22-lgraph
+          - vosk-model-en-us-daanzu-20200905-lgraph
+          - vosk-model-en-us-0.22
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: models/${{ matrix.model }}
+          key: diag-vosk-${{ matrix.model }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -sSfL --retry 3 -o model.zip "https://alphacephei.com/vosk/models/${{ matrix.model }}.zip"
+          ls -l model.zip
+          rm -rf unzipped && mkdir unzipped models
+          python3 -m zipfile -e model.zip unzipped/
+          ls unzipped
+          # The folder in the zip is the model's name; if it ever isn't, take the one folder there.
+          if [ -d "unzipped/${{ matrix.model }}" ]; then src="unzipped/${{ matrix.model }}"; else src="$(ls -d unzipped/*/ | head -1)"; fi
+          mv "$src" "models/${{ matrix.model }}"
+      - shell: bash
+        run: |
+          du -sh "models/${{ matrix.model }}"
+          find "models/${{ matrix.model }}" -maxdepth 2 | sort
+
+  fetch-speech:
+    name: Fetch the recordings
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: data
+        uses: actions/cache@v4
+        with:
+          path: real-speech
+          key: real-speech-${{ hashFiles('stress/tools/get_real_speech.py') }}
+      - if: steps.data.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          pip install numpy soundfile
+          python stress/tools/get_real_speech.py real-speech
+      - shell: bash
+        run: du -sh real-speech/*
+
+  measure:
+    name: ${{ matrix.label }}
+    needs: [fetch-model, fetch-speech]
+    # One model failing to download shouldn't stop the others being measured.
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: small-en-us-0.15 (shipped)
+            model: vosk-model-small-en-us-0.15
+            open_model: ""
+          - label: en-us-0.22-lgraph
+            model: vosk-model-en-us-0.22-lgraph
+            open_model: ""
+          - label: en-us-daanzu-20200905-lgraph
+            model: vosk-model-en-us-daanzu-20200905-lgraph
+            open_model: ""
+          - label: small-0.15 commands + 0.22 open (Voice only)
+            model: vosk-model-small-en-us-0.15
+            open_model: vosk-model-en-us-0.22
+          - label: 0.22-lgraph commands + 0.22 open (Voice only)
+            model: vosk-model-en-us-0.22-lgraph
+            open_model: vosk-model-en-us-0.22
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      MODEL: ${{ matrix.model }}
+      OPEN_MODEL: ${{ matrix.open_model }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VOICE_SHA }}
+          path: voice035
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/${{ matrix.model }}
+          key: diag-vosk-${{ matrix.model }}
+          fail-on-cache-miss: true
+      - if: matrix.open_model != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: models/${{ matrix.open_model }}
+          key: diag-vosk-${{ matrix.open_model }}
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: real-speech
+          key: real-speech-${{ hashFiles('stress/tools/get_real_speech.py') }}
+          fail-on-cache-miss: true
+      - name: Install, and say what this runner and model are
+        run: |
+          pip install pytest psutil numpy pyyaml platformdirs vosk==0.3.44 soundfile
+          nproc; lscpu | grep -E 'Model name|^CPU\(s\)|MHz'; free -m
+          grep -h __version__ voice035/apps/voice/limitless_voice/__init__.py apps/zoom/limitless_zoom/__init__.py
+          for m in "$MODEL" $OPEN_MODEL; do
+            echo "== $m: $(du -sb "models/$m" | cut -f1) bytes on disk"
+            ls -la "models/$m" "models/$m/graph"
+          done
+          if [ -x /usr/bin/time ]; then echo "TIMER=/usr/bin/time -v" >> "$GITHUB_ENV"; fi
+
+      - name: Cost, Voice (twice, fresh processes)
+        run: |
+          open=""; [ -n "$OPEN_MODEL" ] && open="--open-model $PWD/models/$OPEN_MODEL"
+          for i in 1 2; do
+            echo "---- Voice cost, run $i"
+            python -I stress/tools/model_cost.py voice "$PWD/models/$MODEL" $open --repo voice035 \
+              --talk real-speech/librispeech 2>&1 \
+              | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
+          done
+
+      - name: Cost, Zoom (twice, fresh processes)
+        if: matrix.open_model == ''
+        run: |
+          for i in 1 2; do
+            echo "---- Zoom cost, run $i"
+            python -I stress/tools/model_cost.py zoom "$PWD/models/$MODEL" --repo . \
+              --talk real-speech/librispeech 2>&1 \
+              | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
+          done
+
+      - name: Voice 0.3.5 vs real people
+        continue-on-error: true
+        run: |
+          plugin=""
+          if [ -n "$OPEN_MODEL" ]; then
+            plugin="-p diag_open_model"
+            export VOSK_OPEN_MODEL="$PWD/models/$OPEN_MODEL" PYTHONPATH="$PWD/stress/tools"
+          fi
+          started=$(date +%s)
+          VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
+            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
+            $TIMER python -m pytest voice035/stress/test_voice_real_speech.py $plugin -v -s --durations=5 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
+          echo "Voice tests took $(( $(date +%s) - started )) s"
+
+      - name: Zoom vs real people
+        if: matrix.open_model == ''
+        continue-on-error: true
+        run: |
+          started=$(date +%s)
+          VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
+            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
+            $TIMER python -m pytest stress/test_zoom_real_speech.py -v -s --durations=5 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
+          echo "Zoom tests took $(( $(date +%s) - started )) s"
