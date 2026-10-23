@@ -1,12 +1,12 @@
-2026-10-23 05:24:07,972 INFO    Limitless Voice: Started Limitless Voice 0.3.9 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 05:24:08,970 INFO    comtypes.client._code_cache: Could not import comtypes.gen, trying to create it.
-2026-10-23 05:24:08,971 INFO    comtypes.client._code_cache: Creating comtypes.gen package failed: [WinError 3] The system cannot find the path specified: 'C:\\Users\\runneradmin\\AppData\\Local\\Programs\\Limitless Voice\\_internal\\comtypes\\gen'
-2026-10-23 05:24:08,971 INFO    comtypes.client._code_cache: Created a memory-only package.
-2026-10-23 05:24:08,972 INFO    comtypes.client._code_cache: Creating writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\LimitlessVoice-312'
-2026-10-23 05:24:08,974 INFO    comtypes.client._code_cache: Using writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\LimitlessVoice-312'
-2026-10-23 05:24:09,039 INFO    comtypes.client._generate: Could not import comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4: No module named 'comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4'
-2026-10-23 05:24:09,041 INFO    comtypes.client._generate: # Generating comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4
-2026-10-23 05:24:09,088 INFO    comtypes.client._generate: # Generating comtypes.gen.SpeechLib
-2026-10-23 05:24:09,092 INFO    comtypes.client._generate: Could not import comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0: No module named 'comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0'
-2026-10-23 05:24:09,092 INFO    comtypes.client._generate: # Generating comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0
-2026-10-23 05:24:09,096 INFO    comtypes.client._generate: # Generating comtypes.gen.stdole
+2026-10-23 08:08:59,786 INFO    Limitless Voice: Started Limitless Voice 0.4.1 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 08:09:01,056 INFO    comtypes.client._code_cache: Could not import comtypes.gen, trying to create it.
+2026-10-23 08:09:01,057 INFO    comtypes.client._code_cache: Creating comtypes.gen package failed: [WinError 3] The system cannot find the path specified: 'C:\\Users\\runneradmin\\AppData\\Local\\Programs\\Limitless Voice\\_internal\\comtypes\\gen'
+2026-10-23 08:09:01,057 INFO    comtypes.client._code_cache: Created a memory-only package.
+2026-10-23 08:09:01,058 INFO    comtypes.client._code_cache: Creating writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\LimitlessVoice-312'
+2026-10-23 08:09:01,060 INFO    comtypes.client._code_cache: Using writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\LimitlessVoice-312'
+2026-10-23 08:09:01,135 INFO    comtypes.client._generate: Could not import comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4: No module named 'comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4'
+2026-10-23 08:09:01,137 INFO    comtypes.client._generate: # Generating comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4
+2026-10-23 08:09:01,214 INFO    comtypes.client._generate: # Generating comtypes.gen.SpeechLib
+2026-10-23 08:09:01,222 INFO    comtypes.client._generate: Could not import comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0: No module named 'comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0'
+2026-10-23 08:09:01,222 INFO    comtypes.client._generate: # Generating comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0
+2026-10-23 08:09:01,230 INFO    comtypes.client._generate: # Generating comtypes.gen.stdole

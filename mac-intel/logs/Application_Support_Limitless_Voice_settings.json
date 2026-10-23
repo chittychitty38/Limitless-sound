@@ -1,0 +1,20 @@
+{
+  "mic_name": "",
+  "model": "",
+  "language": "",
+  "speak_feedback": true,
+  "voice_rate": 190,
+  "start_listening": true,
+  "command_vocabulary": true,
+  "keep_on_top": false,
+  "text_scale": 1.0,
+  "high_contrast": false,
+  "hotkey": "",
+  "show_hud": true,
+  "hud_seconds": 3.0,
+  "keep_in_menu_bar": true,
+  "first_run_done": false,
+  "extra": {
+    "suite_language": "en"
+  }
+}
