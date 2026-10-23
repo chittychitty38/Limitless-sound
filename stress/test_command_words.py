@@ -124,12 +124,13 @@ def test_real_people_saying_voice_commands():
           f"{sum(trusting[w]['destructive'] for w in used)} destructive from a wrong word. Per word: "
           + ", ".join(f"{w} {tally[w]['hits']}→{trusting[w]['hits']}" for w in commands if trusting[w]["hits"] != tally[w]["hits"]))
 
-    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin:
-    # results move a little from one runner's CPU to another's. Measured: 73.4% of commands right;
-    # the weakest, "cut", 39% (the open recognizer hears people's "cut" as "god", "come" or
-    # "good", and a destructive command needs it to agree); no destructive key from a word that
-    # wasn't said; stray words fired a command 0.9% of the time; record, play and stop acted on a
-    # median 0.53 to 0.60 s after the word ended, everything a median 1.12 s.
+    # Floors from what CI measured (ubuntu-latest, 100 clips a word, Voice 0.3.6, October 2026),
+    # less a margin: results move a little from one runner's CPU to another's. Over three runs:
+    # 73.4% to 73.5% of commands right; the weakest, "cut", 39% to 40% (the open recognizer hears
+    # people's "cut" as "god", "come" or "cup", and a destructive command needs it to agree); no
+    # destructive key from a word that wasn't said; stray words fired a command 0.4% to 0.9% of
+    # the time; record, play and stop acted on a median 0.53 to 0.60 s after the word ended,
+    # everything a median 1.11 to 1.12 s.
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
     assert hits / tries >= 0.69, f"only {hits / tries:.1%} of the command words were right"
     worst = min(commands, key=rate.get)
@@ -168,8 +169,9 @@ def test_real_people_saying_zoom_commands():
     right_all = sum(hits[w] for w in commands) / sum(tries[w] for w in commands)
     print(f"Zoom's commands: {sum(hits[w] for w in commands)}/{sum(tries[w] for w in commands)} right ({right_all:.1%})")
 
-    # Floors from what CI measured, less a margin: 92.0% right (fit 87%, taller 24 of 25,
-    # shorter 97%, again 91%), and "zoom" alone never zoomed in 100 tries.
+    # Floors from what CI measured, less a margin. Over three runs (the last with Zoom 0.1.4):
+    # 91.4% to 92.0% right (fit 87%, taller 24 of 25, shorter 97%, again 89% to 91%), and "zoom"
+    # alone never zoomed in 100 tries.
     assert right_all >= 0.88, f"only {right_all:.1%} of Zoom's commands were right"
     worst = min(commands, key=lambda w: hits[w] / tries[w])
     assert hits[worst] / tries[worst] >= 0.80, f"“{worst}” was right only {hits[worst] / tries[worst]:.0%} of the time"
