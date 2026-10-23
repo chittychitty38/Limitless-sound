@@ -157,10 +157,9 @@ exact_destructive: true
 # and a reader's "para" (for) pressed Play (test_voice_real_speech.py).
 exact: true
 # When the open recognizer heard two words or more without the command recognizer's first, or
-# three more words than it, it was talk: in an hour of people reading aloud, the command
-# recognizer heard "parar" in "quando você liga para alguém que", "dividir" in "o que alguns casos
-# de vírus ebola ocorreram", "solo" in "polo químicas" and "para" in "e acampamento para famílias
-# com" (test_voice_real_speech.py).
+# two more words than it, it was talk: in an hour of people reading aloud, the command recognizer
+# heard "parar" in "quando você liga para alguém que", "dividir" in "o que alguns casos de vírus
+# ebola ocorreram", "solo" in "polo químicas" and "para" in "se para se" (test_voice_real_speech.py).
 sentence_words: 2
 
 # Words the speech model doesn't know, spelled as words it does. The recognizer listens for

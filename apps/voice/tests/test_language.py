@@ -405,7 +405,8 @@ class PortugueseEngine(unittest.TestCase):
         for heard, open_, keys in [("parar", "quando você liga para alguém que", []),
                                    ("solo", "polo químicas", []),
                                    ("dividir", "o que alguns casos", []),
-                                   ("para", "e acampamento para famílias com", []),   # three more words
+                                   ("para", "e acampamento para famílias com", []),
+                                   ("para", "se para se", []),                    # two more words
                                    ("para", "para o", ["space"]),
                                    ("parar", "parar", ["space"]), ("parar", "", ["space"]),
                                    ("parar", "pare", ["space"]),            # one word: could be it

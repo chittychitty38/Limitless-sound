@@ -20,7 +20,7 @@ file, languages/<code>.yaml, with:
   exact        true when every command runs only on its exact words: in a language whose
                short words are a letter apart ("sala" and "salva"), a near miss is another word
   sentence_words  a number, N: when the open recognizer heard N words or more without the
-               command recognizer's first, or N + 1 more words than it placed, it was talk, and
+               command recognizer's first, or N more words than it placed, it was talk, and
                only its words count for commands (see engine.py). 0, the default, leaves it to
                the command recognizer
   commands     for each built-in pack, for each command (by its first English phrase),
