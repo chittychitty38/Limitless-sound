@@ -53,8 +53,8 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 |---|---|---|---|---|
 | Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.5, in the suite |
 | Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.3 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.6 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.8 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.7 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.9 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.8 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
@@ -93,7 +93,9 @@ follows it live, in place, without moving the keyboard focus:
 
 **A Brazilian Portuguese preview, in Voice only** (0.4.3, #103). Limitless Sound's language list
 offers «Português (prévia: só o Limitless Voice)» (hub 0.2.5); the page and every other app stay
-in English for it.
+in English for it. Every app shows English for a suite language it doesn't have: One-Hand and Zoom
+used to keep the last one, so Español → Português left them in Spanish (One-Hand 0.2.7, Zoom
+0.1.9, #106).
 - Voice's Portuguese is one file, `apps/voice/limitless_voice/languages/pt.yaml`, with Alpha
   Cephei's `vosk-model-small-pt-0.3` (31 MB, Apache 2.0; their only other Portuguese model is
   1.6 GB and GPL).
@@ -173,22 +175,27 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.8 passes it
-on all three computers** (run 39936918797, on the website):
-- Every app is ready in 1–16 s, at Access Standard level 2, with every action answered and no
-  timeouts. The installer takes 12 s on Apple silicon, 18 s on Intel and 81 s on Windows.
-- Every suite check is green, S1 to S6:
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.9 passes it
+on all three computers** (run 39946732776, on the website):
+- Every app is ready in under 8 s, at Access Standard level 2, with every action answered and no
+  timeouts. The installer takes 10 s on Apple silicon, 15 s on Intel and 55 s on Windows.
+- Every suite check is green, S1 to S7:
   - Limitless Sound's own page opens, with its Spanish words (S4, #86);
   - the suite's language can be set to Español and back (S5, #88);
   - One-Hand, Zoom, Control, GazeStage and Color each say they're showing Spanish within 3 s of
     the suite switching, and English again after (S6, #96, #100). Voice is named but not held: it
     reports the language it listens in, English until its Spanish model is downloaded.
-- Every app is under 3% of the CPU sitting idle (Zoom 2.7% on the Intel Mac, everything else
-  0.8% or less).
+  - From Español, Português leaves every app but Voice in English within 3 s (S7, #107). Each
+    must show Spanish first, so an app that ignores the switch can't pass.
+- Every app is under 3% of the CPU sitting idle except Zoom on the Intel Mac: 3.2%, and 3.3% on
+  P3's second look 50 s later (open item 12). Everything else is 1.7% or less.
+- P3 watches an app over 3% once more, 30 s later, and judges that reading (#107): one 15 s
+  reading can't tell a spike from steady use (Zoom on Intel read 3.7% and 2.9% in two runs of
+  the same 0.2.9).
 - P5 (#104) compares each app's idle memory with the last published proof on the same kind of
   computer and warns at 1.5x and 50 MB more. The 0.2.7 proof found Zoom 0.1.6 at twice its
   memory (510 MB on Apple silicon) and 5.3% idle CPU on Intel: it loaded its speech model again
-  on each language switch. Zoom 0.1.8 (#101) fixed it: 188 / 252 / 249 MB in 0.2.8.
+  on each language switch. Zoom 0.1.8 (#101) fixed it: 184 / 250 / 250 MB in 0.2.9.
 
 An app over the limit names its busiest processes (#62). To run it again before the default
 branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
@@ -350,6 +357,15 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 11. **Press the corrected DAW keys once in the real DAWs** (#85): Logic's track mute and solo
     (M, S), Pro Tools' record (F12, on a laptop too), next/previous track (Control-; and
     Control-P) and go to end (Option-Return).
+12. **Zoom's idle CPU on the proof's Intel Mac** (a 2012 Mac mini) sits at the 3% line: 2.7% in
+    0.2.8, 2.9–3.7% in 0.2.9, steady across P3's second look. Apple silicon reads 0.3%, Windows
+    0.0%, and Voice, with the same silence gate (`SpeechGate`, `apps/zoom/limitless_zoom/voice.py`),
+    0.9% on the same Mac. Measure Zoom's threads on a real Intel Mac before changing anything
+    (see the gotchas on idle CPU); its background download of the Spanish model after the suite
+    switches to Español was ruled out.
+13. **Voice's Settings at double text** is 972 px wide, in English too: its longest checkbox
+    ("Listen for command words only…") doesn't wrap. It fits screens 1280 px wide; a smaller one
+    would need the checkbox's explanation as a wrapped line under it.
 
 ## Gotchas learned the hard way
 
@@ -445,6 +461,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   up and down, asks for the width they need), and no fixed minimum size stops a window growing.
   Compare a translation with English on the same machine, and check a few fonts locally
   (DejaVu Sans, Carlito, Liberation Sans) at 1x to 2.3x text before pushing.
+- Before blaming a cause, find a measurement that could prove it wrong. Zoom's 3.7% idle in the
+  first 0.2.9 proof looked like its Spanish model downloading after S6; P3's second look read
+  3.2% then 3.3%, which ruled that out. A re-run of one proof job publishes the first attempt's
+  results again (artifacts share a name): push a commit for a fresh run instead.
 - GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
   account limit"), after a day of many suite builds: each one downloads every app for three
   computers. On 2026-10-23 it refused Control's builds for over an hour. The suite build now takes
