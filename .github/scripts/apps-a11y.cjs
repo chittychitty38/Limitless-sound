@@ -1,6 +1,6 @@
 // Checks every web-based screen in the suite the way the website is checked (axe-core, WCAG 2.2 A
-// and AA, light and dark, the usual window size and a small one), in each app's standard, high
-// contrast and largest-text looks, and from the keyboard: every control reachable with Tab, in
+// and AA, light and dark, the usual window size and a small one, nothing to scroll to sideways), in
+// each app's standard, high contrast and largest-text looks, and from the keyboard: every control reachable with Tab, in
 // document order, with a focus indicator you can see and nothing covering it. Blind and low-vision
 // musicians use these screens with VoiceOver; switch and keyboard users see them through the focus.
 // Any problem fails.
@@ -287,6 +287,12 @@ async function checkStates(page, s, view, { looks = Object.keys(LOOKS), setLook,
         if (settle) await settle();
         const label = `${look === 'standard' ? '' : look + ', '}${scheme}, ${width} x ${height}`;
         await axeCheck(page, s, label);
+        // Nothing off the side to scroll to (WCAG 1.4.10), the largest text and the small size included.
+        const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        if (over > 0) {
+          s.lines.push(`    [reflow] scrolls sideways by ${over} px`);
+          s.keys.set('scrolls sideways', (s.keys.get('scrolls sideways') || 0) + 1);
+        }
         if (keys(look, scheme, i === 0)) await keyboardCheck(page, s, label);
       }
     }
