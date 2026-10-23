@@ -1,5 +1,5 @@
 {
-  "_": "What site-a11y.cjs answers for GitHub's releases API and for proof/latest.json, so the pages are checked with their newest-release links and last night's proof filled in: one app passed, one failed, and one computer that couldn't finish. The releases are newer than the pages' written fallbacks, and a draft must be skipped.",
+  "_": "What site-a11y.cjs answers for GitHub's releases API and for proof/latest.json, so the pages are checked with their newest-release links and last night's proof filled in: one app passed, one failed, suite checks passed and failed, and one computer that couldn't finish. The releases are newer than the pages' written fallbacks, and a draft must be skipped.",
   "releases": [
     { "tag_name": "voice-v9.0.0", "draft": true, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/voice-v9.0.0" },
     { "tag_name": "v0.2.6", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/v0.2.6" },
@@ -21,6 +21,11 @@
         "suiteVersion": "v0.2.6",
         "installSeconds": 11.0,
         "computer": { "os": "macOS 15.7.9" },
+        "suite": [
+          { "id": "S1", "ok": true, "check": "Every app connected to the suite at the same time", "detail": "6 connected" },
+          { "id": "S6", "ok": true, "check": "Every app with Spanish windows follows the suite into Español and back", "detail": "in Spanish: color, control, gaze, onehand, zoom; not yet: voice (listens in English until its Spanish model is downloaded)" },
+          { "id": "S7", "ok": false, "check": "Português, a preview only in Voice, leaves every other app in English", "detail": "in English: color, control, gaze; not in English: onehand (es), zoom (es)" }
+        ],
         "apps": [
           {
             "name": "Limitless Voice", "version": "0.4.0", "level": "adaptive", "joinedSeconds": 2.3, "actionsTried": 23,

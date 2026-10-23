@@ -3,7 +3,9 @@
 // served the way GitHub Pages serves them. Each runs twice: with GitHub's API and last night's
 // proof unreachable (the page's own fallbacks), and with the answers in site-sample.json, so the
 // newest-release links and the proof results are checked as they're shown. In every run, the page
-// must not scroll sideways (WCAG 1.4.10, down to 320 px), and its link to the other language must be
+// must not scroll sideways (WCAG 1.4.10, down to 320 px), at phone width with its text twice as large
+// too (1.4.4, as a phone's text size or a browser's text zoom makes it), its header may stay on top
+// of the page only while it covers less than a fifth of the screen, and its link to the other language must be
 // there, reachable by keyboard and right. The Spanish page must have no English left and the same
 // styles as the English one (site-spanish.cjs).
 // Any problem fails. The site is the front door for musicians with disabilities.
@@ -86,6 +88,22 @@ function serve() {
         }));
         if (page.lang !== pg.lang) fail(`<html lang="${page.lang}">, not "${pg.lang}"`);
         if (page.sideways > 0) fail(`scrolls sideways by ${page.sideways} px`);
+        // How much of the screen a header that stays on top covers, now and with the text at 200%.
+        const covers = await p.evaluate(async (phone) => {
+          const html = document.documentElement, top = document.querySelector('header.top');
+          const share = () => (getComputedStyle(top).position === 'sticky' ? top.offsetHeight / innerHeight : 0);
+          const now = share();
+          if (!phone) return { now };
+          html.style.fontSize = '200%';
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const big = { over: html.scrollWidth - html.clientWidth, share: share() };
+          html.style.fontSize = '';
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          return { now, big };
+        }, width <= 390);
+        if (covers.now > 0.2) fail(`its header stays on top over ${Math.round(covers.now * 100)}% of the screen`);
+        if (covers.big && covers.big.over > 0) fail(`with its text at 200%, scrolls sideways by ${covers.big.over} px`);
+        if (covers.big && covers.big.share > 0.2) fail(`with its text at 200%, its header stays on top over ${Math.round(covers.big.share * 100)}% of the screen`);
         if (page.alternates !== 'en es x-default') fail(`<link rel="alternate" hreflang>: ${page.alternates || 'none'}, not en, es and x-default`);
         const want = base + pg.other;
         if (page.langLinks.length !== 1) fail(`${page.langLinks.length} visible links to the other language, not 1`);

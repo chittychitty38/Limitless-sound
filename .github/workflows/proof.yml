@@ -277,6 +277,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       NIGHTLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.run_id == '' }}
     steps:
+      - uses: actions/checkout@v4   # for the badge's script
+        with:
+          path: repo
+          sparse-checkout: .github/scripts
       - uses: actions/download-artifact@v4
         with:
           pattern: proof-*
@@ -316,6 +320,7 @@ jobs:
               "\n".join((d / "summary.md").read_text() for d in sorted(pathlib.Path('.').iterdir())
                         if (d / "summary.md").exists()))
           EOF
+          python3 ../repo/.github/scripts/proof-badge.py latest.json badge.svg   # the README shows it
           git init -q -b "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -331,10 +336,10 @@ jobs:
         if: env.NIGHTLY == 'true' && hashFiles('results/latest.json') != ''
         run: |
           mkdir -p site/proof
-          cp results/latest.json site/proof/latest.json
+          cp results/latest.json results/badge.svg site/proof/
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add proof/latest.json
+          git add proof/latest.json proof/badge.svg
           git commit -m "Nightly proof $(date -u +%Y-%m-%d)" || exit 0
           git push

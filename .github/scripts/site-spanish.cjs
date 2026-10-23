@@ -6,7 +6,8 @@
 // and the proof filled in or not. A word on the Spanish page is English when the English page uses it,
 // or it's one of the common English words below, unless it's a name or a word Spanish uses too
 // (KEEP). Words marked lang="en" (an English command, the proof's English details) and code don't
-// count, and neither do numbers.
+// count, and neither do numbers. The English page's proof results are data, not its words: they
+// name languages and codes ("Español", "es") that mustn't count as English.
 //
 // Same styles: the two <style> blocks must match, apart from the Spanish page's fonts being one
 // folder up, so the brand can't drift between them.
@@ -49,7 +50,8 @@ function pageTexts() {
   const own = document.documentElement.lang.slice(0, 2);
   const foreign = (el) => !el || el.closest('script, style, code, kbd, samp, pre, [translate="no"]')
     || (el.closest('[lang]')?.lang || own).slice(0, 2) !== own;
-  const where = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : '');
+  const where = (el) => (el.closest('#proof-runs') ? 'proof ' : '') + el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+    + (typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : '');
   const out = [['title', document.title]];
   for (const m of document.querySelectorAll('meta[name="description"], meta[property="og:title"], meta[property="og:description"]'))
     out.push([`meta ${m.getAttribute('name') || m.getAttribute('property')}`, m.content]);
@@ -71,7 +73,7 @@ function words(text) {
 // English words left in the Spanish page's texts, given the English page's: ["where: «text»", ...].
 function englishLeft(spanishTexts, englishTexts) {
   const english = new Set(COMMON);
-  for (const [, text] of englishTexts) for (const w of words(text)) english.add(w);
+  for (const [where, text] of englishTexts) if (!where.startsWith('proof ')) for (const w of words(text)) english.add(w);
   for (const w of KEEP) english.delete(w);
   const found = [];
   for (const [where, text] of spanishTexts) {
