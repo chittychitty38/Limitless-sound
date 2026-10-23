@@ -50,6 +50,10 @@ READY_LIMIT = 15.0   # seconds a musician should ever wait for an app to be read
 IDLE_SECONDS = 15    # how long to watch CPU while everything sits idle
 SETTLE_SECONDS = 5   # quiet time after the last action before that
 IDLE_CPU_LIMIT = 3.0 # % of one core an app may use sitting idle, so laptops last a session
+# An app over that is watched once more this much later, and judged on that. Work it was just
+# asked for ends (Zoom fetching and unpacking its Spanish model when the suite switched to
+# Español, on its own thread); a busy loop doesn't, so it's over both times.
+IDLE_AGAIN_SECONDS = 30
 # An app using half as much memory again as in the last published proof, on the same kind of
 # computer, is worth a look: Zoom 0.1.6 doubled its own by loading its speech model again on
 # each language switch (#101), and only a side-by-side reading of two proofs showed it.
@@ -166,6 +170,33 @@ def usage(bundles: dict[str, str]) -> dict[str, dict]:
                         "busiest": [{"process": process_name(after[p][0]), "cpuPercent": round(c, 1)}
                                     for c, p in each[:3] if c >= 0.1]}
     return out
+
+
+def judge_idle(apps: list[dict], tools: list[str], measure=usage, wait=time.sleep) -> dict:
+    """P3 for each app: its CPU sitting idle, under IDLE_CPU_LIMIT. One over it is watched once
+    more IDLE_AGAIN_SECONDS later and judged on that, with the first reading in its detail.
+    Returns every reading, the hub's included."""
+    idle = measure({t: TOOLS[t][1] for t in tools} | {"hub": HUB_APP})
+    over = {t: TOOLS[t][1] for t in tools if (idle.get(t, {}).get("cpuPercent") or 0) > IDLE_CPU_LIMIT}
+    again = {}
+    if over:
+        wait(IDLE_AGAIN_SECONDS)
+        again = measure(over)
+    for a in apps:
+        first = idle.get(a["tool"], {})
+        a["idle"] = again.get(a["tool"]) or first
+        cpu = a["idle"].get("cpuPercent")
+        ok = cpu is not None and cpu <= IDLE_CPU_LIMIT
+        busiest = ", ".join(f"{b['process']} {b['cpuPercent']}%" for b in a["idle"].get("busiest", []))
+        earlier = ""
+        if a["tool"] in again:
+            a["idleFirst"] = first
+            earlier = f" ({first['cpuPercent']}% {IDLE_AGAIN_SECONDS + SETTLE_SECONDS + IDLE_SECONDS} s earlier)"
+        a["proof"].append({"id": "P3", "ok": ok, "warn": True,
+                           "check": f"Uses under {IDLE_CPU_LIMIT:.0f}% CPU sitting idle",
+                           "detail": "not running" if cpu is None
+                           else f"{cpu}%" + (f": {busiest}" if busiest and not ok else "") + earlier})
+    return idle
 
 
 def wait_for_hub(limit: float) -> las_check.Hub:
@@ -473,16 +504,7 @@ def main(argv=None) -> int:
     proof["suite"] = suite_checks(hub, tools)
     for s in proof["suite"]:
         print(f"  {'PASS' if s['ok'] else 'FAIL'}  {s['id']}  {s['check']}  {s['detail']}", flush=True)
-    idle = usage({t: TOOLS[t][1] for t in tools} | {"hub": HUB_APP})
-    for a in proof["apps"]:
-        a["idle"] = idle.get(a["tool"], {})
-        cpu = a["idle"].get("cpuPercent")
-        ok = cpu is not None and cpu <= IDLE_CPU_LIMIT
-        busiest = ", ".join(f"{b['process']} {b['cpuPercent']}%" for b in a["idle"].get("busiest", []))
-        a["proof"].append({"id": "P3", "ok": ok, "warn": True,
-                           "check": f"Uses under {IDLE_CPU_LIMIT:.0f}% CPU sitting idle",
-                           "detail": "not running" if cpu is None
-                           else f"{cpu}%" + (f": {busiest}" if busiest and not ok else "")})
+    idle = judge_idle(proof["apps"], tools)
     last_version, last = last_proof()
     for a in proof["apps"]:
         check = memory_check(a, last_version, last)
