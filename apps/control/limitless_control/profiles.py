@@ -72,7 +72,8 @@ CATALOG: dict[str, dict[str, dict]] = {
         "play": {"label": "Play / stop", "keys": "space", "say": "Play stop"},
         "record": {"label": "Arrangement record", "keys": "f9", "say": "Record"},
         "undo": {"label": "Undo", "keys": "mod+z", "say": "Undo"},
-        "redo": {"label": "Redo", "keys": "mod+shift+z", "say": "Redo"},
+        # Live's redo differs by system (Ableton's shortcut chapter).
+        "redo": {"label": "Redo", "keys": {"mac": "mod+shift+z", "windows": "mod+y"}, "say": "Redo"},
         "loop": {"label": "Loop selection", "keys": "mod+l", "say": "Loop"},
         "view": {"label": "Switch Session / Arrangement", "keys": "tab", "say": "Switch view"},
         "track_up": {"label": "Up", "keys": "up"},
