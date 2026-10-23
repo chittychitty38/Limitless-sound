@@ -269,6 +269,7 @@ class MainWindow(QMainWindow):
         # speech model's it starts with, until apply_language() moves to the one wanted.
         words.use(wanted(settings.language, None, settings.extra.get("suite_language", "")))
         self.lang = load_language(model_language(Path(str(model_path)).name) or "en")
+        words.listen_in(self.lang)
         self.speaker = Speaker(settings.speak_feedback, settings.voice_rate, on_busy=self._speaking,
                                on_no_voice=lambda lang: self.bridge.call.emit(lambda: self._no_voice(lang)))
         self.speaker.set_language(self.lang)
@@ -623,6 +624,8 @@ class MainWindow(QMainWindow):
     def _use_language(self, lang, path):
         """Listen with this language's speech model, and answer in it."""
         self.lang = lang
+        words.listen_in(lang)
+        self.retranslate()   # the commands the windows suggest, now in this language
         self.engine.set_language(lang, lang.translate(self.packs))
         self.speaker.set_language(lang)
         self.suite.language = lang.code
@@ -637,8 +640,6 @@ class MainWindow(QMainWindow):
             self.listener.start()
         self._update_state()
         self._track_focus()
-        if not self._heard_anything:
-            self.heard_label.setText(self._say_something())   # a command to try, in this language
         self._feedback(lang.text("Listening in {language}", language=lang.name))
         self._show_did(lang.text("Listening in {language}", language=lang.name))
 
@@ -753,9 +754,10 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(state_icon(state))
             if self.tray:
                 self.tray.setIcon(state_icon(state))
-                words.show(self.tray.setToolTip, t("{app}: {state}", app=APP_NAME, state=text))
-                words.show(self.tray_status.setText, text)
         if self.tray:
+            # the words each time: what to say changes with the language listened in, too
+            words.show(self.tray.setToolTip, t("{app}: {state}", app=APP_NAME, state=text))
+            words.show(self.tray_status.setText, text)
             words.show(self.tray_toggle.setText, t("Go to sleep") if self.engine.awake else t("Wake up"))
 
     def on_heard(self, heard, alternative):
@@ -777,7 +779,6 @@ class MainWindow(QMainWindow):
             shown = alternative or heard   # the plain-English transcript reads better
         else:
             shown = result.heard or heard
-        self._heard_anything = True
         self.heard_label.setText(t("Heard: “{text}”", text=shown.replace("[unk]", "").strip()))
         if result.message:
             first_line = result.message.splitlines()[0]
@@ -824,14 +825,13 @@ class MainWindow(QMainWindow):
         self.target_label.setText(t("Sending commands to: {app}", app=name) if name else
                                   t("Click into the app you want to control (Logic, Pro Tools…)"))
 
-    _heard_anything = False   # nothing yet: the heard label suggests something to say
-
     def _say_something(self):
-        return t('Say something, like "{phrase}".', phrase=phrase(self.lang, "what can I say"))
+        return t('Say something, like "{phrase}".', phrase=phrase("what can I say"))
 
     def retranslate(self):
-        """Voice's language changed: every word in its windows, the menu bar menu and the floating
-        display changes in place, so the keyboard focus and what a screen reader is on stay put."""
+        """The language Voice shows or listens in changed: every word in its windows, the menu bar
+        menu and the floating display changes in place, so the keyboard focus and what a screen
+        reader is on stay put."""
         words.show_again()
 
     # -- dialogs -------------------------------------------------------

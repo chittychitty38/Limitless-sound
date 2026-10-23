@@ -88,12 +88,12 @@ class Platform:
         return False
 
     def open_app(self, name):
-        raise NotSupported("opening apps isn't supported here")
+        raise NotSupported(t("opening apps isn't supported here"))   # shown as "That didn't work: ..."
 
     # -- misc ----------------------------------------------------------
 
     def applescript(self, script):
-        raise NotSupported("AppleScript only works on a Mac")
+        raise NotSupported(t("AppleScript only works on a Mac"))
 
     def shell(self, cmd):
         subprocess.run(cmd, shell=True, check=True)

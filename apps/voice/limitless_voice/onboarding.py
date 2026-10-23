@@ -84,10 +84,6 @@ class Page(QWidget):
         self.box.setSpacing(16)
         self.box.setContentsMargins(8, 8, 8, 8)
 
-    def phrase(self, english):
-        """Words to say to Voice, in the language it listens in."""
-        return phrase(self.wizard.window.lang, english)
-
     def spoken(self):
         return ""
 
@@ -225,8 +221,8 @@ class WelcomePage(Page):
             "Everything runs on this computer. Your voice is never recorded or sent anywhere, "
             "and it works without internet.<br><br>"
             "Setup takes about a minute.",
-            bar=self.phrase("go to bar thirty two"), solo=self.phrase("solo track"),
-            mixer=self.phrase("show the mixer"))))
+            bar=phrase("go to bar thirty two"), solo=phrase("solo track"),
+            mixer=phrase("show the mixer"))))
         self.box.addStretch(1)
 
 
@@ -340,7 +336,7 @@ class ControlPermissionPage(Page):
 
 class MicCheckPage(Page):
     def spoken(self):
-        return t("Let's check the microphone. Say: {phrase}.", phrase=self.phrase("what can I say"))
+        return t("Let's check the microphone. Say: {phrase}.", phrase=phrase("what can I say"))
 
     def __init__(self, wizard):
         super().__init__(wizard)
@@ -348,7 +344,7 @@ class MicCheckPage(Page):
         self.box.addWidget(_body(t(
             "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>"
             "The bar should move when you talk. A headset or a mic close to your mouth works "
-            "best when speakers are playing.", phrase=self.phrase("what can I say"))))
+            "best when speakers are playing.", phrase=phrase("what can I say"))))
         row = QHBoxLayout()
         lbl = label(t("&Microphone"))
         self.mics = QComboBox()
@@ -394,7 +390,7 @@ class MicCheckPage(Page):
         said = (alternative or heard or "").replace("[unk]", "").strip()
         if not said:
             return
-        asked = self.phrase("what can I say")
+        asked = phrase("what can I say")
         if _plain(asked) in _plain(heard + " " + alternative):
             self.result.setText(t("✓ Heard “{text}”. Your microphone works.", text=said))
             self.wizard.window.speaker.say(t("Got it. Your microphone works."))
@@ -447,8 +443,8 @@ class ReadyPage(Page):
     def spoken(self):
         return t("You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. "
                  "Say {help} any time for the full list.",
-                 play=self.phrase("play"), bar=self.phrase("go to bar thirty two"),
-                 mixer=self.phrase("show the mixer"), help=self.phrase("what can I say"))
+                 play=phrase("play"), bar=phrase("go to bar thirty two"),
+                 mixer=phrase("show the mixer"), help=phrase("what can I say"))
 
     def __init__(self, wizard):
         super().__init__(wizard)
@@ -459,7 +455,7 @@ class ReadyPage(Page):
         grid = QVBoxLayout()
         for say, what in STARTER_COMMANDS:
             row = label(t("<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>",
-                          say=self.phrase(say), what=t(what)))
+                          say=phrase(say), what=t(what)))
             row.setTextFormat(Qt.RichText)
             row.setWordWrap(True)
             grid.addWidget(sized(row, 1.15))

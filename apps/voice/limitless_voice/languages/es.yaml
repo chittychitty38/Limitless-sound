@@ -289,6 +289,10 @@ texts:
   "That didn't work: {error}": "Eso no funcionó: {error}"
   "Couldn't change the login setting: {error}": "No se pudo cambiar el inicio automático: {error}"
   "Couldn't use that shortcut: {error}": "No se pudo usar ese atajo: {error}"
+  "Couldn't find an app called {name}": "No se encontró ninguna aplicación llamada {name}"
+  AppleScript failed: AppleScript no funcionó
+  AppleScript only works on a Mac: AppleScript solo funciona en un Mac
+  opening apps isn't supported here: abrir aplicaciones no funciona en este equipo
   Allow Limitless Voice to use the microphone: Permite que Limitless Voice use el micrófono
   Open Microphone settings, turn on Limitless Voice, then come back.: Abre los ajustes de Micrófono, activa Limitless Voice y vuelve aquí.
   Allow Limitless Voice to control the computer: Permite que Limitless Voice controle el equipo
