@@ -1,0 +1,118 @@
+# Seen: the descriptions the rules were written against. en-held.tsv is kept apart.
+# expect	context	who	text
+# expect: rg (red-green), rg+ (red-green, further), protan (reds look dark), by (blue-yellow),
+#   solo-mute, meters, less (ease back), more (turn up), undo (back to before), keep (nothing to
+#   change), ask (asks what looks wrong). context: - (a fresh start) or rg (after a red-green change).
+rg	-	US	What is supposed to be red I see as weird green/yellow
+rg	-	US	What is supposed to be red looks like a weird green or yellow to me
+rg	-	US	red and green look the same to me
+rg	-	US	I can't tell red from green
+rg	-	US	the record button and the play button look the same
+rg	-	US	record and play are the same color
+rg	-	US	red looks brown
+rg	-	UK	reds look brownish
+rg	-	US	green looks yellow to me
+rg	-	US	greens look like khaki
+rg	-	US	red and orange look the same
+rg	-	US	red tracks look green
+rg	-	UK	I mix up red and green
+rg	-	US	the red and green regions blur together
+rg	-	US	what should be red looks yellowish
+rg	-	US	greens look brown
+rg	-	US	red and green are identical to me
+rg	-	dictation	red and green look the same
+rg	-	dictation	i cant tell the record button from play
+rg	-	typo	red and gren look the same
+rg	-	US	red looks like a weird olive
+rg	-	US	the recording button looks greenish
+rg	-	US	orange and green tracks look the same
+rg	-	US	yellow and green regions look alike
+rg	-	UK	red and green look identical to me, mate
+rg	-	US	only blue looks right, red and green are the same
+rg+	rg	US	they still look the same red and green
+rg+	rg	US	still the same
+rg+	rg	US	still can't tell them apart
+rg+	rg	UK	red and green still look alike
+rg+	rg	US	no change, they still look the same
+rg+	rg	US	better, but red and green are still close
+protan	-	US	Reds look almost black
+protan	-	US	the record button looks dark
+protan	-	US	red looks black to me
+protan	-	UK	red tracks look very dark
+protan	-	US	reds look dark and muddy
+protan	-	dictation	red looks black
+protan	-	US	the red clip light looks dark
+by	-	US	Blue and green tracks blur together
+by	-	US	blue and green look the same
+by	-	US	yellow looks pink
+by	-	UK	yellow looks grey
+by	-	US	purple and blue look the same
+by	-	US	I can't tell blue from green
+by	-	US	teal and green look the same
+by	-	US	cyan and green look alike
+by	-	US	violet and blue are the same to me
+by	-	US	yellow and white look the same
+by	-	US	pink and yellow look alike
+by	-	US	navy and purple look the same
+by	-	typo	yelow looks pink
+by	-	typo	purpel and blue look the same
+solo-mute	-	US	I can't tell Solo from Mute
+solo-mute	-	US	solo and mute look the same
+solo-mute	-	US	the S and M buttons look the same
+solo-mute	-	US	solo and mute buttons are the same color
+solo-mute	-	US	I can't tell which tracks are soloed and which are muted
+solo-mute	-	dictation	solo and mute look alike
+solo-mute	-	UK	solo and mute are identical
+solo-mute	-	US	mute and solo blur together
+meters	-	US	The meters look like one color all the way up
+meters	-	US	meters are hard to read
+meters	-	US	I can't see when the meters clip
+meters	-	UK	the level meters all look the same
+meters	-	US	I can't tell green from red on the meters
+meters	-	US	metering colors look the same
+meters	-	US	the volume bars look one color
+meters	-	dictation	meters all look the same
+less	rg	US	that's too strong
+less	rg	US	That's too strong, make it more natural
+less	rg	US	it looks ugly now
+less	rg	US	tone it down
+less	rg	US	way too intense
+less	rg	UK	the colours look harsh
+less	rg	US	make it softer
+less	rg	US	less please
+less	rg	US	that's overkill
+less	rg	US	dial it back a bit
+less	rg	US	it hurts my eyes
+less	rg	US	too saturated
+more	-	US	not enough
+more	-	US	make it stronger
+more	-	US	I can't see any difference
+more	-	US	turn it up
+more	-	US	more please
+more	-	US	it's still hard to see
+more	-	US	barely any change
+more	-	UK	the change is too weak
+more	-	US	increase the correction
+more	-	US	can you push it further?
+more	-	US	hardly any difference
+more	-	dictation	make it stronger
+undo	rg	US	that looks worse
+undo	rg	US	worse
+undo	rg	US	go back to how it was
+undo	rg	US	undo that
+undo	rg	UK	put it back
+undo	rg	US	it got worse
+undo	rg	US	revert that
+keep	rg	US	better
+keep	rg	US	much better
+keep	rg	US	looks right now
+keep	rg	US	perfect
+keep	rg	UK	that's it, thanks
+keep	rg	US	I can tell them apart now
+keep	rg	US	great, leave it
+keep	rg	US	looks good
+keep	rg	US	they look different now
+keep	rg	US	awesome
+ask	-	US	hi
+ask	-	US	help
+ask	-	US	how does this work?

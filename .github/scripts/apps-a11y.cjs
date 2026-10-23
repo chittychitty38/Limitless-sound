@@ -14,7 +14,8 @@
 //     way a musician's choice reaches them.
 //   - Limitless Color's window is its own page, served with its Tauri CSP, with the Tauri commands
 //     and events it uses answered by a small stand-in (the Tauri app builds only on the Mac and
-//     Windows runners). Its looks arrive through the same "window-prefs" event the app sends.
+//     Windows runners). Its looks and its language arrive through the same "window-prefs" event the
+//     app sends; in Spanish it must keep the focus and leave no English on screen.
 //   - The Mac installer's welcome and conclusion pages are plain files, opened as they are.
 //
 //   xvfb-run -a node .github/scripts/apps-a11y.cjs              every screen (no xvfb-run on a Mac)
@@ -688,6 +689,52 @@ async function checkColor(browser) {
   await page.waitForSelector('#checkBody .check-pair');
   await page.click('#claudeBox summary');
   await states('tuner, colors on');
+
+  // Color in Spanish, the way the app sends the suite's language: with the window prefs. The words
+  // change in place, the focus stays on the same control (here, one the eye check draws again),
+  // and nothing English is left on screen. Then the window and the setup guide's busiest steps, at
+  // the usual text size and the largest. The conversation keeps the language it was had in.
+  const language = (lang) => page.evaluate((l) => window.__colorApp.emit('window-prefs', { ...l }), { textScale: 1, highContrast: false, reduceMotion: false, language: lang });
+  const languageProblem = (kind, text) => { s.lines.push(`    [language] ${kind}: ${text}`); s.keys.set(kind, (s.keys.get(kind) || 0) + 1); };
+  const englishLeft = async (where) => {
+    const left = await page.evaluate(() => {
+      const es = JSON.parse(document.getElementById('strings-es').textContent), found = new Set();
+      const english = (text) => { const w = (text || '').trim(); if (w && es[w] && es[w] !== w) found.add(w); };
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        const e = n.parentElement;
+        if (!e.closest('script, style, .msg') && e.checkVisibility()) english(n.nodeValue);
+      }
+      for (const e of document.querySelectorAll('[aria-label], [title], [placeholder]')) {
+        if (!e.closest('.msg') && e.checkVisibility()) for (const a of ['aria-label', 'title', 'placeholder']) english(e.getAttribute(a));
+      }
+      english(document.title);
+      return [...found];
+    });
+    for (const w of left) languageProblem('English left on screen in Spanish', `${where}: ${w}`);
+  };
+  await page.locator('#checkBody button').nth(1).focus();
+  const focused = () => page.evaluate(() => ({ i: [...document.querySelectorAll('#checkBody button')].indexOf(document.activeElement), text: document.activeElement.textContent }));
+  const before = await focused();
+  await language('es');
+  await page.waitForFunction(() => document.documentElement.lang === 'es');
+  const after = await focused();
+  if (after.i !== before.i) languageProblem('focus moved when the language changed', `${before.text} → ${after.text || 'nothing'}`);
+  await englishLeft('tuner');
+  const spanish = (view) => states(`${view}, in Spanish`, { looks: ['standard', 'largest text'] });
+  await spanish('tuner, colors on');
+  await page.click('#setupAgain');
+  await page.waitForSelector('dialog#setup[open]');
+  await click('Empezar');
+  await click('Ya sé cómo es mi visión del color');
+  await englishLeft('setup: choose my color vision');
+  await spanish('setup: choose my color vision');
+  await click('Continuar');
+  await page.waitForSelector('#setupBody canvas');
+  await englishLeft('setup: colors tuned');
+  await spanish('setup: colors tuned');
+  await language('en');
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
   await ctx.close();
   server.close();
 }

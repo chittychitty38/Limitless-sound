@@ -99,13 +99,18 @@ fn a_long_conversation_with_the_offline_helper_stays_in_range() {
         "record and mute look the same", "blue and purple are mixed up", "it's too bright", "everything is washed out",
         "better", "worse", "still", "more", "less", "reset", "solo looks grey", "meters are hard to read",
         "", "🎸🎸🎸", "the the the the the the", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        // The same conversation in Spanish, typed and dictated.
+        "lo rojo lo veo como un verde raro", "sigue igual", "demasiado fuerte", "se ve peor", "volvé a como estaba",
+        "mejor", "ya no se ven iguales", "todavia no distingo grabar de play", "el azul y el morado se confunden",
+        "no distingo el solo del mute", "los medidores se ven de un solo color", "bájale tantito", "súbele", "ñññ ¿¡«»",
     ];
     let mut rng = Rng(42);
     let mut p = Profile::default();
     let mut state = helper::HelperState::default();
     for _ in 0..5000 {
         let line = *rng.pick(&lines);
-        let s = helper::offline_reply(line, &p, &mut state);
+        let lang = *rng.pick(&color_core::Lang::ALL);
+        let s = helper::offline_reply_in(line, &p, &mut state, lang);
         s.apply_to(&mut p);
         for (key, lo, hi) in RANGES {
             let v = p.settings.get(key).unwrap();

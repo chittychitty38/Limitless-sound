@@ -1,0 +1,215 @@
+# Seen: the descriptions the Spanish rules were written against. es-held.tsv is kept apart.
+# expect	context	who	text
+# expect: rg (red-green), rg+ (red-green, further), protan (reds look dark), by (blue-yellow),
+#   solo-mute, meters, less (ease back), more (turn up), undo (back to before), keep (nothing to
+#   change), ask (asks what looks wrong). context: - (a fresh start) or rg (after a red-green change).
+rg	-	neutro	Lo que debería ser rojo lo veo como un verde o amarillo raro
+rg	-	neutro	lo que se supone que es rojo me parece verde
+rg	-	neutro	el rojo y el verde se ven iguales
+rg	-	neutro	no distingo el rojo del verde
+rg	-	neutro	El botón de grabar y el de reproducir se ven del mismo color
+rg	-	neutro	no diferencio grabar de play
+rg	-	neutro	las pistas rojas y las verdes las veo iguales
+rg	-	MX tú	el rojo lo veo café
+rg	-	ES tú	los rojos se ven marrones
+rg	-	neutro	el verde lo veo como amarillo
+rg	-	CO	los verdes parecen cafés
+rg	-	neutro	el rojo y el naranja los veo iguales
+rg	-	neutro	todo lo rojo me parece verde oliva
+rg	-	neutro	confundo el rojo con el verde
+rg	-	neutro	los colores rojo y verde se me mezclan
+rg	-	neutro	me cuesta separar el verde del rojo
+rg	-	neutro	el botón rojo de grabar parece verde
+rg	-	neutro	rojo y verde son lo mismo para mí
+rg	-	neutro	veo el rojo como amarillento
+rg	-	neutro	las regiones verdes y rojas no las distingo
+rg	-	neutro	el verde de reproducir y el rojo de grabar se confunden
+rg	-	AR vos	che, el rojo y el verde los veo re iguales
+rg	-	AR vos	la verdad no sé, el rojo lo veo como café
+rg	-	AR vos	vos fijate, el rojo se ve igual que el verde
+rg	-	ES usted	Quisiera que el rojo y el verde se distingan, ahora los veo iguales
+rg	-	CO usted	El rojo me aparece como un verde amarillento
+rg	-	CO	parce, el rojo y el verde se ven igualitos
+rg	-	MX tú	oye, el rojo y el verde se ven bien parecidos
+rg	-	MX tú	no le hallo la diferencia entre el rojo y el verde
+rg	-	dictado	el rojo y el verde se ven igual
+rg	-	dictado	no se cual es el boton de grabar y cual el de play
+rg	-	dictado	las pistas rojas parecen verdes
+rg	-	dictado	lo rojo lo veo cafe
+rg	-	errata	el rojo y el verde se ben iguales
+rg	-	errata	rojo y berde se confunden
+rg	-	errata	el rojo lo beo marron
+rg	-	errata	el amarrillo y el verde son iguales
+rg	-	neutro	la grabación se ve verde
+rg	-	neutro	el botón de rec y el de play son iguales
+rg	-	neutro	las pistas naranjas y verdes se confunden
+rg	-	neutro	el amarillo y el naranja se confunden con el verde
+rg	-	neutro	lo que es verde lo veo marrón
+rg	-	ES tú	Me cuesta un montón distinguir el rojo del verde
+rg	-	ES tú	Los rojos y los verdes me parecen idénticos
+rg	-	ES usted	¿Puede hacer que el rojo no se parezca al verde?
+rg	-	neutro	solo veo bien el azul, el rojo y el verde no los distingo
+rg+	rg	neutro	sigue igual, todavía se ven iguales el rojo y el verde
+rg+	rg	neutro	todavía se confunden
+rg+	rg	neutro	sigue costando distinguir el rojo del verde
+rg+	rg	neutro	aún no veo la diferencia
+rg+	rg	neutro	igual que antes, no distingo grabar de play
+rg+	rg	neutro	sigo sin distinguirlos
+rg+	rg	neutro	todavía se parecen mucho
+rg+	rg	AR vos	sigue igual, dale más
+rg+	rg	CO usted	Todavía no logro distinguir el rojo del verde
+rg+	rg	dictado	sigue igual
+rg+	rg	errata	todabia se ben iguales
+rg+	rg	neutro	mejoró un poco pero todavía se parecen
+protan	-	neutro	los rojos se ven negros
+protan	-	neutro	el rojo lo veo casi negro
+protan	-	neutro	el botón de grabar se ve muy oscuro
+protan	-	neutro	las pistas rojas se ven oscuras
+protan	-	neutro	el rojo se ve como negro
+protan	-	CO	el rojo se me ve como un café oscuro
+protan	-	neutro	el rojo lo veo muy apagado y oscuro
+protan	-	dictado	el rojo se ve negro
+protan	-	errata	el rojo se be muy oscuro
+protan	-	MX usted	Los botones rojos me parecen casi negros
+protan	-	AR vos	el rojo lo veo re oscuro
+protan	-	MX tú	lo rojo se ve bien oscuro
+protan	-	AR vos	la verdad que no veo bien los rojos, se ven oscuros
+by	-	neutro	el azul y el verde se ven iguales
+by	-	neutro	confundo el azul con el verde
+by	-	neutro	el amarillo lo veo rosa
+by	-	neutro	el amarillo se ve gris
+by	-	neutro	las pistas azules y moradas se ven iguales
+by	-	neutro	el morado y el azul los confundo
+by	-	neutro	el azul parece verde
+by	-	neutro	el verde azulado y el azul se ven igual
+by	-	AR vos	no distingo lo celeste de lo verde
+by	-	neutro	el amarillo y el rosa se confunden
+by	-	neutro	el violeta y el azul parecen lo mismo
+by	-	neutro	el amarillo se ve blanco
+by	-	neutro	la pista turquesa y la verde se ven iguales
+by	-	neutro	las pistas lilas y azules se parecen
+by	-	dictado	el azul y el verde son iguales
+by	-	dictado	el amarillo lo veo gris
+by	-	errata	el asul y el morado se ven iguales
+by	-	errata	el amariyo se ve rosa
+by	-	AR vos	el celeste y el lila los veo iguales
+by	-	CO usted	Me cuesta diferenciar el azul del verde
+by	-	CO	el azul se me ve verde
+by	-	MX tú	lo azul y lo verde se ven igualitos
+by	-	ES tú	Las pistas azules y violetas se parecen demasiado
+by	-	neutro	el fucsia y el azul se ven iguales
+by	-	neutro	el amarillo se ve como rosado claro
+by	-	MX tú	no distingo las pistas cian de las verdes
+solo-mute	-	neutro	no distingo solo de mute
+solo-mute	-	neutro	el solo y el mute se ven iguales
+solo-mute	-	neutro	no sé cuál es el solo y cuál el mute
+solo-mute	-	neutro	los botones de solo y mute son del mismo color
+solo-mute	-	neutro	solo y silencio se confunden
+solo-mute	-	neutro	el botón de solo y el de silenciar se ven iguales
+solo-mute	-	AR vos	el solo y el mute los veo re iguales
+solo-mute	-	ES usted	No logro diferenciar el botón solo del botón mute
+solo-mute	-	dictado	no distingo el solo del mute
+solo-mute	-	errata	el solo y el mut se ven iguales
+solo-mute	-	neutro	no veo si la pista está muteada o en solo
+solo-mute	-	neutro	las teclas S y M se ven iguales
+solo-mute	-	CO	el solo y el silencio de las pistas se ven igualitos
+solo-mute	-	MX tú	oye, no distingo el solo del mute
+solo-mute	-	neutro	cuando muteo una pista no la distingo del solo
+meters	-	neutro	los medidores se ven de un solo color
+meters	-	neutro	no veo cuándo el medidor llega al rojo
+meters	-	ES tú	los vúmetros se ven todos iguales
+meters	-	neutro	no distingo cuándo satura el medidor
+meters	-	neutro	en los medidores no se ve el clip
+meters	-	neutro	los niveles se ven todos verdes
+meters	-	neutro	las barras de volumen se ven de un color
+meters	-	dictado	no veo cuando el vumetro se pone en rojo
+meters	-	errata	los medidore se ven iguales
+meters	-	MX usted	No alcanzo a ver en el medidor cuándo se pasa a rojo
+meters	-	AR vos	en los vúmetros no me doy cuenta cuando pica
+meters	-	neutro	los medidores de nivel parecen todos del mismo color
+meters	-	neutro	no veo la saturación en los medidores
+meters	-	neutro	el medidor de nivel se ve igual en verde y en amarillo
+meters	-	neutro	el indicador de nivel no cambia de color
+less	rg	neutro	es demasiado fuerte
+less	rg	MX tú	muy fuerte, bájale
+less	rg	neutro	está muy intenso
+less	rg	neutro	se ve muy exagerado
+less	rg	neutro	ahora se ve todo raro
+less	rg	neutro	los colores se ven feos
+less	rg	neutro	quiero algo más natural
+less	rg	neutro	hazlo más suave
+less	rg	neutro	menos fuerte por favor
+less	rg	MX tú	te pasaste
+less	rg	neutro	está muy saturado
+less	rg	neutro	se ve artificial
+less	rg	neutro	baja la intensidad
+less	rg	AR vos	bajale un poco que está re fuerte
+less	rg	AR vos	hacelo más suave
+less	rg	MX usted	Bájelo un poco, por favor
+less	rg	ES usted	Está demasiado intenso para mí
+less	rg	CO	está muy chillón
+less	rg	dictado	esta muy fuerte bajale
+less	rg	errata	esta muy intenzo
+less	rg	neutro	me lastima la vista
+less	rg	neutro	un poco menos por favor
+less	rg	neutro	suavízalo un poco
+less	rg	neutro	reduce el efecto
+more	-	neutro	no noto la diferencia
+more	-	neutro	todavía me cuesta verlo
+more	-	neutro	más fuerte por favor
+more	-	MX tú	súbele
+more	-	neutro	aumenta la corrección
+more	-	neutro	no es suficiente
+more	-	neutro	casi no se nota
+more	-	neutro	se nota muy poco
+more	-	neutro	hazlo más fuerte
+more	-	AR vos	dale más
+more	-	AR vos	subile un poco
+more	-	MX usted	Súbale un poco más, por favor
+more	-	ES usted	¿Puede aumentar el efecto?
+more	-	CO usted	póngale más
+more	-	dictado	no veo ninguna diferencia
+more	-	errata	mas fuerte porfabor
+more	-	neutro	el cambio es muy sutil
+more	-	neutro	está muy suave
+more	-	AR vos	no alcanza
+more	-	neutro	falta más contraste
+more	-	neutro	todavía no se ve bien
+more	-	neutro	no se distingue nada
+undo	rg	neutro	se ve peor
+undo	rg	neutro	está peor que antes
+undo	rg	neutro	quedó peor
+undo	rg	neutro	empeoró
+undo	rg	neutro	deshaz el último cambio
+undo	rg	neutro	vuelve como estaba
+undo	rg	MX tú	regresa a como estaba antes
+undo	rg	AR vos	volvé a como estaba
+undo	rg	ES usted	Vuelva a dejarlo como antes
+undo	rg	dictado	se ve peor que antes
+undo	rg	errata	se be peor
+undo	rg	CO usted	uy, así está peor, deshágalo
+keep	rg	neutro	mucho mejor
+keep	rg	neutro	ahora se ve bien
+keep	rg	neutro	perfecto
+keep	rg	neutro	así está bien, gracias
+keep	rg	neutro	ya los distingo
+keep	rg	neutro	ya veo la diferencia
+keep	rg	neutro	ahora sí distingo el rojo del verde
+keep	rg	neutro	se ve bien así, déjalo
+keep	rg	neutro	genial, gracias
+keep	rg	neutro	excelente
+keep	rg	neutro	me gusta como quedó
+keep	rg	AR vos	bárbaro, así está perfecto
+keep	rg	AR vos	ahora sí, dejalo así
+keep	rg	ES usted	Así está muy bien, gracias
+keep	rg	CO	quedó chévere
+keep	rg	MX tú	ya quedó, gracias
+keep	rg	dictado	ya se ve bien
+keep	rg	errata	perfeto ya se ve bien
+keep	rg	neutro	mejor
+keep	rg	neutro	ya no se confunden
+ask	-	neutro	hola, ¿cómo funciona esto?
+ask	-	neutro	ayuda
+ask	-	neutro	qué es esto
+ask	-	neutro	no entiendo
+ask	-	neutro	buenas tardes

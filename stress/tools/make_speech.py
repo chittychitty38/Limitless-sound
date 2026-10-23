@@ -1,13 +1,16 @@
 """Make the spoken clips for the voice stress tests (stress/test_voice_stress.py and
 stress/test_zoom_noise.py).
 
-    python stress/tools/make_speech.py OUT_DIR
+    python stress/tools/make_speech.py OUT_DIR [--zoom es]
 
 Uses the Mac's own voice (`say`) on macOS and espeak-ng elsewhere. Writes 16 kHz
 mono WAV files plus commands.json, which lists what each command clip should do.
 What it should do comes from running the phrase through Limitless Voice's own
 engine as text, so the list never drifts from the command packs. zoom.json does the
 same for Limitless Zoom's phrases, from Zoom's own table.
+
+--zoom es makes only zoom.json, in Spanish: every phrase Zoom listens for in Spanish, and two
+with "por favor", in a Latin American Spanish voice (espeak-ng's es-419, or Paulina on a Mac).
 """
 
 import json
@@ -44,7 +47,8 @@ ZOOM = [
 ]
 
 
-def speak(text, out: Path, voice=None):
+def speak(text, out: Path, voice=None, language=None):
+    """voice: a Mac voice's name; language: espeak-ng's voice for a language ("es-419")."""
     if sys.platform == "darwin":
         cmd = ["say", "-o", str(out), "--data-format=LEI16@16000", "--file-format=WAVE"]
         if voice:
@@ -52,12 +56,28 @@ def speak(text, out: Path, voice=None):
         subprocess.run(cmd + [text], check=True)
     else:
         exe = shutil.which("espeak-ng") or shutil.which("espeak")
-        subprocess.run([exe, "-s", "150", "-w", str(out), text], check=True)
+        subprocess.run([exe, "-s", "150", "-w", str(out)] + (["-v", language] if language else []) + [text], check=True)
 
 
-def main(out_dir):
+def zoom_spanish(out):
+    """Every phrase Zoom listens for in Spanish, and two said with "por favor"."""
+    sys.path.insert(0, str(ROOT / "apps" / "zoom"))
+    from limitless_zoom.voice import SPANISH, without
+    zoom = []
+    for i, text in enumerate([*SPANISH.phrases, "acercar por favor", "ajustar por favor"]):
+        name = f"zoom_es_{i:02d}.wav"
+        speak(text, out / name, "Paulina", language="es-419")
+        zoom.append({"say": text, "file": name, "expect": SPANISH.phrases[" ".join(without(text.split(), SPANISH.fillers))],
+                     "voice": "Paulina" if sys.platform == "darwin" else "es-419"})
+    (out / "zoom.json").write_text(json.dumps(zoom, indent=1, ensure_ascii=False), encoding="utf-8")
+    print(f"{len(zoom)} Zoom command clips in Spanish in {out}")
+
+
+def main(out_dir, zoom_language=None):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    if zoom_language == "es":
+        return zoom_spanish(out)
     packs = load_packs([DEFAULT_PACK_DIR], "mac")
     manifest = []
     voices = [None, "Samantha", "Daniel"] if sys.platform == "darwin" else [None]
@@ -94,4 +114,4 @@ def main(out_dir):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[3] if len(sys.argv) > 3 and sys.argv[2] == "--zoom" else None)

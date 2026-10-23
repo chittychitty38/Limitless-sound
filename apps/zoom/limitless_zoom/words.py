@@ -145,8 +145,9 @@ def show_again():
 # ---- Spanish ------------------------------------------------------------------------
 # Neutral Spanish with tú, in the same words as Limitless Sound's page: "equipo" for computer,
 # "Ajustes", "pulsador" for a switch, "barrido" for scanning, "permanencia" for dwell.
-# macOS settings by the names Spanish macOS shows. Voice commands stay English: the speech model
-# hears English, so the Spanish words tell people to say "zoom in".
+# macOS settings by the names Spanish macOS shows. Voice commands are in the language voice listens
+# in (app.py's listening_language), which can differ from the windows', so a phrase to say is
+# filled in ("Di «{phrase}» para probarlo"), never translated here.
 
 SPANISH = {
     # What Zoom did: the big-text messages, and what it says out loud (actions.py, by its English)
@@ -177,7 +178,7 @@ SPANISH = {
     "Zoom keys are ready": "Las teclas de zoom están listas",
     "Zoom key is {key}": "La tecla de zoom es {key}",
     "Switch is {key}": "El pulsador es {key}",
-    "Ready. Say zoom in, or tap {key}": "Todo listo. Di «zoom in» o pulsa {key}",
+    "Ready. Say {phrase}, or tap {key}": "Todo listo. Di «{phrase}» o pulsa {key}",
     "{action} isn't available in {app}": "{action} no está disponible en {app}",
     "Unknown action {action}": "Acción desconocida: {action}",
     "Screen magnifier": "Lupa de pantalla",
@@ -215,10 +216,22 @@ SPANISH = {
     "Couldn't press the zoom keys: {problem}": "No se pudieron pulsar las teclas de zoom: {problem}",
     "Couldn't change Open at login: {problem}": "No se pudo cambiar Abrir al iniciar sesión: {problem}",
 
-    # Voice (the commands themselves stay English: see above)
+    # Voice, and the language it listens in
     "downloading the voice model (about 40 MB), one time only…":
         "descargando el modelo de voz (unos 40 MB), solo esta vez…",
     "couldn't download the voice model: {problem}": "no se pudo descargar el modelo de voz: {problem}",
+    "downloading the {language} voice model (about {size}), one time only…":
+        "descargando el modelo de voz en {language} (unos {size}), solo esta vez…",
+    "until the {language} voice model is downloaded ({size}, one time only), say the commands in English":
+        "hasta que se descargue el modelo de voz en {language} ({size}, solo esta vez), di los comandos en inglés",
+    "the {language} voice model couldn't be downloaded ({problem}), so say the commands in English":
+        "no se pudo descargar el modelo de voz en {language} ({problem}), así que di los comandos en inglés",
+    "couldn't download the {language} voice model: {problem}":
+        "no se pudo descargar el modelo de voz en {language}: {problem}",
+    "{status}; {note}": "{status}; {note}",
+    "Voice commands in {language}": "Comandos de voz en {language}",
+    "English": "inglés",
+    "Spanish": "español",
     "Listening on {name}": "Escuchando en {name}",
     "Voice couldn't start: {problem}": "La voz no pudo iniciarse: {problem}",
     "Microphone problem: {problem}. Retrying.": "Problema con el micrófono: {problem}. Reintentando.",
@@ -232,6 +245,8 @@ SPANISH = {
     "Choose switch key…": "Elegir la tecla del pulsador…",
     "Microphone": "Micrófono",
     "System default": "Predeterminado del sistema",
+    "Voice command language": "Idioma de los comandos de voz",
+    "Same as Limitless Sound ({language})": "Igual que Limitless Sound ({language})",
     "Open at login": "Abrir al iniciar sesión",
     "Setup and help…": "Configuración y ayuda…",
     "Quit Limitless Zoom": "Salir de Limitless Zoom",
@@ -298,7 +313,10 @@ SPANISH = {
     "System default microphone": "Micrófono predeterminado del sistema",
     "Microphone level": "Nivel del micrófono",
     "What voice heard": "Lo que oyó la voz",
-    "Say “zoom in” to try it.": "Di «zoom in» para probarlo. Los comandos de voz siguen en inglés por ahora.",
+    "Say “{phrase}” to try it.": "Di «{phrase}» para probarlo.",
+    "What you can say:": "Lo que puedes decir:",
+    "<b>{action}</b>: {phrases}": "<b>{action}</b>: {phrases}",
+    "“{phrase}”": "«{phrase}»",
     "Heard: “{text}”": "Oí: «{text}»",
     "Voice status": "Estado de la voz",
     "4. Switch (optional)": "4. Pulsador (opcional)",

@@ -25,6 +25,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test -p color-core
+      - name: The offline helper on people's descriptions, English and Spanish
+        run: cargo run -q -p color-core --example helper_report | head -24
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Every word in the window, its menus and its messages has Spanish.
+      - run: node --test app/test/*.test.mjs
 
   mac:
     needs: test

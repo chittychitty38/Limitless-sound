@@ -478,6 +478,14 @@ def label(text):
     return w
 
 
+ORDER = {action: i for i, action in enumerate(LABELS)}   # how the actions are listed
+
+
+def quoted(phrase):
+    """A phrase to say, in the quotes the language uses: “zoom in”, «acercar»."""
+    return t("“{phrase}”", phrase=phrase)
+
+
 class Setup(QWidget):
     """The setup assistant: shown on first launch and from the menu.
     Everything updates live, so people can see each step work."""
@@ -556,13 +564,20 @@ class Setup(QWidget):
         self.meter.setTextVisible(False)
         words.show(self.meter.setAccessibleName, t("Microphone level"))
         c.addWidget(self.meter)
-        self.heard = LiveText(t("What voice heard"), t("Say \u201czoom in\u201d to try it."))
+        self.heard_anything = False
+        self.heard = LiveText(t("What voice heard"), t("Say \u201c{phrase}\u201d to try it.", phrase="zoom in"))
         self.heard.setWordWrap(True)
         c.addWidget(self.heard)
         self.voice_status = LiveText(t("Voice status"))
         self.voice_status.setObjectName("muted")
         self.voice_status.setWordWrap(True)
         c.addWidget(self.voice_status)
+        # What can be said, in the language voice works in now (app.py keeps it up to date).
+        c.addWidget(label(t("What you can say:")))
+        self.phrases = QLabel()
+        self.phrases.setWordWrap(True)
+        words.show(self.phrases.setAccessibleDescription, t("Voice commands"))   # its words are its name
+        c.addWidget(self.phrases)
 
         # 4. Switch
         self._h2(t("4. Switch (optional)"), lay)
@@ -707,7 +722,19 @@ class Setup(QWidget):
         self.meter.setValue(int(value * 100))
 
     def set_heard(self, text):
+        self.heard_anything = True
         self.heard.setText(t("Heard: \u201c{text}\u201d", text=text))
+
+    def set_phrases(self, language):
+        """What can be said in this language (a voice.Language), each action's phrases on a line,
+        and the phrase to try first."""
+        lines = []
+        for action, phrases in sorted(language.by_action().items(), key=lambda a: ORDER.get(a[0], len(ORDER))):
+            lines.append(t("<b>{action}</b>: {phrases}", action=t(LABELS[action]),
+                           phrases=", ".join(map(quoted, phrases))))
+        self.phrases.setText("<br>".join(lines))
+        if not self.heard_anything:
+            self.heard.setText(t("Say \u201c{phrase}\u201d to try it.", phrase=language.first("in")))
 
     def set_voice_status(self, text):
         self.voice_status.setText(text)

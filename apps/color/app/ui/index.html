@@ -112,6 +112,8 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
 #screenBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .note{margin:0;padding:10px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .note[hidden]{display:none}
+/* Words for the desktop app or the plain page, shown in one of them. */
+[data-only][hidden]{display:none!important}
 
 /* clarity check */
 .pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(240px*var(--ts))),1fr));gap:10px}
@@ -151,7 +153,8 @@ legend{font-weight:600;padding:0 4px}
   <header>
     <div>
       <h1>Limitless Color Tuner</h1>
-      <p class="sub">Tell it what you see, move the faders, and keep going until the session looks right to your eyes. Everything you set becomes a color profile your Mac can apply to Logic Pro or Pro Tools.</p>
+      <p class="sub" data-only="browser">Tell it what you see, move the faders, and keep going until the session looks right to your eyes. Everything you set becomes a color profile your Mac can apply to Logic Pro or Pro Tools.</p>
+      <p class="sub" data-only="desktop" hidden>Your colors apply to your whole screen. Tell the assistant what you see, move the faders, or press Make it clear for me, and keep going until it looks right to you.</p>
     </div>
     <div class="row">
       <button id="screenBtn" type="button" aria-pressed="false" hidden>Screen colors: Off</button>
@@ -233,9 +236,10 @@ legend{font-weight:600;padding:0 4px}
 
     <section class="card" aria-labelledby="e-h">
       <div class="row"><h2 id="e-h">Save your profile</h2></div>
-      <p class="hint">Your settings stay in this browser. Download the color profile as a .cube file, the standard color-lookup format a Mac screen filter can load.</p>
+      <p class="hint" data-only="browser">Your settings stay in this browser. Download the color profile as a .cube file, the standard color-lookup format a Mac screen filter can load.</p>
+      <p class="hint" data-only="desktop" hidden>Your settings are saved automatically. You can also save them as a .cube color profile in Documents › Limitless Color, to share or back up.</p>
       <div class="row">
-        <button class="primary" id="dlCube" type="button">Download .cube profile</button>
+        <button class="primary" id="dlCube" type="button"><span data-only="browser">Download .cube profile</span><span data-only="desktop" hidden>Save .cube profile</span></button>
         <button id="copyJson" type="button">Copy settings</button>
       </div>
       <p class="hint" id="exportMsg" aria-live="polite"></p>
@@ -243,13 +247,23 @@ legend{font-weight:600;padding:0 4px}
     </section>
   </div>
 
-  <section class="card" aria-labelledby="p-h">
+  <section class="card" aria-labelledby="p-h" data-only="browser">
     <h2 id="p-h">Getting this into Logic Pro and Pro Tools</h2>
     <div class="plan">
       <div><h3>Today, built in</h3><p>macOS Settings › Accessibility › Display › Color Filters has fixed red-green and blue-yellow filters with an intensity slider. Logic's track color palette and the Pro Tools Color Palette window let you recolor tracks by hand. Use this page to find the colors that work, then type them in.</p></div>
       <div><h3>Next, a Mac screen filter</h3><p>A small menu bar app captures the screen with ScreenCaptureKit, runs every frame through your .cube profile on the GPU, and shows it in a click-through overlay. It works on any app, including plugins and virtual instruments, with about one frame of delay.</p></div>
       <div><h3>Then, talk to it live</h3><p>The same assistant runs inside the Mac app. You look at your real session, say "the solo button still looks like mute", and the overlay updates while you work. It pairs with the voice control work in this project.</p></div>
     </div>
+  </section>
+
+  <section class="card" aria-labelledby="hw-h" data-only="desktop" hidden>
+    <h2 id="hw-h">How it works</h2>
+    <div class="plan">
+      <div><h3>Screen colors</h3><p>Switch them on and your profile is applied to the whole screen: Logic Pro, Pro Tools, plugins and everything else. Closing this window keeps them on. Use the menu bar or tray icon to switch them off or quit.</p></div>
+      <div><h3>Quick switch</h3><p id="shortcutHelp"></p></div>
+      <div><h3>Talk instead of typing</h3><p>Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.</p></div>
+    </div>
+    <div class="row"><button type="button" id="setupAgain">Run the setup guide again</button></div>
   </section>
 </div>
 
@@ -259,6 +273,360 @@ legend{font-weight:600;padding:0 4px}
   <div id="setupBody"></div>
 </dialog>
 
+<!-- The window's Spanish, English text → Spanish. The app's menus and messages, and the
+     assistant's offline answers, read this table too (color-core/src/lang.rs). -->
+<script type="application/json" id="strings-es">
+{
+"Limitless Color Tuner": "Afinador de Limitless Color",
+"Preview of a music session with your color settings applied. Left of the divider is the original, right is your version. Click a color to choose how it should look.": "Vista previa de una sesión de música con tus ajustes de color. A la izquierda de la división está el original, a la derecha tu versión. Haz clic en un color para elegir cómo debe verse.",
+"Divider between original and your version": "División entre el original y tu versión",
+"Example: what is supposed to be red looks like a weird green or yellow to me": "Ejemplo: lo que debería ser rojo lo veo como un verde o amarillo raro",
+"Anthropic API key": "Clave de API de Anthropic",
+"Your settings as text": "Tus ajustes como texto",
+"Tell it what you see, move the faders, and keep going until the session looks right to your eyes. Everything you set becomes a color profile your Mac can apply to Logic Pro or Pro Tools.": "Cuéntale lo que ves, mueve los faders y sigue hasta que la sesión se vea bien a tus ojos. Todo lo que ajustes se convierte en un perfil de color que tu Mac puede aplicar a Logic Pro o Pro Tools.",
+"Your colors apply to your whole screen. Tell the assistant what you see, move the faders, or press Make it clear for me, and keep going until it looks right to you.": "Tus colores se aplican a toda la pantalla. Cuéntale al asistente lo que ves, mueve los faders o pulsa Ajústalo por mí, y sigue hasta que se vea bien para ti.",
+"Screen colors: Off": "Colores de pantalla: no",
+"Screen colors: On": "Colores de pantalla: sí",
+"Hold to compare": "Mantén para comparar",
+"Undo": "Deshacer",
+"Start over": "Empezar de nuevo",
+"Your screen": "Tu pantalla",
+"Sample Logic-style session": "Sesión de ejemplo estilo Logic",
+"Original": "Original",
+"Yours": "Tu versión",
+"Use a screenshot of my session": "Usar una captura de mi sesión",
+"Back to sample": "Volver al ejemplo",
+"Show it as seen with this color vision (for helpers)": "Mostrarlo como se ve con esta visión del color (para quien te ayuda)",
+"Tip: click any color in the picture to pin it and choose exactly how it should look.": "Consejo: haz clic en cualquier color de la imagen para fijarlo y elegir exactamente cómo debe verse.",
+"Color assistant": "Asistente de color",
+"Connecting…": "Conectando…",
+"Describe what you see": "Describe lo que ves",
+"Send": "Enviar",
+"Stop": "Detener",
+"Talk": "Hablar",
+"You can dictate with the Mac's Dictation key.": "Puedes dictar con la tecla Dictado del Mac.",
+"Smarter answers with Claude (optional)": "Respuestas más inteligentes con Claude (opcional)",
+"Paste an Anthropic API key from console.anthropic.com. It's kept in your computer's keychain. Without a key, the built-in helper answers.": "Pega una clave de API de Anthropic de console.anthropic.com. Se guarda en el llavero de tu equipo. Sin clave, responde el ayudante integrado.",
+"Save key": "Guardar la clave",
+"Can you tell them apart?": "¿Los distingues?",
+"Make it clear for me": "Ajústalo por mí",
+"Controls you should never mix up, in your colors. The bars estimate how different each pair looks with your kind of color vision. Your own eyes have the final say.": "Controles que nunca deberías confundir, en tus colores. Las barras estiman lo distinto que se ve cada par con tu tipo de visión del color. Tus propios ojos tienen la última palabra.",
+"Faders": "Faders",
+"Color vision": "Visión del color",
+"Red-green (green-weak, most common)": "Rojo-verde (verde débil, el más común)",
+"Red-green (red-weak, reds look dark)": "Rojo-verde (rojo débil, los rojos se ven oscuros)",
+"Blue-yellow": "Azul-amarillo",
+"What each control looks like": "Cómo se ve cada control",
+"Original, then yours. Pick a color on the right to pin how a control should look. A pinned control stays put while the faders move everything else.": "Primero el original y luego el tuyo. Elige un color a la derecha para fijar cómo debe verse un control. Un control fijado no cambia mientras los faders mueven todo lo demás.",
+"Quick eye check": "Prueba rápida de la vista",
+"Save your profile": "Guarda tu perfil",
+"Your settings stay in this browser. Download the color profile as a .cube file, the standard color-lookup format a Mac screen filter can load.": "Tus ajustes se quedan en este navegador. Descarga el perfil de color como archivo .cube, el formato estándar de tabla de colores que puede cargar un filtro de pantalla del Mac.",
+"Your settings are saved automatically. You can also save them as a .cube color profile in Documents › Limitless Color, to share or back up.": "Tus ajustes se guardan solos. También puedes guardarlos como perfil de color .cube en Documentos › Limitless Color, para compartirlos o tener una copia.",
+"Download .cube profile": "Descargar el perfil .cube",
+"Save .cube profile": "Guardar el perfil .cube",
+"Copy settings": "Copiar los ajustes",
+"Getting this into Logic Pro and Pro Tools": "Cómo llevarlo a Logic Pro y Pro Tools",
+"Today, built in": "Hoy, con lo que ya trae",
+"macOS Settings › Accessibility › Display › Color Filters has fixed red-green and blue-yellow filters with an intensity slider. Logic's track color palette and the Pro Tools Color Palette window let you recolor tracks by hand. Use this page to find the colors that work, then type them in.": "En macOS, Ajustes del Sistema › Accesibilidad › Pantalla › Filtros de color tiene filtros fijos rojo-verde y azul-amarillo con un regulador de intensidad. La paleta de colores de pista de Logic y la ventana Color Palette de Pro Tools te dejan cambiar el color de las pistas a mano. Usa esta página para encontrar los colores que te funcionan y luego escríbelos allí.",
+"Next, a Mac screen filter": "Después, un filtro de pantalla para Mac",
+"A small menu bar app captures the screen with ScreenCaptureKit, runs every frame through your .cube profile on the GPU, and shows it in a click-through overlay. It works on any app, including plugins and virtual instruments, with about one frame of delay.": "Una pequeña app de la barra de menús captura la pantalla con ScreenCaptureKit, pasa cada fotograma por tu perfil .cube en la GPU y lo muestra en una capa que deja pasar los clics. Funciona con cualquier app, plugins e instrumentos virtuales incluidos, con un fotograma de retraso más o menos.",
+"Then, talk to it live": "Luego, háblale en directo",
+"The same assistant runs inside the Mac app. You look at your real session, say \"the solo button still looks like mute\", and the overlay updates while you work. It pairs with the voice control work in this project.": "El mismo asistente funciona dentro de la app para Mac. Miras tu sesión real, dices «el botón Solo todavía se ve como el de Silenciar» y la capa se actualiza mientras trabajas. Va de la mano del control por voz de este proyecto.",
+"How it works": "Cómo funciona",
+"Screen colors": "Colores de pantalla",
+"Switch them on and your profile is applied to the whole screen: Logic Pro, Pro Tools, plugins and everything else. Closing this window keeps them on. Use the menu bar or tray icon to switch them off or quit.": "Actívalos y tu perfil se aplica a toda la pantalla: Logic Pro, Pro Tools, los plugins y todo lo demás. Si cierras esta ventana, siguen activados. Usa el icono de la barra de menús o de la bandeja del sistema para desactivarlos o salir.",
+"Quick switch": "Activación rápida",
+"Talk instead of typing": "Habla en vez de escribir",
+"Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.": "Pulsa Hablar y luego habla. Usa el dictado de tu equipo, así que cualquier micrófono que funcione con tu equipo funciona aquí.",
+"Run the setup guide again": "Repetir la guía de configuración",
+"Record button & armed tracks": "Botón Grabar y pistas armadas",
+"Play button": "Botón Reproducir",
+"Cycle / loop range": "Ciclo / rango de bucle",
+"Solo": "Solo",
+"Mute": "Silenciar",
+"Input monitoring": "Monitoreo de entrada",
+"Meter: safe level": "Medidor: nivel seguro",
+"Meter: getting hot": "Medidor: nivel alto",
+"Meter: clipping": "Medidor: saturación",
+"Volume automation line": "Línea de automatización de volumen",
+"Track color: Kick (red)": "Color de pista: Bombo (rojo)",
+"Track color: Snare (orange)": "Color de pista: Caja (naranja)",
+"Track color: Bass (yellow)": "Color de pista: Bajo (amarillo)",
+"Track color: Keys (green)": "Color de pista: Teclados (verde)",
+"Track color: Guitar (teal)": "Color de pista: Guitarra (verde azulado)",
+"Track color: Vocal (blue)": "Color de pista: Voz (azul)",
+"Track color: Backing vocals (purple)": "Color de pista: Coros (morado)",
+"Track color: FX (pink)": "Color de pista: FX (rosa)",
+"Color you picked": "Color que elegiste",
+"Color correction": "Corrección del color",
+"Off": "Apagada",
+"Full": "Completa",
+"How strong the difference is": "Intensidad de la diferencia",
+"Mild": "Leve",
+"Strong": "Fuerte",
+"Red vs green brightness": "Brillo rojo / verde",
+"Reds darker": "Rojos más oscuros",
+"Reds brighter": "Rojos más brillantes",
+"Move reds": "Mover los rojos",
+"Toward pink": "Hacia el rosa",
+"Toward orange": "Hacia el naranja",
+"Move greens": "Mover los verdes",
+"Toward yellow": "Hacia el amarillo",
+"Toward blue-green": "Hacia el verde azulado",
+"Move yellows": "Mover los amarillos",
+"Toward green": "Hacia el verde",
+"Move blues": "Mover los azules",
+"Toward cyan": "Hacia el cian",
+"Toward purple": "Hacia el morado",
+"Blue vs yellow brightness": "Brillo azul / amarillo",
+"Yellows darker": "Amarillos más oscuros",
+"Yellows brighter": "Amarillos más brillantes",
+"Color strength": "Intensidad del color",
+"Softer": "Más suave",
+"Bolder": "Más intenso",
+"Light/dark contrast": "Contraste claro/oscuro",
+"Flatter": "Más plano",
+"Punchier": "Más marcado",
+"Pin reach": "Alcance del color fijado",
+"Exact color only": "Solo el color exacto",
+"Similar colors too": "También colores parecidos",
+"Setting": "Ajuste",
+"120 bpm   4/4   C maj": "120 bpm   4/4   Do mayor",
+"Limitless Session — Arrange": "Sesión Limitless — Pistas",
+"Kick": "Bombo",
+"Snare": "Caja",
+"Bass": "Bajo",
+"Keys": "Teclados",
+"Guitar": "Guitarra",
+"Lead Vocal": "Voz principal",
+"Backing Vox": "Coros",
+"FX Return": "Retorno FX",
+"Mixer meters": "Medidores del mezclador",
+"Your screenshot": "Tu captura",
+"Pinned {color}. Choose how it should look in the list below.": "{color} fijado. Elige cómo debe verse en la lista de abajo.",
+"Choose how {name} should look": "Elige cómo debe verse: {name}",
+"Pinned": "Fijado",
+"Unpin": "Soltar",
+"Record vs Play": "Grabar / Reproducir",
+"Solo vs Mute": "Solo / Silenciar",
+"Meter: safe vs clipping": "Medidor: seguro / saturación",
+"Meter: safe vs hot": "Medidor: seguro / alto",
+"Meter: hot vs clipping": "Medidor: alto / saturación",
+"Record vs Input": "Grabar / Entrada",
+"Red track vs green track": "Pista roja / pista verde",
+"Blue track vs purple track": "Pista azul / pista morada",
+"Teal track vs blue track": "Pista verde azulado / pista azul",
+"Clear": "Se distinguen",
+"Getting there": "Casi",
+"Hard to tell apart": "Cuesta distinguirlos",
+"{n} of {total} clear": "{n} de {total} se distinguen",
+"What is supposed to be red looks like a weird green or yellow to me": "Lo que debería ser rojo lo veo como un verde o amarillo raro",
+"I can't tell Solo from Mute": "No distingo Solo de Silenciar",
+"The meters look like one color all the way up": "Los medidores se ven de un solo color de abajo arriba",
+"Reds look almost black": "Los rojos se ven casi negros",
+"Blue and green tracks blur together": "Las pistas azules y verdes se confunden",
+"That's too strong, make it more natural": "Es demasiado fuerte, hazlo más natural",
+"Hi. Tell me what looks wrong, in your own words. For example, which color looks like another one, or which buttons you can't tell apart. I'll change the screen and then ask you what you see now.": "Hola. Cuéntame con tus palabras qué se ve mal. Por ejemplo, qué color se parece a otro o qué botones no distingues. Cambiaré la pantalla y luego te preguntaré qué ves ahora.",
+"Color vision: {name}": "Visión del color: {name}",
+"Pinned {name}": "Fijado: {name}",
+"Unpinned {name}": "Ya no está fijado: {name}",
+"Changed: {list}": "Cambios: {list}",
+"Offline helper": "Ayudante sin conexión",
+"Thinking…": "Pensando…",
+"Stopped.": "Detenido.",
+"Something went wrong: {error}": "Algo salió mal: {error}",
+"red-green (green-weak)": "rojo-verde (verde débil)",
+"red-green (red-weak)": "rojo-verde (rojo débil)",
+"blue-yellow": "azul-amarillo",
+"I eased everything back by about a third so it looks more natural.": "Suavicé todo más o menos un tercio para que se vea más natural.",
+"Can you still tell apart the colors that were giving you trouble?": "¿Sigues distinguiendo los colores que te daban problemas?",
+"I put the colors back the way they were before my last change.": "Dejé los colores como estaban antes de mi último cambio.",
+"Which colors or buttons still look alike? I'll try another way.": "¿Qué colores o botones todavía se parecen? Probaré de otra forma.",
+"Great. Your colors stay like this, and they're saved. Tell me any time something looks off.": "Genial. Tus colores se quedan así y ya están guardados. Avísame cuando algo se vea raro.",
+"Good, I'll keep it like this.": "Bien, lo dejo así.",
+"Is anything still hard to tell apart?": "¿Todavía te cuesta distinguir algo?",
+"I pinned Solo to a bright yellow and Mute to a deep blue, so they differ in brightness as well as color.": "Fijé Solo en un amarillo brillante y Silenciar en un azul oscuro, así se diferencian en brillo además de en color.",
+"Do the S and M buttons look clearly different now?": "¿Ahora los botones S y M se ven claramente distintos?",
+"I changed the meters to blue for safe, yellow for hot and orange-red for clipping. Those three stay apart for most kinds of colorblindness.": "Cambié los medidores a azul para el nivel seguro, amarillo para el nivel alto y rojo anaranjado para la saturación. Esos tres se distinguen con casi todos los tipos de daltonismo.",
+"Looking at a level meter, can you see where blue turns to yellow and then to red?": "Mirando un medidor de nivel, ¿ves dónde el azul pasa a amarillo y luego a rojo?",
+"Reds that look dark usually mean the red-sensing part of the eye is weaker. I made reds brighter and nudged them toward pink.": "Cuando los rojos se ven oscuros, suele ser porque la parte del ojo que capta el rojo es más débil. Hice los rojos más brillantes y los acerqué un poco al rosa.",
+"Do red things, like the Record button, look brighter now? What color do they look like?": "¿Ahora las cosas rojas, como el botón Grabar, se ven más brillantes? ¿De qué color las ves?",
+"That sounds like red-green colorblindness. I moved reds toward pink, greens toward blue-green, and made reds a bit brighter so they stand apart.": "Parece daltonismo rojo-verde. Moví los rojos hacia el rosa y los verdes hacia el verde azulado, e hice los rojos un poco más brillantes para que se distingan.",
+"I pushed further: reds more toward pink, greens more toward blue-green.": "Fui más allá: los rojos, más hacia el rosa, y los verdes, más hacia el verde azulado.",
+"Compare the Record button and the Play button. Do they look different now? What color does each look like to you?": "Compara el botón Grabar con el botón Reproducir. ¿Ahora se ven distintos? ¿De qué color ves cada uno?",
+"That points to blue-yellow colorblindness. I made yellows brighter than blues and pulled blues toward purple, away from greens.": "Eso apunta a daltonismo azul-amarillo. Hice los amarillos más brillantes que los azules y llevé los azules hacia el morado, lejos de los verdes.",
+"I pushed further: yellows brighter still, and blues more toward purple.": "Fui más allá: los amarillos, aún más brillantes, y los azules, más hacia el morado.",
+"Do blue and teal tracks look different now?": "¿Ahora las pistas azules y las verde azulado se ven distintas?",
+"I turned the correction up and made colors a little bolder.": "Subí la corrección e hice los colores un poco más intensos.",
+"Which two things still look the same to you?": "¿Qué dos cosas todavía ves iguales?",
+"I'm not sure what to change yet. Try naming two things that look the same to you, for example {example1} or {example2}.": "Todavía no sé qué cambiar. Dime dos cosas que veas iguales, por ejemplo {example1} o {example2}.",
+"the Record button and the Play button look the same": "el botón Grabar y el botón Reproducir se ven iguales",
+"red looks brown": "el rojo se ve marrón",
+"Same color": "Mismo color",
+"Almost the same": "Casi iguales",
+"Clearly different": "Claramente distintos",
+"How does the session look now? Tell me anything that still looks wrong.": "¿Cómo se ve ahora la sesión? Cuéntame cualquier cosa que todavía se vea mal.",
+"From the eye check, your answers match {name} color vision, so I tuned your colors for it.": "Según la prueba de la vista, tus respuestas coinciden con una visión del color {name}, así que ajusté tus colores para ella.",
+"From the eye check, your answers match {name} color vision, so I set a starting correction.": "Según la prueba de la vista, tus respuestas coinciden con una visión del color {name}, así que puse una corrección inicial.",
+"6 pairs, about a minute": "6 pares, un minuto más o menos",
+"You'll see two circles at a time. Say whether they look like the same color. This tells the tuner which colors to work on. Your answers stay on this page.": "Verás dos círculos cada vez. Di si te parecen del mismo color. Así el afinador sabe con qué colores trabajar. Tus respuestas no salen de esta página.",
+"Start the check": "Empezar la prueba",
+"Done": "Hecho",
+"Every pair looked different to you, so your color vision may be close to typical for these colors. Use the assistant to describe anything that still looks off.": "Todos los pares te parecieron distintos, así que tu visión de estos colores puede ser casi la habitual. Usa el asistente para describir cualquier cosa que todavía se vea rara.",
+"Your answers match {name} color vision. Tuning your colors for that…": "Tus respuestas coinciden con una visión del color {name}. Ajustando tus colores para ella…",
+"Your answers match {name} color vision. I tuned your colors for it.": "Tus respuestas coinciden con una visión del color {name}. Ajusté tus colores para ella.",
+"Your answers match {name} color vision. I set the tuner to that and turned on a starting correction.": "Tus respuestas coinciden con una visión del color {name}. Puse el afinador en ella y activé una corrección inicial.",
+"Automatic tuning didn't work: {error}": "El ajuste automático no funcionó: {error}",
+"Do it again": "Repetirla",
+"Pair {n} of {total}": "Par {n} de {total}",
+"Two colored circles": "Dos círculos de color",
+"Do these two circles look like the same color?": "¿Estos dos círculos te parecen del mismo color?",
+"Saved to {path}": "Guardado en {path}",
+"Saved limitless-color.cube.": "Se guardó limitless-color.cube.",
+"Sent.": "Enviado.",
+"Not saved.": "No se guardó.",
+"Downloads aren't available here, so the profile is in the box below. Select it all and save it as limitless-color.cube.": "Aquí no se puede descargar, así que el perfil está en el cuadro de abajo. Selecciónalo todo y guárdalo como limitless-color.cube.",
+"Copied.": "Copiado.",
+"Press Command-C to copy the selected text.": "Pulsa Comando-C para copiar el texto seleccionado.",
+"A key is saved. Save an empty box to remove it.": "Hay una clave guardada. Guarda el cuadro vacío para quitarla.",
+"{now} of {total} key pairs are now clear for {name} color vision ({before} before).": "Ahora se distinguen {now} de {total} pares clave con una visión del color {name} (antes, {before}).",
+"I also gave {pinned} their own colorblind-safe colors.": "También les di a {pinned} colores propios seguros para el daltonismo.",
+"{a} and {b}": "{a} y {b}",
+"Trying thousands of settings for your eyes…": "Probando miles de ajustes para tus ojos…",
+"Undo takes you back.": "Deshacer te devuelve a lo anterior.",
+"I tuned the colors automatically.": "Ajusté los colores automáticamente.",
+"Look at your session. What still looks wrong, if anything?": "Mira tu sesión. ¿Algo todavía se ve mal?",
+"Showing the original colors. Let go to see yours.": "Mostrando los colores originales. Suelta para ver los tuyos.",
+"Command": "Comando",
+"Option": "Opción",
+"Speak now. If nothing happens, press the Fn key twice, or turn on Dictation in System Settings › Keyboard.": "Habla ahora. Si no pasa nada, pulsa dos veces la tecla Fn o activa el Dictado en Ajustes del Sistema › Teclado.",
+"Speak now. If nothing happens, press Windows key + H.": "Habla ahora. Si no pasa nada, pulsa la tecla Windows + H.",
+"The screen filter stopped unexpectedly.": "El filtro de pantalla se detuvo de forma inesperada.",
+"Restart it": "Reiniciarlo",
+"Press {shortcut} from any app to switch the screen colors on or off.": "Pulsa {shortcut} desde cualquier app para activar o desactivar los colores de pantalla.",
+"Screen access": "Acceso a la pantalla",
+"Step {n} of {total}": "Paso {n} de {total}",
+"Welcome to Limitless Color": "Te damos la bienvenida a Limitless Color",
+"Limitless Color changes the colors on your whole screen, in Logic Pro, Pro Tools, plugins and everything else, so the things you need to tell apart really look different to you.": "Limitless Color cambia los colores de toda tu pantalla, en Logic Pro, Pro Tools, los plugins y todo lo demás, para que lo que necesitas distinguir se vea distinto de verdad para ti.",
+"Setup takes about two minutes: a quick eye check, automatic tuning for your eyes, then you switch it on. You can change anything later by telling the color assistant what you see, or with the faders.": "La configuración lleva unos dos minutos: una prueba rápida de la vista, un ajuste automático para tus ojos y luego lo activas. Después puedes cambiar lo que quieras contándole al asistente de color lo que ves, o con los faders.",
+"Let's start": "Empezar",
+"Skip setup": "Saltar la configuración",
+"You'll see two circles at a time. Say whether they look like the same color to you. Six pairs, about a minute. There are no wrong answers.": "Verás dos círculos cada vez. Di si te parecen del mismo color. Seis pares, un minuto más o menos. No hay respuestas incorrectas.",
+"I already know my color vision": "Ya sé cómo es mi visión del color",
+"Red-green, green-weak": "Rojo-verde, verde débil",
+"The most common kind. Reds and greens look alike, often brownish or yellowish.": "El tipo más común. Los rojos y los verdes se parecen, a menudo marrones o amarillentos.",
+"Red-green, red-weak": "Rojo-verde, rojo débil",
+"Reds look dark, almost black or brown, and get confused with greens.": "Los rojos se ven oscuros, casi negros o marrones, y se confunden con los verdes.",
+"Blues and greens look alike, and yellows look pink or grey.": "Los azules y los verdes se parecen, y los amarillos se ven rosados o grises.",
+"I can usually tell, but it takes effort.": "Normalmente los distingo, pero me cuesta.",
+"Medium": "Media",
+"I mix these colors up often.": "Confundo estos colores a menudo.",
+"These colors look the same to me.": "Estos colores los veo iguales.",
+"Which colors do you mix up?": "¿Qué colores confundes?",
+"How strong is it?": "¿Qué tan fuerte es?",
+"Continue": "Continuar",
+"Do the eye check instead": "Hacer la prueba de la vista",
+"Pair {n} of {total}: do these two circles look like the same color?": "Par {n} de {total}: ¿estos dos círculos te parecen del mismo color?",
+"Every pair looked clearly different to you, so the usual colorblind confusions may not affect you, or only a little.": "Todos los pares te parecieron claramente distintos, así que las confusiones habituales del daltonismo quizá no te afecten, o muy poco.",
+"If some things in your session still look alike, choose your color vision yourself and the app will tune for it.": "Si algunas cosas de tu sesión todavía se parecen, elige tú tu visión del color y la app se ajustará a ella.",
+"Choose it myself": "Elegirla yo",
+"Finish without changes": "Terminar sin cambios",
+"Your answers match {name} color vision. Next, the app tunes your colors for that.": "Tus respuestas coinciden con una visión del color {name}. Ahora la app ajusta tus colores para ella.",
+"Tune my colors": "Ajustar mis colores",
+"That's not right, let me choose": "No es así, prefiero elegir",
+"Your colors, tuned": "Tus colores, ajustados",
+"Continue anyway": "Continuar de todos modos",
+"Trying thousands of color settings for {name} color vision…": "Probando miles de ajustes de color para una visión del color {name}…",
+"A sample music session. Left half: original colors. Right half: your tuned colors.": "Una sesión de música de ejemplo. Mitad izquierda: colores originales. Mitad derecha: tus colores ajustados.",
+"Pair": "Par",
+"Before": "Antes",
+"After": "Después",
+"Compare the pairs. Can you tell each pair apart more easily in the After column, and in the right half of the picture?": "Compara los pares. ¿Distingues mejor cada par en la columna Después y en la mitad derecha de la imagen?",
+"Tuned for {name} color vision at {strength}% strength.": "Ajustado para una visión del color {name} con una intensidad del {strength}%.",
+"Yes, use this": "Sí, usar esto",
+"Make it stronger": "Más fuerte",
+"Too much, make it gentler": "Es demasiado, más suave",
+"Let Limitless Color see the screen": "Deja que Limitless Color vea la pantalla",
+"Screen access is on.": "El acceso a la pantalla está activado.",
+"To recolor Logic Pro and everything else, macOS needs to let Limitless Color see the screen. It only uses the picture to redraw it in your colors. Nothing is recorded, saved, or sent anywhere.": "Para cambiar los colores de Logic Pro y de todo lo demás, macOS tiene que dejar que Limitless Color vea la pantalla. Solo usa la imagen para volver a dibujarla con tus colores. No se graba, no se guarda y no se envía nada.",
+"Click Open System Settings.": "Haz clic en Abrir Ajustes del Sistema.",
+"Turn on Limitless Color in the list. Your Mac may ask for your password.": "Activa Limitless Color en la lista. Puede que tu Mac te pida la contraseña.",
+"If macOS offers to Quit & Reopen, choose it. This window comes back by itself.": "Si macOS te ofrece Salir y volver a abrir, elígelo. Esta ventana vuelve sola.",
+"Open System Settings": "Abrir Ajustes del Sistema",
+"Not now": "Ahora no",
+"Skip for now": "Saltar por ahora",
+"Waiting for you to turn it on… This page notices by itself.": "Esperando a que lo actives… Esta página se da cuenta sola.",
+"I turned it on, but nothing changed": "Lo activé, pero no cambió nada",
+"macOS sometimes only applies the change after Limitless Color reopens.": "A veces macOS solo aplica el cambio cuando Limitless Color se vuelve a abrir.",
+"Quit & Reopen Limitless Color": "Salir y volver a abrir Limitless Color",
+"Checking screen access…": "Comprobando el acceso a la pantalla…",
+"Your colors are on": "Tus colores están activados",
+"Switch on your colors": "Activa tus colores",
+"Press the button and your whole screen changes to your colors, in every app.": "Pulsa el botón y toda tu pantalla cambia a tus colores, en todas las apps.",
+"Switch on screen colors": "Activar los colores de pantalla",
+"Hold the button below to see the original colors for a moment, like bypass on a plugin. Let go to see yours.": "Mantén pulsado el botón de abajo para ver un momento los colores originales, como el bypass de un plugin. Suéltalo para ver los tuyos.",
+"Press {shortcut} in any app to switch your colors on or off.": "Pulsa {shortcut} en cualquier app para activar o desactivar tus colores.",
+"The Limitless Color icon in the menu bar has the same switch. Closing this window keeps your colors on.": "El icono de Limitless Color en la barra de menús también los activa y desactiva. Si cierras esta ventana, tus colores siguen activados.",
+"The Limitless Color icon in the taskbar tray has the same switch. Closing this window keeps your colors on.": "El icono de Limitless Color en la bandeja del sistema también los activa y desactiva. Si cierras esta ventana, tus colores siguen activados.",
+"Something still hard to see? Tell the color assistant in your own words, for example {example}.": "¿Todavía te cuesta ver algo? Cuéntaselo al asistente de color con tus palabras, por ejemplo {example}.",
+"Solo and Mute look the same": "Solo y Silenciar se ven iguales",
+"Start Limitless Color when I log in": "Iniciar Limitless Color al iniciar sesión",
+"Your colors come back on by themselves after a restart.": "Tus colores vuelven a activarse solos después de reiniciar.",
+"Finish": "Terminar",
+"The system keychain isn't available.": "El llavero del sistema no está disponible.",
+"Couldn't save the key: {error}": "No se pudo guardar la clave: {error}",
+"Couldn't reach Claude. Check the internet connection.": "No se pudo conectar con Claude. Comprueba la conexión a internet.",
+"Claude sent an answer that couldn't be read.": "Claude envió una respuesta que no se pudo leer.",
+"Claude didn't accept the API key.": "Claude no aceptó la clave de API.",
+"Claude is busy right now.": "Claude está ocupado en este momento.",
+"Claude returned an error ({code}).": "Claude devolvió un error ({code}).",
+"Claude declined to answer that.": "Claude prefirió no responder a eso.",
+"Claude's answer was empty.": "La respuesta de Claude llegó vacía.",
+"Claude's answer couldn't be read, so the built-in helper answered.": "No se pudo leer la respuesta de Claude, así que respondió el ayudante integrado.",
+"{problem} The built-in helper answered instead.": "{problem} En su lugar respondió el ayudante integrado.",
+"That profile couldn't be read: {error}": "No se pudo leer ese perfil: {error}",
+"Couldn't change start at login: {error}": "No se pudo cambiar el inicio al iniciar sesión: {error}",
+"The screen filter helper is missing: {error}": "Falta el programa auxiliar del filtro de pantalla: {error}",
+"The screen filter helper didn't start: {error}": "El programa auxiliar del filtro de pantalla no se inició: {error}",
+"The screen filter reported a problem: {error}": "El filtro de pantalla informó de un problema: {error}",
+"The screen filter helper isn't running.": "El programa auxiliar del filtro de pantalla no está en marcha.",
+"The screen filter helper stopped responding.": "El programa auxiliar del filtro de pantalla dejó de responder.",
+"Couldn't check Screen Recording permission: {error}": "No se pudo comprobar el permiso de Grabación de pantalla: {error}",
+"Exact match to the tuner.": "Igual que en el afinador.",
+"Matches the tuner closely.": "Muy parecido al afinador.",
+"Close to the tuner. Pinned colors may look a little different on screen.": "Parecido al afinador. Los colores fijados pueden verse algo distintos en la pantalla.",
+"Rough match: Windows' built-in filter can't follow every pinned color or hue move. Try fewer pins or smaller moves.": "Parecido aproximado: el filtro integrado de Windows no puede seguir cada color fijado ni cada cambio de tono. Prueba con menos colores fijados o cambios más pequeños.",
+"Whole-screen colors work on Mac and Windows. On this computer the tuner preview still works.": "Los colores en toda la pantalla funcionan en Mac y Windows. En este equipo, la vista previa del afinador sí funciona.",
+"The Windows color filter isn't available.": "El filtro de color de Windows no está disponible.",
+"Screen colors on": "Colores de pantalla activados",
+"Screen colors off": "Colores de pantalla desactivados",
+"Open Color Tuner…": "Abrir el afinador de colores…",
+"Quit Limitless Color": "Salir de Limitless Color",
+"Opened the color tuner": "Se abrió el afinador de colores",
+"Limitless Color has no action {action}.": "Limitless Color no tiene la acción {action}.",
+"Limitless Color is closing.": "Limitless Color se está cerrando.",
+"Limitless Color didn't answer.": "Limitless Color no respondió.",
+"About {name}": "Acerca de {name}",
+"Services": "Servicios",
+"Hide {name}": "Ocultar {name}",
+"Hide Others": "Ocultar otros",
+"Quit {name}": "Salir de {name}",
+"File": "Archivo",
+"Close Window": "Cerrar ventana",
+"Edit": "Edición",
+"Redo": "Rehacer",
+"Cut": "Cortar",
+"Copy": "Copiar",
+"Paste": "Pegar",
+"Select All": "Seleccionar todo",
+"View": "Ver",
+"Enter Full Screen": "Pantalla completa",
+"Window": "Ventana",
+"Minimize": "Minimizar",
+"Zoom": "Zoom",
+"Help": "Ayuda"
+}
+</script>
 <script>
 (()=>{
 "use strict";
@@ -268,6 +636,52 @@ const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const TAURI=window.__TAURI__;const desktop=!!(TAURI&&TAURI.core);
 const invoke=desktop?TAURI.core.invoke:null;
 let screenOn=false,bypass=false,platform="other";
+
+/* ---------- language ---------- */
+// The window's words in the suite's language while Limitless Sound runs, else in the computer's
+// (the app works out which: windowPrefs.language). The Spanish is the strings-es table at the end
+// of this page, English text → Spanish. The app's menus and messages read the same table
+// (color-core/src/lang.rs), so each word has one Spanish.
+const STRINGS={es:JSON.parse($("#strings-es").textContent)};
+let lang="en";
+function t(text,vars={}){let out=(STRINGS[lang]||{})[text]||text;for(const[k,v]of Object.entries(vars))out=out.split(`{${k}}`).join(v);return out}
+// English kept in a table and translated where it's shown. Marks it for the languages test.
+const en=text=>text;
+// The page's own words, kept in English so they can be put back.
+const TITLE=document.title,fixedText=[],fixedAttrs=[];
+{
+  const walk=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+  for(let n=walk.nextNode();n;n=walk.nextNode())if(n.nodeValue.trim()&&!n.parentElement.closest("script"))fixedText.push([n,n.nodeValue]);
+  for(const name of["aria-label","title","placeholder"])for(const e of document.querySelectorAll(`[${name}]`))fixedAttrs.push([e,name,e.getAttribute(name)]);
+}
+// Words the script writes: each element keeps how to write them, to write them again in a new
+// language in place (the element, and the focus on it, stay where they are).
+const lives=new Map();
+function live(el,fn){if(fn){lives.set(el,fn);el.textContent=fn()}else{lives.delete(el);el.textContent=""}return el}
+function computerLanguage(){
+  for(const l of navigator.languages?.length?navigator.languages:[navigator.language]){const tag=String(l||"").split(/[-_]/)[0].toLowerCase();if(tag==="en"||STRINGS[tag])return tag}
+  return"en";
+}
+function setLanguage(next){
+  next=STRINGS[next]?next:"en";
+  if(next===lang)return false;
+  lang=next;
+  document.documentElement.lang=lang;   // screen readers read the window in it
+  document.title=t(TITLE);
+  for(const[n,en]of fixedText)n.nodeValue=en.replace(en.trim(),t(en.trim()));
+  for(const[e,name,en]of fixedAttrs)e.setAttribute(name,t(en));
+  for(const[el,fn]of lives){if(el.isConnected)el.textContent=fn();else lives.delete(el)}
+  return true;
+}
+// Redraws a part of the window and puts the focus back on the same control in it, so a
+// keyboard, switch or screen reader user isn't thrown back to the top.
+function keepFocus(box,redraw){
+  const all=()=>[...box.querySelectorAll("button,input,select,textarea,summary,a[href],[tabindex]")];
+  const i=all().indexOf(document.activeElement);
+  redraw();
+  if(i>=0)(all()[i]||all()[0])?.focus({preventScroll:true});
+}
+setLanguage(computerLanguage());
 
 /* ---------- color math ---------- */
 const s2l=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);
@@ -358,24 +772,24 @@ function applyLut(src,lut,dst){
 
 /* ---------- the session's controls ---------- */
 const ROLES=[
-  {id:"record",label:"Record button & armed tracks",hex:"#e5322d"},
-  {id:"play",label:"Play button",hex:"#3bbf4a"},
-  {id:"cycle",label:"Cycle / loop range",hex:"#e8c33a"},
-  {id:"solo",label:"Solo",hex:"#f2d23c"},
-  {id:"mute",label:"Mute",hex:"#2fa9d9"},
-  {id:"input",label:"Input monitoring",hex:"#e98a2c"},
-  {id:"meterLow",label:"Meter: safe level",hex:"#34c759"},
-  {id:"meterMid",label:"Meter: getting hot",hex:"#f4d03f"},
-  {id:"meterClip",label:"Meter: clipping",hex:"#ff3b30"},
-  {id:"automation",label:"Volume automation line",hex:"#a6e05a"},
-  {id:"tKick",label:"Track color: Kick (red)",hex:"#d94b4b"},
-  {id:"tSnare",label:"Track color: Snare (orange)",hex:"#e58a3a"},
-  {id:"tBass",label:"Track color: Bass (yellow)",hex:"#c9b037"},
-  {id:"tKeys",label:"Track color: Keys (green)",hex:"#6cbf4f"},
-  {id:"tGtr",label:"Track color: Guitar (teal)",hex:"#3fa88c"},
-  {id:"tVox",label:"Track color: Vocal (blue)",hex:"#3f86d9"},
-  {id:"tBgv",label:"Track color: Backing vocals (purple)",hex:"#8e5bd6"},
-  {id:"tFx",label:"Track color: FX (pink)",hex:"#d45ba8"}
+  {id:"record",label:en("Record button & armed tracks"),hex:"#e5322d"},
+  {id:"play",label:en("Play button"),hex:"#3bbf4a"},
+  {id:"cycle",label:en("Cycle / loop range"),hex:"#e8c33a"},
+  {id:"solo",label:en("Solo"),hex:"#f2d23c"},
+  {id:"mute",label:en("Mute"),hex:"#2fa9d9"},
+  {id:"input",label:en("Input monitoring"),hex:"#e98a2c"},
+  {id:"meterLow",label:en("Meter: safe level"),hex:"#34c759"},
+  {id:"meterMid",label:en("Meter: getting hot"),hex:"#f4d03f"},
+  {id:"meterClip",label:en("Meter: clipping"),hex:"#ff3b30"},
+  {id:"automation",label:en("Volume automation line"),hex:"#a6e05a"},
+  {id:"tKick",label:en("Track color: Kick (red)"),hex:"#d94b4b"},
+  {id:"tSnare",label:en("Track color: Snare (orange)"),hex:"#e58a3a"},
+  {id:"tBass",label:en("Track color: Bass (yellow)"),hex:"#c9b037"},
+  {id:"tKeys",label:en("Track color: Keys (green)"),hex:"#6cbf4f"},
+  {id:"tGtr",label:en("Track color: Guitar (teal)"),hex:"#3fa88c"},
+  {id:"tVox",label:en("Track color: Vocal (blue)"),hex:"#3f86d9"},
+  {id:"tBgv",label:en("Track color: Backing vocals (purple)"),hex:"#8e5bd6"},
+  {id:"tFx",label:en("Track color: FX (pink)"),hex:"#d45ba8"}
 ];
 const R=Object.fromEntries(ROLES.map(r=>[r.id,r]));
 const SAFE={orange:"#e69f00",sky:"#56b4e9",bluishGreen:"#009e73",yellow:"#f0e442",blue:"#0072b2",vermillion:"#d55e00",reddishPurple:"#cc79a7",white:"#f2f2f2"};
@@ -383,17 +797,17 @@ const SAFE={orange:"#e69f00",sky:"#56b4e9",bluishGreen:"#009e73",yellow:"#f0e442
 /* ---------- state ---------- */
 const DEFAULTS={type:"deutan",severity:0.8,daltonize:0,rgSplit:0,bySplit:0,redShift:0,greenShift:0,yellowShift:0,blueShift:0,saturation:1,contrast:1,focus:0.08};
 const FADERS=[
-  {k:"daltonize",label:"Color correction",min:0,max:1,step:0.01,lo:"Off",hi:"Full",fmt:v=>Math.round(v*100)+"%"},
-  {k:"severity",label:"How strong the difference is",min:0,max:1,step:0.01,lo:"Mild",hi:"Strong",fmt:v=>Math.round(v*100)+"%"},
-  {k:"rgSplit",label:"Red vs green brightness",min:-1,max:1,step:0.01,lo:"Reds darker",hi:"Reds brighter",fmt:v=>(v>0?"+":"")+v.toFixed(2)},
-  {k:"redShift",label:"Move reds",min:-60,max:60,step:1,lo:"Toward pink",hi:"Toward orange",fmt:v=>(v>0?"+":"")+v+"°"},
-  {k:"greenShift",label:"Move greens",min:-60,max:60,step:1,lo:"Toward yellow",hi:"Toward blue-green",fmt:v=>(v>0?"+":"")+v+"°"},
-  {k:"yellowShift",label:"Move yellows",min:-60,max:60,step:1,lo:"Toward orange",hi:"Toward green",fmt:v=>(v>0?"+":"")+v+"°"},
-  {k:"blueShift",label:"Move blues",min:-60,max:60,step:1,lo:"Toward cyan",hi:"Toward purple",fmt:v=>(v>0?"+":"")+v+"°"},
-  {k:"bySplit",label:"Blue vs yellow brightness",min:-1,max:1,step:0.01,lo:"Yellows darker",hi:"Yellows brighter",fmt:v=>(v>0?"+":"")+v.toFixed(2)},
-  {k:"saturation",label:"Color strength",min:0.5,max:2,step:0.01,lo:"Softer",hi:"Bolder",fmt:v=>v.toFixed(2)+"×"},
-  {k:"contrast",label:"Light/dark contrast",min:0.7,max:1.5,step:0.01,lo:"Flatter",hi:"Punchier",fmt:v=>v.toFixed(2)+"×"},
-  {k:"focus",label:"Pin reach",min:0.03,max:0.18,step:0.005,lo:"Exact color only",hi:"Similar colors too",fmt:v=>v.toFixed(3)}
+  {k:"daltonize",label:en("Color correction"),min:0,max:1,step:0.01,lo:en("Off"),hi:en("Full"),fmt:v=>Math.round(v*100)+"%"},
+  {k:"severity",label:en("How strong the difference is"),min:0,max:1,step:0.01,lo:en("Mild"),hi:en("Strong"),fmt:v=>Math.round(v*100)+"%"},
+  {k:"rgSplit",label:en("Red vs green brightness"),min:-1,max:1,step:0.01,lo:en("Reds darker"),hi:en("Reds brighter"),fmt:v=>(v>0?"+":"")+v.toFixed(2)},
+  {k:"redShift",label:en("Move reds"),min:-60,max:60,step:1,lo:en("Toward pink"),hi:en("Toward orange"),fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"greenShift",label:en("Move greens"),min:-60,max:60,step:1,lo:en("Toward yellow"),hi:en("Toward blue-green"),fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"yellowShift",label:en("Move yellows"),min:-60,max:60,step:1,lo:en("Toward orange"),hi:en("Toward green"),fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"blueShift",label:en("Move blues"),min:-60,max:60,step:1,lo:en("Toward cyan"),hi:en("Toward purple"),fmt:v=>(v>0?"+":"")+v+"°"},
+  {k:"bySplit",label:en("Blue vs yellow brightness"),min:-1,max:1,step:0.01,lo:en("Yellows darker"),hi:en("Yellows brighter"),fmt:v=>(v>0?"+":"")+v.toFixed(2)},
+  {k:"saturation",label:en("Color strength"),min:0.5,max:2,step:0.01,lo:en("Softer"),hi:en("Bolder"),fmt:v=>v.toFixed(2)+"×"},
+  {k:"contrast",label:en("Light/dark contrast"),min:0.7,max:1.5,step:0.01,lo:en("Flatter"),hi:en("Punchier"),fmt:v=>v.toFixed(2)+"×"},
+  {k:"focus",label:en("Pin reach"),min:0.03,max:0.18,step:0.005,lo:en("Exact color only"),hi:en("Similar colors too"),fmt:v=>v.toFixed(3)}
 ];
 const RANGES=Object.fromEntries(FADERS.map(f=>[f.k,[f.min,f.max]]));
 let S={...DEFAULTS},anchors={};
@@ -419,10 +833,10 @@ function drawDaw(W,H){
   btn(388,40,col("cycle"),()=>{x.strokeStyle="#2a2408";x.lineWidth=2.5;x.beginPath();x.arc(408,28,8,0.3,5.8);x.stroke()});
   x.fillStyle="#111214";x.beginPath();x.roundRect(450,10,300,36,6);x.fill();
   x.fillStyle="#d8f0ff";x.font="600 18px ui-monospace,Menlo,monospace";x.fillText("37  1  2  1",464,28);
-  x.font="600 13px system-ui";x.fillStyle="#a8b0bb";x.fillText("120 bpm   4/4   C maj",590,28);
-  x.fillStyle="#cfd0d4";x.fillText("Limitless Session — Arrange",20,28);
+  x.font="600 13px system-ui";x.fillStyle="#a8b0bb";x.fillText(t("120 bpm   4/4   C maj"),590,28);
+  x.fillStyle="#cfd0d4";x.fillText(t("Limitless Session — Arrange"),20,28);
   // tracks
-  const T=[["Kick","tKick"],["Snare","tSnare"],["Bass","tBass"],["Keys","tKeys"],["Guitar","tGtr"],["Lead Vocal","tVox"],["Backing Vox","tBgv"],["FX Return","tFx"]];
+  const T=[[en("Kick"),"tKick"],[en("Snare"),"tSnare"],[en("Bass"),"tBass"],[en("Keys"),"tKeys"],[en("Guitar"),"tGtr"],[en("Lead Vocal"),"tVox"],[en("Backing Vox"),"tBgv"],[en("FX Return"),"tFx"]];
   const state={Bass:{M:1},Keys:{S:1},Guitar:{I:1},"Lead Vocal":{R:1},Kick:{S:1}};
   const top=86,rh=52,hx=230,ax=hx,aw=1100-hx-170;
   x.fillStyle="#26272c";x.fillRect(0,56,hx,504);
@@ -435,7 +849,7 @@ function drawDaw(W,H){
     const y=top+i*rh;
     x.fillStyle=i%2?"#24252a":"#28292e";x.fillRect(0,y,hx,rh-2);
     x.fillStyle=col(id);x.fillRect(0,y,8,rh-2);
-    x.fillStyle="#e4e6ea";x.font="600 14px system-ui";x.fillText(name,18,y+16);
+    x.fillStyle="#e4e6ea";x.font="600 14px system-ui";x.fillText(t(name),18,y+16);
     const st=state[name]||{};
     [["M","mute"],["S","solo"],["R","record"],["I","input"]].forEach(([L,role],j)=>{
       const bx=18+j*34,by=y+26;
@@ -449,7 +863,7 @@ function drawDaw(W,H){
       const rx=ax+sx,ry=y+3,rH=rh-8;
       x.fillStyle=col(id);x.beginPath();x.roundRect(rx,ry,w,rH,5);x.fill();
       x.fillStyle="rgba(0,0,0,.28)";x.fillRect(rx,ry,w,14);
-      x.fillStyle="#fff";x.font="600 11px system-ui";x.fillText(name+" #"+(1+Math.floor(sx/100)),rx+6,ry+7);
+      x.fillStyle="#fff";x.font="600 11px system-ui";x.fillText(t(name)+" #"+(1+Math.floor(sx/100)),rx+6,ry+7);
       x.strokeStyle="rgba(0,0,0,.55)";x.lineWidth=1;x.beginPath();
       const mid=ry+14+(rH-14)/2;
       for(let px=0;px<w-4;px+=3){const a=(rH-18)/2*Math.pow(rnd(),1.6)*(name==="Kick"&&px%40<8?1.8:1);x.moveTo(rx+2+px,mid-a);x.lineTo(rx+2+px,mid+a)}
@@ -466,7 +880,7 @@ function drawDaw(W,H){
   x.fillStyle="#f0f0f0";x.fillRect(ax+372,56,2,504);
   // meters
   const mx=1100-170;x.fillStyle="#202126";x.fillRect(mx,56,170,504);
-  x.fillStyle="#a8b0bb";x.font="600 12px system-ui";x.fillText("Mixer meters",mx+12,72);
+  x.fillStyle="#a8b0bb";x.font="600 12px system-ui";x.fillText(t("Mixer meters"),mx+12,72);
   const lv=[.95,.7,.62,.5,.4,.98,.55,.3];
   lv.forEach((v,i)=>{
     const bx=mx+12+i*19,bt=96,bh=420;
@@ -481,13 +895,14 @@ function drawDaw(W,H){
 /* ---------- preview ---------- */
 const view=$("#view"),vctx=view.getContext("2d",{willReadFrequently:true});
 let srcCanvas=null,srcData=null,afterImg=null,beforeImg=null;
+let sampleShown=false;
 function setSource(c,label){
   srcCanvas=c;view.width=c.width;view.height=c.height;
   srcData=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height);
   afterImg=new ImageData(c.width,c.height);beforeImg=new ImageData(c.width,c.height);
-  $("#srcBadge").textContent=label;schedule();
+  live($("#srcBadge"),()=>t(label));schedule();
 }
-function loadSample(){const dpr=Math.min(2,window.devicePixelRatio||1);setSource(drawDaw(Math.round(1100*dpr),Math.round(560*dpr)),"Sample Logic-style session")}
+function loadSample(){const dpr=Math.min(2,window.devicePixelRatio||1);sampleShown=true;setSource(drawDaw(Math.round(1100*dpr),Math.round(560*dpr)),en("Sample Logic-style session"))}
 
 let T=null,raf=0;
 function schedule(){if(!raf)raf=requestAnimationFrame(render)}
@@ -512,9 +927,9 @@ function drawPreview(){
     const u=view.width/1100;
     vctx.fillStyle="#ffffff";vctx.fillRect(sx-1*u,0,3*u,view.height);
     vctx.font=`700 ${14*u}px system-ui`;vctx.textBaseline="top";
-    const tag=(t,xx)=>{const w=vctx.measureText(t).width+16*u;vctx.fillStyle="rgba(0,0,0,.75)";vctx.fillRect(xx,view.height-30*u,w,24*u);vctx.fillStyle="#fff";vctx.fillText(t,xx+8*u,view.height-26*u)};
-    if(sx>90*u)tag("Original",sx-100*u);
-    if(view.width-sx>90*u&&!viaScreen)tag("Yours",sx+10*u);
+    const tag=(word,xx)=>{const w=vctx.measureText(word).width+16*u;vctx.fillStyle="rgba(0,0,0,.75)";vctx.fillRect(xx,view.height-30*u,w,24*u);vctx.fillStyle="#fff";vctx.fillText(word,xx+8*u,view.height-26*u)};
+    if(sx>90*u){const w=t("Original");tag(w,sx-vctx.measureText(w).width-26*u)}
+    if(view.width-sx>90*u&&!viaScreen)tag(t("Yours"),sx+10*u);
   }
   return sim;
 }
@@ -523,15 +938,15 @@ $("#simOn").addEventListener("change",schedule);
 $("#sampleBtn").addEventListener("click",loadSample);
 $("#upload").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;
-  const img=new Image();img.onload=()=>{const k=Math.min(1,1800/img.width);const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);setSource(c,"Your screenshot");URL.revokeObjectURL(img.src)};
+  const img=new Image();img.onload=()=>{const k=Math.min(1,1800/img.width);const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);sampleShown=false;setSource(c,en("Your screenshot"));URL.revokeObjectURL(img.src)};
   img.src=URL.createObjectURL(f);
 });
 view.addEventListener("click",e=>{
   if(!srcData)return;const r=view.getBoundingClientRect();
   const px=Math.floor((e.clientX-r.left)/r.width*view.width),py=Math.floor((e.clientY-r.top)/r.height*view.height);
   const i=(py*view.width+px)*4,d=srcData.data;const hex=rgbToHex([d[i]/255,d[i+1]/255,d[i+2]/255]);
-  snapshot();const id="pick"+Date.now();anchors[id]={from:hex,to:linToHex(T(hexToLin(hex))),label:"Color you picked"};
-  $("#pickHint").textContent="Pinned "+hex+". Choose how it should look in the list below.";schedule();
+  snapshot();const id="pick"+Date.now();anchors[id]={from:hex,to:linToHex(T(hexToLin(hex))),label:en("Color you picked")};
+  live($("#pickHint"),()=>t("Pinned {color}. Choose how it should look in the list below.",{color:hex}));schedule();
   setTimeout(()=>document.querySelector(`[data-anchor="${id}"]`)?.focus(),50);
 });
 
@@ -539,7 +954,9 @@ view.addEventListener("click",e=>{
 const fwrap=$("#faders");
 FADERS.forEach(f=>{
   const d=document.createElement("div");d.className="fader";
-  d.innerHTML=`<div class="top-l"><label for="f-${f.k}">${f.label}</label><output id="o-${f.k}"></output></div><input id="f-${f.k}" type="range" min="${f.min}" max="${f.max}" step="${f.step}"><div class="ends"><span>${f.lo}</span><span>${f.hi}</span></div>`;
+  d.innerHTML=`<div class="top-l"><label for="f-${f.k}"></label><output id="o-${f.k}"></output></div><input id="f-${f.k}" type="range" min="${f.min}" max="${f.max}" step="${f.step}"><div class="ends"><span></span><span></span></div>`;
+  live(d.querySelector("label"),()=>t(f.label));
+  const [lo,hi]=d.querySelectorAll(".ends span");live(lo,()=>t(f.lo));live(hi,()=>t(f.hi));
   fwrap.appendChild(d);
   const inp=d.querySelector("input");
   inp.addEventListener("pointerdown",snapshot);inp.addEventListener("keydown",e=>{if(!e.repeat)snapshot()});
@@ -557,9 +974,12 @@ function renderRoles(sim){
   items.forEach(it=>{
     const outLin=T(hexToLin(it.from));const disp=desktop&&screenOn?hexToLin(it.from):outLin;const shown=sim?sim(disp):disp;const origShown=sim?sim(hexToLin(it.from)):hexToLin(it.from);
     const row=document.createElement("div");row.className="role";
-    row.innerHTML=`<div class="nm"><b></b><small></small></div><span class="sw" title="Original"></span><span class="sw" title="Yours"></span><span><input type="color" data-anchor="${it.id}" aria-label="Choose how ${it.label} should look"></span>`;
-    row.querySelector("b").textContent=it.label;
-    row.querySelector("small").innerHTML=it.pinned?`<span class="pin">Pinned</span> · <button type="button" style="min-height:32px;padding:2px 8px;font-size:calc(13px*var(--ts))">Unpin</button>`:linToHex(outLin);
+    row.innerHTML=`<div class="nm"><b></b><small></small></div><span class="sw"></span><span class="sw"></span><span><input type="color" data-anchor="${it.id}"></span>`;
+    const name=t(it.label);row.querySelector("b").textContent=name;
+    row.querySelectorAll(".sw")[0].title=t("Original");row.querySelectorAll(".sw")[1].title=t("Yours");
+    row.querySelector("input").setAttribute("aria-label",t("Choose how {name} should look",{name}));
+    if(it.pinned){const sm=row.querySelector("small");sm.innerHTML=`<span class="pin"></span> · <button type="button" style="min-height:32px;padding:2px 8px;font-size:calc(13px*var(--ts))"></button>`;sm.querySelector(".pin").textContent=t("Pinned");sm.querySelector("button").textContent=t("Unpin")}
+    else row.querySelector("small").textContent=linToHex(outLin);
     const sws=row.querySelectorAll(".sw");sws[0].style.background=linToHex(origShown);sws[1].style.background=linToHex(shown);
     const ci=row.querySelector("input");ci.value=linToHex(outLin);
     ci.addEventListener("focus",snapshot,{once:true});
@@ -572,13 +992,13 @@ function renderRoles(sim){
 }
 /* ---------- clarity check ---------- */
 // Same pairs and thresholds as the automatic tuning (color-core/src/tune.rs).
-const KEY_PAIRS=[["record","play","Record vs Play"],["solo","mute","Solo vs Mute"],["meterLow","meterClip","Meter: safe vs clipping"],["meterLow","meterMid","Meter: safe vs hot"],["meterMid","meterClip","Meter: hot vs clipping"],["record","input","Record vs Input"],["tKick","tKeys","Red track vs green track"],["tVox","tBgv","Blue track vs purple track"],["tGtr","tVox","Teal track vs blue track"]];
+const KEY_PAIRS=[["record","play",en("Record vs Play")],["solo","mute",en("Solo vs Mute")],["meterLow","meterClip",en("Meter: safe vs clipping")],["meterLow","meterMid",en("Meter: safe vs hot")],["meterMid","meterClip",en("Meter: hot vs clipping")],["record","input",en("Record vs Input")],["tKick","tKeys",en("Red track vs green track")],["tVox","tBgv",en("Blue track vs purple track")],["tGtr","tVox",en("Teal track vs blue track")]];
 const CLEAR=0.12;
 function pairDistances(Tn,type,sev){
   const M=simMatrix(type,sev);const see=hex=>toLab(mul(M,Tn(hexToLin(hex))).map(clamp01));
   return KEY_PAIRS.map(([a,b])=>{const x=see(R[a].hex),y=see(R[b].hex);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])});
 }
-const clarityWord=d=>d>=CLEAR?"Clear":d>=CLEAR/2?"Getting there":"Hard to tell apart";
+const clarityWord=d=>t(d>=CLEAR?"Clear":d>=CLEAR/2?"Getting there":"Hard to tell apart");
 function renderClarity(sim){
   const ds=pairDistances(T,S.type,S.severity);const box=$("#pairs");box.replaceChildren();
   KEY_PAIRS.forEach(([a,b,label],i)=>{
@@ -586,11 +1006,11 @@ function renderClarity(sim){
     const el=document.createElement("div");el.className="pair";
     el.innerHTML=`<div class="sws" aria-hidden="true"><span></span><span></span></div><b></b><div class="bar" aria-hidden="true"><i></i></div><small><strong></strong></small>`;
     const sp=el.querySelectorAll(".sws span");sp[0].style.background=show(R[a].hex);sp[1].style.background=show(R[b].hex);
-    el.querySelector("b").textContent=label;el.querySelector("i").style.width=Math.round(Math.min(1,d/(1.5*CLEAR))*100)+"%";
+    el.querySelector("b").textContent=t(label);el.querySelector("i").style.width=Math.round(Math.min(1,d/(1.5*CLEAR))*100)+"%";
     el.querySelector("strong").textContent=clarityWord(d);
     box.appendChild(el);
   });
-  const n=ds.filter(d=>d>=CLEAR).length;$("#clarityBadge").textContent=`${n} of ${ds.length} clear`;
+  const n=ds.filter(d=>d>=CLEAR).length;$("#clarityBadge").textContent=t("{n} of {total} clear",{n,total:ds.length});
 }
 
 let ptimer=0;function schedulePartial(){clearTimeout(ptimer);ptimer=setTimeout(()=>{drawPreview();persist()},60)}
@@ -606,15 +1026,16 @@ function addMsg(who,text,extra){
   if(extra?.question){const s=document.createElement("span");s.className="q";s.textContent=extra.question;d.appendChild(s)}
   chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
 }
-const CHIPS=["What is supposed to be red looks like a weird green or yellow to me","I can't tell Solo from Mute","The meters look like one color all the way up","Reds look almost black","Blue and green tracks blur together","That's too strong, make it more natural"];
-CHIPS.forEach(t=>{const b=document.createElement("button");b.type="button";b.textContent=t;b.onclick=()=>ask(t);$("#chips").appendChild(b)});
-addMsg("bot","Hi. Tell me what looks wrong, in your own words. For example, which color looks like another one, or which buttons you can't tell apart. I'll change the screen and then ask you what you see now.");
+// Things people often say, to try with one press. Said in the window's language.
+const CHIPS=[en("What is supposed to be red looks like a weird green or yellow to me"),en("I can't tell Solo from Mute"),en("The meters look like one color all the way up"),en("Reds look almost black"),en("Blue and green tracks blur together"),en("That's too strong, make it more natural")];
+CHIPS.forEach(en=>{const b=document.createElement("button");b.type="button";live(b,()=>t(en));b.onclick=()=>ask(t(en));$("#chips").appendChild(b)});
+live(addMsg("bot",""),()=>t("Hi. Tell me what looks wrong, in your own words. For example, which color looks like another one, or which buttons you can't tell apart. I'll change the screen and then ask you what you see now."));
 
 function describeChanges(prev,next,anc){
-  const names=Object.fromEntries(FADERS.map(f=>[f.k,f.label]));names.type="Color vision";
-  const parts=[];for(const k in next){if(k in prev&&prev[k]!==next[k])parts.push(`${names[k]||k}: ${k==="type"?next[k]:FADERS.find(f=>f.k===k)?.fmt(next[k])}`)}
-  Object.keys(anc||{}).forEach(id=>parts.push(`Pinned ${R[id]?.label||id}`));
-  return parts.length?"Changed: "+parts.join(" · "):"";
+  const names=Object.fromEntries(FADERS.map(f=>[f.k,f.label]));
+  const parts=[];for(const k in next){if(k in prev&&prev[k]!==next[k])parts.push(k==="type"?t("Color vision: {name}",{name:t(TYPE_NAME[next[k]])}):`${t(names[k]||k)}: ${FADERS.find(f=>f.k===k)?.fmt(next[k])}`)}
+  Object.keys(anc||{}).forEach(id=>parts.push(t("Pinned {name}",{name:t(R[id]?.label||id)})));
+  return parts.length?t("Changed: {list}",{list:parts.join(" · ")}):"";
 }
 function sanitize(res){
   const ch={};const c=res?.changes||{};
@@ -660,14 +1081,18 @@ HOW TO WORK:
 5. Speak plainly and warmly, 1-3 short sentences. Say "red-green" rather than medical terms unless they use them.
 
 Return ONLY a JSON object: {"reply": string, "changes": {only settings you change}, "anchors": {controlId: "#rrggbb"}, "removeAnchors": [controlId], "question": string}`;
+// Added when the window is in Spanish (the desktop app's version: color-core/src/prompt.rs).
+const SPANISH_RULES=`
+
+LANGUAGE: The person's window is in Spanish. Write "reply" and "question" in Spanish: neutral Latin American Spanish, addressing them as tú, short and warm. Name the controls the way the Spanish window does: Grabar, Reproducir, Solo, Silenciar (M), los medidores, las pistas. Say "rojo-verde" and "azul-amarillo" rather than medical terms. If the person writes in another language, answer in theirs. JSON keys, setting names and control ids stay in English.`;
 
 let sample=null,ctl=null,busy=false;
 (async()=>{
   if(desktop)return;
   try{sample=window.claude?await window.claude.use("sample"):null}catch(e){sample=null}
-  $("#aiBadge").textContent=sample?"Claude":"Offline helper";
+  live($("#aiBadge"),()=>sample?"Claude":t("Offline helper"));
 })();
-setTimeout(()=>{if($("#aiBadge").textContent==="Connecting…")$("#aiBadge").textContent="Offline helper"},11000);
+setTimeout(()=>{if(!lives.has($("#aiBadge")))live($("#aiBadge"),()=>t("Offline helper"))},11000);
 
 $("#askForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#ask").value.trim();if(t)ask(t)});
 $("#ask").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#askForm").requestSubmit()}});
@@ -681,15 +1106,15 @@ async function ask(text){
   convo.push({who:"you",text});
   let r=null;
   if(sample){
-    const thinking=addMsg("bot","Thinking…");$("#stop").hidden=false;ctl=new AbortController();
+    const thinking=addMsg("bot",t("Thinking…"));$("#stop").hidden=false;ctl=new AbortController();
     try{
-      const prompt=`${RULES}\n\nCONVERSATION SO FAR:\n${recent||"(none)"}\n\nSTATE:\n${JSON.stringify(stateForModel())}\n\nPerson says: ${text}`;
+      const prompt=`${RULES}${lang==="es"?SPANISH_RULES:""}\n\nCONVERSATION SO FAR:\n${recent||"(none)"}\n\nSTATE:\n${JSON.stringify(stateForModel())}\n\nPerson says: ${text}`;
       const res=await sample.json(prompt,{cache:false,signal:ctl.signal});
       r=sanitize(res);thinking.remove();
     }catch(e){
       thinking.remove();
-      if(e?.code==="not_granted"){sample=null;$("#aiBadge").textContent="Offline helper"}
-      if(e?.code==="cancelled"){addMsg("bot","Stopped.");done();return}
+      if(e?.code==="not_granted"){sample=null;live($("#aiBadge"),()=>t("Offline helper"))}
+      if(e?.code==="cancelled"){addMsg("bot",t("Stopped."));done();return}
     }
     $("#stop").hidden=true;
   }
@@ -701,32 +1126,35 @@ async function ask(text){
   function done(){busy=false;$("#send").disabled=false}
 }
 
-/* Offline helper: simple rules, used when Claude is not available in this view */
+/* Offline helper: simple rules, used when Claude is not available in this view. It answers in the
+   window's language, with the desktop helper's sentences; only the desktop app's helper
+   (color-core/src/helper.rs) also understands Spanish. */
 let lastDir=null;
-function localHelper(t){
-  const s=t.toLowerCase();const has=w=>new RegExp("\\b("+w+")").test(s);
+function localHelper(text){
+  const s=text.toLowerCase();const has=w=>new RegExp("\\b("+w+")").test(s);
   const red=has("red|record|clip"),green=has("green|play"),yellow=has("yellow|gold"),brown=has("brown|olive|khaki"),orange=has("orange"),blue=has("blue|navy|cyan|teal"),purple=has("purple|violet|pink|magenta"),grey=has("gr[ae]y|white");
   const less=has("too much|too strong|less|weird looking|ugly|natural|harsh|tone it"),more=has("still|more|not enough|stronger|same|can't|cannot|hard");
   const r={changes:{},anchors:{},removeAnchors:[],reply:"",question:""};
   if(less){
     const ch={};["daltonize","rgSplit","bySplit","redShift","greenShift","yellowShift","blueShift"].forEach(k=>ch[k]=+(S[k]*0.6).toFixed(2));ch.saturation=+(1+(S.saturation-1)*0.6).toFixed(2);
-    r.changes=ch;r.reply="I eased everything back by about a third so it looks more natural.";r.question="Can you still tell the colors apart that were giving you trouble?";return sanitize(r);
+    r.changes=ch;r.reply=t("I eased everything back by about a third so it looks more natural.");r.question=t("Can you still tell apart the colors that were giving you trouble?");return sanitize(r);
   }
-  if(has("solo")&&has("mute")){r.anchors={solo:SAFE.yellow,mute:SAFE.blue};r.reply="I pinned Solo to a bright yellow and Mute to a deep blue, so they differ in brightness as well as color.";r.question="Do the S and M buttons on the Keys and Bass tracks look clearly different now?";return sanitize(r)}
-  if(has("meter")){r.anchors={meterLow:SAFE.sky,meterMid:SAFE.yellow,meterClip:SAFE.vermillion};r.changes={rgSplit:clamp(S.rgSplit+0.2,-1,1)};r.reply="I changed the meters to blue for safe, yellow for hot and orange-red for clipping, three colors that stay apart for most kinds of colorblindness.";r.question="Looking at the mixer meters on the right, can you see where blue turns to yellow and then to red?";return sanitize(r)}
-  if(red&&has("black|dark")){r.changes={type:"protan",severity:Math.max(S.severity,0.8),daltonize:Math.max(S.daltonize,0.5),rgSplit:clamp(S.rgSplit+0.35,-1,1),redShift:clamp(S.redShift-15,-60,60)};r.reply="Reds that look dark usually mean the red-sensing part of the eye is weaker. I made reds brighter and nudged them toward pink.";r.question="Does the Kick track and the Record button look brighter now? What color do they look like?";return sanitize(r)}
+  if(has("solo")&&has("mute")){r.anchors={solo:SAFE.yellow,mute:SAFE.blue};r.reply=t("I pinned Solo to a bright yellow and Mute to a deep blue, so they differ in brightness as well as color.");r.question=t("Do the S and M buttons look clearly different now?");return sanitize(r)}
+  if(has("meter")){r.anchors={meterLow:SAFE.sky,meterMid:SAFE.yellow,meterClip:SAFE.vermillion};r.changes={rgSplit:clamp(S.rgSplit+0.2,-1,1)};r.reply=t("I changed the meters to blue for safe, yellow for hot and orange-red for clipping. Those three stay apart for most kinds of colorblindness.");r.question=t("Looking at a level meter, can you see where blue turns to yellow and then to red?");return sanitize(r)}
+  if(red&&has("black|dark")){r.changes={type:"protan",severity:Math.max(S.severity,0.8),daltonize:Math.max(S.daltonize,0.5),rgSplit:clamp(S.rgSplit+0.35,-1,1),redShift:clamp(S.redShift-15,-60,60)};r.reply=t("Reds that look dark usually mean the red-sensing part of the eye is weaker. I made reds brighter and nudged them toward pink.");r.question=t("Do red things, like the Record button, look brighter now? What color do they look like?");return sanitize(r)}
   if((red||green)&&(green&&red||yellow||brown||orange)&&!blue){
     const step=more&&lastDir==="rg"?1.5:1;lastDir="rg";
     r.changes={type:S.type==="tritan"?"deutan":S.type,daltonize:clamp(Math.max(S.daltonize,0.5)*(step>1?1.25:1),0,1),redShift:clamp((S.redShift||0)-20*step,-60,60),greenShift:clamp((S.greenShift||0)+22*step,-60,60),rgSplit:clamp(S.rgSplit+0.15*step,-1,1)};
-    r.reply=step>1?"I pushed further: reds more toward pink, greens more toward blue-green.":"That sounds like red-green colorblindness. I moved reds toward pink, greens toward blue-green, and made reds a bit brighter so they stand apart.";
-    r.question="Compare the Record button and the Play button at the top. Do they look different now? What color does each look like to you?";return sanitize(r);
+    r.reply=t(step>1?"I pushed further: reds more toward pink, greens more toward blue-green.":"That sounds like red-green colorblindness. I moved reds toward pink, greens toward blue-green, and made reds a bit brighter so they stand apart.");
+    r.question=t("Compare the Record button and the Play button. Do they look different now? What color does each look like to you?");return sanitize(r);
   }
   if(blue&&(green||purple)||yellow&&(purple||grey)){
     lastDir="by";r.changes={type:"tritan",severity:Math.max(S.severity,0.7),daltonize:Math.max(S.daltonize,0.5),bySplit:clamp(S.bySplit+0.3,-1,1),blueShift:clamp(S.blueShift+15,-60,60),greenShift:clamp(S.greenShift-12,-60,60)};
-    r.reply="That points to blue-yellow colorblindness. I made yellows brighter than blues and pulled blues toward purple, away from greens.";r.question="Do the Vocal (blue) and Guitar (teal) tracks look different now?";return sanitize(r);
+    r.reply=t("That points to blue-yellow colorblindness. I made yellows brighter than blues and pulled blues toward purple, away from greens.");r.question=t("Do blue and teal tracks look different now?");return sanitize(r);
   }
-  if(more){const ch={daltonize:clamp(S.daltonize+0.2,0,1),saturation:clamp(S.saturation+0.15,0.5,2)};r.changes=ch;r.reply="I turned the correction up and made colors a little bolder.";r.question="Which two things still look the same to you?";return sanitize(r)}
-  r.reply="I'm not sure what to change yet. Try naming two things that look the same to you, for example \"the Record button and the Play button look the same\" or \"red looks brown\".";
+  if(more){const ch={daltonize:clamp(S.daltonize+0.2,0,1),saturation:clamp(S.saturation+0.15,0.5,2)};r.changes=ch;r.reply=t("I turned the correction up and made colors a little bolder.");r.question=t("Which two things still look the same to you?");return sanitize(r)}
+  const quote=en=>lang==="es"?`«${t(en)}»`:`"${en}"`;
+  r.reply=t("I'm not sure what to change yet. Try naming two things that look the same to you, for example {example1} or {example2}.",{example1:quote("the Record button and the Play button look the same"),example2:quote("red looks brown")});
   return sanitize(r);
 }
 
@@ -744,43 +1172,54 @@ function confusionPair(type,base){
 const CHECK=[];
 [["deutan",[0.25,0.22,0.06]],["protan",[0.3,0.2,0.1]],["tritan",[0.2,0.3,0.35]],["deutan",[0.45,0.4,0.2]],["protan",[0.18,0.14,0.2]],["tritan",[0.4,0.45,0.3]]].forEach(([t,b])=>CHECK.push({t,pair:confusionPair(t,b)}));
 CHECK.sort((a,b)=>a.pair[0]<b.pair[0]?-1:1);
+const TYPE_NAME={deutan:en("red-green (green-weak)"),protan:en("red-green (red-weak)"),tritan:en("blue-yellow")};
+const ANSWERS=[[en("Same color"),1],[en("Almost the same"),0.5],[en("Clearly different"),0]];
 let ck={i:-1,score:{protan:0,deutan:0,tritan:0}};
+// The check's result, worked out once when the last pair is answered: drawing it again (in
+// another language) never tunes again or repeats the assistant's message.
+function finishCheck(){
+  if(ck.resume){ck.resume=false;setScreen(true)}
+  const best=Object.entries(ck.score).sort((a,b)=>b[1]-a[1])[0];
+  if(best[1]<0.75){ck.result={typical:true};return}
+  const type=best[0],sev=clamp(0.4+best[1]*0.3,0.4,1),name=()=>t(TYPE_NAME[type]);
+  const res=ck.result={type,state:desktop?"tuning":"set"};
+  const told=summary=>addMsg("bot",summary,{question:t("How does the session look now? Tell me anything that still looks wrong.")});
+  if(desktop){
+    tuneFor(type,sev).then(r=>{const m=useTune(r,true);res.state="tuned";res.summary=m;
+      told(t("From the eye check, your answers match {name} color vision, so I tuned your colors for it.",{name:name()})+" "+m());
+      keepFocus($("#checkBody"),renderCheck)}).catch(e=>{res.state="failed";res.error=String(e);keepFocus($("#checkBody"),renderCheck)});
+  }else{
+    snapshot();S.type=type;S.severity=+sev.toFixed(2);S.daltonize=Math.max(S.daltonize,0.5);schedule();
+    if(type==="deutan"||type==="protan"){S.redShift=Math.min(S.redShift,-15);S.greenShift=Math.max(S.greenShift,15)}else{S.bySplit=Math.max(S.bySplit,0.25)}
+    told(t("From the eye check, your answers match {name} color vision, so I set a starting correction.",{name:name()}));
+  }
+}
 function renderCheck(){
-  const body=$("#checkBody");body.innerHTML="";
+  const body=$("#checkBody");body.replaceChildren();
   if(ck.i<0){
-    $("#checkStep").textContent="6 pairs, about a minute";
-    body.innerHTML=`<p class="hint">You'll see two circles at a time. Say whether they look like the same color. This tells the tuner which colors to work on. Your answers stay on this page.</p>`;
-    const b=document.createElement("button");b.className="primary";b.type="button";b.textContent="Start the check";b.onclick=async()=>{ck={i:0,score:{protan:0,deutan:0,tritan:0},resume:false};if(desktop&&screenOn){ck.resume=true;await setScreen(false)}renderCheck()};body.appendChild(b);return;
+    live($("#checkStep"),()=>t("6 pairs, about a minute"));
+    body.append(live(h("p",{class:"hint"}),()=>t("You'll see two circles at a time. Say whether they look like the same color. This tells the tuner which colors to work on. Your answers stay on this page.")));
+    const b=live(h("button",{type:"button",class:"primary"}),()=>t("Start the check"));
+    b.onclick=async()=>{ck={i:0,score:{protan:0,deutan:0,tritan:0},resume:false};if(desktop&&screenOn){ck.resume=true;await setScreen(false)}renderCheck()};body.append(b);return;
   }
   if(ck.i>=CHECK.length){
-    if(ck.resume){ck.resume=false;setScreen(true)}
-    $("#checkStep").textContent="Done";
-    const sc=ck.score;const best=Object.entries(sc).sort((a,b)=>b[1]-a[1])[0];
-    const p=document.createElement("p");
-    if(best[1]<0.75){p.textContent="Every pair looked different to you, so your color vision may be close to typical for these colors. Use the assistant to describe anything that still looks off.";body.appendChild(p)}
-    else{
-      const nm={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"}[best[0]];
-      const sev=clamp(0.4+best[1]*0.3,0.4,1);
-      if(desktop){
-        p.textContent=`Your answers match ${nm} color vision. Tuning your colors for that…`;body.appendChild(p);
-        tuneFor(best[0],sev).then(r=>{const m=useTune(r,true);p.textContent=`Your answers match ${nm} color vision. I tuned your colors for it. `+m;
-          addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I tuned your colors for it. `+m,{question:"How does the session look now? Tell me anything that still looks wrong."})}).catch(e=>{p.textContent="Automatic tuning didn't work: "+e});
-      }else{
-      p.textContent=`Your answers match ${nm} color vision. I set the tuner to that and turned on a starting correction.`;body.appendChild(p);
-      snapshot();S.type=best[0];S.severity=+sev.toFixed(2);S.daltonize=Math.max(S.daltonize,0.5);schedule();
-      if(best[0]==="deutan"||best[0]==="protan"){S.redShift=Math.min(S.redShift,-15);S.greenShift=Math.max(S.greenShift,15)}else{S.bySplit=Math.max(S.bySplit,0.25)}
-      addMsg("bot",`From the eye check, your answers match ${nm} color vision, so I set a starting correction.`,{question:"How does the session look now? Tell me anything that still looks wrong."});
-      }
-    }
-    const again=document.createElement("button");again.type="button";again.textContent="Do it again";again.onclick=()=>{ck.i=-1;renderCheck()};body.appendChild(again);return;
+    live($("#checkStep"),()=>t("Done"));
+    const res=ck.result,name=()=>t(TYPE_NAME[res.type]);
+    body.append(live(h("p"),res.typical?()=>t("Every pair looked different to you, so your color vision may be close to typical for these colors. Use the assistant to describe anything that still looks off.")
+      :res.state==="tuning"?()=>t("Your answers match {name} color vision. Tuning your colors for that…",{name:name()})
+      :res.state==="tuned"?()=>t("Your answers match {name} color vision. I tuned your colors for it.",{name:name()})+" "+res.summary()
+      :res.state==="failed"?()=>t("Automatic tuning didn't work: {error}",{error:res.error})
+      :()=>t("Your answers match {name} color vision. I set the tuner to that and turned on a starting correction.",{name:name()})));
+    const again=live(h("button",{type:"button"}),()=>t("Do it again"));again.onclick=()=>{ck.i=-1;renderCheck()};body.append(again);return;
   }
-  const it=CHECK[ck.i];$("#checkStep").textContent=`Pair ${ck.i+1} of ${CHECK.length}`;
-  body.innerHTML=`<div class="check-pair" role="img" aria-label="Two colored circles"><span style="background:${it.pair[0]}"></span><span style="background:${it.pair[1]}"></span></div><p style="margin:0;font-weight:600">Do these two circles look like the same color?</p>`;
-  const row=document.createElement("div");row.className="row";
-  [["Same color",1],["Almost the same",0.5],["Clearly different",0]].forEach(([l,v])=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.onclick=()=>{ck.score[it.t]+=v;ck.i++;renderCheck();$("#checkBody button")?.focus()};row.appendChild(b)});
-  body.appendChild(row);
+  const it=CHECK[ck.i];live($("#checkStep"),()=>t("Pair {n} of {total}",{n:ck.i+1,total:CHECK.length}));
+  const pair=h("div",{class:"check-pair",role:"img","aria-label":t("Two colored circles")},h("span"),h("span"));
+  pair.children[0].style.background=it.pair[0];pair.children[1].style.background=it.pair[1];
+  body.append(pair,h("p",{style:"margin:0;font-weight:600"},t("Do these two circles look like the same color?")));
+  const row=h("div",{class:"row"});
+  ANSWERS.forEach(([l,v])=>{const b=h("button",{type:"button"},t(l));b.onclick=()=>{ck.score[it.t]+=v;ck.i++;if(ck.i>=CHECK.length)finishCheck();renderCheck();$("#checkBody button")?.focus()};row.append(b)});
+  body.append(row);
 }
-renderCheck();
 
 /* ---------- export ---------- */
 function cubeText(){
@@ -790,39 +1229,50 @@ function cubeText(){
 }
 let downloads=null;(async()=>{try{downloads=window.claude?await window.claude.use("downloads"):null}catch(e){}})();
 $("#dlCube").addEventListener("click",async()=>{
-  if(desktop){try{const p=await invoke("export_cube");$("#exportMsg").textContent="Saved to "+p}catch(e){$("#exportMsg").textContent=String(e)}return}
-  const txt=cubeText();const msg=$("#exportMsg");
-  if(downloads){try{const r=await downloads.save({filename:"limitless-color.cube",data:txt});msg.textContent=r.status==="saved"?"Saved limitless-color.cube.":"Sent.";return}catch(e){if(e?.code==="cancelled"||e?.code==="declined"){msg.textContent="Not saved.";return}}}
-  $("#jsonOut").value=txt;msg.textContent="Downloads aren't available here, so the profile is in the box below. Select it all and save it as limitless-color.cube.";
+  const msg=$("#exportMsg");
+  if(desktop){try{const p=await invoke("export_cube");live(msg,()=>t("Saved to {path}",{path:p}))}catch(e){live(msg,()=>String(e))}return}
+  const txt=cubeText();
+  if(downloads){try{const r=await downloads.save({filename:"limitless-color.cube",data:txt});live(msg,()=>t(r.status==="saved"?"Saved limitless-color.cube.":"Sent."));return}catch(e){if(e?.code==="cancelled"||e?.code==="declined"){live(msg,()=>t("Not saved."));return}}}
+  $("#jsonOut").value=txt;live(msg,()=>t("Downloads aren't available here, so the profile is in the box below. Select it all and save it as limitless-color.cube."));
 });
 $("#copyJson").addEventListener("click",async()=>{
-  const t=JSON.stringify({S,anchors},null,1);$("#jsonOut").value=t;
-  try{await navigator.clipboard.writeText(t);$("#exportMsg").textContent="Copied."}catch(e){$("#jsonOut").select();$("#exportMsg").textContent="Press Command-C to copy the selected text."}
+  const json=JSON.stringify({S,anchors},null,1);$("#jsonOut").value=json;
+  try{await navigator.clipboard.writeText(json);live($("#exportMsg"),()=>t("Copied."))}catch(e){$("#jsonOut").select();live($("#exportMsg"),()=>t("Press Command-C to copy the selected text."))}
 });
 
-loadSample();
-
 /* ---------- desktop app ---------- */
-function note(t,action){
-  const n=$("#screenNote");n.replaceChildren();n.hidden=!t;if(!t)return;
-  const sp=document.createElement("span");sp.textContent=t;n.appendChild(sp);
-  if(action){const b=document.createElement("button");b.type="button";b.textContent=action.label;b.onclick=action.run;n.appendChild(b)}
+// A note above the window. `text` is the words (the app's are already in the window's language),
+// or a function that writes them, so they change language with the window.
+function note(text,action){
+  const n=$("#screenNote");n.replaceChildren();n.hidden=!text;if(!text)return;
+  n.append(live(h("span"),typeof text==="function"?text:()=>text));
+  if(action){const b=live(h("button",{type:"button"}),()=>t(action.label));b.onclick=action.run;n.append(b)}
 }
-/* Text size, high contrast and reduced motion from Limitless Sound, already combined with the
-   computer's own reduced motion by the app. They change the window, never the colors. */
+/* Text size, high contrast, reduced motion and the language, from Limitless Sound or the
+   computer, combined by the app. They change the window, never the colors. */
 function applyWindowPrefs(p){
   if(!p)return;const root=document.documentElement;
   root.style.setProperty("--ts",String(clamp(+p.textScale||1,1,2)));
   root.classList.toggle("high-contrast",!!p.highContrast);
   root.classList.toggle("reduce-motion",!!p.reduceMotion);
+  if(p.language&&setLanguage(p.language))relabel();
+}
+// Everything the script drew, again in the window's new language, in place.
+function relabel(){
+  keepFocus(document.body,()=>{
+    if(sampleShown)loadSample();   // the sample session's own words
+    render();
+    renderCheck();
+    if(setup.open)renderSetup(true);
+  });
 }
 function applyStatus(st){
   applyWindowPrefs(st.windowPrefs);
   if(!bypass)screenOn=st.filterOn;platform=st.platform;
-  const b=$("#screenBtn");b.setAttribute("aria-pressed",String(st.filterOn||bypass));b.textContent="Screen colors: "+(st.filterOn||bypass?"On":"Off");
-  $("#bypassBtn").hidden=!(st.filterOn||bypass);
-  $("#aiBadge").textContent=st.hasApiKey?"Claude":"Offline helper";
-  $("#keyMsg").textContent=st.hasApiKey?"A key is saved. Save an empty box to remove it.":"";
+  const on=st.filterOn||bypass,b=$("#screenBtn");b.setAttribute("aria-pressed",String(on));live(b,()=>t(on?"Screen colors: On":"Screen colors: Off"));
+  $("#bypassBtn").hidden=!on;
+  live($("#aiBadge"),()=>st.hasApiKey?"Claude":t("Offline helper"));
+  live($("#keyMsg"),st.hasApiKey?()=>t("A key is saved. Save an empty box to remove it."):null);
   if(!bypass)note(st.filterOn?(st.filterNote||""):"");
   if(setup.open&&su.step==="on")renderSetup();
   schedule();
@@ -835,38 +1285,43 @@ async function setScreen(on){try{applyStatus(await invoke("set_filter",{on}))}ca
 async function askDesktop(text){
   if(busy)return;busy=true;$("#send").disabled=true;
   addMsg("you",text);$("#ask").value="";
-  const thinking=addMsg("bot","Thinking…");
+  const thinking=addMsg("bot",t("Thinking…"));
   try{
     const r=await invoke("ask_assistant",{message:text});
     thinking.remove();snapshot();
     S={...DEFAULTS,...r.status.profile.S};anchors=r.status.profile.anchors||{};
-    addMsg("bot",r.reply,{changes:r.changes.length?"Changed: "+r.changes.join(" · "):"",question:r.question});
+    addMsg("bot",r.reply,{changes:r.changes.length?t("Changed: {list}",{list:r.changes.join(" · ")}):"",question:r.question});
     if(r.note)addMsg("bot",r.note);
     applyStatus(r.status);
-  }catch(e){thinking.remove();addMsg("bot","Something went wrong: "+e)}
+  }catch(e){thinking.remove();addMsg("bot",t("Something went wrong: {error}",{error:String(e)}))}
   busy=false;$("#send").disabled=false;
 }
 
 /* Automatic tuning: searches the faders for the clearest natural-looking profile. */
-const TYPE_NAME={deutan:"red-green (green-weak)",protan:"red-green (red-weak)",tritan:"blue-yellow"};
 async function tuneFor(type,sev){return invoke("auto_tune_profile",{cvd:type,severity:+(+sev).toFixed(2)})}
+// The pairs that tuning gives colorblind-safe colors when they're still hard to tell apart
+// (color-core/src/tune.rs).
+const SAFE_PINS=[["solo","mute"],["record","play"],["meterLow","meterClip"]];
+// Uses a tuning result. Returns what it did, as a function that says it in the window's language.
 function useTune(r,keepPins){
   snapshot();
   const mine=keepPins?anchors:{};
   S={...DEFAULTS,...r.profile.S};anchors={...(r.profile.anchors||{}),...mine};schedule();
-  const clearNow=r.pairs.filter(p=>p.after>=CLEAR).length,clearBefore=r.pairs.filter(p=>p.before>=CLEAR).length;
-  return `${clearNow} of ${r.pairs.length} key pairs are now clear for ${TYPE_NAME[S.type]} color vision (${clearBefore} before).`+(r.pinned.length?` I also gave ${r.pinned.join(", ")} their own colorblind-safe colors.`:"");
+  const clearNow=r.pairs.filter(p=>p.after>=CLEAR).length,clearBefore=r.pairs.filter(p=>p.before>=CLEAR).length,type=S.type;
+  const pinned=SAFE_PINS.filter(([a,b])=>r.profile.anchors?.[a]&&r.profile.anchors?.[b]);
+  return()=>t("{now} of {total} key pairs are now clear for {name} color vision ({before} before).",{now:clearNow,total:r.pairs.length,name:t(TYPE_NAME[type]),before:clearBefore})+
+    (pinned.length?" "+t("I also gave {pinned} their own colorblind-safe colors.",{pinned:pinned.map(([a,b])=>t("{a} and {b}",{a:t(R[a].label),b:t(R[b].label)})).join(", ")}):"");
 }
 async function makeClear(){
-  const b=$("#tuneBtn");b.disabled=true;$("#tuneMsg").textContent="Trying thousands of settings for your eyes…";
-  try{const msg=useTune(await tuneFor(S.type,S.severity),true);$("#tuneMsg").textContent=msg+" Undo takes you back.";
-    addMsg("bot","I tuned the colors automatically. "+msg,{question:"Look at your session. What still looks wrong, if anything?"})}
-  catch(e){$("#tuneMsg").textContent="Automatic tuning didn't work: "+e}
+  const b=$("#tuneBtn"),msg=$("#tuneMsg");b.disabled=true;live(msg,()=>t("Trying thousands of settings for your eyes…"));
+  try{const m=useTune(await tuneFor(S.type,S.severity),true);live(msg,()=>m()+" "+t("Undo takes you back."));
+    addMsg("bot",t("I tuned the colors automatically.")+" "+m(),{question:t("Look at your session. What still looks wrong, if anything?")})}
+  catch(e){live(msg,()=>t("Automatic tuning didn't work: {error}",{error:String(e)}))}
   b.disabled=false;
 }
 
 /* Hold to compare: shows the original colors while held, like bypass on a plugin. */
-const holdOn=async()=>{if(bypass||!screenOn)return;bypass=true;note("Showing the original colors. Let go to see yours.");try{await invoke("set_filter",{on:false})}catch(e){}};
+const holdOn=async()=>{if(bypass||!screenOn)return;bypass=true;note(()=>t("Showing the original colors. Let go to see yours."));try{await invoke("set_filter",{on:false})}catch(e){}};
 const holdOff=async()=>{if(!bypass)return;bypass=false;await setScreen(true)};
 function bindHold(bp){
   bp.addEventListener("pointerdown",holdOn);["pointerup","pointerleave","pointercancel"].forEach(ev=>bp.addEventListener(ev,holdOff));
@@ -876,13 +1331,17 @@ function bindHold(bp){
 
 /* ---------- first-launch setup ---------- */
 const setup=$("#setup");
-let su={step:"welcome",ck:null,tune:null,type:"deutan",sev:0.8,fix:false,poll:0,stuck:false};
-let shortcutText="";
+let su={step:"welcome",ck:null,tune:null,tuning:false,perm:null,type:"deutan",sev:0.8,fix:false,poll:0,stuck:false};
+let shortcut="";
+// The shortcut as the keyboard labels its keys, in the window's language.
+const shortcutText=()=>shortcut.replace("CommandOrControl",platform==="mac"?t("Command"):"Ctrl").replace("Alt",platform==="mac"?t("Option"):"Alt").split("+").join(" + ");
 const h=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(k==="on")for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(k==="class")e.className=v;else if(k in e)e[k]=v;else e.setAttribute(k,v)}e.append(...kids.flat().filter(x=>x!=null&&x!==false));return e};
 const setupSteps=()=>platform==="mac"?["welcome","check","tune","permission","on"]:["welcome","check","tune","on"];
 function go(step){
   clearInterval(su.poll);
   if(step==="done"){finishSetup();return}
+  if(step==="permission")su.perm=null;
+  if(step==="tune"&&su.tuning==="failed")su.tuning=false;
   su.step=step;if(!setup.open)setup.showModal();
   if(!su.fix)invoke("set_onboarding",{step}).catch(()=>{});
   renderSetup();
@@ -897,14 +1356,17 @@ function startSetup(){su={...su,ck:null,tune:null,type:S.type,sev:S.severity,fix
 setup.addEventListener("cancel",e=>{e.preventDefault();finishSetup()});
 function focusFirst(){setTimeout(()=>($("#setupBody .primary")||$("#setupBody button,#setupBody input"))?.focus(),30)}
 
-function renderSetup(){
+// Draws the setup step. `again` draws the same step once more (in a new language) without
+// moving the focus or starting anything a second time.
+function renderSetup(again){
   const body=$("#setupBody"),title=$("#setup-h"),st=setupSteps();
-  $("#setupStep").textContent=su.fix?"Screen access":`Step ${st.indexOf(su.step)+1} of ${st.length}`;
-  body.replaceChildren();const btn=(label,run,primary)=>h("button",{type:"button",class:primary?"primary big":"big",on:{click:run}},label);
-  const p=t=>h("p",{},t);
+  $("#setupStep").textContent=su.fix?t("Screen access"):t("Step {n} of {total}",{n:st.indexOf(su.step)+1,total:st.length});
+  body.replaceChildren();const btn=(label,run,primary)=>h("button",{type:"button",class:primary?"primary big":"big",on:{click:run}},t(label));
+  const p=en=>h("p",{},t(en));
+  const focus=()=>{if(!again)focusFirst()};
 
   if(su.step==="welcome"){
-    title.textContent="Welcome to Limitless Color";
+    title.textContent=t("Welcome to Limitless Color");
     body.append(
       p("Limitless Color changes the colors on your whole screen, in Logic Pro, Pro Tools, plugins and everything else, so the things you need to tell apart really look different to you."),
       p("Setup takes about two minutes: a quick eye check, automatic tuning for your eyes, then you switch it on. You can change anything later by telling the color assistant what you see, or with the faders."),
@@ -912,25 +1374,27 @@ function renderSetup(){
   }
 
   else if(su.step==="check"){
-    title.textContent="Quick eye check";
+    title.textContent=t("Quick eye check");
     const ck=su.ck;
     if(screenOn&&!bypass)setScreen(false);
     if(!ck){
       body.append(p("You'll see two circles at a time. Say whether they look like the same color to you. Six pairs, about a minute. There are no wrong answers."),
         h("div",{class:"row"},btn("Start the check",()=>{su.ck={i:0,score:{protan:0,deutan:0,tritan:0}};renderSetup()},true),btn("I already know my color vision",()=>{su.ck={manual:true};renderSetup()})));
     }else if(ck.manual){
-      const types=[["deutan","Red-green, green-weak","The most common kind. Reds and greens look alike, often brownish or yellowish."],["protan","Red-green, red-weak","Reds look dark, almost black or brown, and get confused with greens."],["tritan","Blue-yellow","Blues and greens look alike, and yellows look pink or grey."]];
-      const sevs=[[0.4,"Mild","I can usually tell, but it takes effort."],[0.7,"Medium","I mix these colors up often."],[1,"Strong","These colors look the same to me."]];
-      const fs1=h("fieldset",{},h("legend",{},"Which colors do you mix up?"),types.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"sutype",value:v,checked:su.type===v}),h("span",{},l,h("small",{},d)))));
-      const pick=sevs.reduce((a,b)=>Math.abs(b[0]-su.sev)<Math.abs(a[0]-su.sev)?b:a)[0];
-      const fs2=h("fieldset",{},h("legend",{},"How strong is it?"),sevs.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"susev",value:v,checked:v===pick}),h("span",{},l,h("small",{},d)))));
-      body.append(fs1,fs2,h("div",{class:"row"},btn("Continue",()=>{su.type=body.querySelector("[name=sutype]:checked").value;su.sev=+body.querySelector("[name=susev]:checked").value;su.tune=null;go("tune")},true),btn("Do the eye check instead",()=>{su.ck=null;renderSetup()})));
+      // Choices kept as they were picked when the step is drawn again.
+      const picked=name=>body.querySelector(`[name=${name}]:checked`)?.value;
+      const types=[["deutan",en("Red-green, green-weak"),en("The most common kind. Reds and greens look alike, often brownish or yellowish.")],["protan",en("Red-green, red-weak"),en("Reds look dark, almost black or brown, and get confused with greens.")],["tritan",en("Blue-yellow"),en("Blues and greens look alike, and yellows look pink or grey.")]];
+      const sevs=[[0.4,en("Mild"),en("I can usually tell, but it takes effort.")],[0.7,en("Medium"),en("I mix these colors up often.")],[1,en("Strong"),en("These colors look the same to me.")]];
+      const fs1=h("fieldset",{},h("legend",{},t("Which colors do you mix up?")),types.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"sutype",value:v,checked:(ck.type||su.type)===v,on:{change:()=>{ck.type=v}}}),h("span",{},t(l),h("small",{},t(d))))));
+      const pick=ck.sev??sevs.reduce((a,b)=>Math.abs(b[0]-su.sev)<Math.abs(a[0]-su.sev)?b:a)[0];
+      const fs2=h("fieldset",{},h("legend",{},t("How strong is it?")),sevs.map(([v,l,d])=>h("label",{class:"choice"},h("input",{type:"radio",name:"susev",value:v,checked:v===pick,on:{change:()=>{ck.sev=v}}}),h("span",{},t(l),h("small",{},t(d))))));
+      body.append(fs1,fs2,h("div",{class:"row"},btn("Continue",()=>{su.type=picked("sutype");su.sev=+picked("susev");su.tune=null;go("tune")},true),btn("Do the eye check instead",()=>{su.ck=null;renderSetup()})));
     }else if(ck.i<CHECK.length){
       const it=CHECK[ck.i];
-      body.append(h("p",{class:"ok"},`Pair ${ck.i+1} of ${CHECK.length}: do these two circles look like the same color?`));
-      const pair=h("div",{class:"check-pair",role:"img","aria-label":"Two colored circles"},h("span"),h("span"));
+      body.append(h("p",{class:"ok"},t("Pair {n} of {total}: do these two circles look like the same color?",{n:ck.i+1,total:CHECK.length})));
+      const pair=h("div",{class:"check-pair",role:"img","aria-label":t("Two colored circles")},h("span"),h("span"));
       pair.children[0].style.background=it.pair[0];pair.children[1].style.background=it.pair[1];body.append(pair);
-      body.append(h("div",{class:"row"},[["Same color",1],["Almost the same",0.5],["Clearly different",0]].map(([l,v],j)=>btn(l,()=>{ck.score[it.t]+=v;ck.i++;renderSetup();focusFirst()},j===0))));
+      body.append(h("div",{class:"row"},ANSWERS.map(([l,v],j)=>btn(l,()=>{ck.score[it.t]+=v;ck.i++;renderSetup();focusFirst()},j===0))));
     }else{
       const best=Object.entries(ck.score).sort((a,b)=>b[1]-a[1])[0];
       if(best[1]<0.75){
@@ -938,106 +1402,113 @@ function renderSetup(){
           p("If some things in your session still look alike, choose your color vision yourself and the app will tune for it."),
           h("div",{class:"row"},btn("Choose it myself",()=>{su.ck={manual:true};renderSetup()},true),btn("Finish without changes",finishSetup)));
       }else{
-        su.type=best[0];su.sev=+clamp(0.4+best[1]*0.3,0.4,1).toFixed(2);su.tune=null;
-        body.append(p(`Your answers match ${TYPE_NAME[su.type]} color vision. Next, the app tunes your colors for that.`),
+        su.type=best[0];su.sev=+clamp(0.4+best[1]*0.3,0.4,1).toFixed(2);if(!again)su.tune=null;
+        body.append(h("p",{},t("Your answers match {name} color vision. Next, the app tunes your colors for that.",{name:t(TYPE_NAME[su.type])})),
           h("div",{class:"row"},btn("Tune my colors",()=>go("tune"),true),btn("That's not right, let me choose",()=>{su.ck={manual:true};renderSetup()})));
       }
     }
-    focusFirst();
+    focus();
   }
 
   else if(su.step==="tune"){
-    title.textContent="Your colors, tuned";
+    title.textContent=t("Your colors, tuned");
     if(!su.tune){
-      body.append(p(`Trying thousands of color settings for ${TYPE_NAME[su.type]} color vision…`));
-      tuneFor(su.type,su.sev).then(r=>{su.tune=r;useTune(r,false);renderSetup()}).catch(e=>{body.replaceChildren(p("Automatic tuning didn't work: "+e),h("div",{class:"row"},btn("Continue anyway",nextStep,true)))});
+      if(su.tuning==="failed"){body.append(h("p",{},t("Automatic tuning didn't work: {error}",{error:su.tuneError})),h("div",{class:"row"},btn("Continue anyway",nextStep,true)));return}
+      body.append(h("p",{},t("Trying thousands of color settings for {name} color vision…",{name:t(TYPE_NAME[su.type])})));
+      if(!su.tuning){
+        su.tuning=true;
+        tuneFor(su.type,su.sev).then(r=>{su.tuning=false;su.tune=r;useTune(r,false);if(su.step==="tune")renderSetup()})
+          .catch(e=>{su.tuning="failed";su.tuneError=String(e);if(su.step==="tune")renderSetup()});
+      }
       return;
     }
     const Tn=makeTransform(S,anchors);const after=hex=>linToHex(Tn(hexToLin(hex)));
-    const cv=h("canvas",{"aria-label":"A sample music session. Left half: original colors. Right half: your tuned colors."});
+    const cv=h("canvas",{"aria-label":t("A sample music session. Left half: original colors. Right half: your tuned colors.")});
     const W=1100,H=560,dpr=Math.min(2,window.devicePixelRatio||1),src=drawDaw(Math.round(760*dpr),Math.round(387*dpr));
     cv.width=src.width;cv.height=src.height;const cx=cv.getContext("2d");
     const sd=src.getContext("2d").getImageData(0,0,src.width,src.height),out=new ImageData(src.width,src.height);applyLut(sd,buildLut(Tn),out);
     cx.putImageData(out,0,0);cx.putImageData(sd,0,0,0,0,Math.round(src.width/2),src.height);
     const u=src.width/W;cx.fillStyle="#fff";cx.fillRect(src.width/2-u,0,3*u,src.height);cx.font=`700 ${16*u}px system-ui`;cx.textBaseline="top";
-    [["Original",src.width/2-110*u],["Yours",src.width/2+12*u]].forEach(([t,x])=>{const w=cx.measureText(t).width+16*u;cx.fillStyle="rgba(0,0,0,.75)";cx.fillRect(x,src.height-34*u,w,26*u);cx.fillStyle="#fff";cx.fillText(t,x+8*u,src.height-30*u)});
+    const mine=t("Yours"),orig=t("Original");
+    [[orig,src.width/2-cx.measureText(orig).width-28*u],[mine,src.width/2+12*u]].forEach(([word,x])=>{const w=cx.measureText(word).width+16*u;cx.fillStyle="rgba(0,0,0,.75)";cx.fillRect(x,src.height-34*u,w,26*u);cx.fillStyle="#fff";cx.fillText(word,x+8*u,src.height-30*u)});
     const rows=[0,1,2,4,6].map(i=>KEY_PAIRS[i]);
     const duo=(a,b)=>{const d=h("div",{class:"duo","aria-hidden":"true"},h("span"),h("span"));d.children[0].style.background=a;d.children[1].style.background=b;return d};
-    const cmp=h("div",{class:"cmp"},h("span",{class:"hd"},"Pair"),h("span",{class:"hd"},"Before"),h("span",{class:"hd"},"After"),
-      rows.flatMap(([a,b,l])=>[h("span",{},l),duo(R[a].hex,R[b].hex),duo(after(R[a].hex),after(R[b].hex))]));
+    const cmp=h("div",{class:"cmp"},h("span",{class:"hd"},t("Pair")),h("span",{class:"hd"},t("Before")),h("span",{class:"hd"},t("After")),
+      rows.flatMap(([a,b,l])=>[h("span",{},t(l)),duo(R[a].hex,R[b].hex),duo(after(R[a].hex),after(R[b].hex))]));
     const strength=Math.round(su.sev*100);
     body.append(cv,p("Compare the pairs. Can you tell each pair apart more easily in the After column, and in the right half of the picture?"),cmp,
-      h("p",{class:"hint"},`Tuned for ${TYPE_NAME[su.type]} color vision at ${strength}% strength.`),
+      h("p",{class:"hint"},t("Tuned for {name} color vision at {strength}% strength.",{name:t(TYPE_NAME[su.type]),strength})),
       h("div",{class:"row"},
         btn("Yes, use this",nextStep,true),
         su.sev<1&&btn("Make it stronger",()=>{su.sev=Math.min(1,su.sev+0.2);su.tune=null;renderSetup()}),
         su.sev>0.2&&btn("Too much, make it gentler",()=>{su.sev=Math.max(0.2,su.sev-0.2);su.tune=null;renderSetup()})));
-    focusFirst();
+    focus();
   }
 
   else if(su.step==="permission"){
-    title.textContent="Let Limitless Color see the screen";
-    body.append(p("Checking screen access…"));
-    const done=()=>{clearInterval(su.poll);body.replaceChildren(h("p",{class:"ok"},"Screen access is on."));
+    title.textContent=t("Let Limitless Color see the screen");
+    const done=()=>{clearInterval(su.poll);su.perm="granted";body.replaceChildren(h("p",{class:"ok"},t("Screen access is on.")));
       invoke("restart_filter").then(applyStatus).catch(()=>{});setTimeout(su.fix?finishSetup:nextStep,900)};
     const check=()=>invoke("screen_permission",{request:false}).then(r=>{if(r!=="denied")done();return r}).catch(()=>"denied");
-    check().then(r=>{
-      if(r!=="denied"||su.step!=="permission")return;
+    const ask=()=>{
       body.replaceChildren(
         p("To recolor Logic Pro and everything else, macOS needs to let Limitless Color see the screen. It only uses the picture to redraw it in your colors. Nothing is recorded, saved, or sent anywhere."),
-        h("ol",{},h("li",{},"Click Open System Settings."),h("li",{},"Turn on Limitless Color in the list. Your Mac may ask for your password."),h("li",{},"If macOS offers to Quit & Reopen, choose it. This window comes back by itself.")),
+        h("ol",{},h("li",{},t("Click Open System Settings.")),h("li",{},t("Turn on Limitless Color in the list. Your Mac may ask for your password.")),h("li",{},t("If macOS offers to Quit & Reopen, choose it. This window comes back by itself."))),
         h("div",{class:"row"},
           btn("Open System Settings",async()=>{try{if(await invoke("screen_permission",{request:true})==="granted")return done();await invoke("open_screen_settings")}catch(e){}
-            clearInterval(su.poll);su.poll=setInterval(check,1500);
+            clearInterval(su.poll);su.poll=setInterval(check,1500);su.waiting=true;
             const w=$("#permWait");if(w)w.hidden=false},true),
           btn(su.fix?"Not now":"Skip for now",()=>su.fix?finishSetup():nextStep())),
-        h("p",{class:"hint",id:"permWait",hidden:true},"Waiting for you to turn it on… This page notices by itself."),
-        h("details",{},h("summary",{},"I turned it on, but nothing changed"),
+        h("p",{class:"hint",id:"permWait",hidden:!su.waiting},t("Waiting for you to turn it on… This page notices by itself.")),
+        h("details",{},h("summary",{},t("I turned it on, but nothing changed")),
           p("macOS sometimes only applies the change after Limitless Color reopens."),
           h("div",{class:"row"},btn("Quit & Reopen Limitless Color",()=>invoke("relaunch")))));
-      focusFirst();
-    });
+      focus();
+    };
+    if(su.perm==="denied")return ask();
+    if(su.perm==="granted")return body.append(h("p",{class:"ok"},t("Screen access is on.")));
+    body.append(p("Checking screen access…"));
+    if(su.perm!=="checking"){
+      su.perm="checking";su.waiting=false;
+      check().then(r=>{if(r!=="denied"||su.step!=="permission")return;su.perm="denied";ask()});
+    }
   }
 
   else if(su.step==="on"){
-    title.textContent=screenOn?"Your colors are on":"Switch on your colors";
+    title.textContent=t(screenOn?"Your colors are on":"Switch on your colors");
     if(!screenOn&&!bypass){
       body.append(p("Press the button and your whole screen changes to your colors, in every app."),
         h("div",{class:"row"},btn("Switch on screen colors",()=>setScreen(true),true)));
     }else{
-      const hold=h("button",{type:"button",class:"big"},"Hold to compare");bindHold(hold);
-      const auto=h("input",{type:"checkbox",id:"suAuto",checked:true});
+      const hold=h("button",{type:"button",class:"big"},t("Hold to compare"));bindHold(hold);
+      const auto=h("input",{type:"checkbox",id:"suAuto",checked:su.autostart??true,on:{change:()=>{su.autostart=auto.checked}}});
       body.append(p("Hold the button below to see the original colors for a moment, like bypass on a plugin. Let go to see yours."),
         h("div",{class:"row"},hold),
         h("ul",{},
-          h("li",{},`Press ${shortcutText} in any app to switch your colors on or off.`),
-          h("li",{},platform==="mac"?"The Limitless Color icon in the menu bar has the same switch. Closing this window keeps your colors on.":"The Limitless Color icon in the taskbar tray has the same switch. Closing this window keeps your colors on."),
-          h("li",{},"Something still hard to see? Tell the color assistant in your own words, for example \"Solo and Mute look the same\".")),
-        h("label",{class:"choice"},auto,h("span",{},"Start Limitless Color when I log in",h("small",{},"Your colors come back on by themselves after a restart."))),
+          h("li",{},t("Press {shortcut} in any app to switch your colors on or off.",{shortcut:shortcutText()})),
+          h("li",{},t(platform==="mac"?"The Limitless Color icon in the menu bar has the same switch. Closing this window keeps your colors on.":"The Limitless Color icon in the taskbar tray has the same switch. Closing this window keeps your colors on.")),
+          h("li",{},t("Something still hard to see? Tell the color assistant in your own words, for example {example}.",{example:lang==="es"?`«${t("Solo and Mute look the same")}»`:"\"Solo and Mute look the same\""}))),
+        h("label",{class:"choice"},auto,h("span",{},t("Start Limitless Color when I log in"),h("small",{},t("Your colors come back on by themselves after a restart.")))),
         h("div",{class:"row"},btn("Finish",async()=>{try{await invoke("set_autostart",{on:auto.checked})}catch(e){}finishSetup()},true)));
     }
-    focusFirst();
+    focus();
   }
 }
 
+renderCheck();
+loadSample();
+
 if(desktop){
+  for(const e of document.querySelectorAll("[data-only]"))e.hidden=e.dataset.only!=="desktop";
   ["#screenBtn","#talkBtn","#claudeBox","#tuneBtn"].forEach(id=>$(id).hidden=false);
-  $(".sub").textContent="Your colors apply to your whole screen. Tell the assistant what you see, move the faders, or press Make it clear for me, and keep going until it looks right to you.";
-  document.querySelector('[aria-labelledby="p-h"]').innerHTML=`<h2 id="p-h">How it works</h2><div class="plan">
-    <div><h3>Screen colors</h3><p>Switch them on and your profile is applied to the whole screen: Logic Pro, Pro Tools, plugins and everything else. Closing this window keeps them on. Use the menu bar or tray icon to switch them off or quit.</p></div>
-    <div><h3>Quick switch</h3><p id="shortcutHelp"></p></div>
-    <div><h3>Talk instead of typing</h3><p>Press Talk, then speak. It uses your computer's own dictation, so any microphone that works with your computer works here.</p></div></div>
-    <div class="row"><button type="button" id="setupAgain">Run the setup guide again</button></div>`;
   $("#setupAgain").addEventListener("click",startSetup);
   $(".split").hidden=true;
   $("#tuneBtn").addEventListener("click",makeClear);
   $("#screenBtn").addEventListener("click",()=>setScreen(!($("#screenBtn").getAttribute("aria-pressed")==="true")));
   bindHold($("#bypassBtn"));
   $("#talkBtn").addEventListener("click",async()=>{$("#ask").focus();try{await invoke("start_dictation")}catch(e){}
-    note(platform==="mac"?"Speak now. If nothing happens, press the Fn key twice, or turn on Dictation in System Settings › Keyboard.":"Speak now. If nothing happens, press Windows key + H.")});
-  $("#saveKey").addEventListener("click",async()=>{try{await invoke("set_api_key",{key:$("#apiKey").value});$("#apiKey").value="";applyStatus(await invoke("get_status"))}catch(e){$("#keyMsg").textContent=String(e)}});
-  document.querySelector('#e-h').closest(".card").querySelector(".hint").textContent="Your settings are saved automatically. You can also save them as a .cube color profile in Documents › Limitless Color, to share or back up.";
-  $("#dlCube").textContent="Save .cube profile";
+    note(()=>t(platform==="mac"?"Speak now. If nothing happens, press the Fn key twice, or turn on Dictation in System Settings › Keyboard.":"Speak now. If nothing happens, press Windows key + H."))});
+  $("#saveKey").addEventListener("click",async()=>{try{await invoke("set_api_key",{key:$("#apiKey").value});$("#apiKey").value="";applyStatus(await invoke("get_status"))}catch(e){live($("#keyMsg"),()=>String(e))}});
   TAURI.event.listen("status",e=>applyStatus(e.payload));
   TAURI.event.listen("window-prefs",e=>applyWindowPrefs(e.payload));
   const osMotion=matchMedia("(prefers-reduced-motion: reduce)");
@@ -1045,11 +1516,11 @@ if(desktop){
   osMotion.addEventListener("change",tellMotion);tellMotion();
   TAURI.event.listen("filter-error",e=>note(e.payload));
   TAURI.event.listen("permission-needed",()=>{if(setup.open&&su.step==="permission")return;su.fix=!setup.open;go("permission")});
-  TAURI.event.listen("filter-stopped",()=>note("The screen filter stopped unexpectedly.",{label:"Restart it",run:()=>invoke("restart_filter").then(applyStatus).catch(e=>note(String(e)))}));
+  TAURI.event.listen("filter-stopped",()=>note(()=>t("The screen filter stopped unexpectedly."),{label:en("Restart it"),run:()=>invoke("restart_filter").then(applyStatus).catch(e=>note(String(e)))}));
   invoke("get_status").then(st=>{
     S={...DEFAULTS,...st.profile.S};anchors=st.profile.anchors||{};
-    shortcutText=st.shortcut.replace("CommandOrControl",st.platform==="mac"?"Command":"Ctrl").replace("Alt",st.platform==="mac"?"Option":"Alt").split("+").join(" + ");
-    $("#shortcutHelp").textContent="Press "+shortcutText+" from any app to switch the screen colors on or off.";
+    shortcut=st.shortcut;platform=st.platform;
+    live($("#shortcutHelp"),()=>t("Press {shortcut} from any app to switch the screen colors on or off.",{shortcut:shortcutText()}));
     applyStatus(st);
     if(st.onboarding!=="done"){su.type=S.type;su.sev=S.severity;go(setupSteps().includes(st.onboarding)?st.onboarding:"welcome")}
   });

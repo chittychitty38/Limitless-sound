@@ -1,0 +1,122 @@
+# Blind: written by a separate session that never saw the helper's rules or the other test sets.
+# expect	context	who	text
+rg	-	MX tú	No distingo las pistas rojas de las verdes en Logic, para mí son del mismo color.
+rg	-	ES usted	El botón de grabar y el de reproducir me parecen iguales, no sé cuál estoy pulsando.
+rg	-	AR vos	Che, las regiones rojas las veo marrones, casi como las verdes.
+rg	-	CO tú	Las pistas rojas se me ven color oliva, no sé cuáles son las rojas.
+rg	-	dictado	el boton de rec y el de play se ven del mismo color no los distingo
+rg	-	errata	Las rejiones verdes y las rojas se ben iguales en Pro Tools.
+rg	-	MX usted	Disculpe, el verde de los canales lo veo amarillento y no lo diferencio del rojo.
+rg	-	ES tú	Tío, el rojo me parece verde. Todos los canales me salen iguales.
+rg	-	AR vos	No puedo diferenciar el rojo del verde en la ventana de mezcla, ¿me ayudás?
+rg	-	CO usted	Las pistas verdes se ven cafés, como las rojas.
+rg	-	CL tú	Oye, el rojo de grabación lo veo amarillo, igual que el verde de play.
+rg	-	PE usted	Los botones rojos y verdes se confunden entre sí, me cuesta mucho.
+rg	-	MX tú	Para mí el verde se ve como naranja y no sé cuál pista es cuál.
+rg	-	dictado	no se cual pista es roja y cual es verde se ven igual
+rg	-	ES usted	Las regiones rojas y las verdes las veo exactamente del mismo tono.
+rg	-	AR vos	El botón de grabar lo veo verde, igual que el de reproducir, re confuso.
+rg	-	errata	No distingo entre rojo y berde en mis pistas.
+rg	-	CO tú	El rojo lo veo como un marrón verdoso y se mezcla con el verde.
+rg	-	MX usted	Las regiones en rojo me parecen amarillas, igual que las verdes.
+rg	-	dictado	rojo y verde son lo mismo para mi en logic
+rg	-	CL usted	No logro diferenciar las pistas rojas de las verdes.
+rg	-	ES tú	Los canales verdes parecen marrones y no los separo de los rojos.
+protan	-	MX tú	El botón de grabar se ve casi negro, apenas lo encuentro.
+protan	-	ES usted	Las pistas rojas las veo muy oscuras, prácticamente negras.
+protan	-	AR vos	El rojo se ve negro en mi pantalla, ¿podés arreglarlo?
+protan	-	dictado	el rojo de rec se ve negro casi no lo veo
+protan	-	CO usted	La luz roja del clip se me ve oscura, casi negra.
+protan	-	errata	Las rejiones rojas se ven negras, no se nota nada.
+protan	-	PE tú	Lo rojo lo veo apagado y oscuro, como si fuera negro.
+protan	-	ES tú	Las pistas rojas son casi negras, no se distinguen del fondo.
+by	-	MX tú	No distingo el azul del verde en las pistas.
+by	-	ES usted	Las regiones azules y las moradas me parecen iguales.
+by	-	AR vos	El turquesa y el azul los veo igual, ¿lo podés corregir?
+by	-	CO tú	El amarillo se me ve gris.
+by	-	dictado	el azul y el violeta se ven iguales
+by	-	errata	El amariyo lo veo rosado.
+by	-	CL tú	Las pistas celestes parecen verdes.
+by	-	MX usted	Los canales lila y los azules se confunden.
+by	-	ES tú	El amarillo me parece blanco, casi no lo veo.
+by	-	AR vos	No distingo entre el verde y el azul en los canales.
+by	-	CO usted	El color turquesa lo confundo con el verde.
+by	-	PE usted	El azul claro y el verde los veo idénticos.
+by	-	dictado	no distingo azul de morado en las regiones
+by	-	MX tú	Las pistas amarillas se ven rosas.
+by	-	ES usted	El morado y el azul son el mismo color para mí.
+by	-	errata	El asul y el verde se ven iguales en Logic.
+solo-mute	-	MX tú	No sé cuál es el botón de solo y cuál el de mute.
+solo-mute	-	ES usted	Los botones S y M me parecen iguales.
+solo-mute	-	AR vos	No distingo solo de mute, ¿me ayudás?
+solo-mute	-	dictado	no distingo el solo del mute
+solo-mute	-	CO tú	El botón de solo y el de silenciar se ven idénticos.
+solo-mute	-	errata	Confundo el botón de solo con el de silensiar.
+solo-mute	-	CL usted	La S y la M de los canales se ven del mismo color.
+solo-mute	-	ES tú	Me lío entre solo y mute en cada pista.
+solo-mute	-	MX usted	No logro diferenciar los botones de solo y silencio.
+solo-mute	-	PE tú	Solo y mute me parecen el mismo botón.
+meters	-	MX tú	Los medidores se ven todos de un solo color.
+meters	-	ES usted	No veo cuándo el vúmetro llega al rojo.
+meters	-	AR vos	No me doy cuenta cuando satura el medidor, ¿podés hacer algo?
+meters	-	dictado	no veo cuando los medidores se ponen rojos
+meters	-	CO usted	Los vúmetros se ven verdes de arriba a abajo, no sé cuándo clipea.
+meters	-	errata	Los bumetros se ven de un mismo color.
+meters	-	CL tú	No veo cuando la señal clipea en los medidores.
+meters	-	ES tú	Las barras de nivel se ven todas iguales, no sé si me paso.
+meters	-	MX usted	No alcanzo a ver cuando el medidor entra en la zona roja.
+meters	-	PE usted	En los medidores de nivel no distingo el verde del rojo.
+more	-	MX tú	No noto ningún cambio.
+more	-	ES usted	Necesito que la corrección sea más fuerte.
+more	-	AR vos	Subile más, todavía no alcanza.
+more	-	dictado	no veo ninguna diferencia
+more	-	CO tú	Más fuerte por favor, casi no se nota.
+more	-	errata	No beo diferencia, ponlo más fuerte.
+more	-	CL usted	La corrección se queda corta, auméntela.
+more	-	ES tú	Dale más caña, que apenas cambia.
+more	-	MX usted	Se ve igual que antes, intensifíquelo por favor.
+more	-	dictado	mas intenso por favor no alcanza
+less	rg	MX tú	Está demasiado fuerte, bájale.
+less	rg	ES usted	Los colores han quedado chillones, rebájelo un poco.
+less	rg	AR vos	Es muy intenso, me lastima los ojos, bajalo.
+less	rg	dictado	esta muy fuerte bajale un poco
+less	rg	CO tú	Quedó muy exagerado, suavízalo.
+less	rg	errata	Se ve muy artifisial, más suave porfa.
+less	rg	CL tú	Está muy fuerte, me cansa la vista, bájalo.
+less	rg	ES tú	Te has pasado, los colores parecen falsos. Más suave.
+less	rg	MX usted	Ahora es demasiado intenso, ¿lo puede suavizar?
+less	rg	AR vos	Quedó re chillón, bajale la intensidad.
+less	rg	PE usted	Los colores se ven poco naturales, redúzcalo.
+less	rg	dictado	muy intenso me duelen los ojos
+rg+	rg	MX tú	Sigo sin distinguir el rojo del verde.
+rg+	rg	ES usted	Ha mejorado un poco, pero el rojo y el verde todavía se confunden.
+rg+	rg	AR vos	Siguen iguales, no los distingo.
+rg+	rg	dictado	el rojo y el verde todavia se ven igual
+rg+	rg	CO usted	Algo mejor, pero las pistas rojas y verdes aún se mezclan.
+rg+	rg	errata	Todavia no distingo el rojo del berde.
+rg+	rg	CL tú	Las rojas y las verdes siguen viéndose iguales.
+rg+	rg	ES tú	Un poquito mejor, aunque el botón de grabar y el de play siguen pareciéndose.
+undo	rg	MX tú	Se ve peor, regrésalo como estaba.
+undo	rg	ES usted	Esto ha empeorado, deshágalo.
+undo	rg	AR vos	Quedó peor, volvé a como estaba.
+undo	rg	dictado	deshacer se ve peor
+undo	rg	CO tú	Ponlo como estaba antes, esto está peor.
+undo	rg	errata	Está peor, desasé el cambio.
+undo	rg	PE usted	Vuelva a los colores originales, por favor, se ve peor.
+undo	rg	ES tú	Uf, mucho peor. Quítalo y déjalo como al principio.
+keep	rg	MX tú	¡Ahora sí distingo las pistas! Gracias.
+keep	rg	ES usted	Perfecto, déjelo así.
+keep	rg	AR vos	Ahora sí, re bien, dejalo así.
+keep	rg	dictado	perfecto asi esta bien gracias
+keep	rg	CO tú	Mucho mejor, ya puedo diferenciarlos.
+keep	rg	errata	Asi esta perfecto, grasias.
+keep	rg	CL usted	Se ve muy bien, no lo cambie.
+keep	rg	ES tú	¡Genial! Ya distingo el rojo del verde.
+keep	rg	MX usted	Ahora se ve correcto, muchas gracias.
+keep	rg	AR vos	Bárbaro, ahora veo la diferencia, no toques nada.
+keep	rg	dictado	ya los distingo dejalo asi
+keep	rg	PE tú	Mucho mejor, mantenlo así.
+ask	-	MX tú	Hola, ¿qué tal?
+ask	-	ES usted	¿Cómo funciona esta aplicación?
+ask	-	AR vos	¿Qué podés hacer vos?
+ask	-	dictado	hola buenas tardes

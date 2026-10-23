@@ -1,0 +1,105 @@
+# Held out: written before the Spanish rules, and never used to write them. Measured, not tuned to.
+# expect	context	who	text
+# expect: rg (red-green), rg+ (red-green, further), protan (reds look dark), by (blue-yellow),
+#   solo-mute, meters, less (ease back), more (turn up), undo (back to before), keep (nothing to
+#   change), ask (asks what looks wrong). context: - (a fresh start) or rg (after a red-green change).
+rg	-	MX tú	los botones rojos los veo como cafés, casi iguales a los verdes
+rg	-	ES tú	el rojo y el verde me parecen el mismo color, no sé cuál es cuál
+rg	-	AR vos	che, el verde de las pistas lo veo medio amarronado, igual que el rojo
+rg	-	CO	a mí lo rojo se me ve como color café clarito
+rg	-	dictado	no distingo el boton de grabar del de play los dos se ven como amarillos
+rg	-	ES usted	Disculpe, los colores rojos y verdes de las pistas no los diferencio
+rg	-	AR vos	fijate que el rojo de grabar y el verde de reproducir se ven re parecidos
+rg	-	CO	las pistas verdes y las rojas se ven como del mismo tono de amarillo
+rg	-	dictado	lo que es rojo yo lo veo verde
+rg	-	errata	el rrojo y el berde se ven casi igual
+rg	-	MX tú	el naranja y el verde de las regiones no los distingo
+rg	-	ES tú	el amarillo y el verde de las pistas me parecen iguales
+rg	-	AR vos	no me doy cuenta cuál pista es roja y cuál es verde
+rg	-	dictado	la grabacion y la reproduccion tienen casi el mismo color para mi
+rg	-	errata	lo rojo se ve como verde amarilloso
+rg	-	ES tú	No hay manera de distinguir el rojo del verde
+rg	-	CO usted	¿Podría ayudarme? Veo el rojo como si fuera marrón
+rg	-	AR vos	las regiones rojas me parecen verdes, como oliva
+rg	-	MX usted	Fíjese que el botón de play y el de grabar se me hacen del mismo color
+rg	-	CO tú	el rojo se me confunde con el verde todo el tiempo
+rg+	rg	MX tú	sigue igual, el rojo y el verde se ven parecidos
+rg+	rg	ES tú	todavía no distingo el rojo del verde
+rg+	rg	AR vos	seguí, todavía se parecen mucho el rojo y el verde
+rg+	rg	CO	aún se ven casi iguales
+rg+	rg	dictado	todavia no veo la diferencia entre grabar y play
+rg+	rg	CO usted	Mejoró algo, pero el rojo y el verde aún se confunden
+protan	-	MX tú	el botón de grabar se ve casi negro
+protan	-	ES tú	los rojos los veo muy oscuros, como apagados
+protan	-	AR vos	el rojo del clip lo veo re oscuro, casi negro
+protan	-	CO	las pistas rojas se ven negras para mí
+protan	-	dictado	el rojo lo veo oscurisimo
+protan	-	MX usted	Los colores rojos me aparecen muy oscuros
+protan	-	ES usted	Le comento que el botón de grabación lo veo verde oscuro
+protan	-	errata	el rojo se be negro
+by	-	MX tú	el azul y el verde los confundo mucho
+by	-	ES tú	las pistas azules y las verdes me parecen iguales
+by	-	AR vos	el celeste y el verde no los distingo
+by	-	CO	lo morado y lo azul se ven igualitos
+by	-	dictado	el amarillo lo veo como rosado
+by	-	CO usted	Para mí el amarillo parece gris
+by	-	errata	el asul y el berde son iguales para mi
+by	-	MX tú	no distingo la pista turquesa de la azul
+by	-	AR vos	mirá, el violeta y el azul de las pistas los veo iguales
+by	-	CO	el amarillo y el blanco se me confunden
+by	-	ES tú	los tonos azules se mezclan con los verdes
+by	-	dictado	las pistas moradas y azules parecen del mismo color
+by	-	MX tú	lo amarillo se ve medio rosita
+by	-	ES usted	Disculpe, no logro diferenciar el azul del morado
+solo-mute	-	MX tú	no distingo el solo del mute
+solo-mute	-	ES tú	los botones de solo y silencio se ven iguales
+solo-mute	-	AR vos	el solo y el mute son re parecidos, no los distingo
+solo-mute	-	CO	no sé si una pista está en solo o en mute, se ven igual
+solo-mute	-	dictado	solo y mute se confunden
+solo-mute	-	MX usted	¿Podría hacer que el solo se vea distinto al silenciar?
+solo-mute	-	errata	el solo y el mutte se ven igualitos
+solo-mute	-	MX tú	los botones S y M de las pistas se ven del mismo color
+meters	-	MX tú	los medidores se ven todos de un solo color
+meters	-	ES tú	en los vúmetros no veo cuándo pasa a rojo
+meters	-	AR vos	no me doy cuenta cuando el medidor clipea
+meters	-	CO	las barras de nivel se ven todas verdes
+meters	-	dictado	no veo cuando el medidor se pone rojo
+meters	-	ES usted	Los medidores de nivel no me muestran bien cuándo satura
+meters	-	errata	los medidres se ven iguales arriba y abajo
+meters	-	MX tú	no distingo en los niveles cuando ya está saturando
+less	rg	MX tú	está demasiado fuerte, bájale tantito
+less	rg	ES tú	Ahora los colores se ven muy chillones
+less	rg	AR vos	te pasaste, está muy exagerado
+less	rg	CO	quedó muy intenso, más suavecito por favor
+less	rg	dictado	se ve muy raro todo bajale un poco
+less	rg	MX usted	Está muy fuerte, ¿lo puede bajar un poco?
+less	rg	errata	esta demaciado fuerte
+less	rg	ES tú	Prefiero algo más natural
+less	rg	AR vos	bajale un cambio que me cansa la vista
+more	-	MX tú	casi no se nota la diferencia, súbele
+more	-	ES tú	No noto ningún cambio, ponlo más fuerte
+more	-	AR vos	subile un poco más que no alcanza
+more	-	CO usted	está muy suave todavía, auméntele
+more	-	dictado	me cuesta ver la diferencia todavia
+more	-	ES usted	Necesito que el efecto sea más fuerte
+more	-	errata	no se nota nada, mas fuerte porfa
+more	-	MX tú	está muy débil el cambio
+more	-	AR vos	hacelo más intenso
+undo	rg	MX tú	ahora se ve peor
+undo	rg	ES tú	Así está peor, vuelve a como estaba
+undo	rg	AR vos	empeoró, volvé atrás
+undo	rg	CO	uy no, quedó peor que antes
+undo	rg	dictado	deshaz eso se ve peor
+undo	rg	MX usted	Regréselo como estaba, por favor
+keep	rg	MX tú	ya se ve mucho mejor, gracias
+keep	rg	ES tú	Perfecto, así está bien
+keep	rg	AR vos	joya, ahora sí los distingo
+keep	rg	CO	listo, quedó muy bien
+keep	rg	dictado	ya distingo el rojo del verde
+keep	rg	CO usted	Ahora sí se ven diferentes, muchas gracias
+keep	rg	errata	mejoro bastante
+keep	rg	MX tú	ya no se ven iguales
+keep	rg	AR vos	dejalo así que está bárbaro
+ask	-	MX tú	hola
+ask	-	ES tú	no sé qué hacer
+ask	-	CO tú	¿qué puedes hacer?

@@ -76,6 +76,57 @@ VOICE_PHRASES = {
     "wake up": "wake",
 }
 
+# The same in Spanish (voice.py's SPANISH listens for them). Where Limitless Voice has the
+# action too, its words: "acercar" and "ampliar", "alejar" and "reducir", as Spanish menus and
+# macOS's Zoom name them. Every word is one the Spanish speech model knows
+# (stress/test_zoom_language.py checks), and the words people say alone were measured on real
+# people (stress/README.md, "Zoom in Spanish").
+SPANISH_PHRASES = {
+    "acercar": "in",
+    "ampliar": "in",
+    "alejar": "out",
+    "reducir": "out",
+    "acercar mucho": "bigIn",
+    "ampliar mucho": "bigIn",
+    "alejar mucho": "bigOut",
+    "reducir mucho": "bigOut",
+    "más altas": "taller",
+    "pistas más altas": "taller",
+    "más bajas": "shorter",
+    "pistas más bajas": "shorter",
+    "ajustar": "fit",
+    "ajustar a la ventana": "fit",
+    "mostrar todo": "fit",
+    "ver todo": "fit",
+    "onda más grande": "wave",
+    "forma de onda más grande": "wave",
+    "onda más pequeña": "waveOut",
+    "forma de onda más pequeña": "waveOut",
+    "lupa": "magToggle",
+    "activar la lupa": "magToggle",
+    "desactivar la lupa": "magToggle",
+    "aumentar": "magIn",
+    "más aumento": "magIn",
+    "disminuir": "magOut",
+    "menos aumento": "magOut",
+    "zoom uno": "preset1",
+    "zoom dos": "preset2",
+    "zoom tres": "preset3",
+    "zoom cuatro": "preset4",
+    "zoom cinco": "preset5",
+    "otra vez": "again",
+    "repite": "again",
+    "mostrar el panel": "panel",
+    "ocultar el panel": "panel",
+    "mostrar panel": "panel",
+    "ocultar panel": "panel",
+    "teclas de zoom": "keys",
+    "deja de escuchar": "sleep",
+    "a dormir": "sleep",
+    "empieza a escuchar": "wake",
+    "despierta": "wake",
+}
+
 # One-handed zoom layer: key -> action. All under the left hand.
 DEFAULT_LAYER_MAP = {
     "e": "in", "q": "out", "s": "taller", "w": "shorter", "a": "fit",

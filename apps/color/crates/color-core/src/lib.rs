@@ -5,6 +5,7 @@
 
 pub mod color;
 pub mod helper;
+pub mod lang;
 pub mod lut;
 pub mod matrix;
 pub mod prefs;
@@ -15,5 +16,6 @@ pub mod tune;
 mod testdata;
 
 pub use color::CvdType;
+pub use lang::Lang;
 pub use prefs::WindowPrefs;
 pub use profile::{Anchor, Profile, Settings, Transform};
