@@ -16,7 +16,7 @@
 const NAMES = [
   'Limitless Sound Foundation', 'Limitless Access Standard', 'Limitless Sound', 'Limitless Voice',
   'Limitless One-Hand', 'Limitless Zoom', 'Limitless Color', 'Limitless Control', 'Limitless Link',
-  'Access Standard', 'GazeStage', 'One-Hand', 'Logic Pro', 'Pro Tools', 'Ableton Live',
+  'Access Standard', 'GazeStage', 'One-Hand', 'Logic Pro', 'Pro Tools', 'Ableton Live', 'GarageBand', 'REAPER', 'FL Studio',
   'Xbox Adaptive Controller', 'Line 6 Helix', 'Apple Silicon', 'Apple', 'macOS', 'Mac', 'Windows',
   'SmartScreen', 'GitHub', 'Intel', 'MIDI', 'PDF', 'DAW', 'Common Voice', 'FLEURS', 'Jason Barnes',
   'Conyers', 'Georgia', 'Foundation', 'Microsoft', 'plug-ins', 'plug-in',
