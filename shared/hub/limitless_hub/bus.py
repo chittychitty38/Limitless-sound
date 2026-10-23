@@ -467,7 +467,13 @@ class Bus:
         if not text or not self.settings["prefs"].get("speak", True):
             return
         if self.speaker is not None:
-            self.speaker.say(text, lang=self.language_of(source, lang))
+            lang = self.language_of(source, lang)
+            # English is said the way it always was, so a speaker that takes only the text
+            # (the Access Standard kit's, a plug-in's) keeps working.
+            if lang == languages.DEFAULT:
+                self.speaker.say(text)
+            else:
+                self.speaker.say(text, lang=lang)
 
     def language_of(self, source: str, lang=None) -> str:
         """The language text is in: the one it names, else the one its app reported

@@ -65,7 +65,7 @@ def start_private_hub(home: Path):
     from limitless_hub.server import Hub as RealHub  # noqa: E402
 
     class Quiet:
-        def say(self, text):
+        def say(self, text, lang="en"):
             pass
 
     hub = RealHub({}, port=0, http_port=0, speaker=Quiet(), persist=False).start()
