@@ -546,6 +546,8 @@ footer p { margin: 0; }
       box.innerHTML = data.runs.map((run) => {
         if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>No se pudo completar: ${en(run.error)}</p></div>`;
         const ok = run.apps.filter(passed).length;
+        const hub = run.hubIdle && run.hubIdle.cpuPercent != null
+          ? ` La página de Limitless Sound${run.hubVersion ? " " + esc(run.hubVersion) : ""}: en reposo, ${esc(run.hubIdle.cpuPercent)}&nbsp;% del procesador.` : "";
         const when = new Date(run.when).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
         const apps = run.apps.map((a) => {
           const good = passed(a);
@@ -559,7 +561,7 @@ footer p { margin: 0; }
         }).join("");
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
-          + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.</p>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.${hub}</p>`
           + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })

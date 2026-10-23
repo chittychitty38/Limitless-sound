@@ -523,6 +523,8 @@ footer p { margin: 0; }
       box.innerHTML = data.runs.map((run) => {
         if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>${esc(run.error)}</p></div>`;
         const ok = run.apps.filter(passed).length;
+        const hub = run.hubIdle && run.hubIdle.cpuPercent != null
+          ? ` The Limitless Sound page${run.hubVersion ? " " + esc(run.hubVersion) : ""} used ${esc(run.hubIdle.cpuPercent)}% of the processor sitting idle.` : "";
         const when = new Date(run.when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
         const apps = run.apps.map((a) => {
           const good = passed(a);
@@ -537,7 +539,7 @@ footer p { margin: 0; }
         }).join("");
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
-          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.${hub}</p>`
           + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })

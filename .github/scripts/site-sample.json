@@ -20,6 +20,8 @@
         "when": "2026-10-23T05:11:56Z",
         "suiteVersion": "v0.2.6",
         "installSeconds": 11.0,
+        "hubVersion": "0.2.6",
+        "hubIdle": { "cpuPercent": 0.1, "memoryMB": 25 },
         "computer": { "os": "macOS 15.7.9" },
         "suite": [
           { "id": "S1", "ok": true, "check": "Every app connected to the suite at the same time", "detail": "6 connected" },
