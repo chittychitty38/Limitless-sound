@@ -54,7 +54,7 @@ needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom's Spanish w
 FLOORS = {
     "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03, "after": 1.35},
     "es": {"right": 0.79, "worst": 0.30, "with_yes": 0.80, "worst_with_yes": 0.30, "stray": 0.10, "after": 1.6},
-    "pt": {"right": 0.0, "worst": 0.0, "with_yes": 0.0, "worst_with_yes": 0.0, "stray": 1.0, "after": 9.0},  # first runs
+    "pt": {"right": 0.58, "worst": 0.0, "with_yes": 0.58, "worst_with_yes": 0.0, "stray": 0.09, "after": 1.7},
 }
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
@@ -165,6 +165,14 @@ def test_real_people_saying_voice_commands():
     # the time ("pagar" heard as "parar" 8 times in 36); commands acted a median 1.38 s after the
     # word ended, as the Spanish model ends an utterance later than the English one, and play,
     # stop and record 0.57 s.
+    # Voice 0.4.2 in Brazilian Portuguese, a preview, two runs (39925409575 and 39925513641), 23
+    # words with Logic Pro in front: 61.9% to 62.3% right at once and 62.5% to 62.7% with a yes. The
+    # small Portuguese model hears nothing at all in about a third of these clips, where Spanish's
+    # hears nothing in 4% of the same kind (stress/README.md). The weakest, "apagar", is never right
+    # in its 5 clips (heard as nothing, or as "a pagar", which asks), so there's no floor for one
+    # word; no destructive key from a word not said; stray words fired a command 5.4% to 6.0% of
+    # the time ("sala" heard as "solo" or "salvar"); commands acted a median 1.54 s after the word,
+    # and play, stop and record about 0.75 s.
     floor = FLOORS[LANG.code]
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
     assert hits / tries >= floor["right"], f"only {hits / tries:.1%} of the command words were right"
