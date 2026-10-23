@@ -71,7 +71,7 @@ Then do the same for **Developer ID Installer: Your Name (AB12CD34EF)**, and nam
 `DeveloperIDInstaller.p12`.
 
 Write down both names exactly as Keychain Access shows them, for example
-`Developer ID Application: Bennet Laren (AB12CD34EF)`. You'll need them in step 6.
+`Developer ID Application: Your Name (AB12CD34EF)`. You'll need them in step 6.
 
 ### 5. Make an app-specific password
 
@@ -105,10 +105,10 @@ For the installer certificate, use `DeveloperIDInstaller.p12` instead.
 | --- | --- |
 | `APPLE_CERT_P12` | `DeveloperIDApplication.p12`, copied with the Terminal line above |
 | `APPLE_CERT_PASSWORD` | the password you gave that file |
-| `APPLE_SIGNING_IDENTITY` | its name, like `Developer ID Application: Bennet Laren (AB12CD34EF)` |
+| `APPLE_SIGNING_IDENTITY` | its name, like `Developer ID Application: Your Name (AB12CD34EF)` |
 | `APPLE_INSTALLER_CERT_P12` | `DeveloperIDInstaller.p12`, copied the same way |
 | `APPLE_INSTALLER_CERT_PASSWORD` | the password you gave that file |
-| `APPLE_INSTALLER_IDENTITY` | its name, like `Developer ID Installer: Bennet Laren (AB12CD34EF)` |
+| `APPLE_INSTALLER_IDENTITY` | its name, like `Developer ID Installer: Your Name (AB12CD34EF)` |
 | `APPLE_ID` | the email address of your Apple Account |
 | `APPLE_TEAM_ID` | your Team ID from step 2 |
 | `APPLE_APP_PASSWORD` | the app-specific password from step 5 |
