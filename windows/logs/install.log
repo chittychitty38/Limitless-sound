@@ -1,99 +1,99 @@
-﻿2026-10-23 11:32:22.661   Log opened. (Time zone: UTC+00:00)
-2026-10-23 11:32:22.661   Setup version: Inno Setup version 6.7.1
-2026-10-23 11:32:22.661   Original Setup EXE: D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe
-2026-10-23 11:32:22.661   Setup command line: /SL5="$6012E,327897236,867840,D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log
-2026-10-23 11:32:22.661   Windows version: 10.0.26100
-2026-10-23 11:32:22.661   Windows architecture: x64 (64-bit)
-2026-10-23 11:32:22.661   Machine types supported by system: x86 x64
-2026-10-23 11:32:22.661   User privileges: Administrative
-2026-10-23 11:32:22.665   Administrative install mode: No
-2026-10-23 11:32:22.665   Install mode root key: HKEY_CURRENT_USER
-2026-10-23 11:32:22.665   64-bit install mode: No
-2026-10-23 11:32:22.665   RedirectionGuard status for current process: Enabled in enforcing mode
-2026-10-23 11:32:22.667   Created protected temporary directory: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp
-2026-10-23 11:32:23.647   Found 7 files to register with RestartManager.
-2026-10-23 11:32:23.647   Calling RestartManager's RmGetList.
-2026-10-23 11:32:23.654   RmGetList finished successfully.
-2026-10-23 11:32:23.654   RestartManager found no applications using one of our files.
-2026-10-23 11:32:23.679   Starting the installation process.
-2026-10-23 11:32:23.682   -- File entry --
-2026-10-23 11:32:23.682   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app0.exe
-2026-10-23 11:32:23.930   Time stamp of our file: 2026-10-23 11:16:12.000
-2026-10-23 11:32:23.930   Installing the file.
-2026-10-23 11:32:24.213   Successfully installed the file.
-2026-10-23 11:32:24.213   -- File entry --
-2026-10-23 11:32:24.213   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app1.exe
-2026-10-23 11:32:24.213   Time stamp of our file: 2026-10-23 11:16:16.000
-2026-10-23 11:32:24.213   Installing the file.
-2026-10-23 11:32:25.182   Successfully installed the file.
-2026-10-23 11:32:25.182   -- File entry --
-2026-10-23 11:32:25.182   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app2.exe
-2026-10-23 11:32:25.182   Time stamp of our file: 2026-10-23 11:16:22.000
-2026-10-23 11:32:25.182   Installing the file.
-2026-10-23 11:32:25.731   Successfully installed the file.
-2026-10-23 11:32:25.731   -- File entry --
-2026-10-23 11:32:25.731   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app3.exe
-2026-10-23 11:32:25.731   Time stamp of our file: 2026-10-23 11:17:02.000
-2026-10-23 11:32:25.731   Installing the file.
-2026-10-23 11:32:26.886   Successfully installed the file.
-2026-10-23 11:32:26.886   -- File entry --
-2026-10-23 11:32:26.886   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app4.exe
-2026-10-23 11:32:26.886   Time stamp of our file: 2026-10-23 11:17:06.000
-2026-10-23 11:32:26.886   Installing the file.
-2026-10-23 11:32:26.934   Successfully installed the file.
-2026-10-23 11:32:26.934   -- File entry --
-2026-10-23 11:32:26.934   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app5.exe
-2026-10-23 11:32:26.934   Time stamp of our file: 2026-10-23 11:17:10.000
-2026-10-23 11:32:26.934   Installing the file.
-2026-10-23 11:32:27.142   Successfully installed the file.
-2026-10-23 11:32:27.142   -- File entry --
-2026-10-23 11:32:27.142   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app6.exe
-2026-10-23 11:32:27.142   Time stamp of our file: 2026-10-23 11:17:16.000
-2026-10-23 11:32:27.142   Installing the file.
-2026-10-23 11:32:28.429   Successfully installed the file.
-2026-10-23 11:32:28.429   Installation process succeeded.
-2026-10-23 11:32:28.433   -- Run entry --
-2026-10-23 11:32:28.433   Run as: Current user
-2026-10-23 11:32:28.433   Type: Exec
-2026-10-23 11:32:28.433   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app0.exe
-2026-10-23 11:32:28.433   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /TASKS=startup
-2026-10-23 11:32:30.542   Process exit code: 0
-2026-10-23 11:32:30.542   -- Run entry --
-2026-10-23 11:32:30.542   Run as: Current user
-2026-10-23 11:32:30.542   Type: Exec
-2026-10-23 11:32:30.542   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app1.exe
-2026-10-23 11:32:30.542   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 11:32:38.902   Process exit code: 0
-2026-10-23 11:32:38.902   -- Run entry --
-2026-10-23 11:32:38.902   Run as: Current user
-2026-10-23 11:32:38.902   Type: Exec
-2026-10-23 11:32:38.902   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app2.exe
-2026-10-23 11:32:38.902   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 11:32:40.280   Process exit code: 0
-2026-10-23 11:32:40.280   -- Run entry --
-2026-10-23 11:32:40.280   Run as: Current user
-2026-10-23 11:32:40.280   Type: Exec
-2026-10-23 11:32:40.280   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app3.exe
-2026-10-23 11:32:40.280   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 11:32:50.324   Process exit code: 0
-2026-10-23 11:32:50.324   -- Run entry --
-2026-10-23 11:32:50.324   Run as: Current user
-2026-10-23 11:32:50.324   Type: Exec
-2026-10-23 11:32:50.324   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app4.exe
-2026-10-23 11:32:50.324   Parameters: /S
-2026-10-23 11:32:51.318   Process exit code: 0
-2026-10-23 11:32:51.318   -- Run entry --
-2026-10-23 11:32:51.318   Run as: Current user
-2026-10-23 11:32:51.318   Type: Exec
-2026-10-23 11:32:51.318   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app5.exe
-2026-10-23 11:32:51.318   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-2026-10-23 11:32:53.053   Process exit code: 0
-2026-10-23 11:32:53.053   -- Run entry --
-2026-10-23 11:32:53.053   Run as: Current user
-2026-10-23 11:32:53.053   Type: Exec
-2026-10-23 11:32:53.053   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-TT3HITVSLC.tmp\app6.exe
-2026-10-23 11:32:53.053   Parameters: /S
-2026-10-23 11:33:16.681   Process exit code: 0
-2026-10-23 11:33:16.683   Need to restart Windows? No
-2026-10-23 11:33:16.685   Deinitializing Setup.
-2026-10-23 11:33:16.708   Log closed.
+﻿2026-10-23 20:07:16.235   Log opened. (Time zone: UTC+00:00)
+2026-10-23 20:07:16.235   Setup version: Inno Setup version 6.7.1
+2026-10-23 20:07:16.235   Original Setup EXE: D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe
+2026-10-23 20:07:16.235   Setup command line: /SL5="$40198,327865724,867840,D:\a\Limitless-sound\Limitless-sound\dl\Limitless-Sound-Suite-windows.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log
+2026-10-23 20:07:16.235   Windows version: 10.0.26100
+2026-10-23 20:07:16.235   Windows architecture: x64 (64-bit)
+2026-10-23 20:07:16.235   Machine types supported by system: x86 x64
+2026-10-23 20:07:16.235   User privileges: Administrative
+2026-10-23 20:07:16.238   Administrative install mode: No
+2026-10-23 20:07:16.238   Install mode root key: HKEY_CURRENT_USER
+2026-10-23 20:07:16.238   64-bit install mode: No
+2026-10-23 20:07:16.238   RedirectionGuard status for current process: Enabled in enforcing mode
+2026-10-23 20:07:16.240   Created protected temporary directory: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp
+2026-10-23 20:07:16.879   Found 7 files to register with RestartManager.
+2026-10-23 20:07:16.879   Calling RestartManager's RmGetList.
+2026-10-23 20:07:16.884   RmGetList finished successfully.
+2026-10-23 20:07:16.884   RestartManager found no applications using one of our files.
+2026-10-23 20:07:16.899   Starting the installation process.
+2026-10-23 20:07:16.900   -- File entry --
+2026-10-23 20:07:16.901   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app0.exe
+2026-10-23 20:07:17.027   Time stamp of our file: 2026-10-23 19:39:12.000
+2026-10-23 20:07:17.027   Installing the file.
+2026-10-23 20:07:17.237   Successfully installed the file.
+2026-10-23 20:07:17.237   -- File entry --
+2026-10-23 20:07:17.237   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app1.exe
+2026-10-23 20:07:17.239   Time stamp of our file: 2026-10-23 19:39:16.000
+2026-10-23 20:07:17.239   Installing the file.
+2026-10-23 20:07:18.067   Successfully installed the file.
+2026-10-23 20:07:18.067   -- File entry --
+2026-10-23 20:07:18.069   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app2.exe
+2026-10-23 20:07:18.069   Time stamp of our file: 2026-10-23 19:39:20.000
+2026-10-23 20:07:18.069   Installing the file.
+2026-10-23 20:07:18.550   Successfully installed the file.
+2026-10-23 20:07:18.550   -- File entry --
+2026-10-23 20:07:18.550   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app3.exe
+2026-10-23 20:07:18.550   Time stamp of our file: 2026-10-23 19:39:26.000
+2026-10-23 20:07:18.550   Installing the file.
+2026-10-23 20:07:19.600   Successfully installed the file.
+2026-10-23 20:07:19.600   -- File entry --
+2026-10-23 20:07:19.600   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app4.exe
+2026-10-23 20:07:19.600   Time stamp of our file: 2026-10-23 19:39:28.000
+2026-10-23 20:07:19.600   Installing the file.
+2026-10-23 20:07:19.639   Successfully installed the file.
+2026-10-23 20:07:19.639   -- File entry --
+2026-10-23 20:07:19.639   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app5.exe
+2026-10-23 20:07:19.639   Time stamp of our file: 2026-10-23 19:39:32.000
+2026-10-23 20:07:19.639   Installing the file.
+2026-10-23 20:07:19.827   Successfully installed the file.
+2026-10-23 20:07:19.827   -- File entry --
+2026-10-23 20:07:19.829   Dest filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app6.exe
+2026-10-23 20:07:19.829   Time stamp of our file: 2026-10-23 19:39:38.000
+2026-10-23 20:07:19.829   Installing the file.
+2026-10-23 20:07:21.162   Successfully installed the file.
+2026-10-23 20:07:21.162   Installation process succeeded.
+2026-10-23 20:07:21.165   -- Run entry --
+2026-10-23 20:07:21.165   Run as: Current user
+2026-10-23 20:07:21.165   Type: Exec
+2026-10-23 20:07:21.165   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app0.exe
+2026-10-23 20:07:21.165   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /TASKS=startup
+2026-10-23 20:07:22.829   Process exit code: 0
+2026-10-23 20:07:22.829   -- Run entry --
+2026-10-23 20:07:22.829   Run as: Current user
+2026-10-23 20:07:22.829   Type: Exec
+2026-10-23 20:07:22.829   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app1.exe
+2026-10-23 20:07:22.829   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 20:07:30.787   Process exit code: 0
+2026-10-23 20:07:30.787   -- Run entry --
+2026-10-23 20:07:30.787   Run as: Current user
+2026-10-23 20:07:30.787   Type: Exec
+2026-10-23 20:07:30.787   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app2.exe
+2026-10-23 20:07:30.787   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 20:07:32.199   Process exit code: 0
+2026-10-23 20:07:32.199   -- Run entry --
+2026-10-23 20:07:32.199   Run as: Current user
+2026-10-23 20:07:32.199   Type: Exec
+2026-10-23 20:07:32.199   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app3.exe
+2026-10-23 20:07:32.199   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 20:07:41.665   Process exit code: 0
+2026-10-23 20:07:41.665   -- Run entry --
+2026-10-23 20:07:41.665   Run as: Current user
+2026-10-23 20:07:41.665   Type: Exec
+2026-10-23 20:07:41.665   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app4.exe
+2026-10-23 20:07:41.665   Parameters: /S
+2026-10-23 20:07:42.525   Process exit code: 0
+2026-10-23 20:07:42.525   -- Run entry --
+2026-10-23 20:07:42.525   Run as: Current user
+2026-10-23 20:07:42.525   Type: Exec
+2026-10-23 20:07:42.525   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app5.exe
+2026-10-23 20:07:42.525   Parameters: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+2026-10-23 20:07:44.429   Process exit code: 0
+2026-10-23 20:07:44.429   -- Run entry --
+2026-10-23 20:07:44.429   Run as: Current user
+2026-10-23 20:07:44.429   Type: Exec
+2026-10-23 20:07:44.429   Filename: C:\Users\RUNNER~1\AppData\Local\Temp\is-P841ZON9LP.tmp\app6.exe
+2026-10-23 20:07:44.429   Parameters: /S
+2026-10-23 20:08:03.807   Process exit code: 0
+2026-10-23 20:08:03.809   Need to restart Windows? No
+2026-10-23 20:08:03.811   Deinitializing Setup.
+2026-10-23 20:08:03.850   Log closed.

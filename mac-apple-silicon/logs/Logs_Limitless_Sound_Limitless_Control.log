@@ -1,3 +1,3 @@
-2026-10-23 11:32:51,293 INFO    Limitless Control: Started Limitless Control 0.2.8 on Darwin 15.7.9 (arm64), Python 3.12.10
-2026-10-23 11:32:51,736 INFO    Limitless Control.stdout: Limitless Control 0.2.8 running. Settings: http://127.0.0.1:47820/?t=gcOaJZaT1cYmbB2FKM2c5A
-2026-10-23 11:32:51,740 INFO    Limitless Control.stdout: Mac: allow Accessibility access so key commands reach your apps.
+2026-10-23 20:17:01,142 INFO    Limitless Control: Started Limitless Control 0.2.8 on Darwin 15.7.9 (arm64), Python 3.12.10
+2026-10-23 20:17:01,839 INFO    Limitless Control.stdout: Limitless Control 0.2.8 running. Settings: http://127.0.0.1:47820/?t=jM5ix1IDwS0JfBvahRtkhg
+2026-10-23 20:17:01,850 INFO    Limitless Control.stdout: Mac: allow Accessibility access so key commands reach your apps.
