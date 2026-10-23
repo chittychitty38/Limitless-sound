@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from .audio import list_input_devices
-from .look import grow, sized
+from .look import LiveText, grow, sized
 from .settings import APP_NAME
 
 STARTER_COMMANDS = [
@@ -49,8 +49,8 @@ def _body(text):
     return sized(lbl, 1.15)
 
 
-def _status(text=""):
-    lbl = sized(QLabel(text), 1.15, bold=True)
+def _status(about, text=""):
+    lbl = sized(LiveText(about, text), 1.15, bold=True)
     lbl.setWordWrap(True)
     return lbl
 
@@ -94,7 +94,7 @@ class SetupWizard(QDialog):
         self.next_btn.setDefault(True)
         self.back_btn.clicked.connect(self.back)
         self.next_btn.clicked.connect(self.forward)
-        self.step_label = QLabel()
+        self.step_label = LiveText("Setup step")
 
         nav = QHBoxLayout()
         nav.addWidget(self.step_label)
@@ -214,7 +214,7 @@ class MicPermissionPage(Page):
         self.button.setMinimumHeight(48)
         self.button.clicked.connect(self.ask)
         self.box.addWidget(self.button)
-        self.status = _status()
+        self.status = _status("Microphone permission")
         self.box.addWidget(self.status)
         self.box.addStretch(1)
         self._announced = None
@@ -274,7 +274,7 @@ class ControlPermissionPage(Page):
         self.button.setMinimumHeight(48)
         self.button.clicked.connect(self.ask)
         self.box.addWidget(self.button)
-        self.status = _status()
+        self.status = _status("Permission to press keys")
         self.box.addWidget(self.status)
         self.skip = QPushButton("Skip for now (commands won't work until this is on)")
         self.skip.setFlat(True)
@@ -323,6 +323,7 @@ class MicCheckPage(Page):
         lbl = QLabel("&Microphone")
         self.mics = QComboBox()
         self.mics.setAccessibleName("Microphone")
+        self.mics.setAccessibleDescription("Microphone to listen with")   # what VoiceOver reads as its label
         lbl.setBuddy(self.mics)
         row.addWidget(lbl)
         row.addWidget(self.mics, 1)
@@ -333,8 +334,7 @@ class MicCheckPage(Page):
         self.level.setFixedHeight(26)
         self.level.setAccessibleName("Microphone level")
         self.box.addWidget(self.level)
-        self.result = _status("Listening…")
-        self.result.setAccessibleName("What was heard")
+        self.result = _status("What was heard", "Listening…")
         self.box.addWidget(self.result)
         self.box.addStretch(1)
         self.got_it = False

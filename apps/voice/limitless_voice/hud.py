@@ -11,7 +11,7 @@ from PySide6.QtCore import QAbstractAnimation, QEasingCurve, QPropertyAnimation,
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPixmap, QIcon
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from .look import sized
+from .look import LiveText, sized
 
 # state -> (dot colour, label)
 STATES = {
@@ -54,13 +54,15 @@ class Hud(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.setFocusPolicy(Qt.NoFocus)
+        self.setWindowTitle("Limitless Voice")   # a window it draws itself: named for screen readers
+        self.setAccessibleName("What Limitless Voice heard")
 
         self.dot = QLabel()
         # sized even at the normal size: labels with a style sheet of their own keep their
         # first font unless it's set again when the text size changes
-        self.state_label = sized(QLabel(), 1.0)
-        self.heard = sized(QLabel(), 1.5, bold=True)
-        self.did = sized(QLabel(), 1.0)
+        self.state_label = sized(LiveText("Listening state"), 1.0)
+        self.heard = sized(LiveText("Heard"), 1.5, bold=True)
+        self.did = sized(LiveText("What happened"), 1.0)
         for lbl in (self.state_label, self.heard, self.did):
             lbl.setStyleSheet("color: white; background: transparent;")
         self.heard.setWordWrap(True)

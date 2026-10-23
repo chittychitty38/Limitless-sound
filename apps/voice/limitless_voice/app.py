@@ -26,7 +26,7 @@ from .audio import Listener, list_input_devices
 from .engine import BUILTIN_PHRASES, Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs, recognizer_phrases
 from .keys import spoken_vocabulary
-from .look import grow, in_use, resize_text, sized
+from .look import LiveText, grow, in_use, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .numbers import NUMBER_WORDS
 from .platforms import current_os, get_platform
@@ -171,6 +171,7 @@ class SettingsDialog(QDialog):
 
         self.model = QComboBox()
         self.model.setAccessibleName("Speech model")
+        self.model.setAccessibleDescription("Speech model for listening")   # what VoiceOver reads as its label
         for name, (label, size) in MODELS.items():
             have = " (installed)" if find_model(name) else f" ({size} download)"
             self.model.addItem(label + have, name)
@@ -309,7 +310,7 @@ class MainWindow(QMainWindow):
         self.permission_box = QFrame()
         self.permission_box.setFrameShape(QFrame.StyledPanel)
         pbox = QVBoxLayout(self.permission_box)
-        self.permission_text = QLabel()
+        self.permission_text = LiveText("Permission needed")
         self.permission_text.setWordWrap(True)
         pbox.addWidget(self.permission_text)
         prow = QHBoxLayout()
@@ -322,14 +323,12 @@ class MainWindow(QMainWindow):
         self.permission_box.hide()
         layout.addWidget(self.permission_box)
 
-        self.heard_label = sized(QLabel("Say something, like \"what can I say\"."), 1.25)
+        # A screen reader reads their words, and what each one is (see LiveText)
+        self.heard_label = sized(LiveText("Last thing heard", "Say something, like \"what can I say\"."), 1.25)
         self.heard_label.setWordWrap(True)
-        self.heard_label.setAccessibleName("Last thing heard")
-        self.did_label = QLabel("")
+        self.did_label = LiveText("What happened")
         self.did_label.setWordWrap(True)
-        self.did_label.setAccessibleName("What happened")
-        self.target_label = QLabel("")
-        self.target_label.setAccessibleName("App receiving commands")
+        self.target_label = LiveText("App receiving commands")
         for lbl in (self.heard_label, self.did_label, self.target_label):
             lbl.setTextInteractionFlags(Qt.TextSelectableByKeyboard | Qt.TextSelectableByMouse)
             layout.addWidget(lbl)
@@ -338,6 +337,7 @@ class MainWindow(QMainWindow):
         mic_label = QLabel("&Microphone")
         self.mic_combo = QComboBox()
         self.mic_combo.setAccessibleName("Microphone")
+        self.mic_combo.setAccessibleDescription("Microphone to listen with")   # what VoiceOver reads as its label
         mic_label.setBuddy(self.mic_combo)
         mic_row.addWidget(mic_label)
         mic_row.addWidget(self.mic_combo, 1)
@@ -354,7 +354,7 @@ class MainWindow(QMainWindow):
         self.level.setAccessibleName("Microphone level")
         layout.addWidget(self.level)
 
-        self.mic_error = QLabel("")
+        self.mic_error = LiveText("Microphone problem")
         self.mic_error.setWordWrap(True)
         self.mic_error.hide()
         layout.addWidget(self.mic_error)
