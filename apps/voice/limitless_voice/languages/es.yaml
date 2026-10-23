@@ -238,8 +238,8 @@ texts:
   close this window: cerrar esta ventana
   quit this app: salir de esta aplicación
   Opens Go to Position, types the bar, presses Return: Abre Ir a la posición, escribe el compás y pulsa Intro
-  Toggle solo on the selected track (verify): Activa o quita el solo de la pista seleccionada (comprobar)
-  Toggle mute on the selected track (verify): Silencia la pista seleccionada o le quita el silencio (comprobar)
+  Toggle solo on the selected track: Activa o quita el solo de la pista seleccionada
+  Toggle mute on the selected track: Silencia la pista seleccionada o le quita el silencio
   Toggle record enable on the selected track (verify): Activa o desactiva la grabación de la pista seleccionada (comprobar)
   Focuses the main counter (Bars|Beats), types the bar, presses Return: Va al contador principal (compases y tiempos), escribe el compás y pulsa Intro
   Period, number, period on the keypad recalls a memory location: Punto, número y punto en el teclado numérico recuperan una ubicación de memoria
@@ -247,8 +247,14 @@ texts:
   Solo selected tracks: Solo de las pistas seleccionadas
   Mute selected tracks: Silencia las pistas seleccionadas
   Record-enable selected tracks: Activa la grabación de las pistas seleccionadas
-  Move the edit selection down a track (verify): Baja la selección de edición una pista (comprobar)
-  Move the edit selection up a track (verify): Sube la selección de edición una pista (comprobar)
+  Move the edit selection down a track: Baja la selección de edición una pista
+  Move the edit selection up a track: Sube la selección de edición una pista
+  New MIDI track: Nueva pista MIDI
+  New return track: Nueva pista de retorno
+  Switch the selected track off or on (Live's track activator): Apaga o enciende la pista seleccionada (el activador de pista de Live)
+  Toggle record arm on the selected track: Arma o desarma la grabación de la pista seleccionada
+  Split the clip at the selection: Divide el clip en la selección
+  Opens Export Audio/Video: Abre Exportar audio/vídeo
 
 # For each built-in pack, for each command by its first English phrase: what to say in Spanish.
 # A list is every way to say the command; a mapping gives them per English phrase, where the
@@ -355,8 +361,8 @@ commands:
     musical typing: ["teclado musical", "teclado de escritura musical", "escritura musical"]
     zoom in: &zoom_in ["acercar", "ampliar", "más zoom", "acercar zoom"]
     zoom out: &zoom_out ["alejar", "reducir", "menos zoom", "alejar zoom"]
-    zoom in vertical: ["acercar en vertical", "ampliar en vertical", "pistas más altas"]
-    zoom out vertical: ["alejar en vertical", "reducir en vertical", "pistas más bajas"]
+    zoom in vertical: &taller ["acercar en vertical", "ampliar en vertical", "pistas más altas"]
+    zoom out vertical: &shorter ["alejar en vertical", "reducir en vertical", "pistas más bajas"]
     zoom to fit: &fit ["ajustar a [la] ventana", "ajustar a [la] selección", "zoom a [la] selección",
                        "ajustar zoom"]
     bounce: ["exportar [la] mezcla", "exportar [el] proyecto"]
@@ -415,3 +421,39 @@ commands:
     zoom to fit: *fit
     bounce: ["exportar [la] mezcla", "exportar a disco"]
     save as: ["guardar como", "guarda como"]
+
+  # Live's own names where Spanish musicians use them: clip, loop, MIDI, retorno.
+  Ableton Live:
+    play: *play
+    record: *record
+    metronome: *metronome
+    go to start: *start
+    loop: ["loop", "bucle", "activar loop", "loop a [la] selección", "bucle a [la] selección"]
+    new track: ["nueva pista", "pista nueva", "nueva pista de audio", "añadir [una] pista", "agregar [una] pista",
+                "añadir [una] pista de audio", "agregar [una] pista de audio"]
+    new midi track: ["nueva pista midi", "nueva pista de instrumento", "añadir [una] pista midi",
+                     "agregar [una] pista midi", "añadir [una] pista de instrumento",
+                     "agregar [una] pista de instrumento"]
+    new return track: ["nueva pista de retorno", "añadir [una] pista de retorno", "agregar [una] pista de retorno"]
+    duplicate: ["duplicar", "duplicar [la] pista", "duplica [la] pista", "duplicar eso", "duplica eso",
+                "duplicar [el] clip", "duplica [el] clip"]
+    solo: *solo
+    mute: *mute
+    arm: *arm
+    split: ["dividir", "divide", "dividir aquí", "divide aquí", "dividir [el] clip", "divide [el] clip"]
+    consolidate: ["consolidar", "consolida", "consolidar clips", "unir", "une", "unir clips", "une [los] clips"]
+    quantize: *quantize
+    delete: *delete
+    mixer: ["mezclador", "mostrar [el] mezclador", "ocultar [el] mezclador", "ver [el] mezclador"]
+    browser: ["navegador", "explorador", "mostrar [el] navegador", "ocultar [el] navegador", "ver [el] navegador",
+              "biblioteca"]
+    clip view: ["vista de clip", "vista del clip", "mostrar [el] clip", "editor", "mostrar [el] editor",
+                "piano roll", "editor de teclado"]
+    automation: ["automatización", "mostrar [la] automatización", "modo automatización", "modo de automatización"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
+    zoom in vertical: *taller
+    zoom out vertical: *shorter
+    zoom to selection: ["zoom a [la] selección", "ajustar a [la] selección", "acercar a [la] selección"]
+    zoom to fit: ["ajustar a [la] ventana", "ajustar zoom", "mostrar todo", "ver todo"]
+    export: ["exportar", "exportar audio", "exportar [la] mezcla", "exportar [el] proyecto"]

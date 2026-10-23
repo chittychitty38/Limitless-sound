@@ -65,7 +65,8 @@ class SpanishFile(unittest.TestCase):
         self.assertEqual(ES.check(builtin_packs()), [])
 
     def test_the_english_it_stands_for_is_kept(self):
-        play = next(c for c in SPANISH["mac"][1].commands if "reproducir" in c.phrases)
+        logic = next(p for p in SPANISH["mac"] if p.name == "Logic Pro")
+        play = next(c for c in logic.commands if "reproducir" in c.phrases)
         self.assertEqual(play.english_of("parar"), "stop")
         self.assertEqual(play.english_of("dale play"), "play")
         self.assertEqual(play.english[0], "play")
@@ -138,8 +139,10 @@ class SpanishEngine(unittest.TestCase):
             ("Logic Pro", "grabar", ["r"]),
             ("Logic Pro", "por favor guarda el proyecto gracias", ["cmd+s"]),
             ("Logic Pro", "mostrar el mezclador", ["x"]),
-            ("Logic Pro", "silenciar la pista", ["ctrl+m"]),
-            ("Logic Pro", "mute", ["ctrl+m"]),
+            ("Logic Pro", "silenciar la pista", ["m"]),
+            ("Logic Pro", "mute", ["m"]),
+            ("Ableton Live", "nueva pista midi", ["cmd+shift+t"]),
+            ("Ableton Live", "ir al compás treinta y dos", []),   # Live has no key for it
             ("Logic Pro", "loop", ["c"]),
             ("Pro Tools", "loop", ["shift+cmd+l"]),
             ("Logic Pro", "flecha arriba", ["up"]),
@@ -156,7 +159,7 @@ class SpanishEngine(unittest.TestCase):
         e, _ = engine("Finder")
         r = e.handle("reproducir", "reproducir")
         self.assertFalse(r.handled)
-        self.assertEqual(r.message, '"reproducir" funciona en Logic Pro y Pro Tools. '
+        self.assertEqual(r.message, '"reproducir" funciona en Ableton Live, Logic Pro y Pro Tools. '
                                     "Pon uno de ellos al frente y dilo otra vez.")
 
     def test_yes_and_cancel(self):
@@ -247,7 +250,7 @@ class SpanishEngine(unittest.TestCase):
         ok, message = s.invoke("do", {"phrase": "quit the app"}, "x")
         self.assertEqual(message, "Ese comando necesita que digas sí, así que no se puede usar desde otra "
                                   "aplicación.")
-        self.assertEqual(pressed(p), ["space", "ctrl+s", "space", "/", "32", "return", "/", "8", "return"])
+        self.assertEqual(pressed(p), ["space", "s", "space", "/", "32", "return", "/", "8", "return"])
         e, _ = engine("Finder")
         s = Suite(e)
         s.link = mock.Mock()
