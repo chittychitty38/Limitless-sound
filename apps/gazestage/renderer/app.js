@@ -368,8 +368,9 @@ function wake() {
 }
 function frame(now) {
   framePending = false;
-  toneTick(now);
   step(now);
+  if (toneBusy() && !toneTimer) toneGo();
+  toneDraw();
   const at = `${state.px},${state.py}`, moved = at !== lastAt;
   lastAt = at;
   const settling = state.candidate !== state.current;
@@ -543,7 +544,7 @@ function press(t, source) {
   if (d.goto) return showPage(d.goto);
   if (d.nudge) {
     nudgeXY(NUDGE[d.nudge], 0.05);
-    state.nudging = { t, dir: NUDGE[d.nudge], since: performance.now() };
+    state.nudging = { t, dir: NUDGE[d.nudge], since: performance.now() }; toneGo();
     if (source !== 'gaze' && source !== 'mouse') setTimeout(() => release(t), 250);
     return;
   }
@@ -579,17 +580,17 @@ const SUITE_DO = {
   octaveUp: () => action('octup'), octaveDown: () => action('octdown'), scale: () => action('scale'),
   latch: () => action('hold'), panic: () => action('panic'),
   tone: () => showPage('tone'),
-  'xy.set': (a) => {
+  'xySet': (a) => {
     // x and y are 0..1, or 0..127 like a MIDI value. A missing axis stays where it is.
     const v = (n, cur) => (n == null || n === '' || !Number.isFinite(+n) ? cur : +n > 1 ? +n / 127 : +n);
     placeXY(v(a.x, motion.x), v(a.y, motion.y), a.glide != null && Number.isFinite(+a.glide) ? +a.glide : undefined);
     return `${S.xyNameX} ${toCC(motion.glide?.x ?? motion.x)}, ${S.xyNameY} ${toCC(motion.glide?.y ?? motion.y)}`;
   },
-  'xy.snapA': () => snapXY('A'), 'xy.snapB': () => snapXY('B'), 'xy.snapC': () => snapXY('C'), 'xy.snapD': () => snapXY('D'),
-  'xy.center': () => action('xyCenter'),
-  'xy.left': () => nudgeXY(NUDGE.left, 0.1), 'xy.right': () => nudgeXY(NUDGE.right, 0.1),
-  'xy.up': () => nudgeXY(NUDGE.up, 0.1), 'xy.down': () => nudgeXY(NUDGE.down, 0.1),
-  'xy.follow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
+  'xySnapA': () => snapXY('A'), 'xySnapB': () => snapXY('B'), 'xySnapC': () => snapXY('C'), 'xySnapD': () => snapXY('D'),
+  'xyCenter': () => action('xyCenter'),
+  'xyLeft': () => nudgeXY(NUDGE.left, 0.1), 'xyRight': () => nudgeXY(NUDGE.right, 0.1),
+  'xyUp': () => nudgeXY(NUDGE.up, 0.1), 'xyDown': () => nudgeXY(NUDGE.down, 0.1),
+  'xyFollow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
 };
 let suiteOn = false;
 
@@ -760,11 +761,11 @@ function xyPointer(t, now) {
   return true;
 }
 
-function placeXY(x, y, ms = +S.xyGlide) { motion.glideTo(x, y, ms, performance.now()); wake(); }
+function placeXY(x, y, ms = +S.xyGlide) { motion.glideTo(x, y, ms, performance.now()); toneGo(); wake(); }
 function nudgeXY([dx, dy], step) {
   const x = motion.glide ? motion.glide.x : motion.x, y = motion.glide ? motion.glide.y : motion.y;
   motion.glideTo(clamp(x + dx * step, 0, 1), clamp(y + dy * step, 0, 1), 120, performance.now());
-  wake();
+  toneGo(); wake();
 }
 function snapXY(k) {
   if (state.xyStore) {
@@ -785,7 +786,7 @@ function dragXY(t, e) {
   const go = (ev, instant) => {
     const r = t.getBoundingClientRect();
     const x = clamp((ev.clientX - r.left) / r.width, 0, 1), y = clamp(1 - (ev.clientY - r.top) / r.height, 0, 1);
-    if (instant) placeXY(x, y, Math.min(+S.xyGlide, 150)); else { motion.chaseTo(x, y, 40); wake(); }
+    if (instant) placeXY(x, y, Math.min(+S.xyGlide, 150)); else { motion.chaseTo(x, y, 40); toneGo(); wake(); }
   };
   go(e, true);
   try { t.setPointerCapture(e.pointerId); } catch {}
@@ -800,9 +801,20 @@ $('xy').addEventListener('keydown', (e) => {
   nudgeXY(NUDGE[dir], e.shiftKey ? 0.01 : 0.05);
 });
 
-// Every frame: move the point, draw it, and send whatever changed.
-let lastDrawn = '', xySaveDue = false;
-function toneTick(now) {
+// The point moves and its MIDI goes out on a timer of its own, every 10 ms while it moves, not
+// with the drawing: frames stop while GazeStage is minimised and slow down behind other windows,
+// and "tone A" from Voice has to reach the Helix with Pro Tools in front. toneDraw() shows it.
+let lastDrawn = '', xySaveDue = false, toneTimer = 0;
+const toneBusy = () => motion.moving || !!state.nudging || !!state.teaching;
+function toneGo() {
+  toneStep(performance.now());   // a placement goes out at once
+  if (toneTimer || !toneBusy()) return;
+  toneTimer = setInterval(() => {
+    toneStep(performance.now());
+    if (!toneBusy()) { clearInterval(toneTimer); toneTimer = 0; }
+  }, 10);
+}
+function toneStep(now) {
   const n = state.nudging;
   if (n && now - n.since > 350 && !state.paused) {
     // Held arrow: keep moving, the full width in about three seconds.
@@ -827,11 +839,15 @@ function toneTick(now) {
     xySaveDue = true;
   }
   if (xySaveDue && !motion.moving && !state.nudging) { S.xyX = x; S.xyY = y; save(); xySaveDue = false; }
-  const key = `${x.toFixed(4)},${y.toFixed(4)},${r.sent.x},${r.sent.y}`;
+}
+// With the frames: the point where it is now, and only when that changed.
+function toneDraw() {
+  const x = motion.x, y = motion.y, cx = toCC(x), cy = toCC(y);
+  const key = `${x.toFixed(4)},${y.toFixed(4)}`;
   if (key === lastDrawn) return;
   lastDrawn = key;
   const puck = $('xyPuck'); puck.style.left = x * 100 + '%'; puck.style.top = (1 - y) * 100 + '%';
-  const text = `${S.xyNameX} ${r.sent.x} · ${S.xyNameY} ${r.sent.y}`;
+  const text = `${S.xyNameX} ${cx} · ${S.xyNameY} ${cy}`;
   $('xyReadout').textContent = text; $('xy').setAttribute('aria-valuetext', text);
   for (const b of document.querySelectorAll('[data-snap]')) {
     const p = S.xySnaps[b.dataset.snap];
@@ -915,8 +931,8 @@ async function renderToneSettings() {
 }
 for (const [k, v] of Object.entries(XY_PROFILES)) $('sXyProfile').add(new Option(v.x != null ? `${v.name} (CC ${v.x} and ${v.y})` : v.name, k));
 for (let c = 1; c <= 16; c++) $('sXyChannel').add(new Option(String(c), c));
-$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; wake(); toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
-$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; wake(); toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
+$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; toneGo(); wake(); toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
+$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; toneGo(); wake(); toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
 
 // ---------- Pro Tools LEDs ----------
 midi.addEventListener('led', (e) => {
@@ -988,7 +1004,7 @@ async function onSettingChanged(key) {
     case 'key': case 'scale': case 'pads': allNotesOff(); renderInstrument(); break;
     case 'xyOut': await refreshToneOut(); break;
     case 'xyProfile': case 'xyCcX': case 'xyCcY': case 'xyChannel':
-      state.xySent = {}; renderTone(); renderToneSettings(); break;   // resend on the new controllers
+      state.xySent = {}; toneGo(); renderTone(); renderToneSettings(); break;   // resend on the new controllers
     case 'xyNameX': case 'xyNameY': lastDrawn = ''; renderTone(); break;
     case 'xyShape': if (S.xyShape) synth.shape(motion.x, motion.y); else { synth.shape(null); listen(false); } break;
   }

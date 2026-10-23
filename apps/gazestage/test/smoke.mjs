@@ -106,6 +106,11 @@ try {
   const bare = await app.firstWindow();
   for (let t = 0; t < 300 && !hub.hello; t++) await sleep(100);
   assert.ok(hub.hello, 'joins Limitless Sound on first launch');
+  // The Access Standard's rule for actions (C3 in standard/conformance/las_check.py): a short id of
+  // letters, digits and _, and a plain label. The tone pad's first ids (xy.set) broke it, and only
+  // the proof noticed: GazeStage 0.4.1 lost its level.
+  const badActions = hub.hello.actions.filter((a) => !/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(a.id) || !a.label?.trim() || a.label.length > 60);
+  assert.deepEqual(badActions.map((a) => a.id), [], 'every action has a short id and a plain label');
   assert.equal(await bare.evaluate(() => window.__gs.S.onboarded), false, 'first launch: the guided setup is showing');
   const watch = freezeWatch(bare);
   let audio = null;
@@ -345,17 +350,38 @@ try {
   await win.mouse.move(5, 5);
 
   step('tone pad: other Limitless Sound apps can move it');
-  assert.ok(hub.hello.actions.some((a) => a.id === 'xy.set'));
-  const set = await hubInvoke(5, 'xy.set', { x: 0, y: 127, glide: 0 });
+  assert.ok(hub.hello.actions.some((a) => a.id === 'xySet'));
+  const set = await hubInvoke(5, 'xySet', { x: 0, y: 127, glide: 0 });
   assert.equal(set?.ok, true, JSON.stringify(set));
   await win.waitForTimeout(100);
   assert.deepEqual([await lastCC(16), await lastCC(17)], [0, 127]);
-  assert.equal((await hubInvoke(6, 'xy.snapC'))?.ok, true);
+  assert.equal((await hubInvoke(6, 'xySnapC'))?.ok, true);
   if (listener) {
     await win.waitForTimeout(300);
     listener.closePort();
     assert.ok(heard.some((m) => m[0] === 0xb0 && m[1] === 16 && m[2] === 0), `GazeStage Notes carried the tone pad: ${JSON.stringify(heard.slice(-4))}`);
   }
+
+  step('tone pad: moves and sends with GazeStage minimised, as when the DAW is in front');
+  // Drawing stops while the window is minimised; the tone pad's MIDI must not wait for it. It
+  // used to move with the drawing: "tone A" from Voice waited for GazeStage to be looked at.
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.isVisible())?.minimize());
+  await win.evaluate(() => {   // and, wherever minimising doesn't stop it (a test display), no frames
+    const ask = window.requestAnimationFrame.bind(window), held = [];
+    window.requestAnimationFrame = (f) => { held.push(f); return 0; };
+    window.__framesBack = () => { window.requestAnimationFrame = ask; held.forEach((f) => ask(f)); };
+  });
+  await sleep(500);
+  const asked = Date.now();
+  assert.equal((await hubInvoke(7, 'xySet', { x: 127, y: 0, glide: 300 }))?.ok, true);
+  await win.waitForFunction(() => window.__gs.sent.filter((m) => m[1] === 16).at(-1)?.[2] === 127, null, { polling: 20, timeout: 3000 });
+  const glided = Date.now() - asked;
+  assert.ok(glided < 1000, `a 300 ms glide finished ${glided} ms after the action, with the window minimised`);
+  assert.equal(await win.evaluate(() => window.__gs.sent.filter((m) => m[1] === 17).at(-1)?.[2]), 0);
+  await win.evaluate(() => window.__framesBack());
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.isMinimized())?.restore());
+  await sleep(300);
+
   await win.evaluate(() => Object.assign(window.__gs.S, { mode: 'head', select: 'dwell' }));
   await win.click('[data-goto=play]');
 
