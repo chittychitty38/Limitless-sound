@@ -19,5 +19,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.3
-      - run: npx playwright install --with-deps chromium
+      # The browser only: the runner already has the libraries headless Chromium needs, and
+      # --with-deps fetched fonts and a virtual display from Ubuntu's mirror, which twice took the
+      # whole 10 minutes (#118).
+      - run: npx playwright install chromium
       - run: node .github/scripts/site-a11y.cjs
