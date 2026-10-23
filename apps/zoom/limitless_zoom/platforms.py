@@ -91,7 +91,8 @@ class Backend:
 
     def permissions(self):
         """What the OS must allow, as a list of dicts with key, title, why,
-        state ("ok", "missing" or "unknown") and required."""
+        state ("ok", "missing" or "unknown") and required. Title and why are in English;
+        the setup window shows them in the suite's language."""
         return []
 
     def request_permission(self, key):

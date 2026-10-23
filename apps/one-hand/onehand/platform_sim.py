@@ -1,5 +1,10 @@
 """Stand-in backend for systems without keyboard support (and for trying the window)."""
 
+from .words import t
+
+# Shown in the window, which puts it in the suite's language.
+UNSUPPORTED = "Keyboard control works on Mac and Windows. This computer can only show the window."
+
 
 class SimBackend:
     platform = "mac"
@@ -29,7 +34,7 @@ class SimBackend:
         pass
 
     def permission_help(self):
-        return "This computer is not supported yet. The window works, but keys are not changed."
+        return t("This computer is not supported yet. The window works, but keys are not changed.")
 
     def open_permission_settings(self, which=None):
         pass
@@ -68,4 +73,4 @@ def get_backend():
     if sys.platform == "win32":
         from .platform_win import WindowsBackend
         return WindowsBackend()
-    return SimBackend(error="Keyboard control works on Mac and Windows. This computer can only show the window.")
+    return SimBackend(error=UNSUPPORTED)

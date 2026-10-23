@@ -34,28 +34,8 @@ MAC_MODIFIERS = {"cmd": "cmd", "opt": "opt", "ctrl": "ctrl", "shift": "shift", "
 # their own keyboard, so Control stays Control on Windows.
 WINDOWS_LITERAL = {"cmd": "ctrl", "opt": "alt", "ctrl": "ctrl", "shift": "shift", "win": "win"}
 
-# What people say -> chord token. Used by "press ..." commands.
-SPOKEN_KEYS = {
-    "command": "cmd", "commands": "cmd", "control": "ctrl", "option": "opt",
-    "alt": "opt", "shift": "shift", "windows": "win",
-    "return": "return", "enter": "return", "tab": "tab", "space": "space",
-    "spacebar": "space", "delete": "delete", "backspace": "delete",
-    "escape": "escape", "home": "home", "end": "end",
-    "left": "left", "right": "right", "up": "up", "down": "down",
-    "period": ".", "dot": ".", "comma": ",", "slash": "/", "minus": "-",
-    "dash": "-", "equals": "=", "plus": "=", "semicolon": ";",
-    "quote": "'", "backslash": "\\", "bracket": "[", "close bracket": "]",
-}
-SPOKEN_KEYS.update({f"f{i}": f"f{i}" for i in range(1, 21)})
-# NATO alphabet so letters survive noisy rooms ("press command shift november")
-NATO = {
-    "alpha": "a", "bravo": "b", "charlie": "c", "delta": "d", "echo": "e",
-    "foxtrot": "f", "golf": "g", "hotel": "h", "india": "i", "juliet": "j",
-    "kilo": "k", "lima": "l", "mike": "m", "november": "n", "oscar": "o",
-    "papa": "p", "quebec": "q", "romeo": "r", "sierra": "s", "tango": "t",
-    "uniform": "u", "victor": "v", "whiskey": "w", "xray": "x",
-    "yankee": "y", "zulu": "z",
-}
+# What people say for each key ("command", "period", "november") is the language's: its
+# keys section (languages/<code>.yaml).
 
 
 class KeyChordError(ValueError):
@@ -92,21 +72,25 @@ def for_platform(mods, platform, literal=False):
     return out
 
 
-def spoken_to_chord(words):
+def spoken_to_chord(words, language=None):
     """"command shift n" -> "cmd+shift+n". Raises KeyChordError if unclear."""
+    if language is None:
+        from .language import ENGLISH as language
+    names, letters = language.spoken_keys, language.letters
     tokens = words.lower().split()
     mods, key = [], None
     i = 0
     while i < len(tokens):
-        two = " ".join(tokens[i:i + 2])
-        if tokens[i] == "f" and i + 1 < len(tokens) and tokens[i + 1].isdigit():
-            two = "f" + tokens[i + 1]   # "f 5" -> F5
-        if two in SPOKEN_KEYS:
-            tok, i = SPOKEN_KEYS[two], i + 2
+        if tokens[i] in language.f_keys and i + 1 < len(tokens) and tokens[i + 1].isdigit():
+            tok, i = names.get("f" + tokens[i + 1]), i + 2   # "f 5" -> F5
         else:
-            raw = tokens[i]
-            tok = SPOKEN_KEYS.get(raw) or NATO.get(raw) or (raw if len(raw) == 1 else None)
-            i += 1
+            # the longest name that fits: "punto y coma" before "punto", "uve doble" before "uve"
+            for n in (3, 2, 1):
+                said = " ".join(tokens[i:i + n])
+                if n == 1 or i + n <= len(tokens) and (said in names or said in letters):
+                    break
+            tok = names.get(said) or letters.get(said) or (said if len(said) == 1 else None)
+            i += n
         if tok is None:
             raise KeyChordError(f"don't know the key {tokens[i - 1]!r}")
         if tok in ("cmd", "ctrl", "opt", "shift", "win"):
@@ -121,7 +105,6 @@ def spoken_to_chord(words):
 
 
 def spoken_vocabulary():
-    """Every key name the "press ..." command understands, for the recognizer."""
-    words = {p for p in list(SPOKEN_KEYS) + list(NATO) if not re.fullmatch(r"f\d+", p)}
-    words.add("f")  # F-keys are said "f five"
-    return words
+    """Every key name the English "press ..." command understands, for the recognizer."""
+    from .language import ENGLISH
+    return ENGLISH.key_vocabulary()

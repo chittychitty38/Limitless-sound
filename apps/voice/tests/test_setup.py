@@ -183,6 +183,7 @@ class Hud(unittest.TestCase):
             w.deleteLater()
 
 
+EN = {"language": "en"}   # what Voice listens in, reported with the look (prefs.applied)
 HUB_PREFS = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False,
              "reduceMotion": False, "dwellMs": 800, "scanMs": 1200}
 
@@ -229,7 +230,7 @@ class SharedSettings(unittest.TestCase):
         self.assertTrue(w.hud.high_contrast)
         self.assertIn("#ffeb3b", w.hud.did.styleSheet())
         self.assertFalse(QApplication.isEffectEnabled(Qt.UI_General))
-        self.assertEqual(self.applied(), [{"textScale": 1.5, "highContrast": True, "reduceMotion": True}])
+        self.assertEqual(self.applied(), [{"textScale": 1.5, "highContrast": True, "reduceMotion": True, **EN}])
 
     def test_changes_apply_live_even_to_an_open_setup_guide(self):
         w = self.w
@@ -244,9 +245,9 @@ class SharedSettings(unittest.TestCase):
         self.hub("prefs", highContrast=True)
         self.assertAlmostEqual(title.font().pointSizeF(), self.base * 1.8)
         self.assertEqual(app.styleSheet(), HIGH_CONTRAST)
-        self.assertEqual(self.applied(), [{"textScale": 1.0, "highContrast": False, "reduceMotion": False},
-                                          {"textScale": 2.0, "highContrast": False, "reduceMotion": False},
-                                          {"textScale": 1.0, "highContrast": True, "reduceMotion": False}])
+        self.assertEqual(self.applied(), [{"textScale": 1.0, "highContrast": False, "reduceMotion": False, **EN},
+                                          {"textScale": 2.0, "highContrast": False, "reduceMotion": False, **EN},
+                                          {"textScale": 1.0, "highContrast": True, "reduceMotion": False, **EN}])
 
     def test_reduced_motion_means_no_fading(self):
         hud = self.w.hud
@@ -277,9 +278,9 @@ class SharedSettings(unittest.TestCase):
         self.s.high_contrast = False
         self.w.apply_settings()                              # Voice's own setting changed: told again
         self.assertEqual(app.styleSheet(), "")
-        self.assertEqual(self.applied(), [{"textScale": 1.3, "highContrast": True, "reduceMotion": False},
-                                          {"textScale": 1.75, "highContrast": True, "reduceMotion": False},
-                                          {"textScale": 1.75, "highContrast": False, "reduceMotion": False}])
+        self.assertEqual(self.applied(), [{"textScale": 1.3, "highContrast": True, "reduceMotion": False, **EN},
+                                          {"textScale": 1.75, "highContrast": True, "reduceMotion": False, **EN},
+                                          {"textScale": 1.75, "highContrast": False, "reduceMotion": False, **EN}])
 
     def test_without_the_hub_nothing_changes(self):
         w = self.w

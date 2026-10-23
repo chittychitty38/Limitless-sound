@@ -7,6 +7,7 @@ from ctypes import wintypes
 
 from .engine import PASS, SUPPRESS, Tap
 from .keys import WIN_CODES, WIN_EXTENDED, WIN_GENERIC
+from .words import t
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -105,7 +106,7 @@ class WindowsBackend:
         self._hook_handle = user32.SetWindowsHookExW(WH_KEYBOARD_LL, self._proc,
                                                      kernel32.GetModuleHandleW(None), 0)
         if not self._hook_handle:
-            self.error = f"Could not watch the keyboard (error {ctypes.get_last_error()})."
+            self.error = t("Could not watch the keyboard (error {code}).", code=ctypes.get_last_error())
             ready.set()
             return
         ready.set()
@@ -193,7 +194,7 @@ class WindowsBackend:
                          creationflags=0x08000000)  # CREATE_NO_WINDOW
 
     def permission_help(self):
-        return "Windows would not let the app watch the keyboard. Try restarting the app."
+        return t("Windows would not let the app watch the keyboard. Try restarting the app.")
 
     def open_permission_settings(self, which=None):
         pass

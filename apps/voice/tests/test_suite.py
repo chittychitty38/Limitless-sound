@@ -241,7 +241,7 @@ class SharedSettings(unittest.TestCase):
         self.assertEqual(seen[-1]["textScale"], 1.5)
         s.report_look({"textScale": 1.5, "highContrast": False, "reduceMotion": False})
         self.assertEqual(s.link.states, [("prefs.applied", {"textScale": 1.5, "highContrast": False,
-                                                            "reduceMotion": False})])
+                                                            "reduceMotion": False, "language": "en"})])
 
 
 if __name__ == "__main__":

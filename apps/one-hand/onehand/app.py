@@ -7,13 +7,14 @@ from PySide6.QtWidgets import (QApplication, QBoxLayout, QCheckBox, QComboBox, Q
                                QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QStackedWidget, QStyle,
                                QSystemTrayIcon, QVBoxLayout, QWidget)
 
-from . import __version__, applog
+from . import __version__, applog, words
 from .engine import Engine, Settings
 from .icons import app_icon, tray_icon
 from .keys import MIRROR, ROWS, cap, shortcut_text
 from .platform_sim import get_backend
 from .settings import APP_NAME, Prefs, load_layouts
 from .suite import Suite
+from .words import t
 
 # High contrast (a Limitless Sound shared setting) goes on top of the usual look: pure black,
 # white text and edges with no grey, and a blue focus ring that shows on every button, even a yellow one.
@@ -76,6 +77,13 @@ QComboBox:focus {{ border-color: #4fc3ff; }}
 """ + (HIGH_CONTRAST if contrast else "")
 
 
+def label(text, **props):
+    """A label whose words follow the suite's language."""
+    w = QLabel(**props)
+    words.show(w.setText, text)
+    return w
+
+
 def repolish(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)
@@ -88,13 +96,16 @@ class LiveText(QLabel):
     """Words that change on screen: the mode, the key just tried, what setup is waiting for.
     A screen reader reads the words themselves (on a Mac VoiceOver reads a label's name as its
     words, so these never get a fixed name), `about` says what they are, and each change is
-    posted so a screen reader on the label reads the new words."""
+    posted so a screen reader on the label reads the new words. Its words, and what they are,
+    follow the suite's language."""
 
     def __init__(self, about, text="", **props):
         super().__init__(text, **props)
-        self.setAccessibleDescription(about)
+        words.keep(self.setText, text)
+        words.show(self.setAccessibleDescription, about)
 
     def setText(self, text):
+        words.keep(self.setText, text)   # said again in the next language the suite picks
         super().setText(text)
         # Qt posts the name change itself; VoiceOver follows a label's words as its value.
         iface = QAccessible.queryAccessibleInterface(self)
@@ -136,7 +147,9 @@ class KeyCard(QFrame):
         self.cap.setText(cap(key))
         self.cmd.setText(label)
         self.sends.setText(sends)
-        self.setAccessibleName(f"{cap(key)} key: {label or 'nothing'}" + (f", presses {sends}" if sends else ""))
+        what = label or t("nothing")
+        self.setAccessibleName(t("{key} key: {command}, presses {keys}", key=cap(key), command=what, keys=sends)
+                               if sends else t("{key} key: {command}", key=cap(key), command=what))
 
     def set_flash(self, on):
         self.setProperty("flash", on)
@@ -159,7 +172,7 @@ class OnBadge(QWidget):
         self.setWindowTitle(APP_NAME)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        self.label = LiveText("One-hand mode")
+        self.label = LiveText(t("One-hand mode"))
         lay.addWidget(self.label)
         self._floated = False
         self.set_look(1.0, False)
@@ -171,13 +184,16 @@ class OnBadge(QWidget):
                                  f"font-weight: {900 if contrast else 800}; border-radius: {px(16)}; "
                                  f"padding: {px(7)} {px(18)}; border: {4 if contrast else 2}px solid #000;")
         if self.isVisible():
-            self.show_text(self.label.text())   # resize and center it again
+            self.place()   # resize and center it again
 
-    def show_text(self, text):
-        self.label.setText(text)
+    def place(self):
         self.adjustSize()
         screen = QApplication.primaryScreen().availableGeometry()
         self.move(screen.center().x() - self.width() // 2, screen.top() + 10)
+
+    def show_text(self, text):
+        self.label.setText(text)
+        self.place()
         if not self.isVisible():
             self.show()
             if not self._floated:
@@ -194,43 +210,44 @@ class PermissionPage(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(48, 36, 48, 36)
         outer.setSpacing(16)
-        outer.addWidget(QLabel("Welcome to Limitless One-Hand", objectName="title"))
-        intro = QLabel("To turn your keys into Logic Pro and Pro Tools commands, macOS needs you to allow "
-                       "One-Hand to use the keyboard. This takes about a minute and you only do it once.",
-                       wordWrap=True)
-        outer.addWidget(intro)
+        outer.addWidget(label(t("Welcome to Limitless One-Hand"), objectName="title"))
+        outer.addWidget(label(t("To turn your keys into Logic Pro and Pro Tools commands, macOS needs you to allow "
+                                "One-Hand to use the keyboard. This takes about a minute and you only do it once."),
+                              wordWrap=True))
         self.steps = {}
-        for n, (name, why) in enumerate([
-            ("Accessibility", "lets One-Hand press DAW shortcuts for you"),
-            ("Input Monitoring", "lets One-Hand notice which keys you press"),
+        # The names macOS reports them by, and the names its settings show in the language in use.
+        for n, (name, shown, why) in enumerate([
+            ("Accessibility", t("Accessibility"), t("It lets One-Hand press DAW shortcuts for you.")),
+            ("Input Monitoring", t("Input Monitoring"), t("It lets One-Hand notice which keys you press.")),
         ], start=1):
             box = QFrame(objectName="step")
             row = QHBoxLayout(box)
             row.setContentsMargins(16, 12, 16, 12)
-            tick = LiveText(f"Step {n}", "○", objectName="tick")   # its width grows with the text, in style()
-            tick.setAccessibleName(f"{name} not allowed yet")   # the circle, in words
+            tick = LiveText(t("Step {n}", n=n), "○", objectName="tick")   # its width grows with the text, in style()
+            words.show(tick.setAccessibleName, t("{name} not allowed yet", name=shown))   # the circle, in words
             row.addWidget(tick)
-            text = QLabel(f"<b>Step {n}: {name}</b><br>Switch on <b>Limitless One-Hand</b>. It {why}.",
-                          wordWrap=True)
-            row.addWidget(text, 1)
-            btn = QPushButton(f"Open {name} settings", objectName="primary")
-            btn.setAccessibleName(f"Open {name} settings in System Settings")
+            row.addWidget(label(t("<b>Step {n}: {name}</b><br>Switch on <b>Limitless One-Hand</b>. {why}",
+                                  n=n, name=shown, why=why), wordWrap=True), 1)
+            btn = QPushButton(objectName="primary")
+            words.show(btn.setText, t("Open {name} settings", name=shown))
+            words.show(btn.setAccessibleName, t("Open {name} settings in System Settings", name=shown))
             btn.clicked.connect(lambda _=False, w=name: main.backend.open_permission_settings(w))
             row.addWidget(btn)
             outer.addWidget(box)
             self.steps[name] = (box, tick, btn)
-        tips = QLabel("If One-Hand isn't in the list, press <b>+</b> under the list and choose "
-                      "<b>Limitless One-Hand</b> from Applications. If macOS asks to quit and reopen the app, "
-                      "choose <b>Quit &amp; Reopen</b>.", objectName="hint", wordWrap=True)
-        outer.addWidget(tips)
-        self.status = LiveText("Setup status", objectName="status", wordWrap=True)
+        outer.addWidget(label(t("If One-Hand isn't in the list, press <b>+</b> under the list and choose "
+                                "<b>Limitless One-Hand</b> from Applications. If macOS asks to quit and reopen "
+                                "the app, choose <b>Quit &amp; Reopen</b>."), objectName="hint", wordWrap=True))
+        self.status = LiveText(t("Setup status"), objectName="status", wordWrap=True)
         outer.addWidget(self.status)
         row = QHBoxLayout()
-        self.reopen = QPushButton("Reopen One-Hand", objectName="primary")
+        self.reopen = QPushButton(objectName="primary")
+        words.show(self.reopen.setText, t("Reopen One-Hand"))
         self.reopen.clicked.connect(main.relaunch)
         self.reopen.hide()
-        later = QPushButton("Look around first")
-        later.setAccessibleDescription("Skip for now and look at the key map")
+        later = QPushButton()
+        words.show(later.setText, t("Look around first"))
+        words.show(later.setAccessibleDescription, t("Skip for now and look at the key map"))
         later.clicked.connect(lambda: main.show_main())
         row.addWidget(self.reopen)
         row.addWidget(later)
@@ -246,15 +263,16 @@ class PermissionPage(QWidget):
         for name, (box, tick, btn) in self.steps.items():
             done = status.get(name, False)
             box.setProperty("done", done)
-            tick.setAccessibleName(f"{name} {'allowed' if done else 'not allowed yet'}")
+            words.show(tick.setAccessibleName, t("{name} allowed", name=t(name)) if done
+                       else t("{name} not allowed yet", name=t(name)))
             tick.setText("✓" if done else "○")
             btn.setVisible(not done)
             repolish(box)
         if all(status.values()) and tried:
-            self.status.setText("Both are on. macOS needs One-Hand to restart before it can use them.")
+            self.status.setText(t("Both are on. macOS needs One-Hand to restart before it can use them."))
             self.reopen.show()
         else:
-            self.status.setText("Waiting for you to switch these on. This page updates by itself.")
+            self.status.setText(t("Waiting for you to switch these on. This page updates by itself."))
             self.reopen.hide()
 
 
@@ -279,6 +297,8 @@ class MainWindow(QWidget):
         self._seen_previews = 0
         self._front = None
         self._quitting = False
+        self._problem = None    # why the keyboard can't be used, off a Mac
+        self._practice = None   # the key just tried, and its command
 
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(app_icon())
@@ -292,12 +312,12 @@ class MainWindow(QWidget):
         self.pages = QStackedWidget()
         outer.addWidget(self.pages)
         self.permission_page = PermissionPage(self)
-        self.pages.addWidget(self._scrolling(self.permission_page, "Set up keyboard access"))
-        self.pages.addWidget(self._scrolling(self._build_main(), "One-Hand settings and key map"))
+        self.pages.addWidget(self._scrolling(self.permission_page, t("Set up keyboard access")))
+        self.pages.addWidget(self._scrolling(self._build_main(), t("One-Hand settings and key map")))
 
         self._main_thread = MainThread()
         self.suite = Suite(self.engine, backend, self.set_hand, dispatch=self._main_thread.call.emit,
-                           prefs_changed=self.apply_style).start()
+                           prefs_changed=self.apply_style, language_changed=self.retranslate).start()
 
         self.badge = OnBadge(backend)
         self._build_tray()
@@ -324,7 +344,7 @@ class MainWindow(QWidget):
     @staticmethod
     def _scrolling(widget, name):
         area = QScrollArea(widgetResizable=True)
-        area.setAccessibleName(name)   # Tab stops on it, to scroll by keyboard
+        words.show(area.setAccessibleName, name)   # Tab stops on it, to scroll by keyboard
         area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         area.setWidget(widget)
         return area
@@ -342,32 +362,36 @@ class MainWindow(QWidget):
 
         self.banner = QFrame(objectName="banner")
         bl = QVBoxLayout(self.banner)
-        self.banner_text = LiveText("Keyboard access", wordWrap=True)
+        self.banner_text = LiveText(t("Keyboard access"), wordWrap=True)
         bl.addWidget(self.banner_text)
-        self.banner_button = QPushButton("Set up keyboard access", objectName="primary")
+        self.banner_button = QPushButton(objectName="primary")
+        words.show(self.banner_button.setText, t("Set up keyboard access"))
         self.banner_button.clicked.connect(self.show_permission)
         bl.addWidget(self.banner_button)
         self.banner.hide()
         left.addWidget(self.banner)
 
         self.power = QPushButton(objectName="power", checkable=True)
-        self.power.setAccessibleDescription("Turns one-hand mode on or off. You can also double-tap Shift.")
+        words.show(self.power.setAccessibleDescription,
+                   t("Turns one-hand mode on or off. You can also double-tap Shift."))
         self.power.clicked.connect(lambda checked: self.engine.set_enabled(checked))
         left.addWidget(self.power)
-        left.addWidget(QLabel("Click it, double-tap Shift, or press a foot pedal or switch set to F18.",
-                              objectName="hint", wordWrap=True))
-        self.status = LiveText("One-hand mode status", objectName="status", wordWrap=True)
+        left.addWidget(label(t("Click it, double-tap Shift, or press a foot pedal or switch set to F18."),
+                             objectName="hint", wordWrap=True))
+        self.status = LiveText(t("One-hand mode status"), objectName="status", wordWrap=True)
         self.status.setMinimumHeight(56)
         left.addWidget(self.status)
 
         hands = QHBoxLayout()
-        hands.addWidget(QLabel("I'm using my"))
+        hands.addWidget(label(t("I'm using my")))
         # Not a button group: in one, Tab skips the hand that isn't chosen, as with radio buttons.
         # set_hand keeps just one of them checked.
         self.hand_buttons = {}
         for hand in ("left", "right"):
-            b = QPushButton(f"{hand.title()} hand", checkable=True)
-            b.setAccessibleName(f"Use the {hand}-hand layout")
+            b = QPushButton(checkable=True)
+            words.show(b.setText, t("Left hand") if hand == "left" else t("Right hand"))
+            words.show(b.setAccessibleName,
+                       t("Use the left-hand layout") if hand == "left" else t("Use the right-hand layout"))
             b.setChecked(self.prefs.hand == hand)
             b.clicked.connect(lambda _=False, h=hand: self.set_hand(h))
             self.hand_buttons[hand] = b
@@ -379,19 +403,19 @@ class MainWindow(QWidget):
         ol = QVBoxLayout(opts)
         ol.setContentsMargins(16, 10, 16, 10)
         ol.setSpacing(4)
-        ol.addWidget(QLabel("Options", objectName="h2"))
-        self.add_option(ol, "Hold Space to type letters from the other side", "mirror_typing")
-        self.add_option(ol, "Double-tap Shift switches one-hand mode", "double_shift")
+        ol.addWidget(label(t("Options"), objectName="h2"))
+        self.add_option(ol, t("Hold Space to type letters from the other side"), "mirror_typing")
+        self.add_option(ol, t("Double-tap Shift switches one-hand mode"), "double_shift")
         if self.backend.platform == "windows":
-            self.add_option(ol, "Caps Lock switches one-hand mode", "caps_lock_toggle")
-        self.add_option(ol, "Show an ON badge at the top of the screen", "show_badge", self.refresh_power)
-        self.add_option(ol, "Play a sound when switching", "play_sounds")
-        self.add_option(ol, "Say “on” and “off” out loud", "speak")
-        self.add_option(ol, "Larger text", "larger_text", self.apply_style)
-        self.add_option(ol, "Keep this window on top", "keep_on_top", self.apply_on_top)
-        self.add_option(ol, "Start with one-hand mode on", "start_on")
+            self.add_option(ol, t("Caps Lock switches one-hand mode"), "caps_lock_toggle")
+        self.add_option(ol, t("Show an ON badge at the top of the screen"), "show_badge", self.refresh_power)
+        self.add_option(ol, t("Play a sound when switching"), "play_sounds")
+        self.add_option(ol, t("Say “on” and “off” out loud"), "speak")
+        self.add_option(ol, t("Larger text"), "larger_text", self.apply_style)
+        self.add_option(ol, t("Keep this window on top"), "keep_on_top", self.apply_on_top)
+        self.add_option(ol, t("Start with one-hand mode on"), "start_on")
         if self.backend.login_item_supported():
-            self.add_option(ol, "Open One-Hand when I log in", "open_at_login",
+            self.add_option(ol, t("Open One-Hand when I log in"), "open_at_login",
                             lambda: self.backend.set_login_item(self.prefs.open_at_login))
         left.addWidget(opts)
         left.addStretch()
@@ -400,10 +424,11 @@ class MainWindow(QWidget):
         right.setSpacing(10)
         cols.addLayout(right, 6)
         pick = QHBoxLayout()
-        pick.addWidget(QLabel("Your keys in", objectName="h2"))
+        pick.addWidget(label(t("Your keys in"), objectName="h2"))
         self.app_pick = QComboBox()
-        self.app_pick.setAccessibleName("Show the key map for")
-        self.app_pick.setAccessibleDescription("App whose keys are shown")   # what VoiceOver reads as its label
+        words.show(self.app_pick.setAccessibleName, t("Show the key map for"))
+        words.show(self.app_pick.setAccessibleDescription,
+                   t("App whose keys are shown"))   # what VoiceOver reads as its label
         for app in self.layouts["apps"]:
             if app.get(self.backend.platform):
                 self.app_pick.addItem(app["name"], app["id"])
@@ -421,14 +446,13 @@ class MainWindow(QWidget):
                 grid.addWidget(card, r, c)
                 self.cards.append((r, c, card))
         right.addLayout(grid)
-        self.practice = LiveText("Key you just tried", objectName="practice", wordWrap=True)
+        self.practice = LiveText(t("Key you just tried"), objectName="practice", wordWrap=True)
         self.practice.setMinimumHeight(30)
         right.addWidget(self.practice)
         self.note = QLabel(objectName="hint", wordWrap=True)
         right.addWidget(self.note)
-        tips = QLabel("Space still plays and stops. Holding ⌘, ⌥, ⌃ or ⇧ lets your normal shortcuts through. "
-                      "Other apps type normally.", objectName="hint", wordWrap=True)
-        right.addWidget(tips)
+        right.addWidget(label(t("Space still plays and stops. Holding ⌘, ⌥, ⌃ or ⇧ lets your normal shortcuts "
+                                "through. Other apps type normally."), objectName="hint", wordWrap=True))
         right.addStretch()
         return page
 
@@ -438,24 +462,27 @@ class MainWindow(QWidget):
             return
         self.tray = QSystemTrayIcon(tray_icon(False), self)
         menu = QMenu()
-        self.tray_toggle = QAction("Turn one-hand mode on", menu)
+        self.tray_toggle = QAction(menu)   # its words say what it does now, in refresh_power
         self.tray_toggle.triggered.connect(self.engine.toggle)
         menu.addAction(self.tray_toggle)
         menu.addSeparator()
         group = QActionGroup(menu)
         self.tray_hands = {}
         for hand in ("left", "right"):
-            act = QAction(f"{hand.title()} hand", menu, checkable=True)
+            act = QAction(menu, checkable=True)
+            words.show(act.setText, t("Left hand") if hand == "left" else t("Right hand"))
             act.setChecked(self.prefs.hand == hand)
             act.triggered.connect(lambda _=False, h=hand: self.set_hand(h))
             group.addAction(act)
             menu.addAction(act)
             self.tray_hands[hand] = act
         menu.addSeparator()
-        show = QAction("Show One-Hand window", menu)
+        show = QAction(menu)
+        words.show(show.setText, t("Show One-Hand window"))
         show.triggered.connect(self.bring_back)
         menu.addAction(show)
-        quit_ = QAction("Quit One-Hand", menu)
+        quit_ = QAction(menu)
+        words.show(quit_.setText, t("Quit One-Hand"))
         quit_.triggered.connect(self.quit)
         menu.addAction(quit_)
         self.tray.setContextMenu(menu)
@@ -471,7 +498,8 @@ class MainWindow(QWidget):
                         toggle_keys=p.toggle_keys())
 
     def add_option(self, layout, text, attr, extra=None):
-        box = QCheckBox(text)
+        box = QCheckBox()
+        words.show(box.setText, text)
         box.setChecked(getattr(self.prefs, attr))
 
         def changed(_state):
@@ -545,13 +573,21 @@ class MainWindow(QWidget):
                     self.show_permission()
                 self.perm_timer.start()
                 return
-            self.banner_text.setText(f"{exc}\n\n{self.backend.permission_help() or ''}".strip())
+            self._problem = exc
+            self._show_problem()
             self.banner_button.hide()
             self.banner.show()
             return
+        self._problem = None
         self.perm_timer.stop()
         self.banner.hide()
         self.show_main()
+
+    def _show_problem(self):
+        # What the backend said went wrong: words from t(), or English that's in the Spanish table too.
+        said = self._problem.args[0] if self._problem.args else ""
+        said = words.again(said) if isinstance(said, words.Text) else t(str(said))
+        self.banner_text.setText(f"{said}\n\n{self.backend.permission_help() or ''}".strip())
 
     def check_permission(self):
         status = self.backend.permission_status()
@@ -567,7 +603,7 @@ class MainWindow(QWidget):
     def show_main(self):
         self.pages.setCurrentIndex(1)
         if self.backend.platform == "mac" and not self.backend.running:
-            self.banner_text.setText("One-Hand can't use the keyboard yet, so your keys won't change.")
+            self.banner_text.setText(t("One-Hand can't use the keyboard yet, so your keys won't change."))
             self.banner_button.show()
             self.banner.show()
         self.power.setFocus()
@@ -583,7 +619,7 @@ class MainWindow(QWidget):
             self._seen_changes = self.engine.changes
             self.refresh_power()
             on = self.engine.enabled
-            text = "One hand on" if on else "One hand off"
+            text = t("One hand on") if on else t("One hand off")
             if self.prefs.play_sounds:
                 self.backend.play_sound(on)
             self.suite.mode_changed(on)
@@ -604,34 +640,40 @@ class MainWindow(QWidget):
             self.refresh_power()
 
     def show_practice(self, key, label):
-        sends = ""
         for _, _, card in self.cards:
             if card.key == key:
                 card.set_flash(True)
-                sends = card.sends.text()
             elif card.steady and card.property("flash"):
                 card.set_flash(False)   # with reduced motion only the last key pressed stays lit
-        name = self.app_pick.currentText()
-        self.practice.setText(f"{cap(key)} → {label}. In {name} that presses {sends}.")
-        self.backend.announce(label)
+        self._practice = (key, label)
+        self._write_practice()
+        self.backend.announce(t(label))
+
+    def _write_practice(self):
+        key, label = self._practice
+        sends = next((card.sends.text() for _, _, card in self.cards if card.key == key), "")
+        self.practice.setText(t("{key} → {command}. In {app} that presses {keys}.", key=cap(key), command=t(label),
+                                app=self.app_pick.currentText(), keys=sends))
 
     def refresh_power(self):
         on = self.engine.enabled
         self.power.setChecked(on)
-        self.power.setText("One-hand mode is ON" if on else "One-hand mode is OFF")
+        self.power.setText(t("One-hand mode is ON") if on else t("One-hand mode is OFF"))
         self.power.setAccessibleName(self.power.text())
         app = self.engine.profile_for(self._front)
         in_self = bool(self._front) and self._front.lower() in self.engine.self_app_ids
-        hand = self.prefs.hand
+        left = self.prefs.hand == "left"
+        hand = t("left-hand") if left else t("right-hand")
         if not on:
-            text = "Your keyboard works normally."
+            text = t("Your keyboard works normally.")
+            self._practice = None
             self.practice.setText("")
         elif app:
-            text = f"{app['name']} is in front: your {hand}-hand keys are {app['name']} commands."
+            text = t("{app} is in front: your {hand} keys are {app} commands.", app=app["name"], hand=hand)
         elif in_self:
-            text = f"Try it here: press the {hand}-hand keys below to see what they do."
+            text = t("Try it here: press the {hand} keys below to see what they do.", hand=hand)
         else:
-            text = "Waiting for Logic Pro or Pro Tools. Other apps type normally."
+            text = t("Waiting for Logic Pro or Pro Tools. Other apps type normally.")
         self.status.setText(text)
         for _, _, card in self.cards:
             card.setProperty("active", bool(on and (app or in_self)))
@@ -640,11 +682,12 @@ class MainWindow(QWidget):
             repolish(card)
         if self.tray:
             self.tray.setIcon(tray_icon(on))
-            self.tray_toggle.setText("Turn one-hand mode off" if on else "Turn one-hand mode on")
-            self.tray.setToolTip(f"{APP_NAME}: {'ON' if on else 'off'}")
+            self.tray_toggle.setText(t("Turn one-hand mode off") if on else t("Turn one-hand mode on"))
+            self.tray.setToolTip(t("{name}: ON", name=APP_NAME) if on else t("{name}: off", name=APP_NAME))
         if on and self.prefs.show_badge:
-            where = app["name"] if app else "waiting for your DAW"
-            self.badge.show_text(f"ONE-HAND ON  ·  {hand.title()} hand  ·  {where}")
+            where = app["name"] if app else t("waiting for your DAW")
+            self.badge.show_text(t("ONE-HAND ON  ·  {hand}  ·  {where}",
+                                   hand=t("Left hand") if left else t("Right hand"), where=where))
         else:
             self.badge.hide()
 
@@ -658,12 +701,24 @@ class MainWindow(QWidget):
             left_key = ROWS[r][len(ROWS[r]) - 1 - c] if right else ROWS[r][c]
             key = MIRROR[left_key] if right else left_key
             cmd = cmds.get(left_key)
-            card.show_command(key, cmd["label"] if cmd else "",
+            # layouts.json is in English; its labels and notes are in the Spanish table too.
+            card.show_command(key, t(cmd["label"]) if cmd else "",
                               shortcut_text(cmd["send"], cmd.get("mods", []), self.backend.platform) if cmd else "")
-        notes = [f"{c['label']}: {c['note']}" for c in cmds.values() if c.get("note")]
+        notes = [f"{t(c['label'])}: {t(c['note'])}" for c in cmds.values() if c.get("note")]
         self.note.setText("\n".join(notes))
         self.note.setVisible(bool(notes))
         self.fit_to_text()   # another DAW's shortcuts can need more room
+
+    def retranslate(self):
+        """The suite's language changed: every word in the window, its menu and the badge
+        changes in place, so the keyboard focus and what a screen reader is on stay put."""
+        words.show_again()
+        if self._problem is not None:
+            self._show_problem()
+        self.refresh_keys()     # the commands, and room for longer words
+        self.refresh_power()    # the mode, the menu and the badge
+        if self._practice:
+            self._write_practice()
 
     # ---- window life -------------------------------------------------
 
@@ -683,8 +738,8 @@ class MainWindow(QWidget):
             if not self.prefs.seen_menu_tip:
                 self.prefs.seen_menu_tip = True
                 self.prefs.save()
-                self.tray.showMessage(APP_NAME, "One-Hand is still running in the menu bar. "
-                                      "Double-tap Shift any time to switch one-hand mode.",
+                self.tray.showMessage(APP_NAME, t("One-Hand is still running in the menu bar. "
+                                                  "Double-tap Shift any time to switch one-hand mode."),
                                       tray_icon(False), 6000)
             return
         self.shutdown()

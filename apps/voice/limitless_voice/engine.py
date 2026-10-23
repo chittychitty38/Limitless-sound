@@ -7,6 +7,9 @@ It knows four states:
              do anything, so lyrics can't trigger commands mid-take
   command    matches phrases against the packs for the app in front
   dictation  types what you say into the focused field
+
+What it listens for and says back is the language's (language.py): its phrases for the
+built-in commands, its numbers, its replies. The packs' shortcuts are the same in every one.
 """
 
 import difflib
@@ -14,28 +17,10 @@ import re
 from dataclasses import dataclass, field
 
 from .actions import _fill, run_action
-from .grammar import undo_sounds_like
-from .numbers import normalize_numbers
+from .language import ENGLISH
 
-WAKE = {"wake up", "start listening", "computer wake up"}
-SLEEP = {"go to sleep", "stop listening"}
-CANCEL = {"cancel", "never mind", "nevermind", "no"}
-YES = {"yes", "confirm", "do it", "yes please"}
-AGAIN = {"again", "repeat that", "do that again", "one more time", "same again"}
-HELP = {"what can i say", "show commands", "help"}
-DICTATION_ON = {"start dictation", "dictation mode", "start typing", "begin dictation", "dictation on", "take dictation"}
-DICTATION_OFF = {"stop dictation", "command mode", "stop typing", "end dictation", "dictation off"}
-# While a take is recording, only these do anything.
-TAKE_STOP = {"stop", "stop recording", "stop playback", "stop the take"}
-TAKE_OFF = {"end take mode", "take mode off", "all commands"}
-
-# Words the engine itself listens for, so the recognizer knows them too.
-BUILTIN_PHRASES = WAKE | SLEEP | CANCEL | YES | AGAIN | HELP | DICTATION_ON | DICTATION_OFF | TAKE_STOP | TAKE_OFF | {
-    "scratch that", "delete that", "new line", "new paragraph", "times", "twice",
-}
-
-FILLER_START = ("please ", "um ", "uh ", "okay ", "ok ", "hey computer ", "computer ")
-FILLER_END = (" please", " thanks", " thank you")
+# Words the English engine listens for, so the recognizer knows them too.
+BUILTIN_PHRASES = ENGLISH.builtin_phrases()
 
 MAX_REPEAT = 50
 # Keys that throw work away. However they're reached ("delete fifty times",
@@ -44,13 +29,6 @@ DESTRUCTIVE_KEYS = {"delete", "backspace", "forwarddelete", "cmd+x", "cmd+v", "c
                     "cmd+backspace", "ctrl+x", "ctrl+v", "ctrl+d"}
 MAX_DESTRUCTIVE = 3
 FUZZY_CUTOFF = 0.88
-
-# Spoken punctuation in dictation mode.
-DICTATION_WORDS = {
-    "comma": ",", "period": ".", "full stop": ".", "question mark": "?",
-    "exclamation mark": "!", "exclamation point": "!", "colon": ":",
-    "semicolon": ";", "dash": " -", "open quote": ' "', "close quote": '"',
-}
 
 
 @dataclass
@@ -61,45 +39,53 @@ class Result:
     command: object = None
     params: dict = field(default_factory=dict)
     times: int = 1
+    kind: str = ""        # "ask" (say yes or cancel), "missed" (no command in it), "help" (the list)
+    english: str = None   # the English words it stands for, for the rest of the suite
 
 
-def normalize(text):
+def normalize(text, language=ENGLISH):
     text = text.lower().replace("[unk]", " ").strip()
     text = re.sub(r"[^\w\s'+\-]", " ", text)
     text = " ".join(text.split())
+    starts = [f + " " for f in language.lists["filler_start"]]
+    ends = [" " + f for f in language.lists["filler_end"]]
     changed = True
     while changed:
         changed = False
-        for f in FILLER_START:
+        for f in starts:
             if text.startswith(f):
                 text, changed = text[len(f):], True
-        for f in FILLER_END:
+        for f in ends:
             if text.endswith(f):
                 text, changed = text[: -len(f)], True
-    return normalize_numbers(undo_sounds_like(text))
+    return language.numbers.normalize(language.undo_sounds_like(text))
 
 
-def split_repeat(text):
+def split_repeat(text, language=ENGLISH):
     """"nudge right 4 times" -> ("nudge right", 4)."""
-    m = re.match(r"^(.*\S)\s+(\d+)\s+times?$", text)
+    times = "|".join(re.escape(w) for w in language.lists["times"])
+    m = re.match(rf"^(.*\S)\s+(\d+)\s+(?:{times})$", text) if times else None
     if m:
         return m.group(1), min(int(m.group(2)), MAX_REPEAT)
-    if text.endswith(" twice"):
-        return text[: -len(" twice")], 2
+    for w in language.lists["twice"]:
+        if text.endswith(" " + w):
+            return text[: -len(" " + w)], 2
     return text, 1
 
 
 class Engine:
-    def __init__(self, platform, packs, feedback=None, start_awake=True, own_names=()):
+    def __init__(self, platform, packs, feedback=None, start_awake=True, own_names=(), language=ENGLISH):
         """
         platform    from platforms.get_platform()
-        packs       from grammar.load_packs()
+        packs       from grammar.load_packs(), in the language (Language.translate)
         feedback    called with a short message after each command (speech, screen)
         own_names   names this app shows up as when it's in front, so commands
                     go to the DAW the user was in, not to our own window
+        language    what it listens for and answers in (language.load)
         """
         self.platform = platform
         self.packs = packs
+        self.lang = language
         self.feedback = feedback or (lambda msg: None)
         self.awake = start_awake
         self.dictating = False
@@ -110,6 +96,12 @@ class Engine:
         self.take = False        # a take is recording: only stop words count
         self.suite = None        # the Limitless Sound link: other apps' actions by voice
         self._last_typed = ""
+
+    def set_language(self, language, packs):
+        """Listen and answer in another language, with the packs in it (Language.translate).
+        A question waiting for yes, and what "again" would repeat, were in the old one."""
+        self.lang, self.packs = language, packs
+        self.pending = self.last = None
 
     # -- context -------------------------------------------------------
 
@@ -150,6 +142,8 @@ class Engine:
         alternative  an open-vocabulary transcript of the same audio, used for
                      dictation and for commands that take free text
         """
+        lang, words = self.lang, self.lang.words
+        normalize = self.normalize
         texts = [t for t in (normalize(heard), normalize(alternative or "")) if t]
         # The command recognizer's guess at a sentence it mostly couldn't place ("[unk] enter [unk]
         # [unk]") isn't a command on its own: in an hour of people reading aloud, nearly every
@@ -163,26 +157,26 @@ class Engine:
         text = texts[0]
 
         if not self.awake:
-            if any(t in WAKE for t in texts):
+            if any(t in words["wake"] for t in texts):
                 self.awake = True
                 return self._reply(raw, "Listening")
             return Result(raw, False, "asleep")
 
-        if any(t in SLEEP for t in texts):
+        if any(t in words["sleep"] for t in texts):
             self.awake = False
             self.dictating = False
             return self._reply(raw, "Going to sleep")
 
         if self.take:
-            if any(t in TAKE_OFF for t in texts):
+            if any(t in words["take_off"] for t in texts):
                 self.take = False
                 return self._reply(raw, "All commands back on")
-            if not any(t in TAKE_STOP for t in texts):
+            if not any(t in words["take_stop"] for t in texts):
                 return Result(raw, False, "take")
             self.take = False
-            found = self._match("stop", self.commands_for(self.current_app_name()))
+            found = self._match_english("stop", self.commands_for(self.current_app_name()))
             if found:
-                return self._run(raw, found[0], found[1], 1)
+                return self._run(raw, found[0], found[1], 1, english=None if lang.is_english else "stop")
             return self._reply(raw, "All commands back on")
 
         if self.dictating:
@@ -192,33 +186,33 @@ class Engine:
         if self.pending:
             cmd, params, times = self.pending
             self.pending = None
-            if text in YES:
+            if text in words["yes"]:
                 return self._run(raw, cmd, params, times)
-            if text in CANCEL:
+            if text in words["cancel"]:
                 return self._reply(raw, "Cancelled")
             # Anything else is the next command: a question asked by mistake mustn't eat it.
 
-        if text in DICTATION_ON:
+        if text in words["dictation_on"]:
             self.dictating = True
             return self._reply(raw, "Dictation on. Say stop dictation to go back to commands.")
-        if text in DICTATION_OFF:
+        if text in words["dictation_off"]:
             # "start" and "stop" sound alike to the recognizer; dictation is already off,
             # so a "stop" here was most likely a "start" misheard
             return self._reply(raw, "Dictation is off. To start it, say begin dictation.", handled=False)
-        if text in HELP:
+        if text in words["help"]:
             return self._help(raw)
-        if text in AGAIN:
+        if text in words["again"]:
             if not self.last:
                 return self._reply(raw, "Nothing to repeat yet", handled=False)
             cmd, params, times = self.last
             return self._run(raw, cmd, params, times)
-        if text in CANCEL:
+        if text in words["cancel"]:
             return self._reply(raw, "OK")
 
         commands = self.commands_for(self.current_app_name())
         found, said = None, text
         for t in texts:
-            body, times = split_repeat(t)
+            body, times = split_repeat(t, lang)
             found = self._match(body, commands)
             if found:
                 raw = said = t
@@ -229,27 +223,33 @@ class Engine:
                 if hit:
                     return self._reply(raw, self.suite.run(hit))
         if not found:
-            body, times = split_repeat(text)
+            body, times = split_repeat(text, lang)
             found = self._fuzzy(body, commands)
         if not found:
             elsewhere = self._works_in(texts)
             if elsewhere:
                 # Heard right, but it's a DAW command and that DAW isn't in front.
-                return Result(raw, False, f"\"{text}\" works in {elsewhere}. "
-                              f"Bring {'it' if ' and ' not in elsewhere else 'one of them'} to the front, "
-                              "then say it again.")
-            return Result(raw, False, f"Didn't catch a command in \"{text}\"")
+                one = len(elsewhere) == 1
+                apps = elsewhere[0] if one else lang.text("{some} and {last}", some=", ".join(elsewhere[:-1]),
+                                                          last=elsewhere[-1])
+                return Result(raw, False, lang.text(
+                    '"{text}" works in {apps}. Bring it to the front, then say it again.' if one else
+                    '"{text}" works in {apps}. Bring one of them to the front, then say it again.',
+                    text=text, apps=apps))
+            return Result(raw, False, lang.text('Didn\'t catch a command in "{text}"', text=text), kind="missed")
         cmd, params = found
         # Free text from the command recognizer is only the command words it could place: "open the
         # [unk] [unk] that" tried to open an app called "the that". When it missed words, the
-        # words come from the open recognizer, or the command doesn't run.
-        if (cmd.free_text and alternative is not None and "[unk]" in heard.lower()
+        # words come from the open recognizer, or the command doesn't run. In a language whose
+        # command words include everyday ones (Spanish "de", "la", "al"), a whole sentence can come
+        # back in command words with none missed, so there the words always come from the open one.
+        if (cmd.free_text and alternative is not None and ("[unk]" in heard.lower() or lang.free_text_needs_both)
                 and said == normalize(heard) != normalize(alternative)):
             heard_open = normalize(alternative)
-            again = self._match(split_repeat(heard_open)[0], [cmd])
+            again = self._match(split_repeat(heard_open, lang)[0], [cmd])
             if not again:
-                return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
-                              else "Didn't catch that")
+                return Result(raw, False, lang.text('Didn\'t catch a command in "{text}"', text=heard_open)
+                              if heard_open else lang.text("Didn't catch that"), kind="missed")
             params, raw = again[1], heard_open
         if cmd.repeatable is False:
             times = 1
@@ -268,7 +268,8 @@ class Engine:
                   and said.split()[0] not in normalize(alternative).split())
         if cmd.confirm or unsure:
             self.pending = (cmd, params, times)
-            return self._reply(raw, f"Say yes to {cmd.help or cmd.phrases[0]}, or cancel")
+            return self._reply(raw, lang.text("Say yes to {what}, or cancel", what=cmd.help or cmd.phrases[0]),
+                               kind="ask")
         return self._run(raw, cmd, params, times)
 
     def instant(self, heard):
@@ -278,12 +279,36 @@ class Engine:
         ask which app is in front: handle() decides that on the main thread as usual."""
         if not self.awake or self.dictating or self.pending or "[unk]" in heard:
             return False
-        text = normalize(heard)
+        text = self.normalize(heard)
         if self.take:
-            return text in TAKE_STOP
+            return text in self.lang.words["take_stop"]
         return any(cmd.instant and cmd.match(text) is not None for pack in self.packs for cmd in pack.commands)
 
     # -- helpers -------------------------------------------------------
+
+    def normalize(self, text):
+        return normalize(text, self.lang)
+
+    def from_english(self, text, everywhere=False):
+        """How to say, in Voice's language, a phrase the rest of the suite sends in English
+        ("go to bar 32" -> "ir al compás 32"). The phrase itself if it isn't English for a
+        command (it may be in Voice's language already). With everywhere, a command for any
+        app counts, not only the one in front."""
+        if self.lang.is_english:
+            return text
+        said = normalize(text)
+        for kind in ("wake", "sleep", "cancel", "yes", "again", "help", "dictation_on", "dictation_off",
+                     "take_stop", "take_off"):
+            if said in ENGLISH.words[kind]:
+                return self.lang.first(kind)
+        body, times = split_repeat(said)
+        commands = ([c for p in self.packs for c in p.commands] if everywhere
+                    else self.commands_for(self.current_app_name()))
+        found = self._match_english(body, commands)
+        spoken = found and self.lang.spoken_for(found[0], body, found[1])
+        if not spoken:
+            return text
+        return spoken + (f" {times} {self.lang.first('times')}" if times > 1 else "")
 
     @staticmethod
     def _destroys(cmd, params):
@@ -304,18 +329,24 @@ class Engine:
                 return cmd, params
         return None
 
+    @staticmethod
+    def _match_english(text, commands):
+        for cmd in commands:
+            params = cmd.match_english(text)
+            if params is not None:
+                return cmd, params
+        return None
+
     def _works_in(self, texts):
-        """The apps where this phrase is a command, when the app in front has none: "Logic Pro and
-        Pro Tools". Exact matches only, so a near-miss is never sent off to another app."""
+        """The apps where this phrase is a command, when the app in front has none: ["Logic Pro",
+        "Pro Tools"]. Exact matches only, so a near-miss is never sent off to another app."""
         names = []
         for pack in self.packs:
             if pack.is_global or pack.name in names:
                 continue
-            if any(self._match(split_repeat(t)[0], pack.commands) for t in texts):
+            if any(self._match(split_repeat(t, self.lang)[0], pack.commands) for t in texts):
                 names.append(pack.name)
-        if len(names) > 1:
-            return ", ".join(names[:-1]) + " and " + names[-1]
-        return names[0] if names else ""
+        return names
 
     def _fuzzy(self, text, commands):
         """Catch near-misses like "solo the trak" vs "solo the track"."""
@@ -329,7 +360,7 @@ class Engine:
                     best, best_score = cmd, score
         return (best, {}) if best else None
 
-    def _run(self, raw, cmd, params, times):
+    def _run(self, raw, cmd, params, times, english=None):
         action = cmd.action
         if "builtin" in action:
             return self._builtin(raw, action["builtin"])
@@ -344,10 +375,11 @@ class Engine:
         for k, v in params.items():
             msg = msg.replace("{" + k + "}", str(v))
         if times > 1 and msg:
-            msg += f", {times} times"
+            msg += self.lang.text(", {n} times", n=times)
         if msg:
             self.feedback(msg)
-        return Result(raw, True, msg or cmd.phrases[0], cmd, params, times)
+        return Result(raw, True, msg or cmd.phrases[0], cmd, params, times,
+                      english=english or cmd.english_of(raw))
 
     def _builtin(self, raw, name):
         if name == "dictation":
@@ -361,46 +393,48 @@ class Engine:
         raise ValueError(f"unknown builtin {name!r}")
 
     def _dictate(self, raw, texts):
-        if any(t in DICTATION_OFF for t in texts):
+        words, text_of = self.lang.words, self.lang.text
+        if any(t in words["dictation_off"] for t in texts):
             self.dictating = False
             return self._reply(raw, "Back to commands")
         text = texts[-1]
         self._bring_target_forward()
-        if text in ("scratch that", "delete that"):
+        if text in words["scratch"]:
             for _ in range(len(self._last_typed)):
                 self.platform.press("delete")
             self._last_typed = ""
-            return Result(raw, True, "Scratched")
-        if text in ("new line", "newline"):
+            return Result(raw, True, text_of("Scratched"))
+        if text in words["new_line"]:
             self.platform.press("return")
-            return Result(raw, True, "New line")
-        if text == "new paragraph":
+            return Result(raw, True, text_of("New line"))
+        if text in words["new_paragraph"]:
             self.platform.press("return")
             self.platform.press("return")
-            return Result(raw, True, "New paragraph")
+            return Result(raw, True, text_of("New paragraph"))
         typed = self._format_dictation(raw)
         self.platform.type_text(typed)
         self._last_typed = typed
-        return Result(raw, True, f"Typed: {typed.strip()}")
+        return Result(raw, True, text_of("Typed: {text}", text=typed.strip()))
 
     def _format_dictation(self, raw):
         out = " " + raw.replace("[unk]", "").strip()
-        for word, mark in sorted(DICTATION_WORDS.items(), key=lambda kv: -len(kv[0])):
+        for word, mark in sorted(self.lang.punctuation.items(), key=lambda kv: -len(kv[0])):
             out = re.sub(rf"\s+{re.escape(word)}\b", mark, out, flags=re.IGNORECASE)
         return out
 
     def help_lines(self):
         app = self.current_app_name()
-        lines = [f"Commands for {app or 'any app'}:"]
+        lines = [self.lang.text("Commands for {app}:", app=app or self.lang.text("any app"))]
         for c in self.commands_for(app):
             lines.append(f"  {c.phrases[0]:<32} {c.pack}")
         return lines
 
     def _help(self, raw):
         lines = self.help_lines()
-        self.feedback(f"{len(lines) - 1} commands available. They're listed on screen.")
-        return Result(raw, True, "\n".join(lines))
+        self.feedback(self.lang.text("{n} commands available. They're listed on screen.", n=len(lines) - 1))
+        return Result(raw, True, "\n".join(lines), kind="help")
 
-    def _reply(self, raw, msg, handled=True):
+    def _reply(self, raw, msg, handled=True, kind=""):
+        msg = self.lang.text(msg)
         self.feedback(msg)
-        return Result(raw, handled, msg)
+        return Result(raw, handled, msg, kind=kind)

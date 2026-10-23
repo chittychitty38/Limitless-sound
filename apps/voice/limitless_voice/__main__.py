@@ -5,7 +5,8 @@
                                    Shortcuts, Stream Deck, scripts)
   ... list                         print every phrase
   ... typed                        type phrases in the terminal instead of speaking
-  add --dry-run to see what would happen without pressing anything
+  add --dry-run to see what would happen without pressing anything, and
+  --language es to say them in Spanish (English phrases still work with "do")
 """
 
 import argparse
@@ -22,6 +23,7 @@ def main(argv=None):
 
     from .engine import Engine
     from .grammar import DEFAULT_PACK_DIR, load_packs
+    from .language import available, load
     from .platforms import current_os, get_platform
     from .settings import user_packs_dir
 
@@ -31,6 +33,8 @@ def main(argv=None):
     p.add_argument("--dry-run", action="store_true", help="show what would run, don't press anything")
     p.add_argument("--app", help="with --dry-run: pretend this app is in front (e.g. 'Logic Pro')")
     p.add_argument("--os", choices=["mac", "windows", "linux"], help="with --dry-run: pretend to be this OS")
+    p.add_argument("--language", choices=[code for code, _ in available()], default="en",
+                   help="the language the phrases are in (default en)")
     args = p.parse_args(argv)
 
     if args.mode == "app":
@@ -38,7 +42,8 @@ def main(argv=None):
         return run()
 
     os_name = args.os or current_os()
-    packs = load_packs([DEFAULT_PACK_DIR, user_packs_dir()], os_name)
+    lang = load(args.language)
+    packs = lang.translate(load_packs([DEFAULT_PACK_DIR, user_packs_dir()], os_name))
 
     if args.mode == "list":
         for pack in packs:
@@ -53,10 +58,10 @@ def main(argv=None):
         platform = DryRunPlatform(os_name, echo=True, app=args.app)
     else:
         platform = get_platform()
-    engine = Engine(platform, packs, feedback=lambda m: None)
+    engine = Engine(platform, packs, feedback=lambda m: None, language=lang)
 
     if args.mode == "do":
-        r = engine.handle(" ".join(args.phrase))
+        r = engine.handle(engine.from_english(" ".join(args.phrase)))
         print(r.message)
         return 0 if r.handled else 1
 

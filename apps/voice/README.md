@@ -16,7 +16,7 @@ installed, and your voice never leaves the machine.
 | **Windows** | Windows 10 or 11, 64-bit. |
 | **Microphone** | Any mic the computer already recognises: the built-in laptop mic, a USB mic, a headset, a webcam mic or an audio interface input. Any sample rate. A headset or a mic close to your mouth works best when speakers are playing. Bluetooth headsets work, but drop to phone-call quality, so expect more misses. |
 | **Computer** | Anything from roughly the last ten years. Recognition uses about 300 MB of memory and a small share of one CPU core. About 300 MB of disk space. |
-| **Language** | English (US) built in. A more accurate English model and an Indian English model can be downloaded from Settings. |
+| **Language** | English (US) built in. Spanish, for Latin America and Spain, is a 39 MB download from Settings, once. A larger English model and an Indian English model can be downloaded from Settings too. |
 | **Apps** | Ready-made commands for Logic Pro (Mac), Pro Tools and Ableton Live 12 (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
 
 Not covered yet: Linux, Chromebooks, iPad.
@@ -87,6 +87,49 @@ Input Monitoring permission).
 **Getting better accuracy:** pick your best mic in the Microphone menu and
 watch the level bar move as you speak. Keep it closer than the speakers.
 If commands get missed, try Settings > Speech model > "more accurate".
+
+## Languages
+
+Voice listens and answers in English or Spanish. Choose in Settings > Language:
+
+- **Same as Limitless Sound** (the default): the language chosen for the whole suite on the
+  Limitless Sound page. Without the hub, English, as always.
+- **English** or **Español**: that one, whatever the suite's is.
+
+Spanish is downloaded once (39 MB) the first time it's chosen, then works without internet.
+Until it's here (offline, say), Voice keeps listening in English, says so in its window, and
+offers the download again.
+
+Its commands are the English ones, said the way Spanish-speaking musicians say them, with
+Latin America's and Spain's words both: "ir al compás treinta y dos", "graba", "dale play",
+"parar", "solo", "silenciar la pista" or "mute", "loop", "deshacer", "añadir pista" or "agregar
+pista", "mostrar el mezclador", "pulsa comando mayúsculas ene", "desplazar a la derecha cuatro
+veces". Say "qué puedo decir" for the list, "a dormir" and "despierta", "sí" and "cancelar",
+"empezar dictado" and "terminar dictado". Cut, Paste, Delete and Duplicate are said whole when
+said alone ("cortar", "pegar", "eliminar" or "borrar", "duplicar"), never "corta": a word that
+sounds like one of them must never throw work away.
+
+Replies are read by a Spanish voice when the computer has one. When it hasn't, Voice says where
+to add one: on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage
+Voices; on Windows, Settings > Time & language > Speech > Add voices. With the suite's one voice
+on, the hub reads them in Spanish. Other apps' actions ("screen colors on") are only heard in
+English for now, as the apps name them in English. The window's buttons, Settings and the setup
+guide are in English.
+
+How well it hears real people, measured in CI (Voice 0.4.0; `stress/README.md` has how):
+
+| | English | Spanish |
+|---|---|---|
+| Command words said by real people, right at once (one word each, cut out of sentences) | 73% | 83% |
+| Right at once or after a "yes" | 82% | 84% |
+| Cut, Paste or Delete pressed for a word that wasn't said | never | never |
+| An hour of people reading aloud: commands fired in Logic Pro / Pro Tools | 0 / 3.8 | 1 / 0 |
+| How soon a command acts after the word ends | 1.1 s | 1.4 s |
+| Play, stop and record | 0.6 s | 0.6 s |
+
+The words aren't the same in the two languages, so this says each one does its job rather
+than that one is better. Spanish's speech model is Alpha Cephei's small Spanish model,
+under the Apache 2.0 licence, like the English one.
 
 ## Adding your own commands
 
@@ -163,9 +206,24 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 | `engine.py` | Sleep/wake, dictation, confirm, repeat, picks the command for the app in front |
 | `grammar.py` | Loads command files, matches phrases, builds the recognizer's phrase list |
 | `platforms/` | Pressing keys, typing, finding and focusing apps, per OS |
-| `numbers.py`, `keys.py` | Spoken numbers and key names |
+| `language.py`, `languages/` | Each language's words: its phrases for every built-in command, its own words (wake, sleep, yes, cancel...), numbers, key names and replies. The packs stay English |
+| `numbers.py`, `keys.py` | Spoken numbers and key names, from the language's tables |
 | `voice_out.py` | Spoken feedback |
 | `model.py` | Finds or downloads the speech model |
+
+**Adding a language** takes a speech model, one file, and measurements:
+1. A Vosk model under a permissive licence (Apache 2.0 or the like, not GPL), listed with its
+   size in the new `languages/<code>.yaml`.
+2. That file, copied from `languages/es.yaml`: the language's phrases for every command in the
+   built-in packs (by each command's first English phrase), its own words, numbers table, key
+   names, and every reply. `tests/test_language.py` fails until every command has phrases and
+   every reply a translation.
+3. `stress/test_voice_language.py` against the model: every word Voice listens for must be one
+   it knows (it prints the nearest words it does know). Then real people: the Multilingual
+   Spoken Words Corpus's clips of its command words (`stress/tools/get_command_words.py --lang`)
+   and an hour of FLEURS read aloud (`stress/tools/get_fleurs.py --lang`), with floors in
+   `stress/test_command_words.py` and `stress/test_voice_real_speech.py`, and a job in
+   `.github/workflows/stress.yml`.
 
 ## What's next
 
@@ -178,7 +236,8 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 4. **Mixer values by voice** ("track three volume minus six") through a
    virtual Mackie Control / HUI surface, which both DAWs support.
 5. **More apps and languages:** command files for Studio One, REAPER,
-   GarageBand and FL Studio; Vosk has models for 20+ languages. Ableton Live's
+   GarageBand and FL Studio; Vosk has models for 20+ languages (see Adding a
+   language above). Ableton Live's
    single-letter keys (S solo, C arm, O metronome, A automation) do nothing
    while Live's Computer MIDI Keyboard is on: check them on a real Live 12.
 

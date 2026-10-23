@@ -14,7 +14,7 @@ from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import __version__, applog, mac_keys, voice
+from . import __version__, applog, mac_keys, voice, words
 from .actions import APP_ACTIONS, LABELS
 from .hotkeys import GlobalKeys, KeyLogic
 from .keys import format_key
@@ -22,6 +22,7 @@ from .router import Router
 from .settings import Settings, config_dir
 from .suite import Suite
 from .ui import KeyCaptureDialog, Look, Panel, Setup, Toast
+from .words import t
 
 SERVER_NAME = f"limitless-zoom-{getpass.getuser()}"
 SHOW = "show"   # what opening Zoom again sends the copy already running: show the panel
@@ -29,16 +30,17 @@ log = logging.getLogger("Limitless Zoom")
 
 
 class Bus(QObject):
-    """Carries events from the key and voice threads onto the UI thread."""
+    """Carries events from the key and voice threads onto the UI thread. Words go as objects,
+    so words made with t() reach the window still able to change language (words.again)."""
 
     action = Signal(str)
     layer = Signal(bool)
     switch = Signal()
-    status = Signal(str)
+    status = Signal(object)
     captured = Signal(str)
     voice_ready = Signal(str)
-    heard = Signal(str)
-    voice_status = Signal(str)
+    heard = Signal(object)
+    voice_status = Signal(object)
     level = Signal(float)
     call = Signal(object)   # calls from the Limitless Sound link
 
@@ -97,7 +99,7 @@ class ZoomApp(QObject):
         self.ui_effects = QApplication.isEffectEnabled(Qt.UI_General)
 
         self.toast = Toast()
-        self.badge = Toast(persistent=True, about="Zoom keys")
+        self.badge = Toast(persistent=True, about=t("Zoom keys"))
         self.tts = None
         try:
             from PySide6.QtTextToSpeech import QTextToSpeech
@@ -156,7 +158,7 @@ class ZoomApp(QObject):
         if self.use_voice and self.settings["voice_enabled"]:
             self.start_voice()
         else:
-            self.panel.voice_label.setText("Voice: off")
+            self._voice_status(t("off"))
 
     def key_text(self):
         return format_key(self.logic.layer_key, self.backend.os_name)
@@ -171,7 +173,7 @@ class ZoomApp(QObject):
             self.keys.start()
         except Exception as e:
             self.keys = None
-            self._status(f"Zoom keys couldn't start: {e}")
+            self._status(t("Zoom keys couldn't start: {problem}", problem=e))
 
     def _check_permissions(self):
         try:
@@ -182,10 +184,10 @@ class ZoomApp(QObject):
         if ok and self._perms_ok is False:
             # Just allowed: the keyboard listener has to be made again to work.
             self.start_keys()
-            self.feedback("Zoom keys are ready")
+            self.feedback(t("Zoom keys are ready"))
         if not ok:
-            missing = ", ".join(p["title"] for p in perms if p["required"] and p["state"] == "missing")
-            self._status(f"Needs {missing}. Open Setup from the menu bar.")
+            missing = ", ".join(t(p["title"]) for p in perms if p["required"] and p["state"] == "missing")
+            self._status(t("Needs {names}. Open Setup from the menu bar.", names=missing))
         elif self._perms_ok is False:
             self._status("")
         self._perms_ok = ok
@@ -245,7 +247,7 @@ class ZoomApp(QObject):
             for c in combos:
                 self.backend.send(c)
         except Exception as e:
-            self.bus.status.emit(f"Couldn't press the zoom keys: {e}")
+            self.bus.status.emit(t("Couldn't press the zoom keys: {problem}", problem=e))
 
     def _app_action(self, action):
         if action == "panel":
@@ -258,7 +260,7 @@ class ZoomApp(QObject):
         elif action in ("sleep", "wake"):
             if self.voice:
                 self.voice.asleep = action == "sleep"
-            self.feedback(LABELS[action])
+            self.feedback(t(LABELS[action]))
 
     def feedback(self, text):
         self.toast.show_text(text)
@@ -270,13 +272,13 @@ class ZoomApp(QObject):
 
     def _layer_changed(self, on):
         if on:
-            self.badge.show_text("ZOOM KEYS ON", where="corner")
+            self.badge.show_text(t("ZOOM KEYS ON"), where="corner")
         else:
             self.badge.hide()
         self.panel.set_keys_state(on, self.key_text())
         if self.setup_window is not None:
             self.setup_window.set_layer_state(on)
-        self.feedback("Zoom keys on" if on else "Zoom keys off")
+        self.feedback(t("Zoom keys on") if on else t("Zoom keys off"))
         self.suite.keys_changed(on)
         if self.tray:
             self.keys_action.setChecked(on)
@@ -286,17 +288,20 @@ class ZoomApp(QObject):
             return
         self._status_text = text
         self.panel.status.setText(text)
+        self._tray_tip()
+
+    def _tray_tip(self):
         if self.tray:
-            self.tray.setToolTip(f"Limitless Zoom\n{text}" if text else "Limitless Zoom")
+            self.tray.setToolTip(f"Limitless Zoom\n{self._status_text}" if self._status_text else "Limitless Zoom")
 
     def _voice_status(self, text):
         log.info("Voice: %s", text)   # only when it changes: which microphone, or why there's none
-        self.panel.voice_label.setText(f"Voice: {text}")
+        self.panel.voice_label.setText(t("Voice: {status}", status=text))
         if self.setup_window is not None:
             self.setup_window.set_voice_status(text)
 
     def _heard(self, text):
-        self.panel.voice_label.setText(f"Voice: heard \u201c{text}\u201d")
+        self.panel.voice_label.setText(t("Voice: heard \u201c{text}\u201d", text=text))
         if self.setup_window is not None:
             self.setup_window.set_heard(text)
 
@@ -317,6 +322,17 @@ class ZoomApp(QObject):
         # Menus, pop-up lists and tooltips appear at once instead of sliding or fading in.
         QApplication.setEffectEnabled(Qt.UI_General, self.ui_effects and not look.reduce_motion)
 
+    def retranslate(self):
+        """The suite's language changed: every word in every window and the menu changes in
+        place, so the keyboard focus and what a screen reader is on stay put."""
+        words.show_again()
+        if self._status_text:
+            self._status_text = words.again(self._status_text)
+            self._tray_tip()
+        self._perms_shown = None   # the permissions, named in the new language
+        self._check_permissions()
+        self.set_look(self.look)   # room for the new words, each window where it was
+
     # Voice -----------------------------------------------------------------
 
     def start_voice(self):
@@ -324,14 +340,14 @@ class ZoomApp(QObject):
         if model:
             self._start_voice_with(str(model))
             return
-        self._voice_status("downloading the voice model (about 40 MB), one time only…")
+        self._voice_status(t("downloading the voice model (about 40 MB), one time only…"))
 
         def fetch():
             try:
                 path = voice.download_model(config_dir() / "models")
                 self.bus.voice_ready.emit(str(path))
             except Exception as e:
-                self.bus.voice_status.emit(f"couldn't download the voice model: {e}")
+                self.bus.voice_status.emit(t("couldn't download the voice model: {problem}", problem=e))
 
         threading.Thread(target=fetch, daemon=True).start()
 
@@ -355,7 +371,7 @@ class ZoomApp(QObject):
             self.start_voice()
         else:
             self.stop_voice()
-            self._voice_status("off")
+            self._voice_status(t("off"))
 
     def set_mic(self, name):
         self.settings["voice_device"] = name
@@ -376,7 +392,7 @@ class ZoomApp(QObject):
         return dlg.key
 
     def choose_layer_key(self):
-        key = self.capture_key("Zoom keys on/off", "Press the key you want to turn the zoom keys on and off.")
+        key = self.capture_key(t("Zoom keys on/off"), t("Press the key you want to turn the zoom keys on and off."))
         if key:
             self.settings["layer_key"] = self.logic.layer_key = key
             self.settings.save()
@@ -384,18 +400,18 @@ class ZoomApp(QObject):
             if self.setup_window is not None:
                 self.setup_window.set_key_text(self.key_text())
                 self.setup_window.set_layer_state(self.logic.layer_on)
-            self.feedback(f"Zoom key is {self.key_text()}")
+            self.feedback(t("Zoom key is {key}", key=self.key_text()))
         return key
 
     def choose_switch_key(self):
-        key = self.capture_key("Switch", "Press your switch now.")
+        key = self.capture_key(t("Switch"), t("Press your switch now."))
         if key:
             self.settings["switch_key"] = self.logic.switch_key = key
             self.settings.save()
             text = format_key(key, self.backend.os_name)
             if self.setup_window is not None:
                 self.setup_window.set_switch_text(text)
-            self.feedback(f"Switch is {text}")
+            self.feedback(t("Switch is {key}", key=text))
         return key
 
     def show_setup(self):
@@ -419,7 +435,7 @@ class ZoomApp(QObject):
         w.finished.connect(self._setup_done)
         w.set_layer_state(self.logic.layer_on)
         if self.voice is None:
-            w.set_voice_status("off" if not self.settings["voice_enabled"] else "starting…")
+            w.set_voice_status(t("off") if not self.settings["voice_enabled"] else t("starting…"))
         self.setup_window = w
         self._perms_shown = None
         self._check_permissions()
@@ -433,13 +449,13 @@ class ZoomApp(QObject):
     def _setup_done(self):
         self.settings["first_run"] = False
         self.settings.save()
-        self.feedback(f"Ready. Say zoom in, or tap {self.key_text()}")
+        self.feedback(t("Ready. Say zoom in, or tap {key}", key=self.key_text()))
 
     def set_open_at_login(self, on):
         try:
             self.backend.set_open_at_login(on)
         except Exception as e:
-            self._status(f"Couldn't change Open at login: {e}")
+            self._status(t("Couldn't change Open at login: {problem}", problem=e))
         if self.tray and hasattr(self, "login_action"):
             self.login_action.setChecked(self.backend.open_at_login())
 
@@ -448,31 +464,39 @@ class ZoomApp(QObject):
     def _make_tray(self):
         tray = QSystemTrayIcon(tray_icon(), self)
         menu = QMenu()
-        menu.addAction("Show or hide zoom panel", lambda: self.run("panel"))
-        self.keys_action = QAction("Zoom keys on", menu, checkable=True)
+
+        def item(text, *run, checkable=False):
+            # A menu item whose words follow the suite's language.
+            a = menu.addAction("", *run) if run else QAction(menu, checkable=checkable)
+            words.show(a.setText, text)
+            return a
+
+        item(t("Show or hide zoom panel"), lambda: self.run("panel"))
+        self.keys_action = item(t("Zoom keys on"), checkable=True)
         self.keys_action.triggered.connect(lambda on: self.logic.set_layer(on))
         menu.addAction(self.keys_action)
-        voice_action = QAction("Listen for voice commands", menu, checkable=True)
+        voice_action = item(t("Listen for voice commands"), checkable=True)
         voice_action.setChecked(self.settings["voice_enabled"])
         voice_action.triggered.connect(self.set_voice)
         menu.addAction(voice_action)
-        speak_action = QAction("Speak each action", menu, checkable=True)
+        speak_action = item(t("Speak each action"), checkable=True)
         speak_action.setChecked(self.settings["speak"])
         speak_action.triggered.connect(lambda on: (self.settings.__setitem__("speak", on), self.settings.save()))
         menu.addAction(speak_action)
         menu.addSeparator()
-        menu.addAction("Choose zoom keys on/off key…", self.choose_layer_key)
-        menu.addAction("Choose switch key…", self.choose_switch_key)
-        mic_menu = menu.addMenu("Microphone")
+        item(t("Choose zoom keys on/off key…"), self.choose_layer_key)
+        item(t("Choose switch key…"), self.choose_switch_key)
+        mic_menu = menu.addMenu("")
+        words.show(mic_menu.setTitle, t("Microphone"))
         mic_menu.aboutToShow.connect(lambda: self._fill_mics(mic_menu))
         if self.backend.can_open_at_login():
-            self.login_action = QAction("Open at login", menu, checkable=True)
+            self.login_action = item(t("Open at login"), checkable=True)
             self.login_action.setChecked(self.backend.open_at_login())
             self.login_action.triggered.connect(self.set_open_at_login)
             menu.addAction(self.login_action)
-        menu.addAction("Setup and help…", self.show_setup)
+        item(t("Setup and help…"), self.show_setup)
         menu.addSeparator()
-        menu.addAction("Quit Limitless Zoom", QApplication.quit)
+        item(t("Quit Limitless Zoom"), QApplication.quit)
         tray.setContextMenu(menu)
         tray.setToolTip("Limitless Zoom")
         tray.show()
@@ -486,7 +510,7 @@ class ZoomApp(QObject):
         except Exception:
             mics = []
         for name in [None] + mics:
-            a = QAction(name or "System default", menu, checkable=True)
+            a = QAction(name or t("System default"), menu, checkable=True)
             a.setChecked(name == self.settings["voice_device"])
             a.triggered.connect(lambda _=False, n=name: self.set_mic(n))
             menu.addAction(a)

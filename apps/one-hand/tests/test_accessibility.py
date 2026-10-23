@@ -1,5 +1,5 @@
 """Screen readers and the keyboard alone, in every window One-Hand shows: the main window, the
-macOS permission page that opens on first launch, and the ON badge.
+macOS permission page that opens on first launch, and the ON badge. In English and in Spanish.
 
 Blind and low-vision musicians run their DAW with VoiceOver. What it reads is what Qt's
 accessibility interface gives it, so that's what these tests read too."""
@@ -21,6 +21,7 @@ from onehand import limitless_link  # noqa: E402
 from onehand.app import MainWindow  # noqa: E402
 from onehand.platform_sim import SimBackend  # noqa: E402
 from onehand.settings import Prefs, load_layouts  # noqa: E402
+from onehand.words import t  # noqa: E402
 
 CONTROLS = (QAbstractButton, QComboBox, QAbstractSlider, QAbstractSpinBox, QLineEdit, QAbstractItemView)
 
@@ -144,8 +145,9 @@ def assert_read(label, posted, text):
 
 # ---- One-Hand, every window ------------------------------------------------------------
 
-@pytest.fixture
-def make(tmp_path, monkeypatch):
+@pytest.fixture(params=["en", "es"])
+def make(request, tmp_path, monkeypatch):
+    monkeypatch.setattr("onehand.words._computer", request.param)     # every window, in each language
     monkeypatch.setenv("LIMITLESS_SOUND_HOME", str(tmp_path))         # no hub here...
     monkeypatch.setattr(limitless_link, "launch_hub", lambda: False)  # ...and don't open one
     monkeypatch.setattr(Prefs, "save", lambda self: None)              # leave the real settings alone
@@ -198,7 +200,7 @@ def test_tab_goes_through_each_window_in_order(make):
     w = waiting_for_permission(make)
     page = w.permission_page
     steps = [btn for _, _, btn in page.steps.values()]
-    later = next(b for b in page.findChildren(QAbstractButton) if b.text() == "Look around first")
+    later = next(b for b in page.findChildren(QAbstractButton) if b.text() == t("Look around first"))
     assert_tab_order(w, [w.pages.widget(0), *steps, later])
     w.show_main()
     assert_tab_order(w, [w.pages.widget(1), w.banner_button, w.power, *hands, *options, w.app_pick])
@@ -209,19 +211,21 @@ def test_status_text_is_read_and_its_changes_posted(make, posted):
     w = make()
     w.engine.set_enabled(True)
     w.tick()
-    assert_read(w.status, posted, "Try it here: press the left-hand keys below to see what they do.")
-    assert_read(w.badge.label, posted, "ONE-HAND ON  ·  Left hand  ·  waiting for your DAW")
+    assert_read(w.status, posted, t("Try it here: press the {hand} keys below to see what they do.",
+                                    hand=t("left-hand")))
+    assert_read(w.badge.label, posted, t("ONE-HAND ON  ·  {hand}  ·  {where}", hand=t("Left hand"),
+                                         where=t("waiting for your DAW")))
     w.show_practice("e", "Record")
     assert_read(w.practice, posted, w.practice.text())
 
     w = waiting_for_permission(make)
     page = w.permission_page
-    assert_read(page.status, posted, "Waiting for you to switch these on. This page updates by itself.")
+    assert_read(page.status, posted, t("Waiting for you to switch these on. This page updates by itself."))
     # The ticks are symbols on screen and words to a screen reader.
     _, tick, _ = page.steps["Accessibility"]
-    assert tick.text() == "○" and said(tick) == "Accessibility not allowed yet"
+    assert tick.text() == "○" and said(tick) == t("{name} not allowed yet", name=t("Accessibility"))
     page.refresh({"Accessibility": True, "Input Monitoring": False}, False)
     assert tick.text() == "✓"
-    assert_read(tick, posted, "Accessibility allowed")
+    assert_read(tick, posted, t("{name} allowed", name=t("Accessibility")))
     w.show_main()
-    assert_read(w.banner_text, posted, "One-Hand can't use the keyboard yet, so your keys won't change.")
+    assert_read(w.banner_text, posted, t("One-Hand can't use the keyboard yet, so your keys won't change."))

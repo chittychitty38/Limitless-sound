@@ -23,11 +23,11 @@ SLOT_PATTERNS = {
 }
 
 
-def _convert(kind, raw):
+def _convert(kind, raw, language=None):
     if kind == "number":
         return int(raw)
     if kind == "keys":
-        return spoken_to_chord(raw)
+        return spoken_to_chord(raw, language)
     return raw
 
 
@@ -42,10 +42,16 @@ class Command:
     help: str = ""
     fuzzy: bool = True
     instant: bool = False       # run the moment it's heard, before the utterance is over
+    english: list = None        # the pack's own phrases, when these are another language's
+    language: object = None     # the language the phrases are in (None: English)
+    to_english: list = field(default_factory=list, repr=False)   # [(phrase regex, English phrase)]
     _compiled: list = field(default_factory=list, repr=False)
 
     def __post_init__(self):
         self._compiled = [compile_phrase(p) for p in self.phrases]
+        if self.english is None:
+            self.english = list(self.phrases)
+        self._english = self._compiled if self.english == self.phrases else None
 
     @property
     def literal_phrases(self):
@@ -62,16 +68,33 @@ class Command:
         return any(kind == "text" for _, slots in self._compiled for _, kind in slots)
 
     def match(self, text):
-        for regex, slots in self._compiled:
-            m = regex.match(" " + text)
-            if not m:
-                continue
-            try:
-                params = {name: _convert(kind, m.group(name)) for name, kind in slots}
-            except KeyChordError:
-                continue
-            return params
-        return None
+        return _match(self._compiled, text, self.language)
+
+    def match_english(self, text):
+        """match(), for the pack's own English phrases: what the rest of the suite sends."""
+        if self._english is None:
+            self._english = [compile_phrase(p) for p in self.english]
+        return _match(self._english, text, None)
+
+    def english_of(self, text):
+        """The English phrase that words said in this command's language stand for, so the rest
+        of the suite hears which intent it was ("parar" -> "stop"). None if it's unclear."""
+        if not self.to_english:
+            return text
+        return next((eng for regex, eng in self.to_english if regex.match(" " + text)), None)
+
+
+def _match(compiled, text, language):
+    for regex, slots in compiled:
+        m = regex.match(" " + text)
+        if not m:
+            continue
+        try:
+            params = {name: _convert(kind, m.group(name), language) for name, kind in slots}
+        except KeyChordError:
+            continue
+        return params
+    return None
 
 
 def _expand_optional(phrase):
@@ -201,35 +224,17 @@ def vocabulary(packs):
     return words
 
 
-# Words the small speech model doesn't know, spelled as words it does.
-# The recognizer listens for the right side; normalize() turns it back.
-SOUNDS_LIKE = {
-    "quantize": ["quant ties", "kwan ties"],
-    "unmute": ["un mute"],
-    "unsolo": ["un solo"],
-    "playhead": ["play head"],
-    "backspace": ["back space"],
-    "spacebar": ["space bar"],
-    "xray": ["x ray"],
-    "zoomer": ["zoom her"],
-}
-
-
-def _sounds_like_variants(segment):
-    variants = [segment]
-    for word, aliases in SOUNDS_LIKE.items():
-        if re.search(rf"\b{word}\b", segment):
-            variants += [re.sub(rf"\b{word}\b", a, segment) for a in aliases]
-    return variants
-
-
-def recognizer_phrases(packs, extra=()):
+def recognizer_phrases(packs, extra=(), language=None):
     """What the command recognizer listens for: every fixed run of words in
     every phrase ("go to bar", "show the mixer"), plus extra words and phrases.
 
     Whole phrases work much better than loose words: the recognizer can't
     stitch together nonsense like "delta bar" from a list of single words.
+    Words the speech model doesn't know are spelled as words it does (the
+    language's sounds_like); normalize() turns them back.
     """
+    if language is None:
+        from .language import ENGLISH as language
     units = set()
     for pack in packs:
         for cmd in pack.commands:
@@ -238,17 +243,16 @@ def recognizer_phrases(packs, extra=()):
                     for segment in re.split(r"\{[^}]+\}", expanded):
                         segment = " ".join(segment.split())
                         if segment:
-                            units.update(_sounds_like_variants(segment))
+                            units.update(language.sounds_like_variants(segment))
     for e in extra:
-        units.update(_sounds_like_variants(e))
+        units.update(language.sounds_like_variants(e))
     return units
 
 
-def undo_sounds_like(text):
-    for word, aliases in SOUNDS_LIKE.items():
-        for a in aliases:
-            text = re.sub(rf"\b{a}\b", word, text)
-    return text
+def undo_sounds_like(text, language=None):
+    if language is None:
+        from .language import ENGLISH as language
+    return language.undo_sounds_like(text)
 
 
 DEFAULT_PACK_DIR = Path(__file__).parent / "packs"

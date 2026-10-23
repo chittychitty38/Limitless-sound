@@ -1,5 +1,5 @@
 """Screen readers and the keyboard alone, in every window Zoom shows: the toast and the zoom keys
-badge, the big-button panel, the key capture dialog and the setup assistant.
+badge, the big-button panel, the key capture dialog and the setup assistant. In English and in Spanish.
 
 Blind and low-vision musicians run their DAW with VoiceOver. What it reads is what Qt's
 accessibility interface gives it, so that's what these tests read too."""
@@ -23,6 +23,7 @@ from limitless_zoom.app import ZoomApp  # noqa: E402
 from limitless_zoom.hotkeys import KeyLogic  # noqa: E402
 from limitless_zoom.settings import Settings  # noqa: E402
 from limitless_zoom.ui import KeyCaptureDialog  # noqa: E402
+from limitless_zoom.words import t  # noqa: E402
 from test_ui import PermBackend  # noqa: E402
 
 CONTROLS = (QAbstractButton, QComboBox, QAbstractSlider, QAbstractSpinBox, QLineEdit, QAbstractItemView)
@@ -135,9 +136,10 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-@pytest.fixture
-def zoom(qapp, tmp_path):
-    """Zoom on first run, with Accessibility still to allow: the panel and setup are open."""
+@pytest.fixture(params=["en", "es"])
+def zoom(request, qapp, tmp_path, monkeypatch):
+    """Zoom on first run, with Accessibility still to allow: the panel and setup are open. In each language."""
+    monkeypatch.setattr("limitless_zoom.words._computer", request.param)
     s = Settings(tmp_path / "s.json")
     s["speak"] = False
     app = ZoomApp(s, PermBackend(), use_keys=False, use_voice=False, use_tray=False)
@@ -149,12 +151,14 @@ def zoom(qapp, tmp_path):
         w.hide()
     app.poll.stop()
     app.perm_timer.stop()
+    app.server.close()   # see test_spanish.py: a later test's "--do" must reach its own app
 
 
 def test_every_window_names_its_controls(zoom):
     zoom.run("in")
     zoom.run("keys")   # the toast and the badge are up
-    dialog = KeyCaptureDialog("Zoom keys on/off", "Press the key you want.", lambda cb: None)
+    dialog = KeyCaptureDialog(t("Zoom keys on/off"), t("Press the key you want to turn the zoom keys on and off."),
+                              lambda cb: None)
     for window in (zoom.toast, zoom.badge, zoom.panel, zoom.setup_window, dialog):
         assert problems(window) == [], window.windowTitle()
     # A permission Zoom can't check shows "Open Settings…" instead of "Allow…".
@@ -165,19 +169,19 @@ def test_every_window_names_its_controls(zoom):
 
 def test_panel_buttons_are_named_in_words_not_symbols(zoom):
     names = [said(b) for b in zoom.panel.buttons[:len(PANEL_BUTTONS)]]
-    assert names[:2] == ["Zoom out", "Zoom in"]
-    assert names[-2:] == ["Zoom out a lot", "Zoom in a lot"]
+    assert names[:2] == [t("Zoom out"), t("Zoom in")]
+    assert names[-2:] == [t("Zoom out a lot"), t("Zoom in a lot")]
 
 
 def test_tab_goes_through_each_window_in_order(zoom):
     w = zoom.setup_window
     allow = [btn for _, _, btn in w.perm_rows.values()]
     # Step 1's buttons first, though they're added after the window is built.
-    assert_tab_order(w, [w.findChild(QScrollArea), *allow, button(w, "Use a different key…"), w.mic,
-                         button(w, "Set up my switch…"), w.start_btn])
+    assert_tab_order(w, [w.findChild(QScrollArea), *allow, button(w, t("Use a different key…")), w.mic,
+                         button(w, t("Set up my switch…")), w.start_btn])
 
-    dialog = KeyCaptureDialog("Switch", "Press your switch now.", lambda cb: None)
-    assert_tab_order(dialog, [button(dialog, "Cancel")])
+    dialog = KeyCaptureDialog(t("Switch"), t("Press your switch now."), lambda cb: None)
+    assert_tab_order(dialog, [button(dialog, t("Cancel"))])
     dialog.reject()
 
 
@@ -214,14 +218,14 @@ def assert_read(label, posted, text):
 def test_status_text_is_read_and_its_changes_posted(zoom, posted):
     w, panel = zoom.setup_window, zoom.panel
     zoom.run("in")
-    assert_read(zoom.toast.label, posted, "Zoom in")
+    assert_read(zoom.toast.label, posted, t("Zoom in"))
     zoom.run("keys")
-    assert_read(zoom.badge.label, posted, "ZOOM KEYS ON")
-    assert_read(w.key_state, posted, "ZOOM KEYS ON")
+    assert_read(zoom.badge.label, posted, t("ZOOM KEYS ON"))
+    assert_read(w.key_state, posted, t("ZOOM KEYS ON"))
     assert_read(panel.keys_label, posted, panel.keys_label.text())
     zoom._heard("zoom in")
-    assert_read(panel.voice_label, posted, "Voice: heard “zoom in”")
-    assert_read(w.heard, posted, "Heard: “zoom in”")
+    assert_read(panel.voice_label, posted, t("Voice: heard “{text}”", text="zoom in"))
+    assert_read(w.heard, posted, t("Heard: “{text}”", text="zoom in"))
     zoom._voice_status("listening on the built-in microphone")
     assert_read(w.voice_status, posted, "listening on the built-in microphone")
     zoom._status("Couldn't press the zoom keys")
@@ -229,11 +233,12 @@ def test_status_text_is_read_and_its_changes_posted(zoom, posted):
 
     # The permission marks are symbols on screen and words to a screen reader.
     mark = w.perm_rows["accessibility"][0]
-    assert mark.text() == "!" and said(mark) == "Accessibility: not allowed yet"
+    assert mark.text() == "!" and said(mark) == t("{name}: {state}", name=t("Accessibility"),
+                                                  state=t("not allowed yet"))
     zoom.backend.allowed = True
     zoom._check_permissions()
     assert mark.text() == "✓"
-    assert_read(mark, posted, "Accessibility: allowed")
+    assert_read(mark, posted, t("{name}: {state}", name=t("Accessibility"), state=t("allowed")))
 
 
 def test_escape_cancels_choosing_a_key(qapp):

@@ -12,6 +12,7 @@ from collections import deque
 from pathlib import Path
 
 from .actions import VOICE_PHRASES
+from .words import t
 
 MODEL_NAME = "vosk-model-small-en-us-0.15"
 MODEL_URL = f"https://alphacephei.com/vosk/models/{MODEL_NAME}.zip"
@@ -234,7 +235,7 @@ class VoiceListener(threading.Thread):
             vosk.SetLogLevel(-1)
             model = vosk.Model(str(self.model_path))
         except Exception as e:
-            self._status(f"Voice couldn't start: {e}")
+            self._status(t("Voice couldn't start: {problem}", problem=e))
             return
 
         while not self._halt.is_set():
@@ -243,7 +244,7 @@ class VoiceListener(threading.Thread):
             except Exception as e:
                 # Microphone unplugged, busy or missing: say so, then keep trying, less often
                 # the longer it lasts.
-                self._status(f"Microphone problem: {e}. Retrying.")
+                self._status(t("Microphone problem: {problem}. Retrying.", problem=e))
                 self._halt.wait(self._retry)
                 self._retry = min(RETRY_MOST, self._retry * 2)
 
@@ -265,7 +266,7 @@ class VoiceListener(threading.Thread):
                 self._recognizer = (rate, rec)
             hearing = Hearing(self._recognizer[1], self._result)
             self._retry = RETRY_FIRST
-            self._status(f"Listening on {info['name']}")
+            self._status(t("Listening on {name}", name=info["name"]))
             while not self._halt.is_set():
                 try:
                     data = audio.get(timeout=0.5)
@@ -285,7 +286,7 @@ class VoiceListener(threading.Thread):
         text = " ".join(res.get("text", "").replace("[unk]", "").split())
         action = match_phrase(res.get("text", ""), res.get("result"), self.min_conf)
         if text:
-            self.on_heard(text if action else f"{text} (not sure, ignored)")
+            self.on_heard(text if action else t("{heard} (not sure, ignored)", heard=text))
         if action is None:
             return
         if self.asleep and action not in WAKE_ACTIONS:
