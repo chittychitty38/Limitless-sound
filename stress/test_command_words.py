@@ -88,13 +88,13 @@ def test_real_people_saying_voice_commands():
           f"({sum(_making):.0f} s of it building recognizers). In front: Logic Pro. Heard as "
           f"“command transcript / open transcript”. "
           + (f"Left out, as Voice listens for them but alone they do nothing: {', '.join(left_out)}." if left_out else ""))
-    print(f"\n{'word':<9} {'right':>13}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
+    print(f"\n{'word':<9} {'right':>13}  {'asked':>5}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
     for w in commands:
         t = tally[w]
         wrong_cmd = f"{t['wrong']}" + (f" ({t['destructive']} destr.)" if t["destructive"] else "")
         after = f"{_median(soon[w]) * 1000:.0f} ms" if soon[w] else "-"
         miss = ", ".join(f"“{k}” ×{n}" for k, n in instead[w].most_common(3))
-        print(f"{w:<9} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {wrong_cmd:>12}  {after:>10}  "
+        print(f"{w:<9} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {t['asked']:>5}  {wrong_cmd:>12}  {after:>10}  "
               f"{what_if[w]['hits'] / t['tries']:>7.0%}  {miss}")
     for w in strays:
         t = tally[w]
@@ -111,6 +111,10 @@ def test_real_people_saying_voice_commands():
           f"after the word ended, 9 in 10 within {every[int(len(every) * 0.9)] * 1000:.0f} ms ({len(every)} clips).")
     print(f"A command other than the one said: {sum(wrong.values())} times, {destroyed} destructive. "
           f"Most often: {wrong.most_common(8)}")
+    asked_more = sum(tally[w]["asked"] for w in commands)
+    print(f"Asked to confirm instead (\"Say yes to cut, or cancel\"): {asked_more} times, so "
+          f"{(hits + asked_more) / tries:.1%} were right at once or with a yes. Per word: "
+          + ", ".join(f"{w} {tally[w]['asked']}" for w in commands if tally[w]["asked"]))
     if strays:
         quiet, stray_tries = _sums(tally, strays)
         q2, _ = _sums(what_if, strays)
@@ -124,17 +128,24 @@ def test_real_people_saying_voice_commands():
           f"{sum(trusting[w]['destructive'] for w in used)} destructive from a wrong word. Per word: "
           + ", ".join(f"{w} {tally[w]['hits']}→{trusting[w]['hits']}" for w in commands if trusting[w]["hits"] != tally[w]["hits"]))
 
-    # Floors from what CI measured (ubuntu-latest, 100 clips a word, Voice 0.3.6, October 2026),
-    # less a margin: results move a little from one runner's CPU to another's. Over three runs:
-    # 73.4% to 73.5% of commands right; the weakest, "cut", 39% to 40% (the open recognizer hears
-    # people's "cut" as "god", "come" or "cup", and a destructive command needs it to agree); no
-    # destructive key from a word that wasn't said; stray words fired a command 0.4% to 0.9% of
-    # the time; record, play and stop acted on a median 0.53 to 0.60 s after the word ended,
-    # everything a median 1.11 to 1.12 s.
+    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin:
+    # results move a little from one runner's CPU to another's. Voice 0.3.6, three runs: 73.4% to
+    # 73.5% of commands right; the weakest, "cut", 39% to 40% (the open recognizer hears people's
+    # "cut" as "god", "come" or "cup", and a destructive command needs it to agree); no destructive
+    # key from a word that wasn't said; stray words fired a command 0.4% to 0.9% of the time;
+    # record, play and stop acted on a median 0.53 to 0.60 s after the word ended, everything a
+    # median 1.11 to 1.12 s. Voice 0.3.8 asks instead of refusing when the open recognizer
+    # disagrees: 73.0% right at once and 82.0% at once or with a yes; the weakest at once,
+    # "delete", 37%, and with a yes, "mute", 71%; still no destructive key from a wrong word.
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
     assert hits / tries >= 0.69, f"only {hits / tries:.1%} of the command words were right"
     worst = min(commands, key=rate.get)
     assert rate[worst] >= 0.32, f"“{worst}” was right only {rate[worst]:.0%} of the time"
+    assert (hits + asked_more) / tries >= 0.78, \
+        f"only {(hits + asked_more) / tries:.1%} of the command words were right at once or with a yes"
+    with_yes = {w: (tally[w]["hits"] + tally[w]["asked"]) / tally[w]["tries"] for w in commands}
+    worst = min(commands, key=with_yes.get)
+    assert with_yes[worst] >= 0.62, f"“{worst}” was right only {with_yes[worst]:.0%} of the time, even with a yes"
     assert destroyed == 0, f"a word that wasn't said pressed a destructive key {destroyed} times"
     if strays:
         assert 1 - quiet / stray_tries <= 0.03, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"

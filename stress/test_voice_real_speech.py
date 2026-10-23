@@ -227,10 +227,17 @@ def _shown(heard):
     return " | ".join(parts) or "(nothing)"
 
 
+def asked(got):
+    """Whether the app asked first ("Say yes to cut, or cancel") and did nothing yet. Voice 0.3.8
+    asks when a command would cut, paste or delete and its two recognizers didn't agree."""
+    return not got[1] and bool(got[0]) and got[0][-1].startswith("Say yes to")
+
+
 def right(word, h, kind):
-    """Whether one clip went right, and whether it made the app do anything."""
+    """Whether one clip went right, and whether it made the app do anything. A question isn't
+    an action: someone who said the word answers yes, and a stray word's question is dropped."""
     want, got = outcome([(word, word)]), outcome(h)
-    fired = bool(got[1]) or got[2]
+    fired = bool(got[1]) or (got[2] and not asked(got))
     if kind == "command":
         return got == want, fired, want, got
     if kind == "word":
@@ -246,6 +253,7 @@ def score(words, jobs, heard, kinds):
         t = tally[word]
         t["tries"] += 1
         t["hits"] += hit
+        t["asked"] += not hit and asked(got)
         if fired and got != want:
             t["wrong"] += 1
             t["destructive"] += bool(_destructive(got[1]))
@@ -386,7 +394,7 @@ def test_ordinary_talk_rarely_fires_commands():
     ceiling = {"Logic Pro": 3, "Pro Tools": 7}
     too_many = []
     for app, most in ceiling.items():
-        fired = []
+        fired, questions = [], []
         for _, heard in streams:
             # Each reader is a fresh session: "again" repeats only that reader's last command.
             e, p = _engine(app)
@@ -394,14 +402,18 @@ def test_ordinary_talk_rarely_fires_commands():
                 before = len(p.log)
                 r = e.handle(c, o)
                 acts = p.log[before:]
-                if acts or _state(e) != LISTENING:
+                if not acts and e.pending is not None and r.message.startswith("Say yes to"):
+                    questions.append((utt, c, o, r.message))   # a question, not an action
+                    e.pending = None
+                elif acts or _state(e) != LISTENING:
                     fired.append((utt, c, o, r.message, acts))
                     # Judge every utterance from plain listening, so one false trigger
                     # (falling asleep, dictation on) neither hides nor causes the rest.
                     e.awake, e.dictating, e.pending, e.take = True, False, None, False
         bad = [f for f in fired if _destructive(f[4])]
         print(f"\n{app}: {len(fired)} commands fired ({len(fired) / hours:.1f} an hour), "
-              f"{len(bad)} destructive ({len(bad) / hours:.1f} an hour)")
+              f"{len(bad)} destructive ({len(bad) / hours:.1f} an hour); asked to confirm {len(questions)} times"
+              + (f", e.g. heard “{questions[0][1]}” / “{questions[0][2]}”" if questions else ""))
         for message, n in Counter(f[3] for f in fired).most_common(12):
             utt, c, o, _, acts = next(f for f in fired if f[3] == message)
             print(f"  {n:>3} × {message!r:<28} e.g. heard “{c}” / “{o}” {list(acts)[:3]}  (reading about “{said.get(utt, '')[:70]}”)")

@@ -24,7 +24,9 @@ commands:
     do: {keys: shift+cmd+l}
   - say: ["metronome", "click", "toggle click", "toggle metronome"]
     do: {keys: numpad7}
-  - say: ["go to start", "go to beginning", "back to start", "top"]
+  # Not "top" alone: real people's "stop" came back as "top" 8 times in 100 and sent the playhead
+  # to the start (stress/test_command_words.py).
+  - say: ["go to start", "go to beginning", "back to start", "go to the top"]
     do: {keys: return}
   - say: ["go to bar {bar:number}", "bar {bar:number}", "jump to bar {bar:number}"]
     do:

@@ -223,6 +223,29 @@ class Flow(unittest.TestCase):
         e.handle("yes")
         self.assertEqual(pressed(p), ["cmd+q"])
 
+    def test_a_question_asked_by_mistake_does_not_eat_the_next_command(self):
+        e, p = engine("Logic Pro")
+        e.handle("delete", "the lead")          # someone did say delete, the open recognizer misheard
+        self.assertTrue(e.pending)
+        e.handle("yes")
+        self.assertEqual(pressed(p), ["delete"])
+        e, p = engine("Logic Pro")
+        e.handle("cut", "cat")                  # a stray word: Voice asks
+        r = e.handle("play", "play")            # the next command still runs
+        self.assertTrue(r.handled)
+        self.assertEqual(pressed(p), ["space"])
+        self.assertFalse(e.pending)
+
+    def test_top_alone_is_not_go_to_start(self):
+        # people's "stop" came back as "top" and sent the playhead to the start
+        for app in ("Logic Pro", "Pro Tools"):
+            e, p = engine(app)
+            e.handle("top", "top")
+            self.assertNotIn("return", pressed(p))
+            e, p = engine(app)
+            e.handle("go to start", "go to start")
+            self.assertEqual(len(pressed(p)), 1)
+
     def test_dictation_uses_open_transcript(self):
         e, p = engine("Logic Pro")
         e.handle("start dictation")
@@ -272,7 +295,9 @@ class Destructive(unittest.TestCase):
                                       ("Logic Pro", "delete", "the leap"), ("Pro Tools", "delete", "believe")]:
             e, p = engine(app)
             r = e.handle(said, heard_open)
-            self.assertFalse(r.handled, f"{said} / {heard_open}")
+            self.assertTrue(r.message.startswith("Say yes to"), f"{said} / {heard_open}: {r.message}")
+            self.assertEqual(pressed(p), [], f"{said} / {heard_open}")
+            e.handle("the cat sat down", "the cat sat down")                 # never confirmed
             self.assertEqual(pressed(p), [], f"{said} / {heard_open}")
         for app, said, keys in [("Logic Pro", "cut", ["cmd+x"]), ("Logic Pro", "paste", ["cmd+v"]),
                                 ("Logic Pro", "delete", ["delete"])]:
@@ -283,8 +308,11 @@ class Destructive(unittest.TestCase):
             self.assertTrue(e.handle(said).handled, said)                    # typed, or from another app
             self.assertEqual(pressed(p), keys)
         e, p = engine("Logic Pro")
-        self.assertFalse(e.handle("cut that", "cat").handled)              # longer, the same: one
-        self.assertEqual(pressed(p), [])                                   # person's "cat" did that
+        self.assertTrue(e.handle("cut that", "cat").message.startswith("Say yes"))   # longer, the same:
+        self.assertEqual(pressed(p), [])                                   # one person's "cat" did that
+        e.handle("yes")                                                    # they really said cut
+        self.assertEqual(pressed(p), ["cmd+x"])
+        e, p = engine("Logic Pro")
         self.assertTrue(e.handle("cut that", "cut that").handled)
         self.assertEqual(pressed(p), ["cmd+x"])
         e, p = engine("Logic Pro")
