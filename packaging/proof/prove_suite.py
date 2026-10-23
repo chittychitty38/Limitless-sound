@@ -264,8 +264,7 @@ def suite_checks(hub: las_check.Hub, tools: list[str]) -> list[dict]:
 
 # Apps not held to Spanish yet, and why. Voice reports the language it listens in, which stays
 # English until its Spanish speech model (39 MB) is downloaded, and the proof doesn't download it.
-NOT_IN_SPANISH = {"voice": "listens in English until its Spanish model is downloaded",
-                  "color": "its windows are English only for now"}
+NOT_IN_SPANISH = {"voice": "listens in English until its Spanish model is downloaded"}
 
 
 def apps_follow_language(hub: las_check.Hub, tools: list[str]) -> dict:
