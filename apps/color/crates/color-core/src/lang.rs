@@ -127,6 +127,21 @@ mod tests {
     }
 
     #[test]
+    fn everything_color_core_says_has_spanish() {
+        use crate::helper::{label, said};
+        use crate::profile::{RANGES, ROLES};
+        let mut words: Vec<&str> = said::ALL.to_vec();
+        words.extend(RANGES.iter().map(|(k, _, _)| label(k)));
+        words.push(label("anything else"));
+        words.extend(crate::CvdType::ALL.iter().map(|c| c.plain_name()));
+        words.extend(ROLES.iter().map(|r| r.label));
+        let missing: Vec<_> = words.iter().filter(|w| !spanish().contains_key(**w)).collect();
+        assert!(missing.is_empty(), "no Spanish in app/ui/index.html for {missing:?}");
+        // The window's own words are checked by app/test/languages.test.mjs.
+        assert!(spanish().len() > 300);
+    }
+
+    #[test]
     fn text_without_spanish_stays_english() {
         assert_eq!(t(Lang::Es, "A sentence nobody translated"), "A sentence nobody translated");
         assert_eq!(tf(Lang::En, "Open {name}", &[("name", "Limitless Color")]), "Open Limitless Color");
