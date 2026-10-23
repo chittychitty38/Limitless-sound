@@ -127,8 +127,8 @@ ENGLISH = Language("en", "English", "English", "vosk-model-small-en-us-0.15", "4
 # It also listens for the words said most in Spanish (common_words.py): without them, the model
 # writes down ordinary talk as the nearest command. With them to choose from, it's less sure of
 # the commands it hears right (1 in 20 under 0.64, against 0.92 without), so a command needs 0.15
-# less: 0.40 with the default setting. On real people that heard 91% of the commands rather than
-# 88%, and an hour of reading aloud zoomed once either way (stress/test_zoom_language.py).
+# less: 0.40 with the default setting. On real people that heard 90% to 91% of the commands
+# rather than 88%, and an hour of reading aloud zoomed once or twice (stress/test_zoom_language.py).
 SPANISH = Language("es", "Español", "Spanish", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
                    fillers=("por favor", "gracias"), others=common_words.SPANISH, confidence_offset=-0.15)
 LANGUAGES = {lang.code: lang for lang in (ENGLISH, SPANISH)}

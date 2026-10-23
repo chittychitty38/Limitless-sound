@@ -116,6 +116,8 @@ def test_commands_get_through_music(snr_db):
           + f". Wrong action {len(wrong)} times: {wrong[:6]}. Missed: {missed[:12]}")
     # Measured on CI: every command at all three levels on Linux (espeak-ng, 14 clips), and 41 of 42
     # on a Mac (three of its voices), where "magnify" was once heard as "magnifier". The floor
-    # allows two misses on Linux and six on the Mac.
+    # allows two misses on Linux and six on the Mac. Spanish, every one of its 45 phrases in
+    # espeak-ng's es-419 voice: 44, 45 and 41 heard, never a wrong action; at 6 dB, "otra vez" was
+    # heard as "obra" and "mostrar el panel" as "mostrar el".
     assert right["now"] / n >= 0.85, f"only {right['now'] / n:.0%} of Zoom's commands heard over music at {snr_db} dB"
     assert len(wrong) <= max(1, n // 10), wrong
