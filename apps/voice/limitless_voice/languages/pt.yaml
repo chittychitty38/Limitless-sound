@@ -288,6 +288,22 @@ texts:
   Toggle record arm on the selected track: Arma ou desarma a gravação da faixa selecionada
   Split the clip at the selection: Divide o clipe na seleção
   Opens Export Audio/Video: Abre Exportar áudio/vídeo
+  # GarageBand, REAPER and FL Studio
+  Opens the New Track dialog: Abre a janela Nova faixa
+  Split items at the edit cursor: Divide os itens no cursor de edição
+  Opens the Render dialog: Abre a janela Render
+  Record mode: Modo de gravação
+  Switches record mode on or off; say play to start recording: Liga ou desliga o modo de gravação; diga tocar para começar a gravar
+  Toggle the metronome (not from the Piano roll): Liga ou desliga o metrônomo (não pelo Piano roll)
+  Move the playback marker to the start (Playlist): Leva o marcador de reprodução para o início (Playlist)
+  Next bar (Song mode): Próximo compasso (modo Song)
+  Previous bar (Song mode): Compasso anterior (modo Song)
+  Select the next channel in the Channel Rack: Seleciona o próximo canal no Channel Rack
+  Select the previous channel in the Channel Rack: Seleciona o canal anterior no Channel Rack
+  Solo the selected Mixer track (with the Mixer in front): Solo na faixa selecionada do Mixer (com o Mixer na frente)
+  Step back through FL Studio's undo history: Volta um passo no histórico do FL Studio
+  FL Studio has no redo key. To step forward again, say press command z.: O FL Studio não tem tecla para refazer. Para avançar um passo, diga aperte comando zê.
+  Opens the render options for a WAV file: Abre as opções para exportar um arquivo WAV
   # Voice's windows (words.py): the main window, the menu bar menu, Settings, the setup guide
   # and the floating display. Words with "&" before a letter are reached with Alt and that letter.
   # How words are put together, the same in Portuguese:
@@ -636,5 +652,57 @@ commands:
     zoom in vertical: *taller
     zoom out vertical: *shorter
     zoom to selection: ["zoom na seleção", "ajustar à seleção", "aproximar na seleção"]
+    zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo"]
+    export: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]
+
+  # GarageBand, REAPER and FL Studio keep their own names for their windows (Playlist, Channel
+  # Rack, Piano roll, Mixer), as Brazilian musicians use them.
+  GarageBand:
+    play: *play
+    record: *record
+    new track: *new_track
+    automation: ["automação", "mostrar [a] automação", "ver [a] automação"]
+    musical typing: ["teclado musical", "digitação musical"]
+
+  REAPER:
+    play: *play
+    record: *record
+    loop: ["loop", "ativar [o] loop", "reprodução em loop"]
+    go to start: *start
+    go to end: ["ir para o fim", "ir pro fim", "ir para o final", "ir para o fim do projeto"]
+    new marker: &new_marker ["novo marcador", "marcador novo", "adicionar [um] marcador", "colocar [um] marcador"]
+    new track: *new_track
+    next track: *next_track
+    previous track: *previous_track
+    redo: *redo
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir no cursor"]
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]
+    zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo", "ajustar ao projeto"]
+    render: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]
+
+  FL Studio:
+    play: *play
+    # Not "gravar": R only switches record mode, and play then records.
+    record mode: ["modo gravação", "modo de gravação", "ativar [o] modo de gravação", "armar gravação"]
+    metronome: *metronome
+    go to start: *start
+    forward: ["avançar", "para frente", "pra frente", "próximo compasso", "compasso seguinte", "avançar [um] compasso"]
+    back: ["voltar", "retroceder", "para trás", "pra trás", "compasso anterior", "voltar [um] compasso"]
+    new marker: *new_marker
+    # The Channel Rack's channels, which Brazilians also call tracks.
+    next channel: ["próximo canal", "canal seguinte", "próxima faixa", "faixa seguinte"]
+    previous channel: ["canal anterior", "faixa anterior"]
+    solo: *solo
+    undo: ["desfazer", "desfazer isso", "desfaz isso"]
+    redo: *redo
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]
+    piano roll: ["piano roll", "editor de teclado", "mostrar [o] piano roll", "mostrar [o] editor de teclado",
+                 "editor", "mostrar [o] editor"]
+    # The Playlist is where the tracks are; the Channel Rack holds the channels.
+    playlist: ["janela de faixas", "mostrar [as] faixas", "ver [as] faixas"]
+    channel rack: ["janela de canais", "mostrar [os] canais", "ver [os] canais"]
+    browser: ["navegador", "mostrar [o] navegador", "esconder [o] navegador", "ver [o] navegador", "biblioteca"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
     zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo"]
     export: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]
