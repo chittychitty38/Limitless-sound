@@ -3,6 +3,7 @@
 use serde_json::json;
 
 use crate::color::{hex_to_lin, lin_to_hex, simulate};
+use crate::lang::{self, Lang};
 use crate::profile::{Profile, ROLES};
 
 pub const RULES: &str = r##"You are the color assistant inside "Limitless Color", an app that recolors the whole screen so a colorblind musician can see Logic Pro, Pro Tools and their plugins the way they want. You change display settings, then ask what they see, and repeat until they're happy.
@@ -30,8 +31,24 @@ HOW TO WORK:
 
 Return ONLY a JSON object: {"reply": string, "changes": {only settings you change, "type" included if it changes}, "anchors": {controlId: "#rrggbb"}, "removeAnchors": [controlId], "question": string}"##;
 
+/// Added to the instructions when the window is in another language, so Claude answers in it and
+/// names the controls the way the window does.
+pub fn language_rules(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "",
+        Lang::Es => r##"
+
+LANGUAGE: The person's window is in Spanish. Write "reply" and "question" in Spanish: neutral Latin American Spanish, addressing them as tú, short and warm. Name the controls the way the Spanish window does (each control's "label" in STATE): Grabar, Reproducir, Solo, Silenciar (M), los medidores, las pistas. Say "rojo-verde" and "azul-amarillo" rather than medical terms. If the person writes in another language, answer in theirs. JSON keys, setting names and control ids stay in English."##,
+    }
+}
+
 /// The current screen state as the assistant sees it.
 pub fn state_json(p: &Profile) -> serde_json::Value {
+    state_json_in(p, Lang::En)
+}
+
+/// [`state_json`], with each control named as the window names it in `lang`.
+pub fn state_json_in(p: &Profile, lang: Lang) -> serde_json::Value {
     let t = p.transform();
     let s = &p.settings;
     let controls: Vec<_> = ROLES
@@ -41,7 +58,7 @@ pub fn state_json(p: &Profile) -> serde_json::Value {
             let shown = t.apply(lin);
             json!({
                 "id": r.id,
-                "label": r.label,
+                "label": lang::t(lang, r.label),
                 "original": r.hex,
                 "shownNow": lin_to_hex(shown),
                 "likelyPerceivedAs": lin_to_hex(simulate(shown, s.cvd, s.severity)),
@@ -59,6 +76,11 @@ pub struct Turn {
 }
 
 pub fn build(p: &Profile, recent: &[Turn], message: &str) -> String {
+    build_in(p, recent, message, Lang::En)
+}
+
+/// The whole message for one turn, for a person whose window is in `lang`.
+pub fn build_in(p: &Profile, recent: &[Turn], message: &str, lang: Lang) -> String {
     let convo = if recent.is_empty() {
         "(none)".to_string()
     } else {
@@ -71,7 +93,11 @@ pub fn build(p: &Profile, recent: &[Turn], message: &str) -> String {
             .collect::<Vec<_>>()
             .join("\n")
     };
-    format!("{RULES}\n\nCONVERSATION SO FAR:\n{convo}\n\nSTATE:\n{}\n\nPerson says: {message}", state_json(p))
+    format!(
+        "{RULES}{}\n\nCONVERSATION SO FAR:\n{convo}\n\nSTATE:\n{}\n\nPerson says: {message}",
+        language_rules(lang),
+        state_json_in(p, lang)
+    )
 }
 
 #[cfg(test)]
@@ -85,5 +111,21 @@ mod tests {
         assert!(s.contains("Person says: red looks brown"));
         assert!(s.contains("\"id\":\"record\""));
         assert!(s.contains("Person: hi"));
+        assert!(!s.contains("LANGUAGE:"), "English instructions stay as they were");
+    }
+
+    #[test]
+    fn a_spanish_window_gets_answers_in_spanish() {
+        let p = Profile::default();
+        let s = build_in(&p, &[], "lo rojo lo veo café", Lang::Es);
+        assert!(s.contains("Person says: lo rojo lo veo café"));
+        assert!(s.contains("LANGUAGE: The person's window is in Spanish."));
+        assert!(s.contains("Write \"reply\" and \"question\" in Spanish"));
+        // The controls carry the window's Spanish names; their ids stay English.
+        let state = state_json_in(&p, Lang::Es);
+        let record = state["controls"].as_array().unwrap().iter().find(|c| c["id"] == "record").unwrap();
+        assert_eq!(record["label"], lang::t(Lang::Es, "Record button & armed tracks"));
+        assert_ne!(record["label"], "Record button & armed tracks");
+        assert_eq!(build(&p, &[], "x"), build_in(&p, &[], "x", Lang::En));
     }
 }

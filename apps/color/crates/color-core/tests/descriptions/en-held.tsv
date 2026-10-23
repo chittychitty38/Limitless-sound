@@ -1,0 +1,68 @@
+# Held out: written before the rules changed, and never used to write them. Measured, not tuned to.
+# expect	context	who	text
+# expect: rg (red-green), rg+ (red-green, further), protan (reds look dark), by (blue-yellow),
+#   solo-mute, meters, less (ease back), more (turn up), undo (back to before), keep (nothing to
+#   change), ask (asks what looks wrong). context: - (a fresh start) or rg (after a red-green change).
+rg	-	US	the red buttons look kind of brown, same as the green ones
+rg	-	US	I honestly can't tell red from green on the tracks
+rg	-	UK	record and play look like the same colour to me
+rg	-	US	red stuff shows up as a muddy yellow
+rg	-	UK	the green regions look orangey like the red ones
+rg	-	dictation	i see red as green basically
+rg	-	typo	the redd and grean tracks look the same
+rg	-	US	yellow and green tracks are basically identical
+rg	-	US	can you help, reds look brownish to me
+rg	-	UK	the recording light and the play button blend together
+rg	-	US	orange and green regions look alike
+rg	-	dictation	what should be red looks olive
+rg+	rg	US	still the same, red and green look alike
+rg+	rg	US	I still can't tell red from green
+rg+	rg	UK	they still look almost identical
+rg+	rg	US	a bit better but red and green still blend
+protan	-	US	the record button looks almost black
+protan	-	US	reds look really dark to me
+protan	-	UK	the clip light is so dark I can barely see it
+protan	-	dictation	red tracks look black
+protan	-	US	red looks darkish brown
+by	-	US	blue and green look the same to me
+by	-	UK	I mix up the blue and green tracks
+by	-	US	light blue and green are hard to tell apart
+by	-	US	purple and blue tracks look identical
+by	-	dictation	yellow looks pinkish
+by	-	UK	yellow looks grey to me
+by	-	US	teal and blue tracks blend together
+by	-	typo	violet and blu are the same to me
+solo-mute	-	US	I can't tell solo from mute
+solo-mute	-	UK	the solo and mute buttons look the same
+solo-mute	-	US	is that track soloed or muted? they look identical
+solo-mute	-	dictation	s and m buttons look alike
+solo-mute	-	US	solo vs mute is impossible for me
+meters	-	US	the meters look like one color all the way up
+meters	-	UK	I can't see when the level meter hits red
+meters	-	US	metering is all one color
+meters	-	dictation	i cant tell when the meter clips
+meters	-	US	the level bars all look green
+less	rg	US	way too strong, tone it down
+less	rg	UK	the colours look garish now
+less	rg	US	that's overdone, make it subtler
+less	rg	US	too intense, can you dial it back
+less	rg	dictation	everything looks weird ease off a bit
+less	rg	US	make it more natural please
+more	-	US	I barely notice any difference, turn it up
+more	-	UK	not enough, make it stronger
+more	-	US	the change is too subtle
+more	-	US	crank it up more
+more	-	dictation	still hard to see the difference
+more	-	US	can you make it more intense
+undo	rg	US	now it looks worse
+undo	rg	UK	that made it worse, go back
+undo	rg	US	undo that please
+undo	rg	dictation	put it back how it was
+keep	rg	US	much better, thanks
+keep	rg	UK	perfect, leave it like that
+keep	rg	US	now I can tell them apart
+keep	rg	US	that's great
+keep	rg	dictation	they dont look the same anymore
+keep	rg	US	looks good now
+ask	-	US	hello
+ask	-	US	what can you do?

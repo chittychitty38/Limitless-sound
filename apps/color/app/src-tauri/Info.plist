@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the app's Info.plist by Tauri. Limitless Color speaks English and Spanish (its
+     own words come from app/ui/index.html), so on a Mac set to Spanish, macOS's own parts of the
+     app are in Spanish too: the file picker, the text menus and the Edit menu's system items. -->
+<plist version="1.0">
+<dict>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+	</array>
+</dict>
+</plist>
