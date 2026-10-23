@@ -37,6 +37,7 @@ jobs:
       voice: ${{ steps.diff.outputs.voice }}
       gazestage: ${{ steps.diff.outputs.gazestage }}
       color: ${{ steps.diff.outputs.color }}
+      zoom: ${{ steps.diff.outputs.zoom }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,12 +46,12 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            for app in voice gazestage color; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            for app in voice gazestage color zoom; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
             exit 0
           fi
           changed="$(git diff --name-only HEAD^1 HEAD)"
           echo "$changed"
-          for app in voice gazestage color; do
+          for app in voice gazestage color zoom; do
             if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
               echo "$app=true" >> "$GITHUB_OUTPUT"
             else
@@ -120,6 +121,67 @@ jobs:
         run: |
           VOSK_MODEL="$PWD/models/$MODEL" TTS_WAV_DIR="$RUNNER_TEMP/speech" \
             python -m pytest stress/test_voice_stress.py -v -s
+
+  # Voice and Zoom hearing real people instead of a synthetic voice: Google Speech Commands
+  # (single words, thousands of speakers) for how often a command is heard, and LibriSpeech
+  # (an hour of people reading aloud) for how often ordinary talk fires one. Both CC BY 4.0,
+  # fetched once and cached, never committed. stress/tools/get_real_speech.py says what's kept.
+  voice-real-speech:
+    name: Voice and Zoom vs real people (ubuntu-latest)
+    needs: changes
+    if: needs.changes.outputs.voice == 'true' || needs.changes.outputs.zoom == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25   # about 15 with the recordings cached, a minute or two more without
+    env:
+      MODEL: vosk-model-small-en-us-0.15
+    steps:
+      - uses: actions/checkout@v4
+      - id: has
+        shell: bash
+        run: echo "voice=$([ -f apps/voice/limitless_voice/engine.py ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - if: steps.has.outputs.voice == 'yes'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: steps.has.outputs.voice == 'yes'
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: vosk-${{ env.MODEL }}
+      # Restored and saved as separate steps, so a failing test still keeps the download.
+      - if: steps.has.outputs.voice == 'yes'
+        id: data
+        uses: actions/cache/restore@v4
+        with:
+          path: real-speech
+          key: real-speech-${{ hashFiles('stress/tools/get_real_speech.py') }}
+      - if: steps.has.outputs.voice == 'yes'
+        name: Install, fetch the speech model the app ships and the recordings
+        shell: bash
+        run: |
+          pip install pytest psutil numpy pyyaml platformdirs vosk==0.3.44 soundfile
+          if [ ! -d "models/$MODEL" ]; then
+            mkdir -p models
+            curl -sSfL -o model.zip "https://alphacephei.com/vosk/models/${MODEL}.zip"
+            python -m zipfile -e model.zip models/
+          fi
+          if [ "${{ steps.data.outputs.cache-hit }}" != "true" ]; then
+            python stress/tools/get_real_speech.py real-speech
+          fi
+      - if: steps.has.outputs.voice == 'yes' && steps.data.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: real-speech
+          key: ${{ steps.data.outputs.cache-primary-key }}
+      - if: steps.has.outputs.voice == 'yes'
+        shell: bash
+        run: |
+          # The recognizer warns about every command word the small model doesn't know each time
+          # it's built, thousands of times here; each warning is shown once.
+          VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
+            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
+            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py -v -s --durations=5 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   gazestage:
     name: GazeStage soak and focus (${{ matrix.os }})
