@@ -68,6 +68,8 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* Header */
 header.top { position: sticky; top: 0; z-index: 5; background: rgba(19,18,31,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+/* Taller than a fifth of the screen (large text, a phone on its side), it scrolls away with the page */
+header.top.scrolls { position: static; }
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--cream); text-decoration: none; }
 .brand img { width: 46px; height: 46px; }
@@ -112,6 +114,8 @@ nav .pill:hover { border-color: var(--lavender); }
 .meta { margin: 0 0 10px; line-height: 1.9; }
 .live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
 h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
+/* A word wider than a phone with the text made larger breaks, rather than going off the side */
+h1, h2, h3 { overflow-wrap: anywhere; }
 h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
 .lede strong { color: var(--cream); }
@@ -179,9 +183,11 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .panel li { margin-bottom: 4px; }
 
 /* Vision */
-.docs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .docs { grid-template-columns: 1fr; } }
-.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; }
+.docs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .docs { grid-template-columns: minmax(0, 1fr); } }
+/* A card never wider than the screen, at any text size: long words wrap rather than push it out */
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.doc .btn { max-width: 100%; }
 .doc h3 { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 14px; }
 .doc p { margin: 0 0 14px; }
 .doc ul { margin: 0 0 22px; padding-left: 1.1em; }
@@ -194,14 +200,14 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 360px) { .levels { grid-template-columns: 1fr; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
-.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; }
+.proofruns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .proofruns { grid-template-columns: minmax(0, 1fr); } }
+.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; overflow-wrap: anywhere; }
 .proofrun h3 { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 0 0 4px; }
 .subhead { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 36px 0 0; }
 .proofrun .label { display: block; margin-bottom: 14px; }
 .prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
-.prooflist li { display: grid; grid-template-columns: 1.6em 1fr; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.prooflist li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
 .prooflist .ok .mark { color: #7fd6a4; }
 .prooflist .bad .mark { color: var(--red); }
@@ -211,7 +217,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 
 /* Involved */
 .involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
-.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; }
+.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; min-width: 0; overflow-wrap: anywhere; }
 .involve strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.01em; margin-bottom: 4px; }
 .involve span { color: var(--muted); }
 
@@ -461,6 +467,16 @@ footer p { margin: 0; }
   </div>
 </footer>
 <script>
+// The header stays on top of the page only while it covers less than a fifth of the screen: with
+// large text, or a phone on its side, it would hide what's being read, so it scrolls away instead.
+(() => {
+  const top = document.querySelector("header.top");
+  const fit = () => top.classList.toggle("scrolls", top.offsetHeight > innerHeight / 5);
+  new ResizeObserver(fit).observe(top);
+  addEventListener("resize", fit);
+  fit();
+})();
+
 // Each Download button goes to that app's newest release, looked up when the page opens, and the
 // suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
 (async () => {
