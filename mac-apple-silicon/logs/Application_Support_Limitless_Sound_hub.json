@@ -1,0 +1,117 @@
+{
+  "autostart": true,
+  "routes": [
+    {
+      "id": "take-guard",
+      "name": "While recording, Limitless Voice only listens for stop and wake words, so singing or talking in a take can't trigger commands.",
+      "when": {
+        "event": "daw.record"
+      },
+      "do": [
+        {
+          "action": "voice.takeGuard"
+        }
+      ],
+      "on": true
+    },
+    {
+      "id": "take-guard-off",
+      "name": "When the take stops, Limitless Voice goes back to hearing every command.",
+      "when": {
+        "event": "daw.stop"
+      },
+      "do": [
+        {
+          "action": "voice.takeGuardOff"
+        }
+      ],
+      "on": true
+    },
+    {
+      "id": "take-guard-off-playstop",
+      "name": "Play/stop after a take also ends take mode.",
+      "when": {
+        "event": "daw.playStop"
+      },
+      "do": [
+        {
+          "action": "voice.takeGuardOff"
+        }
+      ],
+      "on": true
+    },
+    {
+      "id": "keys-dont-fight",
+      "name": "When one-hand mode turns on, the zoom keys layer turns off, so the two never fight over the same keys.",
+      "when": {
+        "event": "onehand.mode",
+        "value": true
+      },
+      "do": [
+        {
+          "action": "zoom.keysOff"
+        }
+      ],
+      "on": true
+    },
+    {
+      "id": "keys-dont-fight-2",
+      "name": "When the zoom keys layer turns on, one-hand mode turns off.",
+      "when": {
+        "event": "zoom.keys",
+        "value": true
+      },
+      "do": [
+        {
+          "action": "onehand.off"
+        }
+      ],
+      "on": true
+    },
+    {
+      "id": "rest-voice-with-controller",
+      "name": "When the controller is switched off to rest, Limitless Voice stops listening too.",
+      "when": {
+        "event": "control.enabled",
+        "value": false
+      },
+      "do": [
+        {
+          "action": "voice.sleep"
+        }
+      ],
+      "on": false
+    },
+    {
+      "id": "colors-follow-daw",
+      "name": "Screen colors turn on whenever a DAW comes to the front.",
+      "when": {
+        "event": "app.daw",
+        "value": true
+      },
+      "do": [
+        {
+          "action": "color.on"
+        }
+      ],
+      "on": false
+    }
+  ],
+  "prefs": {
+    "speak": true,
+    "oneVoice": true,
+    "textScale": 1.0,
+    "highContrast": false,
+    "reduceMotion": false,
+    "dwellMs": 800,
+    "scanMs": 1200,
+    "language": "en"
+  },
+  "intentOrder": [
+    "zoom",
+    "control",
+    "onehand",
+    "gaze",
+    "voice"
+  ]
+}

@@ -1,0 +1,2 @@
+2026-10-23 20:40:12,465 INFO    Limitless Voice: Started Limitless Voice 0.4.4 on Darwin 15.7.9 (x86_64), Python 3.12.10
+2026-10-23 20:40:14,039 WARNING Limitless Voice.stderr: limitless_voice/app.py:892: RuntimeWarning: libpyside: Failed to disconnect (None) from signal "clicked()".

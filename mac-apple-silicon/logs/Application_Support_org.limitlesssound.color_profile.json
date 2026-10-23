@@ -1,0 +1,21 @@
+{
+  "filterOn": true,
+  "profile": {
+    "S": {
+      "blueShift": 0.0,
+      "bySplit": 0.0,
+      "contrast": 1.0,
+      "daltonize": 0.0,
+      "focus": 0.08,
+      "greenShift": 0.0,
+      "redShift": 0.0,
+      "rgSplit": 0.0,
+      "saturation": 1.0,
+      "severity": 0.8,
+      "type": "deutan",
+      "yellowShift": 0.0
+    },
+    "anchors": {}
+  },
+  "onboarding": "permission"
+}

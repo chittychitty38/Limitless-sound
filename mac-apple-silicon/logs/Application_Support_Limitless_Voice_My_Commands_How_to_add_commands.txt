@@ -1,0 +1,19 @@
+Your own voice commands go in this folder.
+
+Make a text file ending in .yaml (for example my-commands.yaml) like this:
+
+name: My Commands
+apps: ["Pro Tools"]        # leave out this line for commands that work everywhere
+commands:
+  - say: ["drum bus", "show [the] drum bus"]
+    do: {keys: cmd+shift+d}
+  - say: ["comp lead vocal"]
+    do:
+      steps:
+        - {keys: "cmd+e"}
+        - {wait: 0.2}
+        - {keys: "opt+cmd+3"}
+
+Write shortcuts with Mac key names (cmd, opt, ctrl, shift). On Windows, cmd
+means Ctrl and opt means Alt. Restart Limitless Voice to load changes.
+The built-in commands are a good place to copy from: say "what can I say".
