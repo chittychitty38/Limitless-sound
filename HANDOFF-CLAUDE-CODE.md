@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-22, after the 0.2.3 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.4 release. Everything below is the state of the project then.
 
 ---
 
@@ -51,18 +51,24 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup and shared settings | Python stdlib only | 0.2.1, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.4 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.2 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.2 |
-| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.3 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.4 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.1 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.3** (the repo's Latest release) |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.3, in the suite |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.9 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.4 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.4 |
+| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.4 |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.6 |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.3 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.4** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
 file (Limitless Sound's page › Activity › **Open the log folder**).
+
+Every screen works with a screen reader and the keyboard alone, and CI checks it: the web-based
+screens (Limitless Sound's page, Control's page, GazeStage, Color, the Mac installer) pass WCAG 2.2
+AA in every look with a keyboard walk (`.github/scripts/apps-a11y.cjs`, `screens.yml`, #79), and
+the Qt apps have `tests/test_accessibility.py` (#75). Every app presses the same key for the
+same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85).
 
 Release links (permanent; they always point at the newest suite):
 - https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
@@ -81,7 +87,10 @@ triggers like `/do/daw.record?t=<token>`). Discovery file `link.json` (port + to
 control, gaze, hub). Intents like `daw.play` go to whichever open app can press DAW keys.
 "Sidechain links" are event → action routes (e.g. while recording, Voice only hears stop/wake
 words). The first time the settings page opens it runs the **guided setup**: how do you like to
-play, how should things look; it opens the apps that fit and sets the shared settings.
+play, how should things look, which language; it opens the apps that fit and sets the shared
+settings. The shared `language` ("en" or "es", first set from the computer's own language) is
+followed by every app that has it; the page itself is in Spanish too, and the hub reads each
+app's replies with a voice for the language that app reports (#83).
 Spec: `shared/PROTOCOL.md`. Clients for Python, JavaScript, Rust and C++ (one header, for
 plug-in and hardware makers) in `shared/clients`; apps carry copies, which the hub's tests keep
 identical. Every app works alone without the hub.
@@ -182,9 +191,14 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - Control has never seen a real Xbox Adaptive Controller.
 - One-Hand's Mac self-test passes even if the key hook can't start; check it really types.
 - GazeStage has never driven a real Pro Tools rig (HUI ports, rewind/ffwd/stop mapping).
-- Voice and Zoom are measured against real people (`stress/test_*_real_speech.py`: Speech
-  Commands single words, an hour of LibriSpeech talk), but nobody has measured real people saying
-  the DAW words themselves ("cut", "record", "solo"): those datasets don't have them.
+- Voice and Zoom are measured against recordings of real people, in CI (`stress/README.md`,
+  "Real people"): about 200 people saying single words (Speech Commands), people saying the DAW
+  command words themselves ("cut", "record", "solo"; MLCommons' Multilingual Spoken Words, #77),
+  and an hour of 40 people reading aloud (LibriSpeech). Nobody has spoken to them in a real room
+  with a real DAW running.
+- Nobody who speaks Spanish has used the Spanish Voice or read the Spanish page (#83).
+- No DAW key has been pressed in a real DAW. The keys come from the vendors' guides, and every
+  app agrees with every other (`stress/test_daw_keys_agree.py`).
 - The C++ client has only been tested against the hub, not inside a real plug-in host.
 - No musician with a disability has tried any of it yet.
 
@@ -213,13 +227,17 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    merged, and the throwaway `diag/control-startup`, `diag/control-idle`, `diag/gazestage-idle`
    and `diag/zoom-idle`).
    Ask Bennet first; cloud sessions weren't allowed to delete them.
-6. **Voice: the next false triggers.** Stray single words still fire a harmless command 17.9%
-   of the time ("happy" → Copy, "wow" → louder, "follow" → Solo, "bird" → Record). Requiring the
-   open recognizer to agree on every one-word command would cut that to 1.3%, but costs
-   "forward" (85% → 52%, heard as "for") and "stop" (96% → 92%); `test_voice_real_speech.py`
-   prints this what-if on every run. To decide, it needs real people saying the command words
-   (record, solo, play, undo …). MLCommons' Multilingual Spoken Words corpus (CC BY 4.0) has
-   single English words cut from Common Voice and is the likeliest source.
+6. **Voice: stray single words.** On real people's recordings (`stress/test_voice_real_speech.py`,
+   `stress/test_command_words.py`, each run prints these):
+   - Voice hears 91% of the words it listens for, and 73% of real people's DAW command words at
+     once, 82% at once or after "Say yes to cut, or cancel" (0.3.8).
+   - It never pressed Cut, Paste or Delete for a word that wasn't one.
+   - In an hour of people reading aloud it fired 0 commands with Logic in front and 3.8 with
+     Pro Tools, none destructive.
+   - Stray single words that aren't commands still fire a harmless one 17.8% of the time ("happy"
+     → Copy, "wow" → louder, "follow" → Solo, "bird" → Record). Requiring both listeners to agree
+     on every one-word command would cut that to 1.3% but takes command words from 73% to 47% right
+     ("undo" 85% → 6%), so it isn't done. A better command model (item 7) is the likelier fix.
 7. **A better speech model for Voice's commands: Bennet's call (licence).** Measured on real
    people (branch `diag/vosk-model`, run 39886586088):
    - The larger `vosk-model-en-us-0.22-lgraph` hears no more than the small model (90.6% against
@@ -235,6 +253,23 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
      - It made Zoom worse (52 zooms an hour of talk), so Zoom keeps the small model.
 8. **By ear on a real Mac:** GazeStage's built-in instrument rests 10 s after the last sound
    and wakes on hover (#60); check that the first note after a rest isn't late.
+9. **Spanish** (#83, and Voice 0.4.0 on branch `voice/languages` if it hasn't merged yet):
+   - Ask a Spanish-speaking musician to read `apps/voice/limitless_voice/languages/es.yaml` (the
+     phrases and replies) and the Spanish words in `shared/hub/limitless_hub/web/index.html`
+     (the `strings-es` table), and to say the commands to Voice with Logic open.
+   - On the Mac: set Limitless Sound's language to Español and check that Voice offers its
+     Spanish model, and that the replies come in a Spanish voice (System Settings ›
+     Accessibility › Spoken Content › System voice › Manage Voices adds one).
+   - Zoom's voice commands are still English only.
+10. **More DAWs for Voice.** Voice has Logic Pro, Pro Tools and Ableton Live 12 (#85). The
+    research for FL Studio, REAPER and GarageBand, each shortcut with its official source or
+    marked unconfirmed, is in `apps/voice/DAW-SHORTCUTS.md`. With the DAW on the Mac, confirm the
+    keys there and write the pack (`apps/voice/limitless_voice/packs/`), then add it to
+    `stress/test_daw_keys_agree.py`. On a real Live 12, check the single-letter keys (S solo,
+    C arm, O metronome) with Live's Computer MIDI Keyboard off.
+11. **Press the corrected DAW keys once in the real DAWs** (#85): Logic's track mute and solo
+    (M, S), Pro Tools' record (F12, on a laptop too), next/previous track (Control-; and
+    Control-P) and go to end (Option-Return).
 
 ## Gotchas learned the hard way
 
@@ -243,8 +278,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - Vosk 0.3.45 has no Mac wheels; stay on 0.3.44.
 - GazeStage PR builds need `CSC_FOR_PULL_REQUEST=true` or electron-builder ships a broken Mac
   signature. MediaPipe assets come from `apps/gazestage/scripts/fetch-assets.mjs`.
-- Verified DAW keys: Logic mute/solo are M/S (Ctrl+M mutes regions); Pro Tools record is F12
-  (Cmd+Space is Spotlight).
+- DAW keys: every app must press the same key for the same thing, and
+  `stress/test_daw_keys_agree.py` checks it. When first compared, the apps disagreed six times and
+  one side was wrong each time (#85): Logic's track mute and solo are M and S (Control-M and
+  Control-S act on regions); Pro Tools records on F12 (Command+Space is Spotlight on a Mac).
 - On Apple silicon, reading the keyboard layout (TIS calls) off the main thread kills the app
   with a trap: use `mac_keys.py`, which hops to the main thread.
 - The free plan runs at most 5 macOS jobs at once, and each macOS minute bills 10x (free while
@@ -305,3 +342,8 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   AudioContext running: GazeStage sleeps its loop and rests its audio when nothing moves.
 - Cloud sessions couldn't download Actions logs or artifacts. On the Mac,
   `gh run view --log-failed` and `gh run download` just work.
+- Cloud sessions' network blocked alphacephei.com (Vosk models), huggingface.co and openslr.org,
+  so speech models were measured in CI, not in the session. A cloud container can also restart
+  and lose a background agent's uncommitted work: commit and push early.
+- Limitless Sound's page has every English word in Spanish too. `test_languages.py` fails when a
+  new English word on the page has no Spanish entry: add one to the `strings-es` table.
