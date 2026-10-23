@@ -335,15 +335,15 @@ Brazilian Portuguese (pt_br). Its stray words are a letter from a command ("sala
 command words are the infinitives Voice listens for when a command is said alone; MSWC's
 Portuguese has no "mute" or "loop", so the English names aren't measured.
 
-What CI measured, Voice 0.4.2 with Logic Pro in front (runs 39925409575 and 39925513641):
+What CI measured, Voice 0.4.3 with Logic Pro in front (runs 39932330009 and 39932381616):
 
 | | Portuguese | Spanish |
 |---|---|---|
-| Command words right at once | **61.9% to 62.3%** (565 clips, 23 words) | 83.5% to 83.6% |
-| At once or with a yes | 62.5% to 62.7% | 84.2% |
+| Command words right at once | **61.6% to 62.7%** (565 clips, 23 words) | 83.5% to 83.6% |
+| At once or with a yes | 62.1% to 63.0% | 84.2% |
 | Destructive key from a word not said | 0 | 0 |
-| Stray words that fired a command | 5.4% to 6.0% ("sala" heard as "solo" or "salvar") | 6.2% to 6.5% |
-| Words it listens for, heard as themselves | 52.5% to 52.6% (numbers, and other forms of command words) | 81.9% |
+| Stray words that fired a command | 5.7% to 6.0% ("sala" heard as "solo" or "salvar") | 6.2% to 6.5% |
+| Words it listens for, heard as themselves | 52.3% to 52.8% (numbers, and other forms of command words) | 81.9% |
 | An hour of reading aloud: commands fired in Logic Pro / Pro Tools | 1.0 / 1.0, none destructive (FLEURS) | 1.0 / 0 |
 | Acts after the word, median | 1.54 s; play, stop, record 0.6 to 0.9 s | 1.38 s; 0.57 s |
 

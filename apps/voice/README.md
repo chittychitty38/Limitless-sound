@@ -146,7 +146,7 @@ bar menu and the floating display) change to the language chosen at once, even b
 model is here; the commands they suggest saying are the ones Voice hears, so they stay English
 until then.
 
-How well it hears real people, measured in CI (Voice 0.4.0, and 0.4.2 for Portuguese;
+How well it hears real people, measured in CI (Voice 0.4.0, and 0.4.3 for Portuguese;
 `stress/README.md` has how):
 
 | | English | Spanish | Portuguese (preview) |

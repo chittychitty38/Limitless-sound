@@ -165,12 +165,12 @@ def test_real_people_saying_voice_commands():
     # the time ("pagar" heard as "parar" 8 times in 36); commands acted a median 1.38 s after the
     # word ended, as the Spanish model ends an utterance later than the English one, and play,
     # stop and record 0.57 s.
-    # Voice 0.4.2 in Brazilian Portuguese, a preview, two runs (39925409575 and 39925513641), 23
-    # words with Logic Pro in front: 61.9% to 62.3% right at once and 62.5% to 62.7% with a yes. The
+    # Voice 0.4.3 in Brazilian Portuguese, a preview, two runs (39932330009 and 39932381616), 23
+    # words with Logic Pro in front: 61.6% to 62.7% right at once and 62.1% to 63.0% with a yes. The
     # small Portuguese model hears nothing at all in about a third of these clips, where Spanish's
     # hears nothing in 4% of the same kind (stress/README.md). The weakest, "apagar", is never right
     # in its 5 clips (heard as nothing, or as "a pagar", which asks), so there's no floor for one
-    # word; no destructive key from a word not said; stray words fired a command 5.4% to 6.0% of
+    # word; no destructive key from a word not said; stray words fired a command 5.7% to 6.0% of
     # the time ("sala" heard as "solo" or "salvar"); commands acted a median 1.54 s after the word,
     # and play, stop and record about 0.75 s.
     floor = FLOORS[LANG.code]
