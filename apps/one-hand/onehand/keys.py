@@ -16,7 +16,7 @@ MAC_CODES = {
     "delete_or_backspace": 51, "escape": 53,
     "cmd_r": 54, "cmd_l": 55, "shift_l": 56, "caps_lock": 57, "alt_l": 58, "ctrl_l": 59,
     "shift_r": 60, "alt_r": 61, "ctrl_r": 62,
-    "f13": 105, "f14": 107, "f15": 113, "f16": 106, "f17": 64, "f18": 79, "f19": 80,
+    "f12": 111, "f13": 105, "f14": 107, "f15": 113, "f16": 106, "f17": 64, "f18": 79, "f19": 80,
     "left_arrow": 123, "right_arrow": 124, "down_arrow": 125, "up_arrow": 126,
 }
 
@@ -32,7 +32,7 @@ WIN_CODES = {
     "close_bracket": 0xDD, "quote": 0xDE,
     "shift_l": 0xA0, "shift_r": 0xA1, "ctrl_l": 0xA2, "ctrl_r": 0xA3,
     "alt_l": 0xA4, "alt_r": 0xA5, "cmd_l": 0x5B, "cmd_r": 0x5C,
-    "f13": 0x7C, "f14": 0x7D, "f15": 0x7E, "f16": 0x7F, "f17": 0x80, "f18": 0x81, "f19": 0x82,
+    "f12": 0x7B, "f13": 0x7C, "f14": 0x7D, "f15": 0x7E, "f16": 0x7F, "f17": 0x80, "f18": 0x81, "f19": 0x82,
 }
 # Windows also reports generic Shift/Ctrl/Alt codes from some devices.
 WIN_GENERIC = {0x10: "shift_l", 0x11: "ctrl_l", 0x12: "alt_l"}

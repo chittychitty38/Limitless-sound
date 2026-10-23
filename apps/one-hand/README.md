@@ -25,7 +25,6 @@ Download the newest `one-hand-v…` release from the repository's **Releases** p
 1. Open the `.dmg` and drag **Limitless One-Hand** onto **Applications**.
 2. Double-click it in Applications. It isn't signed by Apple yet, so macOS may say it can't check the app. Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once. (The disk image includes these steps in *How to open One-Hand.txt*.)
 3. A welcome page walks you through the two switches macOS needs, **Accessibility** and **Input Monitoring**. Each step has a button that opens the right page in System Settings, and the welcome page notices on its own when they're on.
-4. For Pro Tools record (⌘Space), turn off the Spotlight shortcut in System Settings → Keyboard → Keyboard Shortcuts → Spotlight.
 
 ### First time on Windows
 

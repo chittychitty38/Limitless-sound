@@ -64,7 +64,8 @@ def test_windows_translates_modifiers_for_pro_tools():
     e = Engine(LAYOUTS, "windows", Settings())
     e.set_enabled(True)
     assert press(e, "q", app=PT_WIN)[0] == Tap("z", ("ctrl_l",))
-    assert press(e, "e", app=PT_WIN)[0] == Tap("spacebar", ("ctrl_l",))
+    assert press(e, "r", app=PT_WIN)[0] == Tap("e", ("ctrl_l",))      # Separate clip
+    assert press(e, "e", app=PT_WIN)[0] == Tap("f12")                    # Record: F12, as in every app
     assert press(e, "q", app="logic.exe") == (PASS, PASS)
 
 
