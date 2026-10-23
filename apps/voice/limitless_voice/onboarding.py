@@ -20,13 +20,13 @@ import unicodedata
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDialog, QFrame, QHBoxLayout, QProgressBar, QPushButton,
-    QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QComboBox, QDialog, QHBoxLayout, QProgressBar, QPushButton,
+    QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from . import words
 from .audio import list_input_devices
-from .look import LiveText, add_item, grow, label, sized
+from .look import LiveText, UpAndDown, add_item, grow, label, sized
 from .settings import APP_NAME
 from .words import phrase, ui
 
@@ -107,7 +107,9 @@ class SetupWizard(QDialog):
         self.settings = window.settings
         words.show(self.setWindowTitle, ui.text("Set up {app}", app=APP_NAME))
         self.setModal(True)
-        self.setMinimumSize(620, 520)
+        # Its pages say how wide they must be (UpAndDown), so no minimum here: one would stop the
+        # window growing for them. Taller than the window, a page scrolls.
+        self.resize(620, 520)
         grow(self, window.look["textScale"])   # room for larger text
 
         self.stack = QStackedWidget()
@@ -131,14 +133,7 @@ class SetupWizard(QDialog):
         self.pages = [WelcomePage(self), MicPermissionPage(self), ControlPermissionPage(self),
                       MicCheckPage(self), PreferencesPage(self), ReadyPage(self)]
         for p in self.pages:
-            # A page larger than the window, at a large text size or in a longer language, scrolls
-            # instead of squeezing its words out of sight; _show_focus scrolls to the keyboard.
-            scroll = QScrollArea()
-            scroll.setWidget(p)
-            scroll.setWidgetResizable(True)
-            scroll.setFrameShape(QFrame.NoFrame)
-            scroll.setFocusPolicy(Qt.NoFocus)
-            self.stack.addWidget(scroll)
+            self.stack.addWidget(UpAndDown(p))   # _show_focus scrolls it to the keyboard
 
         self.poll = QTimer(self)
         self.poll.timeout.connect(self._refresh)

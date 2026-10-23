@@ -13,7 +13,8 @@ import test_spanish as spanish
 from test_setup import make
 
 # isort: split
-from PySide6.QtWidgets import QAbstractButton, QApplication, QComboBox, QLabel, QPushButton, QSystemTrayIcon, QWidget
+from PySide6.QtWidgets import (
+    QAbstractButton, QApplication, QComboBox, QLabel, QPushButton, QScrollArea, QSystemTrayIcon, QWidget)
 
 from limitless_voice import app as app_module, onboarding, words
 from limitless_voice.app import CommandsDialog, SettingsDialog
@@ -159,10 +160,6 @@ class Windows(spanish.Languages):
             w.wizard.show()
             QApplication.processEvents()
             cut.update(self.cut_off(w.wizard, f"setup page {page + 1}"))
-            shown = w.wizard.stack.currentWidget().viewport().width()
-            if w.wizard.pages[page].width() > shown:   # it scrolls sideways to show all its words
-                cut[(f"setup page {page + 1}", "width")] = (f"setup page {page + 1} is "
-                                                            f"{w.wizard.pages[page].width()} wide, shows {shown}")
         for number, window in enumerate(windows):
             QApplication.processEvents()
             size = window.size()
@@ -215,7 +212,11 @@ class Windows(spanish.Languages):
         for place, widget in enumerate([window, *window.findChildren(QWidget)]):
             if not widget.isVisible():
                 continue
-            if isinstance(widget, QLabel) and widget.wordWrap():
+            if isinstance(widget, QScrollArea) and widget.widget() is not None \
+                    and widget.widget().width() > widget.viewport().width() + 1:
+                found[(name, place)] = (f"{name}: {widget.widget().width()} wide, "
+                                        f"shows {widget.viewport().width()}")   # hidden at the side
+            elif isinstance(widget, QLabel) and widget.wordWrap():
                 if widget.heightForWidth(widget.width()) > widget.height() + 1:
                     found[(name, place)] = f"{name}: {widget.text()[:60]!r} needs more height"
             elif isinstance(widget, (QLabel, QAbstractButton, QComboBox)):

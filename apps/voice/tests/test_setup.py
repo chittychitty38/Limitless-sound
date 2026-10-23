@@ -175,8 +175,9 @@ class Wizard(unittest.TestCase):
 
 
     def test_a_page_too_big_for_the_window_scrolls_instead_of_squeezing(self):
-        """At double text, in a setup window that doesn't grow with it, every wrapped line on every
-        page keeps its room: the page scrolls instead. Before, the last page's examples overlapped."""
+        """At double text every wrapped line on every setup page keeps its room: a page taller than
+        the window scrolls, and the window grows as wide as its widest page. Before, the window
+        stayed 620 x 520 and squeezed them."""
         old = QFont(app.font())
         big = QFont(old)
         big.setPointSizeF(old.pointSizeF() * 2)
@@ -189,10 +190,28 @@ class Wizard(unittest.TestCase):
         for i, page in enumerate(wiz.pages):
             wiz._show(i)
             app.processEvents()
+            self.assertLessEqual(page.width(), wiz.stack.currentWidget().viewport().width(), i)   # none at the side
             for lbl in page.findChildren(QLabel):
                 if lbl.isVisible() and lbl.wordWrap():
                     self.assertGreaterEqual(lbl.height() + 1, lbl.heightForWidth(lbl.width()), (i, lbl.text()[:40]))
         self.assertTrue(wiz.stack.currentWidget().verticalScrollBar().isVisible())   # the eight examples
+
+
+    def test_the_main_window_scrolls_instead_of_squeezing_a_permission_still_needed(self):
+        """At double text the main window keeps the whole "Allow Limitless Voice to control the
+        computer" banner, scrolling if it must, and grows as wide as its words need, as before."""
+        old = QFont(app.font())
+        big = QFont(old)
+        big.setPointSizeF(old.pointSizeF() * 2)
+        app.setFont(big)
+        self.addCleanup(app.setFont, old)
+        self.w, p, _ = make(mic="granted", control=False)
+        self.w._check_permissions()
+        self.w.show()
+        app.processEvents()
+        banner = self.w.permission_text
+        self.assertGreaterEqual(banner.height() + 1, banner.heightForWidth(banner.width()))
+        self.assertGreaterEqual(self.w.centralWidget().viewport().width() + 1, self.w.listen_btn.sizeHint().width())
 
 
 class Hud(unittest.TestCase):

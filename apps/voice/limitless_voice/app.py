@@ -25,7 +25,7 @@ from . import __version__, applog, mac_keys, words
 from .audio import Listener, list_input_devices
 from .engine import Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs
-from .look import LiveText, add_item, grow, in_use, label, resize_text, sized
+from .look import LiveText, UpAndDown, add_item, grow, in_use, label, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .language import ENGLISH, available, load as load_language, model_for, model_language, wanted
 from .platforms import current_os, get_platform
@@ -479,7 +479,7 @@ class MainWindow(QMainWindow):
             buttons.addWidget(b)
         layout.addLayout(buttons)
 
-        self.setCentralWidget(root)
+        self.setCentralWidget(UpAndDown(root))
         self.resize(560, 620)
         self._fill_mics()
         self.mic_combo.currentIndexChanged.connect(self._mic_changed)
