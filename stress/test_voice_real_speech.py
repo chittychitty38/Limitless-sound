@@ -309,11 +309,11 @@ def test_real_people_saying_command_words():
         assert rate["stop"] >= 0.90, f"“stop”, which ends a take, was right only {rate['stop']:.0%} of the time"
     worst = min(known, key=rate.get)
     assert rate[worst] >= 0.72, f"“{worst}” was right only {rate[worst]:.0%} of the time"
-    # Measured: stray words fired a command 21.6% to 21.7% of the time, and pressed a destructive
-    # key on 3.8% to 3.9% of them (people's "cat" heard as "cut"). A known problem (stress/README.md);
-    # these ceilings only stop it getting worse. Bring them down when it's fixed.
-    assert 1 - quiet / stray_tries <= 0.25, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
-    assert destroyed / stray_tries <= 0.045, f"stray words pressed a destructive key {destroyed} times"
+    # Measured: stray words fired a command 17.9% of the time (21.6% to 21.9% before Voice 0.3.5),
+    # and never a destructive key: a one-word Cut, Paste or Delete needs the open recognizer to have
+    # heard that word too. Before, people's "cat" pressed Cut 64 to 66 times in 100.
+    assert 1 - quiet / stray_tries <= 0.21, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
+    assert destroyed == 0, f"stray words pressed a destructive key {destroyed} times"
 
 
 @needs_talk
@@ -331,10 +331,10 @@ def test_ordinary_talk_rarely_fires_commands():
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud, heard as {utterances} utterances "
           f"in {took:.0f} s with {WORKERS} at once")
 
-    # Most commands an hour of reading aloud may fire. Measured on three runners: Logic Pro 1.9,
-    # 4.7 and 1.9 an hour, Pro Tools 4.7, 7.6 and 4.7, none destructive. Only a handful in the
-    # hour, so a different CPU moves them by two or three.
-    ceiling = {"Logic Pro": 8, "Pro Tools": 12}
+    # Most commands an hour of reading aloud may fire. Measured: Logic Pro 0 an hour, Pro Tools 3.8,
+    # none destructive (Voice 0.3.4: 1.9 to 4.7, and 4.7 to 7.6). Only a handful in the hour, so a
+    # different CPU moves them by two or three.
+    ceiling = {"Logic Pro": 3, "Pro Tools": 7}
     too_many = []
     for app, most in ceiling.items():
         fired = []
@@ -358,6 +358,6 @@ def test_ordinary_talk_rarely_fires_commands():
             print(f"  {n:>3} × {message!r:<28} e.g. heard “{c}” / “{o}” {list(acts)[:3]}  (reading about “{said.get(utt, '')[:70]}”)")
         for utt, c, o, message, acts in bad:
             print(f"  DESTRUCTIVE: {message!r} {list(acts)} heard “{c}” / “{o}” (reading about “{said.get(utt, '')[:70]}”)")
-        if len(fired) / hours > most or len(bad) / hours > 1:
-            too_many.append(f"{app}: {len(fired) / hours:.1f} an hour (most {most}), {len(bad) / hours:.1f} destructive (most 1)")
+        if len(fired) / hours > most or bad:
+            too_many.append(f"{app}: {len(fired) / hours:.1f} an hour (most {most}), {len(bad)} destructive (none allowed)")
     assert not too_many, too_many
