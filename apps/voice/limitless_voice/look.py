@@ -67,6 +67,13 @@ class UpAndDown(QScrollArea):
         self.setFocusPolicy(Qt.NoFocus)
         widget.installEventFilter(self)
 
+    def sizeHint(self):
+        """What its contents ask for, up to the screen, so a window opens showing all of them when
+        it can (Qt's own stops at 24 lines of text)."""
+        want = self.widget().sizeHint() + QSize(self.verticalScrollBar().sizeHint().width(), 0)
+        screen = self.screen()
+        return want.boundedTo(screen.availableGeometry().size()) if screen else want
+
     def minimumSizeHint(self):
         hint = super().minimumSizeHint()
         need = self.widget().minimumSizeHint().width() + self.verticalScrollBar().sizeHint().width()

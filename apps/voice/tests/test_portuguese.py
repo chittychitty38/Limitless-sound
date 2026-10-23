@@ -6,6 +6,7 @@ button, choice or line cut off. No mic, no real OS, no hub, no speech model: a m
 faked where one's needed (the Portuguese model keeps everything in one folder)."""
 import re
 import shutil
+import sys
 from unittest import mock
 
 # first: it sets up a private config folder and an offscreen screen
@@ -13,6 +14,7 @@ import test_spanish as spanish
 from test_setup import make
 
 # isort: split
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractButton, QApplication, QComboBox, QLabel, QPushButton, QScrollArea, QSystemTrayIcon, QWidget)
 
@@ -189,6 +191,28 @@ class Windows(spanish.Languages):
         QApplication.processEvents()
         self.assertTrue(settings.language_note.text().startswith("Prévia: em português"))
         self.assertEqual(list(self.cut_off(settings, "Settings").values()), [])
+
+    def test_settings_fits_on_screen_at_double_text_in_every_language(self):
+        """Settings at double text, in English, Spanish and Portuguese, is no wider than the screen
+        and cuts nothing off. It was 972 px wide in English and 1241 in Spanish on an 800 px
+        screen: a checkbox's words don't wrap, and the form put every field beside its longest
+        label. Windows' offscreen screen in CI already draws text about twice as wide, so there
+        the normal size is the double one."""
+        screen = QApplication.primaryScreen().availableGeometry()
+        normal = QFont(QApplication.font())
+        double = QFont(normal)
+        double.setPointSizeF(normal.pointSizeF() * (1 if sys.platform == "win32" else 2))
+        QApplication.setFont(double)
+        self.addCleanup(QApplication.setFont, normal)
+        for language in ("en", "es", "pt"):
+            w = self.make(language=language)
+            settings = SettingsDialog(w, w.settings)
+            settings.show()
+            QApplication.processEvents()
+            with self.subTest(language=language):
+                self.assertLessEqual(settings.width(), screen.width())
+                self.assertEqual(list(self.cut_off(settings, "Settings").values()), [])
+            settings.reject()
 
     def test_settings_makes_room_for_the_preview_note(self):
         """Choosing Português in an open Settings shows its preview note whole, however long."""

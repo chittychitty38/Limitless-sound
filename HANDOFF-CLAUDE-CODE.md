@@ -70,7 +70,8 @@ AA in every look with a keyboard walk (`.github/scripts/apps-a11y.cjs`, `screens
 the Qt apps have `tests/test_accessibility.py` (#75). Every app presses the same key for the
 same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85). Voice's setup guide and main
 window grow as wide as their words need and scroll up and down for the rest (`look.UpAndDown`,
-#103): before, at double text, the setup guide cut off parts of 24 lines.
+#103), and so do Settings' contents, with Save and Cancel always in view (0.4.4): before, at
+double text, the setup guide cut off parts of 24 lines and Settings was 972 px wide.
 
 **English and Spanish.** One shared language (`language`, "en" or "es") in Limitless Sound's
 settings, chosen in the first two questions or from the computer's language, and every app
@@ -365,9 +366,6 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
     in `apps/zoom/limitless_zoom/voice.py`). Measure Zoom's threads on a real Intel Mac before
     changing anything (see the gotchas on idle CPU); its background download of the Spanish model
     after the suite switches to Español was ruled out.
-13. **Voice's Settings at double text** is 972 px wide, in English too: its longest checkbox
-    ("Listen for command words only…") doesn't wrap. It fits screens 1280 px wide; a smaller one
-    would need the checkbox's explanation as a wrapped line under it.
 
 ## Gotchas learned the hard way
 
