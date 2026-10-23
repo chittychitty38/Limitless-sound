@@ -9,6 +9,8 @@
 use color_core::Profile;
 use tauri::AppHandle;
 
+use crate::words::t;
+
 #[cfg(target_os = "macos")]
 pub mod macos;
 #[cfg(windows)]
@@ -32,7 +34,7 @@ impl ScreenFilter for Unsupported {
     }
     fn apply(&mut self, _: &Profile, on: bool) -> Result<String, String> {
         if on {
-            Err("Whole-screen colors work on Mac and Windows. On this computer the tuner preview still works.".into())
+            Err(t("Whole-screen colors work on Mac and Windows. On this computer the tuner preview still works."))
         } else {
             Ok(String::new())
         }

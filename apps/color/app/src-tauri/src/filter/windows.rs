@@ -10,6 +10,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::Magnification::{MagInitialize, MagSetFullscreenColorEffect, MagUninitialize, MAGCOLOREFFECT};
 
+use crate::words::t;
+
 pub struct MatrixFilter {
     tx: Sender<[f32; 25]>,
 }
@@ -41,18 +43,18 @@ impl super::ScreenFilter for MatrixFilter {
 
     fn apply(&mut self, profile: &Profile, on: bool) -> Result<String, String> {
         let m = if on { fit(profile) } else { IDENTITY };
-        self.tx.send(to_mag_color_effect(&m)).map_err(|_| "The Windows color filter isn't available.".to_string())?;
+        self.tx.send(to_mag_color_effect(&m)).map_err(|_| t("The Windows color filter isn't available."))?;
         if !on {
             return Ok(String::new());
         }
         let err = fit_error(profile, &m);
-        Ok(if err < 6.0 {
-            "Matches the tuner closely.".into()
+        Ok(t(if err < 6.0 {
+            "Matches the tuner closely."
         } else if err < 15.0 {
-            "Close to the tuner. Pinned colors may look a little different on screen.".into()
+            "Close to the tuner. Pinned colors may look a little different on screen."
         } else {
-            "Rough match: Windows' built-in filter can't follow every pinned color or hue move. Try fewer pins or smaller moves.".into()
-        })
+            "Rough match: Windows' built-in filter can't follow every pinned color or hue move. Try fewer pins or smaller moves."
+        }))
     }
 }
 

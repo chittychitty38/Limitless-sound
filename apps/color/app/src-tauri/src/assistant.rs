@@ -5,6 +5,8 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 
+use crate::words::{t, tf};
+
 const MODEL: &str = "claude-opus-5-5";
 const KEYRING_SERVICE: &str = "Limitless Color";
 const KEYRING_USER: &str = "anthropic-api-key";
@@ -24,12 +26,12 @@ pub fn api_key() -> Option<String> {
 }
 
 pub fn set_api_key(key: &str) -> Result<(), String> {
-    let e = entry().ok_or("The system keychain isn't available.")?;
+    let e = entry().ok_or_else(|| t("The system keychain isn't available."))?;
     if key.is_empty() {
         let _ = e.delete_credential();
         return Ok(());
     }
-    e.set_password(key).map_err(|err| format!("Couldn't save the key: {err}"))
+    e.set_password(key).map_err(|err| tf("Couldn't save the key: {error}", &[("error", &err.to_string())]))
 }
 
 /// Sends one assistant turn and returns Claude's text.
@@ -50,25 +52,25 @@ pub async fn ask_claude(key: &str, prompt: String) -> Result<String, String> {
         .json(&body)
         .send()
         .await
-        .map_err(|_| "Couldn't reach Claude. Check the internet connection.".to_string())?;
+        .map_err(|_| t("Couldn't reach Claude. Check the internet connection."))?;
     let code = resp.status();
-    let v: Value = resp.json().await.map_err(|_| "Claude sent an answer that couldn't be read.".to_string())?;
+    let v: Value = resp.json().await.map_err(|_| t("Claude sent an answer that couldn't be read."))?;
     if !code.is_success() {
         return Err(match code.as_u16() {
-            401 | 403 => "Claude didn't accept the API key.".into(),
-            429 => "Claude is busy right now.".into(),
-            _ => format!("Claude returned an error ({code})."),
+            401 | 403 => t("Claude didn't accept the API key."),
+            429 => t("Claude is busy right now."),
+            _ => tf("Claude returned an error ({code}).", &[("code", &code.to_string())]),
         });
     }
     if v["stop_reason"] == "refusal" {
-        return Err("Claude declined to answer that.".into());
+        return Err(t("Claude declined to answer that."));
     }
     let text: String = v["content"]
         .as_array()
         .map(|blocks| blocks.iter().filter(|b| b["type"] == "text").filter_map(|b| b["text"].as_str()).collect())
         .unwrap_or_default();
     if text.is_empty() {
-        return Err("Claude's answer was empty.".into());
+        return Err(t("Claude's answer was empty."));
     }
     Ok(text)
 }
