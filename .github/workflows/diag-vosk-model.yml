@@ -81,7 +81,7 @@ jobs:
     name: ${{ matrix.label }}
     needs: [fetch-model, fetch-speech]
     # One model failing to download shouldn't stop the others being measured.
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[licenses only]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -189,12 +189,42 @@ jobs:
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
           echo "Zoom tests took $(( $(date +%s) - started )) s"
 
+  # What each model's own files say about its license and training data: the apps ship the model.
+  licenses:
+    name: Model licenses and READMEs
+    needs: [fetch-model]
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - vosk-model-small-en-us-0.15
+          - vosk-model-en-us-0.22-lgraph
+          - vosk-model-en-us-daanzu-20200905-lgraph
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/${{ matrix.model }}
+          key: diag-vosk-${{ matrix.model }}
+          fail-on-cache-miss: true
+      - shell: bash
+        run: |
+          cd "models/${{ matrix.model }}"
+          ls -la
+          for f in README* LICENSE* AUTHORS* COPYING* conf/model.conf; do
+            [ -f "$f" ] || continue
+            echo "==== $f ($(wc -l < "$f") lines)"
+            head -c 6000 "$f"; echo
+          done
+
   # Every model's cost on one runner, so the numbers compare: in round 1 each model ran on
   # whatever CPU its runner had (EPYC 7763, 9V74, 9V45, Xeon 8573C). Two rounds, interleaved.
   cost-all:
     name: Cost of every model on one runner
     needs: [fetch-model, fetch-speech]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[licenses only]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     defaults:
