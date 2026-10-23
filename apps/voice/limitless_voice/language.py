@@ -17,6 +17,9 @@ file, languages/<code>.yaml, with:
                words, never a near miss
   exact        true when every command runs only on its exact words: in a language whose
                short words are a letter apart ("sala" and "salva"), a near miss is another word
+  sentence_words  a number: when the open recognizer heard at least this many words, none of
+               them the command recognizer's first, it was talk, and only its words count for
+               commands (see engine.py). 0, the default, leaves it to the command recognizer
   commands     for each built-in pack, for each command (by its first English phrase),
                the phrases to say in this language
 
@@ -65,6 +68,7 @@ class Language:
         self.free_text_needs_both = bool(data.get("free_text_needs_both"))
         self.exact_destructive = bool(data.get("exact_destructive"))
         self.exact = bool(data.get("exact"))
+        self.sentence_words = int(data.get("sentence_words") or 0)
         self._sounds = [(re.compile(rf"\b{re.escape(a)}\b"), w)
                         for w, aliases in self.sounds_like.items() for a in aliases]
 

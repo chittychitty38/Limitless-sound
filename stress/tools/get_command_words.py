@@ -77,18 +77,19 @@ WORDS = {
            "grabación grabado grabó pagar paga corte corto guardia silencio mezcla parada sola unión "
            "reproducción dividido detenido cola paso nada este").split(),
     # The same for Brazilian Portuguese: its commands that work alone with Logic Pro in front
-    # ("não" is cancel, "dormir" sleep, "ajuda" help); numbers; other forms of command words and
-    # words said alone all the time, which Voice listens for so they're written as themselves
-    # ("gravação", "pagar", which is a letter from "apagar", "isso"); and words a letter from a
-    # command that Voice doesn't listen for ("parte" and "pare", "sala" and "salva", "muita" and
-    # "muta"). Not "corta", "cola" or "apaga": they're Cut, Paste and Delete too, only not said alone.
-    "pt": ("gravar toca tocar reproduzir parar pare salvar salva solo cortar colar apagar ciclo avançar "
+    # ("não" is cancel, "dormir" sleep, "ajuda" help, "para" stop); numbers; other forms of command
+    # words and words said alone all the time, which Voice listens for so they're written as
+    # themselves ("gravação", "pagar", which is a letter from "apagar", "isso"); and words a letter
+    # from a command, or a command's other meaning, that shouldn't do anything ("parte" and "pare",
+    # "sala" and "salvar", "muita" and "muta", "arma", a weapon). Not "corta", "cola" or "apaga":
+    # they're Cut, Paste and Delete too, only not said alone.
+    "pt": ("gravar toca tocar reproduzir parar pare para salvar solo cortar colar apagar ciclo avançar "
            "volta voltar dividir juntar junta biblioteca navegador ajuda aproxima afasta afastar reduzir "
-           "arma dormir esquece não "
+           "dormir esquece não "
            "uma dois duas três quatro cinco seis sete oito nove dez vinte trinta "
            "gravação grave tocando toque parado parada parou salvou corte cortado divisão união silêncio "
            "reprodução voltou pagar paga pagou isso nada aqui este "
-           "parte sala muita copa troca aroma calar").split(),
+           "parte sala salva muita arma copa troca aroma calar").split(),
 }
 
 PROBE = 256 * 1024  # bytes read to find out where in the archive a spot is

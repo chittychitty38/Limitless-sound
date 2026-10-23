@@ -319,7 +319,8 @@ class PortugueseFile(unittest.TestCase):
         packs = PORTUGUESE["mac"]
         phrases = PT.recognizer_phrases(packs)
         for heard, said in [("mi ute", "mute"), ("lupi", "loop"), ("mostrar o mix ser", "mostrar o mixer"),
-                            ("piano rol", "piano roll"), ("sair do modo tei que", "sair do modo take")]:
+                            ("piano rol", "piano roll"), ("sair do modo tei que", "sair do modo take"),
+                            ("quantia azar", "quantizar")]:
             self.assertIn(heard, phrases)
             self.assertEqual(normalize(heard, PT), said)
 
@@ -369,8 +370,14 @@ class PortugueseEngine(unittest.TestCase):
             ("Logic Pro", "solo", ["s"]),
             ("Logic Pro", "clique", ["k"]),
             ("Logic Pro", "lupi", ["c"]),
+            ("Logic Pro", "para", ["space"]),
             ("Logic Pro", "sala", []),                   # a letter from "salva", but another word
             ("Logic Pro", "parte", []),
+            ("Logic Pro", "salva", []),                  # "sala" came back as it
+            ("Logic Pro", "muta", []),                   # and "muita" as this
+            ("Logic Pro", "arma", []),                   # a weapon
+            ("Logic Pro", "salva o projeto", ["cmd+s"]),
+            ("Logic Pro", "arma a faixa", ["ctrl+r"]),
             ("Logic Pro", "adicionar uma faixa", ["opt+cmd+n"]),
             ("Logic Pro", "avançar um compasso", ["."]),
             ("Ableton Live", "nova faixa midi", ["cmd+shift+t"]),
@@ -386,6 +393,26 @@ class PortugueseEngine(unittest.TestCase):
             e, p = pt_engine(app)
             e.handle(said, said)
             self.assertEqual(pressed(p), keys, f"{said} in {app}")
+
+    def test_a_sentence_without_the_command_is_talk(self):
+        """When the open recognizer heard two words or more, and not the command recognizer's
+        first, someone was talking: a reader's "quando você liga para alguém que" was "parar"."""
+        for heard, open_, keys in [("parar", "quando você liga para alguém que", []),
+                                   ("solo", "polo químicas", []),
+                                   ("dividir", "o que alguns casos", []),
+                                   ("parar", "parar", ["space"]), ("parar", "", ["space"]),
+                                   ("parar", "pare", ["space"]),            # one word: could be it
+                                   ("tocar", "tocar agora", ["space"]),     # the command is in it
+                                   ("mi ute", "mi ute", ["m"]),
+                                   ("ir para o compasso trinta e dois", "ir para o compasso trinta e dois",
+                                    ["/", "32", "return"])]:
+            e, p = pt_engine()
+            e.handle(heard, open_)
+            self.assertEqual(pressed(p), keys, f"{heard} / {open_}")
+        e, p = pt_engine()
+        e.handle("começar ditado", "começar ditado")
+        e.handle("parar ditado", "para o ditado agora")     # Voice's own words aren't affected
+        self.assertFalse(e.dictating)
 
     def test_destructive_commands_alone_are_infinitives_and_exact(self):
         """"corta", "cola" and "apaga" are Cut, Paste and Delete only with "isso" after them, and a
@@ -439,11 +466,13 @@ class PortugueseEngine(unittest.TestCase):
     def test_take_mode(self):
         e, p = pt_engine()
         e.take = True
-        for lyric in ("solo", "silenciar", "desfazer", "salvar", "para"):
+        for lyric in ("solo", "silenciar", "desfazer", "salvar", "tocar"):
             self.assertEqual(e.handle(lyric).message, "take")
         r = e.handle("parar")
         self.assertTrue(r.handled)
         self.assertEqual((pressed(p), r.english), (["space"], "stop"))
+        e.take = True
+        self.assertEqual(e.handle("para").english, "stop")
 
     def test_dictation(self):
         e, p = pt_engine()

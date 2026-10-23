@@ -375,7 +375,6 @@ jobs:
           key: ${{ steps.words.outputs.cache-primary-key }}
       - shell: bash
         run: |
-          export VOCAB_LOOKUP='^zar$ ^czar ^quan ^cuan ^canti ^conti ^tizar$ ^izar$ ^zá$ ^sar$ ^ute$ ^mi$ ^ser$ ^is$ ^lipe$ ^lip ^xá ^chá$ ^fou ^fol$ ^que$ ^tei$ ^embaralh ^sport$ ^mike$ ^mai$ ^plai ^plei ^pré$ ^pley ^bau ^xi ^tébi ^tebi ^tabula ^livre$ ^lupi$ ^lupas$ ^rol$ ^mix$ ^dar$ ^tira$ ^tirar$ ^arrasto$ ^lupa$ ^muta$ ^uísque$'
           VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-pt" \
             COMMAND_WORDS_DIR="$PWD/command-words-pt" \
             python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
