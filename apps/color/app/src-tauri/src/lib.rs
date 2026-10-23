@@ -180,13 +180,18 @@ fn start_suite(app: &AppHandle) {
     let handle = app.clone();
     link.on_prefs(move |prefs| {
         let state = handle.state::<AppState>();
-        let mut inner = state.0.lock().unwrap();
-        inner.suite_prefs = WindowPrefs::from_prefs(prefs);
-        if let Some(l) = WindowPrefs::suite_language(prefs) {
-            inner.suite_language = Some(l);
-        }
-        if words::set(language(&inner)) {
-            // Menus change on the main thread, which may be waiting for this lock: let go first.
+        let relanguaged = {
+            let mut inner = state.0.lock().unwrap();
+            inner.suite_prefs = WindowPrefs::from_prefs(prefs);
+            if let Some(l) = WindowPrefs::suite_language(prefs) {
+                inner.suite_language = Some(l);
+            }
+            let changed = words::set(language(&inner));
+            show_window_prefs(&handle, &inner);
+            changed
+        };
+        if relanguaged {
+            // Menus change on the main thread, which may be waiting for the lock: it's let go above.
             let main = handle.clone();
             let _ = handle.run_on_main_thread(move || {
                 let state = main.state::<AppState>();
@@ -194,7 +199,6 @@ fn start_suite(app: &AppHandle) {
                 relabel(&main, &mut inner);
             });
         }
-        show_window_prefs(&handle, &inner);
     });
     let on = app.state::<AppState>().0.lock().unwrap().filter_on;
     link.state("on", on.into());
