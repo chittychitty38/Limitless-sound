@@ -138,8 +138,8 @@ class Matching(unittest.TestCase):
         mac = ["space", "cmd+r", "r", "w", "end", "m", "cmd+t", "cmd+opt+down", "cmd+opt+up", "s", "cmd+m",
                "cmd+pagedown", "cmd+opt+r", "cmd+z", "cmd+shift+z", "cmd+s", "cmd+a"]
         # Older Macs name the app REAPER64; Windows reports reaper.exe, shown as REAPER.
-        for app, os_name, keys in [("REAPER", "mac", mac), ("REAPER64", "mac", mac),
-                                   ("REAPER", "windows", [k.replace("cmd", "ctrl").replace("opt", "alt") for k in mac])]:
+        windows = [k.replace("cmd", "ctrl").replace("opt", "alt") for k in mac]
+        for app, os_name, keys in [("REAPER", "mac", mac), ("REAPER64", "mac", mac), ("REAPER", "windows", windows)]:
             e, p = engine(app, os_name)
             for phrase in said:
                 self.assertTrue(e.handle(phrase, phrase).handled, f"{app} on {os_name}: {phrase}")

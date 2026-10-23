@@ -29,8 +29,8 @@ PACKAGE = Path(words.__file__).parent
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
 LETTERS = re.compile(r"[^\W\d_]{2}")
 # Names, and words that read the same in Spanish.
-SAME_EVERYWHERE = {"Limitless Zoom", "Logic Pro", "GarageBand", "Pro Tools", "Ableton Live", "Tab",
-                   "{name}: {state}"}
+SAME_EVERYWHERE = {"Limitless Zoom", "Logic Pro", "GarageBand", "Pro Tools", "Ableton Live", "REAPER", "FL Studio",
+                   "Tab", "{name}: {state}"}
 
 
 # ---- the words ---------------------------------------------------------------------------
