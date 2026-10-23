@@ -1,38 +1,32 @@
 Windows fatal exception: code 0x8001010d
 
-Thread 0x00001e80 (most recent call first):
-  File "pynput\keyboard\_win32.py", line 196 in _handle
-  File "pynput\keyboard\_base.py", line 430 in release
-  File "limitless_zoom\platforms.py", line 55 in send
-  File "limitless_zoom\platforms.py", line 71 in send
-  File "limitless_zoom\app.py", line 246 in _press
-  File "concurrent\futures\thread.py", line 59 in run
-  File "concurrent\futures\thread.py", line 93 in _worker
+Thread 0x00001298 (most recent call first):
+  File "concurrent\futures\thread.py", line 90 in _worker
   File "threading.py", line 1012 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x000023e8 (most recent call first):
+Thread 0x00002058 (most recent call first):
   File "threading.py", line 359 in wait
   File "threading.py", line 655 in wait
   File "limitless_zoom\voice.py", line 247 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x000023fc (most recent call first):
+Thread 0x00001b8c (most recent call first):
   File "pynput\_util\win32.py", line 189 in __iter__
   File "pynput\_util\win32.py", line 356 in _run
   File "pynput\_util\__init__.py", line 216 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x000005bc (most recent call first):
+Thread 0x000006e4 (most recent call first):
   File "limitless_zoom\limitless_link.py", line 225 in _session
   File "limitless_zoom\limitless_link.py", line 201 in _run
   File "threading.py", line 1012 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Current thread 0x0000222c (most recent call first):
+Current thread 0x0000237c (most recent call first):
   File "limitless_zoom\app.py", line 643 in main
   File "__main__.py", line 5 in <module>

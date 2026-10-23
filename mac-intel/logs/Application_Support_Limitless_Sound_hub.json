@@ -104,7 +104,8 @@
     "highContrast": false,
     "reduceMotion": false,
     "dwellMs": 800,
-    "scanMs": 1200
+    "scanMs": 1200,
+    "language": "en"
   },
   "intentOrder": [
     "zoom",
