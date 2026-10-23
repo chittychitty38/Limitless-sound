@@ -1,0 +1,102 @@
+# Ableton Live 12 on Mac and Windows, default shortcuts, from Ableton's "Live Keyboard
+# Shortcuts" manual chapter (ableton.com/en/manual/live-keyboard-shortcuts). Written with Mac
+# names; on Windows, cmd becomes Ctrl and opt becomes Alt, as in Ableton's own docs.
+#
+# Single-letter shortcuts (O, S, C, A, W, Z) do nothing while Live's Computer MIDI Keyboard is
+# on (M), because the letters play notes. Voice never switches it, since it can't see whether
+# it's on. Live has no default key for stop alone, a bar forward or back, going to a bar,
+# choosing the next track or Capture MIDI (12.4 gave its key to Copy Time), so those aren't here.
+
+name: Ableton Live
+# Windows names Live's exe "Ableton Live"; the Mac calls the app "Live".
+apps: ["Ableton Live", "Live"]
+
+commands:
+  # --- transport --------------------------------------------------------
+  - say: ["play", "stop", "play stop", "start playback", "stop playback"]
+    do: {keys: space}
+    repeatable: false
+    instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  - say: ["record", "start recording"]
+    fuzzy: false
+    instant: true
+    do: {keys: f9}
+    reply: Recording
+    repeatable: false
+  - say: ["metronome", "click", "toggle click", "toggle metronome"]
+    do: {keys: o}
+  # Not "top" alone: real people's "stop" came back as "top" (stress/test_command_words.py).
+  - say: ["go to start", "go to beginning", "back to start", "go to the top"]
+    do: {keys: home}
+  # Loops the selection. With nothing selected, Live resets the loop to the whole arrangement.
+  - say: ["loop", "toggle loop", "loop selection", "set locators", "loop that"]
+    do: {keys: cmd+l}
+
+  # --- tracks -----------------------------------------------------------
+  - say: ["new track", "new audio track", "add [a] track", "add [an] audio track"]
+    do: {keys: cmd+t}
+    reply: New audio track
+  - say: ["new midi track", "new instrument track", "add [a] midi track", "add [an] instrument track"]
+    do: {keys: cmd+shift+t}
+    reply: New MIDI track
+  - say: ["new return track", "add [a] return track"]
+    do: {keys: cmd+opt+t}
+    reply: New return track
+  - say: ["duplicate", "duplicate track", "duplicate that", "duplicate clip"]
+    repeatable: 3   # one misheard number must never wipe a session
+    do: {keys: cmd+d}
+  - say: ["solo", "solo track", "solo [the] track", "unsolo"]
+    do: {keys: s}
+    help: Toggle solo on the selected track
+  # Live's mute is the track activator: 0 switches the selected track off and on.
+  - say: ["mute", "mute track", "mute [the] track", "unmute"]
+    do: {keys: "0"}
+    help: Switch the selected track off or on (Live's track activator)
+  - say: ["arm", "arm track", "record enable", "disarm"]
+    do: {keys: c}
+    help: Toggle record arm on the selected track
+
+  # --- editing ----------------------------------------------------------
+  - say: ["split", "split here", "split clip", "split at playhead"]
+    do: {keys: cmd+e}
+    help: Split the clip at the selection
+  - say: ["consolidate", "join", "join clips", "consolidate clips"]
+    do: {keys: cmd+j}
+  - say: ["quantize", "quantize that"]
+    do: {keys: cmd+u}
+    reply: Quantized
+  - say: ["delete", "delete that", "remove that"]
+    repeatable: 3   # one misheard number must never wipe a session
+    fuzzy: false
+    do: {keys: delete}
+
+  # --- views ------------------------------------------------------------
+  - say: ["mixer", "show [the] mixer", "hide [the] mixer"]
+    do: {keys: cmd+opt+m}
+  - say: ["browser", "show [the] browser", "hide [the] browser", "library"]
+    do: {keys: cmd+opt+b}
+  - say: ["clip view", "show [the] clip", "editor", "show [the] editor", "piano roll"]
+    do: {keys: cmd+opt+3}
+  - say: ["automation", "show automation", "automation mode"]
+    do: {keys: a}
+
+  # --- zoom -------------------------------------------------------------
+  - say: ["zoom in"]
+    do: {keys: "="}
+  - say: ["zoom out"]
+    do: {keys: "-"}
+  - say: ["zoom in vertical", "taller tracks"]
+    do: {keys: opt+=}
+  - say: ["zoom out vertical", "shorter tracks"]
+    do: {keys: opt+-}
+  - say: ["zoom to selection"]
+    do: {keys: z}
+  - say: ["zoom to fit", "fit", "show everything"]
+    do: {keys: w}
+
+  # --- project ----------------------------------------------------------
+  - say: ["export", "export audio", "export mix", "bounce"]
+    fuzzy: false
+    do: {keys: cmd+shift+r}
+    repeatable: false
+    help: Opens Export Audio/Video
