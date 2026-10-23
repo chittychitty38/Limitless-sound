@@ -139,7 +139,10 @@ main { position: relative; display: grid; grid-template-rows: auto 1fr; gap: var
 
 /* ---------- tone pad ---------- */
 #tone { grid-template-columns: 1fr minmax(220px, 280px); grid-template-rows: 1fr auto; gap: var(--gap); }
-.xywrap { display: grid; grid-template-columns: 64px 1fr 64px; grid-template-rows: 56px 1fr 56px; gap: 8px; min-height: 0; }
+/* A window too short for every target here (its smallest, or the largest text) scrolls the page
+   rather than squeezing the targets on top of each other. The padding keeps focus rings inside. */
+#tone { overflow-y: auto; margin: -8px; padding: 8px; }
+.xywrap { display: grid; grid-template-columns: 64px 1fr 64px; grid-template-rows: 56px minmax(120px, 1fr) 56px; gap: 8px; }
 .xywrap .up, .xywrap .down { grid-column: 2; }
 .xywrap .left { grid-column: 1; grid-row: 2; } .xywrap .right { grid-column: 3; grid-row: 2; }
 .nudge { font-size: 1.3em; padding: 0; }
@@ -156,7 +159,7 @@ main { position: relative; display: grid; grid-template-rows: auto 1fr; gap: var
 .xy .snapmark { font-size: .45em; font-weight: 800; color: var(--muted); width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; }
 .xy .readout { position: absolute; top: 10px; right: 14px; font-size: .55em; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; pointer-events: none; }
 .xy.following { border-color: var(--accent); }
-.xyside { display: grid; grid-template-rows: auto repeat(5, 1fr); gap: 10px; min-height: 0; }
+.xyside { display: grid; grid-template-rows: auto repeat(5, 1fr); gap: 10px; }
 .xyside .target { font-size: 1em; min-height: 56px; }
 .xyside .target small { font-size: .72em; }
 .snaps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

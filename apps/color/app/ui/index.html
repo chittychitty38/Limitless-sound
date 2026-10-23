@@ -56,6 +56,9 @@ button:hover{border-color:var(--ink-2)}
 button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 button:disabled{opacity:.5;cursor:default}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+/* The screenshot picker is a hidden file input behind its label: the label shows its focus. */
+label.btn:has(+ #upload:focus-visible){outline:3px solid var(--focus);outline-offset:2px}
+:root.high-contrast label.btn:has(+ #upload:focus-visible){outline-width:4px;outline-offset:3px}
 select{font:inherit;min-height:44px;padding:6px 10px;border-radius:8px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink)}
 label.inline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px;min-width:0;max-width:100%}
 select{max-width:100%}
@@ -178,7 +181,7 @@ legend{font-weight:600;padding:0 4px}
 
     <section class="card" aria-labelledby="as-h">
       <div class="row"><h2 id="as-h">Color assistant</h2><span class="spacer"></span><span class="badge" id="aiBadge">Connecting…</span></div>
-      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chat" id="chat" aria-live="polite" tabindex="0"></div>
       <div class="chips" id="chips"></div>
       <form id="askForm" class="row" style="align-items:stretch;flex-direction:column">
         <label for="ask" class="sr">Describe what you see</label>

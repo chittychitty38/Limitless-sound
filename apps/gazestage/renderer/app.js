@@ -943,15 +943,35 @@ midi.addEventListener('led', (e) => {
 });
 midi.addEventListener('change', () => { refreshChips(); renderMidiSettings(); refreshToneOut(); });
 
+// ---------- what the keyboard can reach ----------
+// Only the top layer on screen takes keyboard focus. The guided setup and calibration cover the
+// whole window, the open settings drawer its right side, the pause screen the page, and the closed
+// drawer waits off screen: without this, Tab walked into controls nobody could see, and a screen
+// reader read them. The face banner floats above the page and the drawer, so it stays readable.
+const LAYERS = [['pauseOverlay', 'show'], ['settings', 'open'], ['onboard', 'show'], ['calib', 'show']];   // bottom to top
+const pageParts = [document.querySelector('.topbar'), ...document.querySelectorAll('main > :not(.banner)')];
+function syncLayers() {
+  const top = LAYERS.findLastIndex(([id, cls]) => $(id).classList.contains(cls));
+  const inert = (el, on) => { if (el.inert !== on) el.inert = on; };
+  for (const el of pageParts) inert(el, top >= 0);
+  LAYERS.forEach(([id, cls], i) => inert($(id), i < top || !$(id).classList.contains(cls)));
+}
+const layerWatch = new MutationObserver(syncLayers);
+for (const [id] of LAYERS) layerWatch.observe($(id), { attributes: true, attributeFilter: ['class'] });
+syncLayers();
+
 // ---------- settings drawer ----------
 function openSettings() {
   state.settingsOpen = true; syncSettingsForm(); renderMidiSettings(); renderToneSettings(); refreshCalInfo();
   $('settings').classList.add('open'); $('settings').setAttribute('aria-hidden', 'false');
-  $('closeSettings').focus();
+  syncLayers(); $('closeSettings').focus();
   if (S.select === 'sound') startMic();
 }
 function closeSettings() {
+  const hadFocus = $('settings').contains(document.activeElement);
   state.settingsOpen = false; $('settings').classList.remove('open'); $('settings').setAttribute('aria-hidden', 'true');
+  syncLayers();
+  if (hadFocus) $('settingsBtn').focus();   // back to where it was opened
 }
 $('settingsBtn').onclick = openSettings; $('closeSettings').onclick = closeSettings;
 $('recenterBtn').onclick = recenter; $('calibBtn').onclick = calibrate;
