@@ -19,6 +19,10 @@ def pressed(p):
     return [e[1] for e in p.log if e[0] == "press"]
 
 
+def opened(p):
+    return [e[1] for e in p.log if e[0] == "open"]
+
+
 class Numbers(unittest.TestCase):
     def test_runs(self):
         cases = {
@@ -284,6 +288,40 @@ class Destructive(unittest.TestCase):
         e, p = engine("Logic Pro")
         self.assertTrue(e.handle("copy", "happy").handled)                 # harmless: as before
         self.assertEqual(pressed(p), ["cmd+c"])
+
+    def test_a_guess_at_a_mostly_unknown_sentence_is_not_a_command(self):
+        # People reading aloud fired "[unk] enter [unk] [unk]" as Return and "stop [unk] [unk]
+        # [unk]" as Play. With more unknown words than known, only the open transcript counts.
+        e, p = engine("Logic Pro")
+        self.assertFalse(e.handle("[unk] enter [unk] [unk]", "and then entered the room").handled)
+        self.assertFalse(e.handle("stop [unk] [unk] [unk]", "stopped at the old inn").handled)
+        self.assertEqual(pressed(p), [])
+        self.assertTrue(e.handle("[unk] [unk] stop", "um stop").handled)     # the open one says it
+        e, p = engine("Logic Pro")
+        self.assertTrue(e.handle("[unk] play please", "uh play please").handled)  # mostly known: as before
+        self.assertTrue(e.handle("[unk] mixer the", "show the mixer").handled)
+
+    def test_free_text_comes_from_words_actually_heard(self):
+        # "open the [unk] [unk] that" tried to open an app called "the that"
+        e, p = engine("Finder")
+        r = e.handle("open the [unk] [unk] that", "open the door so that")
+        self.assertTrue(r.handled)
+        self.assertEqual(opened(p), ["the door so that"])                 # the open recognizer's words
+        self.assertFalse(e.handle("open the [unk] [unk] that", "and then the cat").handled)
+        self.assertEqual(opened(p), ["the door so that"])
+        e.handle("open logic pro", "open logic bro")                      # heard it all: as before
+        self.assertEqual(opened(p)[-1], "Logic Pro")
+
+    def test_windows_opens_an_app_by_whole_words(self):
+        from limitless_voice.platforms.windows import best_shortcut
+        links = ["Git Bash.lnk", "Logic Pro X.lnk", "Ableton Live 12 Suite.lnk", "Ableton Live 12 Suite Uninstall.lnk",
+                 "Word.lnk", "FL Studio 21.lnk"]
+        self.assertIsNone(best_shortcut("it", links))
+        self.assertIsNone(best_shortcut("the that", links))
+        self.assertEqual(best_shortcut("logic", links), "Logic Pro X.lnk")
+        self.assertEqual(best_shortcut("ableton live", links), "Ableton Live 12 Suite.lnk")
+        self.assertEqual(best_shortcut("word", links), "Word.lnk")
+        self.assertEqual(best_shortcut("flstudio 21", links), "FL Studio 21.lnk")
 
     def test_harmless_commands_still_repeat(self):
         e, p = engine("Pro Tools")

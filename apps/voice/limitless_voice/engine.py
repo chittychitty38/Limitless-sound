@@ -151,6 +151,12 @@ class Engine:
                      dictation and for commands that take free text
         """
         texts = [t for t in (normalize(heard), normalize(alternative or "")) if t]
+        # The command recognizer's guess at a sentence it mostly couldn't place ("[unk] enter [unk]
+        # [unk]") isn't a command on its own: in an hour of people reading aloud, nearly every
+        # command that fired came from one (stress/test_voice_real_speech.py). Then only the open
+        # transcript counts.
+        if alternative is not None and heard.lower().split().count("[unk]") > len(normalize(heard).split()):
+            texts = [t for t in (normalize(alternative),) if t]
         raw = heard if normalize(heard) else (alternative or heard)
         if not texts:
             return Result(raw, False)
@@ -232,6 +238,17 @@ class Engine:
                               "then say it again.")
             return Result(raw, False, f"Didn't catch a command in \"{text}\"")
         cmd, params = found
+        # Free text from the command recognizer is only the command words it could place: "open the
+        # [unk] [unk] that" tried to open an app called "the that". When it missed words, the
+        # words come from the open recognizer, or the command doesn't run.
+        if (cmd.free_text and alternative is not None and "[unk]" in heard.lower()
+                and said == normalize(heard) != normalize(alternative)):
+            heard_open = normalize(alternative)
+            again = self._match(split_repeat(heard_open)[0], [cmd])
+            if not again:
+                return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
+                              else "Didn't catch that")
+            params, raw = again[1], heard_open
         # A stray word must never throw work away. The command recognizer can only answer with
         # command words, so real people's "cat" came back as "cut" 64 times in 100 (stress/
         # test_voice_real_speech.py). One word that would press Cut, Paste or Delete counts only
