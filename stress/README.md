@@ -74,10 +74,15 @@ The tests' floors sit a little below what any run measured.
 | Talk: commands fired per hour | **0** (Logic Pro), **3.8** (Pro Tools); **0 destructive**. Voice 0.3.4: 4.7 and 7.6 |
 | Stray words that aren't commands: fired something | **17.9%** of the time; **never a destructive key**. Voice 0.3.4: 21.6%, a destructive key on 3.8% |
 
-| Zoom | |
+| How soon Voice acts after a word ends (median; 9 in 10 within) | |
 |---|---|
-| Stray words: zoomed | 2.3% |
-| Talk: zoomed per hour | 17.0, a third of them "again" |
+| "stop", which goes the moment it's heard (Voice 0.3.6) | **0.67 s**; 0.77 s. Voice 0.3.5: 1.19 s; 1.36 s |
+| Words that wait for the end of the utterance | 1.13 s; 1.28 s |
+
+| Zoom 0.1.4 | |
+|---|---|
+| Stray words: zoomed | 2.2% |
+| Talk: zoomed per hour | **3.8**, all "shorter" or "fit" heard on its own. Zoom 0.1.2: 17.0, nearly all a command word inside a sentence |
 
 What goes wrong, from the printed tables:
 
@@ -93,7 +98,13 @@ What goes wrong, from the printed tables:
   [unk] [unk] that" (an app called "the that"). Since 0.3.5 those go by the open transcript. What
   still fires in Pro Tools is short: "heal separation [unk] a" for "illustration long pepper".
 - **People's "eight" comes back as "a"** 6 times in 100, and "forward" as "four" 9 times.
-- **Zoom's "again"** fires from ordinary talk about 6 times an hour.
+- **Zoom acted on command words inside sentences**: "…had to see again", "for ink" heard as
+  "zoom in". Since 0.1.4 a command with another word running straight on from it (less than
+  0.1 s between, by Vosk's word times) doesn't count, while "please", "uh" and "okay" around it
+  are fine. That took talk from 17 zooms an hour to 3.8, and cost nothing with a band playing
+  (`test_zoom_noise.py`).
+- **Voice waited up to a second to act**, for its open recognizer to end the utterance. Since
+  0.3.6 play, stop and record go as soon as the command recognizer has heard just that.
 
 The test also tries possible fixes on what it heard, without changing the app. The first, a
 one-word destructive command needing the open recognizer to hear the same word, cost no word
