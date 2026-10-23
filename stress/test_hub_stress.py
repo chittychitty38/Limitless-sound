@@ -34,7 +34,7 @@ class Speaker:
     def __init__(self):
         self.said = []
 
-    def say(self, text):
+    def say(self, text, lang="en"):
         self.said.append(text)
 
 
