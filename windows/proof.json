@@ -1,13 +1,13 @@
 {
-  "when": "2026-10-23T10:10:58Z",
+  "when": "2026-10-23T11:33:26Z",
   "standard": "0.1",
-  "suiteVersion": "v0.2.8",
-  "installSeconds": 81.0,
+  "suiteVersion": "v0.2.9",
+  "installSeconds": 55.0,
   "computer": {
     "os": "Windows 10.0.26100",
     "arch": "AMD64",
     "python": "3.12.10",
-    "chip": "AMD64 Family 25 Model 1 Stepping 1, AuthenticAMD"
+    "chip": "AMD64 Family 25 Model 17 Stepping 1, AuthenticAMD"
   },
   "apps": [
     {
@@ -15,7 +15,7 @@
       "name": "Limitless One-Hand",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless One-Hand",
-      "joinedSeconds": 16.0,
+      "joinedSeconds": 7.7,
       "screenshot": "shots/onehand.png",
       "level": "adaptive",
       "checks": [
@@ -86,9 +86,9 @@
       "proof": [
         {
           "id": "P1",
-          "ok": false,
+          "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "16.0 s"
+          "detail": "7.7 s"
         },
         {
           "id": "P2",
@@ -114,14 +114,14 @@
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "130 MB, 129 MB in v0.2.7"
+          "detail": "128 MB, 130 MB in v0.2.8"
         }
       ],
       "actionsTried": 17,
-      "version": "0.2.6",
+      "version": "0.2.7",
       "idle": {
         "cpuPercent": 0.1,
-        "memoryMB": 130,
+        "memoryMB": 128,
         "busiest": [
           {
             "process": "LimitlessOneHand.exe",
@@ -135,7 +135,7 @@
       "name": "Limitless Voice",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Voice",
-      "joinedSeconds": 3.1,
+      "joinedSeconds": 2.1,
       "screenshot": "shots/voice.png",
       "level": "adaptive",
       "checks": [
@@ -208,7 +208,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "3.1 s"
+          "detail": "2.1 s"
         },
         {
           "id": "P2",
@@ -234,14 +234,14 @@
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "138 MB, 139 MB in v0.2.7"
+          "detail": "140 MB, 138 MB in v0.2.8"
         }
       ],
       "actionsTried": 23,
-      "version": "0.4.2",
+      "version": "0.4.3",
       "idle": {
         "cpuPercent": 0.5,
-        "memoryMB": 138,
+        "memoryMB": 140,
         "busiest": [
           {
             "process": "LimitlessVoice.exe",
@@ -255,7 +255,7 @@
       "name": "Limitless Zoom",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Zoom",
-      "joinedSeconds": 4.2,
+      "joinedSeconds": 1.5,
       "screenshot": "shots/zoom.png",
       "level": "adaptive",
       "checks": [
@@ -328,7 +328,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "4.2 s"
+          "detail": "1.5 s"
         },
         {
           "id": "P2",
@@ -347,27 +347,22 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "0.1%"
+          "detail": "0.0%"
         },
         {
           "id": "P5",
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "249 MB, 375 MB in v0.2.7"
+          "detail": "250 MB, 249 MB in v0.2.8"
         }
       ],
       "actionsTried": 22,
-      "version": "0.1.8",
+      "version": "0.1.9",
       "idle": {
-        "cpuPercent": 0.1,
-        "memoryMB": 249,
-        "busiest": [
-          {
-            "process": "Limitless Zoom.exe",
-            "cpuPercent": 0.1
-          }
-        ]
+        "cpuPercent": 0.0,
+        "memoryMB": 250,
+        "busiest": []
       }
     },
     {
@@ -375,7 +370,7 @@
       "name": "Limitless Color",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Color",
-      "joinedSeconds": 13.9,
+      "joinedSeconds": 4.6,
       "screenshot": "shots/color.png",
       "level": "adaptive",
       "checks": [
@@ -448,7 +443,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "13.9 s"
+          "detail": "4.6 s"
         },
         {
           "id": "P2",
@@ -474,7 +469,7 @@
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "34 MB, 31 MB in v0.2.7"
+          "detail": "34 MB, 34 MB in v0.2.8"
         }
       ],
       "actionsTried": 4,
@@ -490,7 +485,7 @@
       "name": "Limitless Control",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Control",
-      "joinedSeconds": 3.2,
+      "joinedSeconds": 2.6,
       "screenshot": "shots/control.png",
       "level": "adaptive",
       "checks": [
@@ -563,7 +558,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "3.2 s"
+          "detail": "2.6 s"
         },
         {
           "id": "P2",
@@ -582,22 +577,27 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "0.0%"
+          "detail": "0.4%"
         },
         {
           "id": "P5",
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "83 MB, 83 MB in v0.2.7"
+          "detail": "82 MB, 83 MB in v0.2.8"
         }
       ],
       "actionsTried": 20,
       "version": "0.2.8",
       "idle": {
-        "cpuPercent": 0.0,
-        "memoryMB": 83,
-        "busiest": []
+        "cpuPercent": 0.4,
+        "memoryMB": 82,
+        "busiest": [
+          {
+            "process": "Limitless Control.exe",
+            "cpuPercent": 0.4
+          }
+        ]
       }
     },
     {
@@ -605,7 +605,7 @@
       "name": "GazeStage",
       "openedBy": "hub",
       "hubAnswer": "Opening GazeStage",
-      "joinedSeconds": 2.3,
+      "joinedSeconds": 1.1,
       "screenshot": "shots/gaze.png",
       "level": "adaptive",
       "checks": [
@@ -678,7 +678,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "2.3 s"
+          "detail": "1.1 s"
         },
         {
           "id": "P2",
@@ -704,14 +704,14 @@
           "ok": true,
           "warn": true,
           "check": "Uses about as much memory sitting idle as in the last published proof",
-          "detail": "492 MB, 505 MB in v0.2.7"
+          "detail": "504 MB, 492 MB in v0.2.8"
         }
       ],
       "actionsTried": 22,
       "version": "0.4.4",
       "idle": {
         "cpuPercent": 0.5,
-        "memoryMB": 492,
+        "memoryMB": 504,
         "busiest": [
           {
             "process": "GazeStage.exe",
@@ -736,7 +736,7 @@
       "id": "S2",
       "ok": true,
       "check": "A shared DAW command (zoom in) reaches an app and is answered within 3 seconds",
-      "detail": "Zoom in (0.15 s)"
+      "detail": "Zoom in (0.07 s)"
     },
     {
       "id": "S3",
@@ -761,6 +761,12 @@
       "ok": true,
       "check": "Every app with Spanish windows follows the suite into Espa\u00f1ol and back",
       "detail": "in Spanish: color, control, gaze, onehand, zoom; not yet: voice (listens in English until its Spanish model is downloaded)"
+    },
+    {
+      "id": "S7",
+      "ok": true,
+      "check": "Portugu\u00eas, a preview only in Voice, leaves every other app in English",
+      "detail": "in English: color, control, gaze, onehand, zoom; voice: en (it listens in Portuguese once its model is downloaded)"
     }
   ],
   "hubIdle": {

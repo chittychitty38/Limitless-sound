@@ -1,4 +1,4 @@
-2026-10-23 10:14:15,381 INFO    Limitless Zoom: Started Limitless Zoom 0.1.8 on Darwin 15.7.9 (arm64), Python 3.12.10
-2026-10-23 10:14:15,397 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
-2026-10-23 10:14:22,187 INFO    Limitless Zoom: Started Limitless Zoom 0.1.8 on Darwin 15.7.9 (arm64), Python 3.12.10
-2026-10-23 10:14:23,474 WARNING pynput.keyboard.Listener: This process is not trusted! Input event monitoring will not be possible until it is added to accessibility clients.
+2026-10-23 11:32:35,792 INFO    Limitless Zoom: Started Limitless Zoom 0.1.9 on Darwin 15.7.9 (arm64), Python 3.12.10
+2026-10-23 11:32:35,805 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
+2026-10-23 11:32:41,428 INFO    Limitless Zoom: Started Limitless Zoom 0.1.9 on Darwin 15.7.9 (arm64), Python 3.12.10
+2026-10-23 11:32:42,266 WARNING pynput.keyboard.Listener: This process is not trusted! Input event monitoring will not be possible until it is added to accessibility clients.
