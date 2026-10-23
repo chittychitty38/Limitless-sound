@@ -37,8 +37,10 @@ jobs:
           - os: windows-latest    # Windows 10 and 11, 64-bit
             label: windows
     runs-on: ${{ matrix.os }}
+    # Signing happens only when these secrets exist (SIGNING.md); without them the build is unsigned.
     env:
       HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12 != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +74,7 @@ jobs:
         shell: bash
         run: echo "version=$(python -c 'import limitless_voice; print(limitless_voice.__version__)')" >> "$GITHUB_OUTPUT"
 
-      # ---- Mac: optional signing + notarization, then a .dmg ------------
+      # ---- Mac: signed and notarized when the Apple secrets are set, then a .dmg ----
       - name: Sign and notarize (only if the Apple secrets are set)
         if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
         env:
@@ -83,16 +85,9 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          echo "$APPLE_CERT_P12" | base64 --decode > cert.p12
-          security create-keychain -p ci build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p ci build.keychain
-          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
-          codesign --force --deep --options runtime --timestamp \
-            --entitlements installer/mac-entitlements.plist \
-            --sign "$APPLE_SIGNING_IDENTITY" "dist/Limitless Voice.app"
-          echo "signed=1" >> "$GITHUB_ENV"
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" keychain
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" app "dist/Limitless Voice.app"
+          "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" notarize "dist/Limitless Voice.app"
 
       - name: Make .dmg
         if: runner.os == 'macOS'
@@ -100,19 +95,29 @@ jobs:
           DMG="dist/LimitlessVoice-${{ steps.v.outputs.version }}-${{ matrix.label }}.dmg"
           mkdir dmg && cp -R "dist/Limitless Voice.app" dmg/ && ln -s /Applications dmg/Applications
           "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Voice" -srcfolder dmg -ov -format UDZO "$DMG"
-          if [ "${signed:-}" = "1" ]; then
-            codesign --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" --timestamp "$DMG"
-            xcrun notarytool submit "$DMG" --apple-id "${{ secrets.APPLE_ID }}" \
-              --team-id "${{ secrets.APPLE_TEAM_ID }}" --password "${{ secrets.APPLE_APP_PASSWORD }}" --wait
-            xcrun stapler staple "$DMG"
-          fi
 
-      # ---- Windows: installer -----------------------------------------
+      # ---- Windows: installer, signed when the Windows secrets are set ----
+      - name: Sign the program (only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\Limitless Voice\LimitlessVoice.exe"'
+
       - name: Make Windows installer
         if: runner.os == 'Windows'
         run: |
           choco install innosetup --no-progress -y
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.v.outputs.version }} installer\windows.iss
+
+      - name: Sign the installer (only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\LimitlessVoiceSetup-${{ steps.v.outputs.version }}.exe"'
 
       - name: Smoke test the built app
         shell: bash

@@ -33,6 +33,10 @@ jobs:
     defaults:
       run:
         working-directory: apps/zoom
+    # Signing with certificates happens only when these secrets exist (SIGNING.md).
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12 != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -79,11 +83,28 @@ jobs:
       - name: Build app
         run: pyinstaller --noconfirm packaging/limitless_zoom.spec
 
+      # One consistent signature, so macOS remembers the permissions you grant: ad-hoc, or the
+      # Developer ID (signed and notarized) when the Apple secrets are set.
+      - name: Sign (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ "$HAS_APPLE_CERT" = true ]; then
+            "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" keychain
+            "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" app "dist/Limitless Zoom.app"
+            "$GITHUB_WORKSPACE/.github/scripts/mac-sign.sh" notarize "dist/Limitless Zoom.app"
+          else
+            codesign --force --deep --sign - "dist/Limitless Zoom.app"
+          fi
       - name: Self test and package (macOS)
         if: runner.os == 'macOS'
         run: |
-          # One consistent ad-hoc signature, so macOS remembers the permissions you grant.
-          codesign --force --deep --sign - "dist/Limitless Zoom.app"
           codesign --verify --deep --strict "dist/Limitless Zoom.app"
           "dist/Limitless Zoom.app/Contents/MacOS/Limitless Zoom" --selftest
           # Drag-to-Applications disk image with a short how-to-open note.
@@ -93,6 +114,13 @@ jobs:
           cp "packaging/How to open on a Mac.txt" dmg/
           "$GITHUB_WORKSPACE/.github/scripts/hdiutil-retry.sh" create -volname "Limitless Zoom" -srcfolder dmg \
             -ov -format UDZO "dist/Limitless-Zoom-${{ matrix.name }}.dmg"
+      - name: Sign the program (only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\Limitless Zoom\Limitless Zoom.exe"'
       - name: Self test and package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -103,6 +131,13 @@ jobs:
           if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }
           iscc packaging\windows.iss
           Move-Item "dist\Limitless Zoom Setup.exe" "dist\Limitless-Zoom-Setup-windows.exe"
+      - name: Sign the installer (only if the Windows secrets are set)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: '& "$env:GITHUB_WORKSPACE\.github\scripts\win-sign.ps1" "dist\Limitless-Zoom-Setup-windows.exe"'
 
       - uses: actions/upload-artifact@v4
         with:
