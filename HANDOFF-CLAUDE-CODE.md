@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-22, after the 0.2.2 release. Everything below is the state of the project then.
+Written 2026-10-22, after the 0.2.3 release. Everything below is the state of the project then.
 
 ---
 
@@ -56,9 +56,9 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 | Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.2 |
 | Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.2 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.3 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.3 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports | gazestage-v0.3.5 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.2** (the repo's Latest release) |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.4 |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.1 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.3** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -182,7 +182,9 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - Control has never seen a real Xbox Adaptive Controller.
 - One-Hand's Mac self-test passes even if the key hook can't start; check it really types.
 - GazeStage has never driven a real Pro Tools rig (HUI ports, rewind/ffwd/stop mapping).
-- Voice's accuracy has only been measured on synthetic speech clips.
+- Voice and Zoom are measured against real people (`stress/test_*_real_speech.py`: Speech
+  Commands single words, an hour of LibriSpeech talk), but nobody has measured real people saying
+  the DAW words themselves ("cut", "record", "solo"): those datasets don't have them.
 - The C++ client has only been tested against the hub, not inside a real plug-in host.
 - No musician with a disability has tried any of it yet.
 
@@ -192,11 +194,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    the guided setup, running the stress tests on the real Mac, and checking each app by hand,
    recording results in `HANDOFF-RESULTS.md`. Fix what fails, one PR per app, and release
    fixes by bumping versions.
-2. **GazeStage 0.4, PR #21** (branch `gazestage/xy-tone-pad`): the tone pad, an XY controller
-   from Bennet's Jason Becker / Line 6 Helix idea. Two CCs (default 16/17; Helix profile CC1/CC2
-   = EXP1/EXP2), sends to a USB Line 6 device if one is plugged in, else the "GazeStage Notes"
-   port. Hub actions `gaze.tone`, `gaze.xy.*`. **Untested with a real Helix**, and far behind
-   `main` now: merge `main` in, re-check, test with a Helix if Bennet has one, bump to 0.4.0.
+2. **The tone pad with a real Helix.** GazeStage 0.4.1 has the tone pad (#21, #67), the XY
+   controller from Bennet's Jason Becker / Line 6 Helix idea: two CCs (default 16/17; the Helix
+   profile sends CC1/CC2 = EXP1/EXP2) to a USB Line 6 device if one is plugged in, else to
+   "GazeStage Notes". Other apps move it with GazeStage's actions `xySet`, `xySnapA`–`D`,
+   `xyCenter`, `xyLeft`… (0.4.2, #70). **Untested with real Line 6
+   hardware**; `HANDOFF.md` has the steps. The CC1/2 mapping comes from Line 6's MIDI table.
 3. **Default branch → `main`.** The repo's default branch is still `zoom-view-control`. Ask
    Bennet to change it at **GitHub › the repo › Settings › General › Default branch** (or run
    `gh repo edit chittychitty38/Limitless-sound --default-branch main` with his OK). Until then
@@ -207,13 +210,31 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    Voice's workflow already signs and notarizes when the `APPLE_*` secrets exist; the other
    apps and the suite `.pkg` need the same steps added.
 5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
-   merged, and the throwaway `diag/control-startup`, `diag/gazestage-idle` and `diag/zoom-idle`).
+   merged, and the throwaway `diag/control-startup`, `diag/control-idle`, `diag/gazestage-idle`
+   and `diag/zoom-idle`).
    Ask Bennet first; cloud sessions weren't allowed to delete them.
-6. **Control is the busiest app sitting idle** (0.2.2 proof: 2.8% on the Intel Mac, 1.3% on
-   Apple silicon, 0.1% on Windows), still under the 3% limit. If it creeps over, measure it the
-   way `diag/gazestage-idle` measured GazeStage before changing anything. GazeStage's built-in
-   instrument now rests 10 s after the last sound and wakes on hover (#60): check by ear on a
-   real Mac that the first note after a rest isn't late.
+6. **Voice: the next false triggers.** Stray single words still fire a harmless command 17.9%
+   of the time ("happy" → Copy, "wow" → louder, "follow" → Solo, "bird" → Record). Requiring the
+   open recognizer to agree on every one-word command would cut that to 1.3%, but costs
+   "forward" (85% → 52%, heard as "for") and "stop" (96% → 92%); `test_voice_real_speech.py`
+   prints this what-if on every run. To decide, it needs real people saying the command words
+   (record, solo, play, undo …). MLCommons' Multilingual Spoken Words corpus (CC BY 4.0) has
+   single English words cut from Common Voice and is the likeliest source.
+7. **A better speech model for Voice's commands: Bennet's call (licence).** Measured on real
+   people (branch `diag/vosk-model`, run 39886586088):
+   - The larger `vosk-model-en-us-0.22-lgraph` hears no more than the small model (90.6% against
+     91.6%) at about 6× the CPU. Voice 0.3.7 stopped calling it "more accurate" in Settings.
+   - `vosk-model-en-us-daanzu-20200905-lgraph`, used only as Voice's command recognizer (the
+     small model staying the open one), takes Voice from 91.6% to 94.7% of words right ("eight"
+     82% → 93%, "up" 85% → 96%), with no destructive presses. The same on a second run.
+     - Cost: about 2× the CPU while listening, 245 MB more memory, a 133 MB download.
+     - Its licence is **AGPL-3.0** (its own LICENSE.txt). Shipping it inside the installers needs
+       Bennet's decision, perhaps a lawyer's. Offering it as an optional download in Settings is
+       the other route.
+     - The code change: Voice's `Listener` holds two models (`_make_recognizers` in `audio.py`).
+     - It made Zoom worse (52 zooms an hour of talk), so Zoom keeps the small model.
+8. **By ear on a real Mac:** GazeStage's built-in instrument rests 10 s after the last sound
+   and wakes on hover (#60); check that the first note after a rest isn't late.
 
 ## Gotchas learned the hard way
 
@@ -236,6 +257,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   launches at the end): wait on the installer's own process (`WaitForExit`) instead, and give
   Inno Setup `postinstall` entries `skipifsilent`.
 - `ps %cpu` on a Mac is a decaying average; measure idle CPU from CPU-time deltas instead.
+- Shared CI runners add time unpredictably (GazeStage's first face on the Intel Mac runner:
+  1.6 to 4.9 s for the same code over 13 builds). A timing check should judge what the code
+  asked for (Zoom's microphone retry test records the waits it requests) or the fastest of a
+  few tries (GazeStage's first face, #73), never one wall-clock reading against a tight line.
 - A soak measures its whole test process, test code included: the hub soak once "leaked" 200 MB
   because the test kept every app link it had closed (#50). Before blaming the app, check what
   the test itself holds on to (`tracemalloc` snapshots show it in a minute).
@@ -265,6 +290,14 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   all. List runs unfiltered and pick on your side (`.github/scripts/newest-builds.sh`, #51).
 - On Windows, Python's faulthandler also reports exceptions that were handled (COM's
   0x8001010d): the crash log drops a run's lines when the app closes normally (#53).
+- Never make an RtMidi (`@julusian/midi`) Output just to list ports: on a Mac each one sets up a
+  CoreMIDI client, which held up GazeStage's main process and slowed its start by a second on
+  an Intel Mac, every 4 s, and never gave the clients back (#67). Any open output lists them all.
+- A local settings page should wait for news (long polling), not ask every 150 ms: Control's
+  page did, which was most of Control's idle CPU on the proof's Intel Mac (#65).
+- The website must pass `.github/scripts/site-a11y.cjs` (axe-core, WCAG 2.2 AA, light and dark,
+  desktop and phone); the Website workflow runs it on every `docs/` change (#66). Hover states
+  aren't checked by it: keep white text on darker hovers, not lighter ones.
 - Windows: `Start-Process` on a file marked as downloaded asks first and is "canceled by the
   user" with nobody to click; start it with `UseShellExecute = $false`. Python writes files and
   pipes in the old code page there, so write UTF-8 explicitly.
