@@ -13,6 +13,15 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.10
+- **Limitless Voice's Settings fits on screen with large text, in every language.** At the suite's largest text, Settings was wider than many screens: 972 px in English, 1241 in Spanish. Now:
+  - its long checkbox has its explanation on a line of its own underneath, which a screen reader reads too;
+  - a field goes under its label when they don't fit side by side;
+  - it scrolls, with Save and Cancel always in view.
+  - Voice 0.4.4.
+- **Limitless Sound's first two questions fit a narrow window.** Since 0.2.9, the long name of the Portuguese preview in the language menu made the page wider than a phone-sized window. With the largest text it scrolled sideways by almost the width of the screen. It fits again, at every text size. Hub 0.2.6.
+- **Limitless Zoom asks your Mac about permissions less often.** While a permission its keys need was missing, Zoom asked macOS about four permissions every second. On the proof's Intel Mac that was about 2% of the processor, for as long as Zoom ran. Now it asks only about the two its keys need, every 5 seconds, and about all of them only while Setup is open. Its keys still start within 5 seconds of being allowed. Zoom 0.1.10.
+
 ### New in 0.2.9
 - **A first preview of Limitless Voice in Brazilian Portuguese.** Choose «Português (prévia: só o Limitless Voice)» in the first two questions or in Settings. Voice then listens and answers in Portuguese in Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER and FL Studio. Its speech model (31 MB) downloads once, when you choose Portuguese. Voice 0.4.3.
   - **Why a preview:** the only free Portuguese speech model we can ship hears less than the Spanish one. Measured on real Brazilian speakers, Voice gets about 6 command words in 10 right the first time, against 8 in 10 in Spanish. Say commands whole and slowly. English is one choice away, and Voice says all this in Portuguese when you choose it.

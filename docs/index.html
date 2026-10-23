@@ -68,6 +68,8 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* Header */
 header.top { position: sticky; top: 0; z-index: 5; background: rgba(19,18,31,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+/* Taller than a fifth of the screen (large text, a phone on its side), it scrolls away with the page */
+header.top.scrolls { position: static; }
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--cream); text-decoration: none; }
 .brand img { width: 46px; height: 46px; }
@@ -112,6 +114,8 @@ nav .pill:hover { border-color: var(--lavender); }
 .meta { margin: 0 0 10px; line-height: 1.9; }
 .live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
 h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
+/* A word wider than a phone with the text made larger breaks, rather than going off the side */
+h1, h2, h3 { overflow-wrap: anywhere; }
 h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
 .lede strong { color: var(--cream); }
@@ -179,9 +183,11 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .panel li { margin-bottom: 4px; }
 
 /* Vision */
-.docs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .docs { grid-template-columns: 1fr; } }
-.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; }
+.docs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .docs { grid-template-columns: minmax(0, 1fr); } }
+/* A card never wider than the screen, at any text size: long words wrap rather than push it out */
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.doc .btn { max-width: 100%; }
 .doc h3 { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 14px; }
 .doc p { margin: 0 0 14px; }
 .doc ul { margin: 0 0 22px; padding-left: 1.1em; }
@@ -194,14 +200,14 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 360px) { .levels { grid-template-columns: 1fr; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
-.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; }
+.proofruns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .proofruns { grid-template-columns: minmax(0, 1fr); } }
+.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; overflow-wrap: anywhere; }
 .proofrun h3 { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 0 0 4px; }
 .subhead { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 36px 0 0; }
 .proofrun .label { display: block; margin-bottom: 14px; }
 .prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
-.prooflist li { display: grid; grid-template-columns: 1.6em 1fr; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.prooflist li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
 .prooflist .ok .mark { color: #7fd6a4; }
 .prooflist .bad .mark { color: var(--red); }
@@ -211,7 +217,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 
 /* Involved */
 .involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
-.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; }
+.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; min-width: 0; overflow-wrap: anywhere; }
 .involve strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.01em; margin-bottom: 4px; }
 .involve span { color: var(--muted); }
 
@@ -264,7 +270,7 @@ footer p { margin: 0; }
             <span>Windows<small>Windows 10 and 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.9</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.10</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
       </div>
 
       <div class="flex" aria-hidden="true">
@@ -300,7 +306,7 @@ footer p { margin: 0; }
           <p class="tag">Run the DAW by speaking</p>
           <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio or anywhere on the computer. In English or Spanish, and a first preview in Brazilian Portuguese. Fully offline: your voice never leaves the machine.</p>
           <p class="for">For musicians who can&rsquo;t use, or can&rsquo;t always use, a mouse and keyboard.</p>
-          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.3">Download<span class="ver">0.4.3</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
+          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.4">Download<span class="ver">0.4.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>02</span><span>One hand</span></p>
@@ -316,7 +322,7 @@ footer p { margin: 0; }
           <p class="tag">See the session at any size</p>
           <p>Zoom the DAW or the whole screen by voice (in English or Spanish), a one-hand key layer, resting your pointer on big buttons, or a single switch. Every action is shown in large text and said out loud.</p>
           <p class="for">For low-vision musicians, and anyone who can&rsquo;t pinch, scroll or hold modifier keys.</p>
-          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.9">Download<span class="ver">0.1.9</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
+          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.10">Download<span class="ver">0.1.10</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
@@ -392,7 +398,7 @@ footer p { margin: 0; }
     <div class="wrap">
       <p class="kicker label">Proof, every night</p>
       <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
-      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds. If anything fails, it shows here.</p>
+      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds, and the suite has to work together: a command from one app reaching another, and every app following the suite into Spanish and back. If anything fails, it shows here.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
         <p class="fine">Loading last night&rsquo;s results&hellip;</p>
       </div>
@@ -461,6 +467,16 @@ footer p { margin: 0; }
   </div>
 </footer>
 <script>
+// The header stays on top of the page only while it covers less than a fifth of the screen: with
+// large text, or a phone on its side, it would hide what's being read, so it scrolls away instead.
+(() => {
+  const top = document.querySelector("header.top");
+  const fit = () => top.classList.toggle("scrolls", top.offsetHeight > innerHeight / 5);
+  new ResizeObserver(fit).observe(top);
+  addEventListener("resize", fit);
+  fit();
+})();
+
 // Each Download button goes to that app's newest release, looked up when the page opens, and the
 // suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
 (async () => {
@@ -492,6 +508,14 @@ footer p { margin: 0; }
       && ["connected", "proof"].includes(x.level || "proof"));
     return bad ? `${bad.check}: ${bad.detail || "failed"}` : "";
   };
+  // The suite's own checks (S1...): the apps together, the shared language.
+  const together = (suite) => {
+    if (!suite || !suite.length) return "";
+    const items = suite.map((s) => `<li class="${s.ok ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${s.ok ? "✓" : "✕"}</span>`
+      + `<span><b>${esc(s.check)}<span class="vh">: ${s.ok ? "passed" : "failed"}</span></b><span class="how">${esc(s.detail)}</span></span></li>`).join("");
+    return `<p class="fine" style="margin:12px 0 6px">The suite together: ${suite.filter((s) => s.ok).length} of ${suite.length} checks passed.</p>`
+      + `<ul class="prooflist">${items}</ul>`;
+  };
   fetch("proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
     .then((data) => {
       const link = document.getElementById("proof-run");
@@ -514,7 +538,7 @@ footer p { margin: 0; }
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
           + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
-          + `<ul class="prooflist">${apps}</ul></div>`;
+          + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
     .catch(() => { box.innerHTML = `<p class="fine">The first nightly results haven&rsquo;t been published yet.</p>`; });

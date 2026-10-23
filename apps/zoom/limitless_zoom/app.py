@@ -187,9 +187,13 @@ class ZoomApp(QObject):
             self.keys = None
             self._status(t("Zoom keys couldn't start: {problem}", problem=e))
 
-    def _check_permissions(self):
+    def _check_permissions(self, everything=False):
+        """everything: Setup is opening, so every permission it shows is asked about."""
+        setup_open = everything or (self.setup_window is not None and self.setup_window.isVisible())
         try:
-            perms = self.backend.permissions()
+            # With Setup closed, only what Zoom keys need. Asking the Mac about all four every
+            # second cost the proof's Intel Mac about 2% of a core, for as long as one was missing.
+            perms = self.backend.permissions() if setup_open else self.backend.required_permissions()
         except Exception:
             return
         ok = all(p["state"] != "missing" for p in perms if p["required"])
@@ -203,14 +207,14 @@ class ZoomApp(QObject):
         elif self._perms_ok is False:
             self._status("")
         self._perms_ok = ok
-        setup_open = self.setup_window is not None and self.setup_window.isVisible()
-        if self.setup_window is not None and perms != self._perms_shown:
+        if setup_open and self.setup_window is not None and perms != self._perms_shown:
             # Only when something changed: restyling Setup every second redrew the whole
             # window every second for as long as a permission was missing.
             self._perms_shown = perms
             self.setup_window.set_permissions(perms)
-        # Check every second while someone is setting up, otherwise now and then.
-        self.perm_timer.setInterval(1000 if setup_open or not ok else 10000)
+        # Every second while someone is setting up, every 5 s while Zoom keys wait for a
+        # permission (they start within 5 s of it being allowed), otherwise now and then.
+        self.perm_timer.setInterval(1000 if setup_open else 5000 if not ok else 10000)
 
     def show_panel(self):
         self.panel.show()
@@ -537,6 +541,7 @@ class ZoomApp(QObject):
             self.setup_window.show()
             self.setup_window.raise_()
             self.backend.bring_to_front()
+            self._check_permissions(everything=True)   # what changed while it was closed
             return
         try:
             mics = voice.list_microphones()
@@ -557,7 +562,7 @@ class ZoomApp(QObject):
         self.setup_window = w
         self._show_phrases()
         self._perms_shown = None
-        self._check_permissions()
+        self._check_permissions(everything=True)
         screen = w.screen().availableGeometry()
         w.resize(min(w.width(), screen.width() - 40), min(w.height(), screen.height() - 40))
         w.move(screen.center() - w.rect().center())
