@@ -4,6 +4,7 @@ Limitless Voice keeps it, else downloaded once while Zoom keeps listening in Eng
 
 import json
 import os
+import threading
 import zipfile
 from pathlib import Path
 
@@ -320,6 +321,10 @@ def test_spanish_is_downloaded_once_while_english_keeps_listening(make, folders,
     model(zoom / ENGLISH.model)
     url = zipped(tmp_path, SPANISH.model)
     monkeypatch.setattr(SPANISH, "url", url)
+    # The download is held until the English meanwhile has been checked: from a file:// URL on a
+    # fast Mac it used to finish while Zoom started, so Spanish was there before the first look.
+    arrived, download = threading.Event(), voice.download_model
+    monkeypatch.setattr(voice, "download_model", lambda *a, **k: arrived.wait(10) and download(*a, **k))
     statuses = []
     monkeypatch.setattr(words, "_computer", "es")
     app = make()
@@ -328,6 +333,7 @@ def test_spanish_is_downloaded_once_while_english_keeps_listening(make, folders,
     assert app.voice.language is ENGLISH   # until it's here
     assert statuses[-1] == ("Escuchando en Fake Mic; hasta que se descargue el modelo de voz en español "
                             "(39 MB, solo esta vez), di los comandos en inglés")
+    arrived.set()
     assert wait_for(lambda: app.voice.language is SPANISH)
     assert app.voice.model_path == str(zoom / SPANISH.model)
     assert statuses[-1] == "Escuchando en Fake Mic"
