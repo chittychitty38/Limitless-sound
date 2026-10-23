@@ -207,6 +207,9 @@ class Listener:
     def stop(self):
         self.stopped = True
 
+    def is_alive(self):
+        return not self.stopped
+
 
 @pytest.fixture(scope="module")
 def qapp():
@@ -395,3 +398,23 @@ def test_the_suite_still_gets_the_english_phrases(make, folders, monkeypatch):
     hub(app, language="es")
     acts = {a["id"]: a for a in app.suite.link._actions}
     assert "zoom in" in acts["in"]["phrases"]
+
+
+def test_a_language_switch_keeps_the_listener_that_has_the_model(make, folders, monkeypatch):
+    # Spanish's model isn't here and can't be downloaded: Zoom keeps listening in English with the
+    # listener it has, rather than loading the English model again on each switch.
+    model(folders[0] / ENGLISH.model)
+    loads = []
+    monkeypatch.setattr(voice, "VoiceListener", lambda *a, **k: loads.append(Listener(*a, **k)) or loads[-1])
+    app = make()
+    first = app.voice
+    shown = []
+    app.bus.voice_status.connect(shown.append)
+    hub(app, language="es")
+    assert app.voice is first and not first.stopped and len(loads) == 1
+    assert "di los comandos en inglés" in shown[-1]   # what it says changes
+    hub(app, language="en")
+    assert app.voice is first and len(loads) == 1
+    assert shown[-1] == "Listening on Fake Mic"
+    app.set_mic("Other Mic")   # a new microphone does start a new listener
+    assert app.voice is not first and first.stopped and len(loads) == 2
