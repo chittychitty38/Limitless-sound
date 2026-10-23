@@ -56,6 +56,68 @@
         {"key": "v", "label": "Heal separation",    "send": "h", "mods": ["command"]},
         {"key": "b", "label": "Delete",             "send": "delete_or_backspace"}
       ]
+    },
+    {
+      "id": "garageband",
+      "name": "GarageBand",
+      "mac": ["com.apple.garageband10"],
+      "windows": [],
+      "commands": [
+        {"key": "q", "label": "Undo",               "send": "z", "mods": ["command"]},
+        {"key": "w", "label": "Redo",               "send": "z", "mods": ["command", "shift"]},
+        {"key": "e", "label": "Record",             "send": "r"},
+        {"key": "t", "label": "New track",          "send": "n", "mods": ["option", "command"], "note": "Opens the New Track dialog"},
+        {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
+        {"key": "c", "label": "Automation",         "send": "a"},
+        {"key": "b", "label": "Musical Typing",     "send": "k", "mods": ["command"]}
+      ]
+    },
+    {
+      "id": "reaper",
+      "name": "REAPER",
+      "mac": ["com.cockos.reaper"],
+      "windows": ["reaper.exe"],
+      "commands": [
+        {"key": "1", "label": "Go to start",        "send": "w"},
+        {"key": "2", "label": "Go to end",          "send": "end"},
+        {"key": "3", "label": "Add marker",         "send": "m"},
+        {"key": "4", "label": "Loop playback",      "send": "r"},
+        {"key": "q", "label": "Undo",               "send": "z", "mods": ["command"]},
+        {"key": "w", "label": "Redo",               "send": "z", "mods": ["command", "shift"]},
+        {"key": "e", "label": "Record",             "send": "r", "mods": ["command"]},
+        {"key": "r", "label": "Split at edit cursor", "send": "s"},
+        {"key": "t", "label": "New track",          "send": "t", "mods": ["command"]},
+        {"key": "a", "label": "Previous track",     "send": "up_arrow", "mods": ["command", "option"], "repeat": true},
+        {"key": "s", "label": "Next track",         "send": "down_arrow", "mods": ["command", "option"], "repeat": true},
+        {"key": "f", "label": "Zoom to fit",        "send": "page_down", "mods": ["command"]},
+        {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
+        {"key": "c", "label": "Mixer",              "send": "m", "mods": ["command"]}
+      ]
+    },
+    {
+      "id": "flstudio",
+      "name": "FL Studio",
+      "mac": ["com.image-line.flstudio"],
+      "windows": ["fl64.exe", "fl64 (scaled).exe"],
+      "commands": [
+        {"key": "1", "label": "Go to start",        "send": "home", "note": "In the Playlist"},
+        {"key": "3", "label": "Add marker",         "send": "t", "mods": ["option"]},
+        {"key": "4", "label": "Playlist",           "send": "f5"},
+        {"key": "5", "label": "Metronome on/off",   "send": "m", "mods": ["command"], "note": "Not from the Piano roll"},
+        {"key": "q", "label": "Undo",               "send": "z", "mods": ["command", "option"], "note": "Steps back through the history"},
+        {"key": "e", "label": "Record mode on/off", "send": "r", "note": "Then Space plays and records"},
+        {"key": "t", "label": "Channel Rack",       "send": "f6"},
+        {"key": "a", "label": "Previous channel",   "send": "up_arrow", "repeat": true},
+        {"key": "s", "label": "Solo track",         "send": "s", "note": "The selected Mixer track, with the Mixer in front"},
+        {"key": "d", "label": "Next channel",       "send": "down_arrow", "repeat": true},
+        {"key": "f", "label": "Zoom to fit",        "send": "4", "mods": ["shift"]},
+        {"key": "g", "label": "Save",               "send": "s", "mods": ["command"]},
+        {"key": "z", "label": "Zoom out",           "send": "page_down", "repeat": true},
+        {"key": "x", "label": "Zoom in",            "send": "page_up", "repeat": true},
+        {"key": "c", "label": "Mixer",              "send": "f9"},
+        {"key": "v", "label": "Piano roll",         "send": "f7"},
+        {"key": "b", "label": "Browser",            "send": "f8", "mods": ["option"]}
+      ]
     }
   ]
 }

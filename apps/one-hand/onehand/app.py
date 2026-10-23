@@ -673,7 +673,7 @@ class MainWindow(QWidget):
         elif in_self:
             text = t("Try it here: press the {hand} keys below to see what they do.", hand=hand)
         else:
-            text = t("Waiting for Logic Pro or Pro Tools. Other apps type normally.")
+            text = t("Waiting for your DAW. Other apps type normally.")
         self.status.setText(text)
         for _, _, card in self.cards:
             card.setProperty("active", bool(on and (app or in_self)))
