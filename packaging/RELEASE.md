@@ -14,10 +14,11 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
 ### New in 0.2.5
-- **Limitless Sound speaks Spanish.** Choose English or Español once, in the first two questions or in Settings, and every app that has Spanish follows. A computer set to Spanish starts in Spanish.
+- **The first step to Limitless Sound in Spanish.** Choose English or Español once, in the first two questions or in Settings, and every app that has Spanish follows it. A computer set to Spanish starts in Spanish.
   - The installers are in Spanish on a Spanish Mac or PC.
   - So is Limitless Sound's own page: the two questions, every tab and every setting.
-  - Replies in Spanish are read by a Spanish voice. If the computer has none, the page says where to add one.
+  - When an app speaks Spanish, its replies are read by a Spanish voice. If the computer has none, the page says where to add one.
+  - Limitless Voice in Spanish, and the other apps' windows, are coming next.
 - **Limitless Voice works in Ableton Live 12**, on Mac and Windows: play, record, metronome, loop, new audio and MIDI tracks, solo, mute, arm, split, consolidate, quantize, delete, mixer, browser, clip view, automation, zoom and export. Voice 0.3.9.
 - **Every app presses the same key for the same thing.** We checked every app's DAW keys against the others and against Apple's, Avid's and Ableton's guides. Six were wrong:
   - In Logic Pro, "mute" and "solo" in Voice and One-Hand muted and soloed regions instead of the track. They now press M and S.
