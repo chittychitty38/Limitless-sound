@@ -171,6 +171,8 @@ class App:
         from .suite import OWN_LOOK, Suite
         # Text size, high contrast and reduced motion for the settings page; the suite can change them.
         self.look = dict(OWN_LOOK)
+        # The suite's language for the settings page; None: the computer's.
+        self.language: str | None = None
         self.suite = Suite(self)
         self.output.suite_say = self.suite.say
 
@@ -264,6 +266,7 @@ class App:
                 "startAtLogin": login.is_enabled(),
                 "menuBar": self.menu is not None,
                 "look": dict(self.look),
+                "language": self.language,
                 "log": list(self.output.log.lines)[-12:],
             }
 

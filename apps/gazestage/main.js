@@ -29,6 +29,30 @@ const isMac = process.platform === 'darwin';
 const testMode = app.commandLine.hasSwitch('use-fake-device-for-media-stream');
 let win = null, quitting = false;
 
+// ---------- language ----------
+// The menu, the question box and the answers to other apps are in the language the page shows
+// (it says which: preload.js). The Spanish is the page's own table (renderer/index.html, strings-es).
+const STRINGS = (() => {
+  const TABLE = '<script type="application/json" id="strings-es">';
+  try {
+    const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const start = page.indexOf(TABLE) + TABLE.length;
+    return { es: JSON.parse(page.slice(start, page.indexOf('</script>', start))) };
+  } catch (e) {
+    log.warn('No Spanish for the menu:', String(e.message || e));
+    return {};
+  }
+})();
+let lang = 'en';
+const t = (text) => (STRINGS[lang] || {})[text] || text;
+ipcMain.on('language', (e, next) => {
+  if (e.sender !== win?.webContents) return;
+  next = STRINGS[next] ? next : 'en';
+  if (next === lang) return;
+  lang = next;
+  buildMenu(); aboutPanel();
+});
+
 // ---------- virtual MIDI ports ----------
 // Port names other apps will see. Pro Tools: Setup > Peripherals > MIDI Controllers > HUI,
 // receive from and send to "GazeStage HUI". Instrument tracks: input "GazeStage Notes".
@@ -134,14 +158,14 @@ const suite = { link: null, ids: 1, waiting: new Map(), ready: false, queue: [],
 // Actions from other apps are done by the page. While it loads (or reloads) they wait here
 // instead of getting lost; one that still waits after 2.5 s says so, and is never done late.
 function askPage(action, args, source) {
-  if (!win) return [false, 'GazeStage has no window open.'];
+  if (!win) return [false, t('GazeStage has no window open.')];
   return new Promise((resolve) => {
     const id = suite.ids++, req = { id, action, args, source };
     const timer = setTimeout(() => {
       suite.waiting.delete(id);
       const queued = suite.queue.indexOf(req);
       if (queued >= 0) suite.queue.splice(queued, 1);
-      resolve([false, queued >= 0 ? 'GazeStage is still starting. Try again in a moment.' : 'GazeStage didn’t answer.']);
+      resolve([false, queued >= 0 ? t('GazeStage is still starting. Try again in a moment.') : t('GazeStage didn’t answer.')]);
     }, 2500);
     suite.waiting.set(id, (r) => { clearTimeout(timer); resolve([!!r?.ok, String(r?.message || '')]); });
     if (suite.ready) win.webContents.send('suite:invoke', req); else suite.queue.push(req);
@@ -180,7 +204,7 @@ ipcMain.on('suite:ready', (e) => {
 ipcMain.on('suite:did', (_e, action) => { if (TRANSPORT.has(action)) suite.link?.did(action); });
 ipcMain.handle('suite:invoke', (_e, action, args) => suite.link
   ? suite.link.invoke(String(action), args && typeof args === 'object' ? args : {})
-  : { ok: false, message: 'Limitless Sound isn’t running.' });
+  : { ok: false, message: t('Limitless Sound isn’t running.') });
 ipcMain.handle('suite:status', () => ({ connected: !!suite.link?.connected, prefs: suite.link?.connected ? suite.link.prefs : null }));
 // What the page is now showing, so the settings page (and the Access Standard test) can see it.
 ipcMain.on('suite:applied', (_e, applied) => { if (applied && typeof applied === 'object') suite.link?.state('prefs.applied', applied); });
@@ -229,7 +253,7 @@ ipcMain.on('synth:connect', (e) => { if (e.sender === win?.webContents) connectS
 ipcMain.handle('dialog:confirm', async (_e, message, yes) => {
   if (!win) return false;
   const { response } = await dialog.showMessageBox(win, {
-    type: 'question', message: String(message), buttons: [String(yes || 'OK'), 'Cancel'], defaultId: 1, cancelId: 1,
+    type: 'question', message: String(message), buttons: [String(yes || 'OK'), t('Cancel')], defaultId: 1, cancelId: 1,
   });
   return response === 0;
 });
@@ -308,50 +332,61 @@ function createWindow() {
 
 // ---------- menu ----------
 const send = (cmd) => () => win?.webContents.send('command', cmd);
+// A built-in menu item: Electron's own English words, or ours in another language.
+const role = (name, en, more = {}) => ({ role: name, ...(lang === 'en' ? {} : { label: t(en) }), ...more });
 function buildMenu() {
   const onTop = !!win?.isAlwaysOnTop();
+  const windowItems = isMac
+    ? [role('minimize', 'Minimize'), role('zoom', 'Zoom'), { type: 'separator' }, role('front', 'Bring All to Front')]
+    : [role('minimize', 'Minimize'), role('close', 'Close')];
   const template = [
     ...(isMac ? [{
       label: 'GazeStage',
       submenu: [
-        { role: 'about' }, { type: 'separator' },
-        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: send('settings') },
-        { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
-        { type: 'separator' }, { role: 'quit' },
+        role('about', 'About GazeStage'), { type: 'separator' },
+        { label: t('Settings…'), accelerator: 'CmdOrCtrl+,', click: send('settings') },
+        { type: 'separator' }, role('hide', 'Hide GazeStage'), role('hideOthers', 'Hide Others'), role('unhide', 'Show All'),
+        { type: 'separator' }, role('quit', 'Quit GazeStage'),
       ],
-    }] : [{ label: 'File', submenu: [{ label: 'Settings…', accelerator: 'Ctrl+,', click: send('settings') }, { role: 'quit' }] }]),
+    }] : [{ label: t('File'), submenu: [{ label: t('Settings…'), accelerator: 'Ctrl+,', click: send('settings') }, role('quit', 'Quit')] }]),
     {
-      label: 'Control',
+      label: t('Control'),
       submenu: [
-        { label: 'Recenter Pointer', accelerator: 'CmdOrCtrl+R', click: send('recenter') },
-        { label: 'Calibrate…', accelerator: 'CmdOrCtrl+K', click: send('calibrate') },
-        { label: 'Pause or Resume', accelerator: 'CmdOrCtrl+P', click: send('pause') },
+        { label: t('Recenter Pointer'), accelerator: 'CmdOrCtrl+R', click: send('recenter') },
+        { label: t('Calibrate…'), accelerator: 'CmdOrCtrl+K', click: send('calibrate') },
+        { label: t('Pause or Resume'), accelerator: 'CmdOrCtrl+P', click: send('pause') },
         { type: 'separator' },
-        { label: 'Transport', accelerator: 'CmdOrCtrl+1', click: send('page:transport') },
-        { label: 'Instrument', accelerator: 'CmdOrCtrl+2', click: send('page:play') },
-        { label: 'Tone Pad', accelerator: 'CmdOrCtrl+3', click: send('page:tone') },
+        { label: t('Transport'), accelerator: 'CmdOrCtrl+1', click: send('page:transport') },
+        { label: t('Instrument'), accelerator: 'CmdOrCtrl+2', click: send('page:play') },
+        { label: t('Tone Pad'), accelerator: 'CmdOrCtrl+3', click: send('page:tone') },
         { type: 'separator' },
-        { label: 'All Notes Off', accelerator: 'CmdOrCtrl+.', click: send('panic') },
-        { label: 'Run Setup Again…', click: send('onboarding') },
+        { label: t('All Notes Off'), accelerator: 'CmdOrCtrl+.', click: send('panic') },
+        { label: t('Run Setup Again…'), click: send('onboarding') },
       ],
     },
     {
-      label: 'View',
+      label: t('View'),
       submenu: [
-        { label: 'Keep Window on Top', type: 'checkbox', checked: onTop, click: send('toggle-on-top') },
-        { label: 'Show Camera Preview', accelerator: 'CmdOrCtrl+Shift+C', click: send('toggle-preview') },
-        { type: 'separator' }, { role: 'togglefullscreen' },
-        { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+        { label: t('Keep Window on Top'), type: 'checkbox', checked: onTop, click: send('toggle-on-top') },
+        { label: t('Show Camera Preview'), accelerator: 'CmdOrCtrl+Shift+C', click: send('toggle-preview') },
+        { type: 'separator' }, role('togglefullscreen', 'Toggle Full Screen'),
+        role('resetZoom', 'Actual Size'), role('zoomIn', 'Zoom In'), role('zoomOut', 'Zoom Out'),
         ...(app.isPackaged ? [] : [{ type: 'separator' }, { role: 'toggleDevTools' }]),
       ],
     },
-    { role: 'windowMenu' },
-    {
-      role: 'help',
-      submenu: [{ label: 'GazeStage Setup Guide', click: () => shell.openExternal('https://github.com/chittychitty38/Limitless-sound/tree/main/apps/gazestage#readme') }],
-    },
+    lang === 'en' ? { role: 'windowMenu' } : role('windowMenu', 'Window', { submenu: windowItems }),
+    role('help', 'Help', {
+      submenu: [{ label: t('GazeStage Setup Guide'), click: () => shell.openExternal('https://github.com/chittychitty38/Limitless-sound/tree/main/apps/gazestage#readme') }],
+    }),
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+function aboutPanel() {
+  app.setAboutPanelOptions({
+    applicationName: 'GazeStage', applicationVersion: app.getVersion(),
+    copyright: 'Limitless Sound', credits: t('Eye, head and sound control for music.'),
+  });
 }
 
 app.whenReady().then(() => {
@@ -363,10 +398,7 @@ app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED.has(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => ALLOWED.has(perm));
-  app.setAboutPanelOptions({
-    applicationName: 'GazeStage', applicationVersion: app.getVersion(),
-    copyright: 'Limitless Sound', credits: 'Eye, head and sound control for music.',
-  });
+  aboutPanel();
   openVirtualPorts();
   createWindow();   // joins Limitless Sound once the page is ready (suite:ready)
   buildMenu();

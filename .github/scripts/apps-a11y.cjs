@@ -474,6 +474,17 @@ async function checkControl(browser) {
   await page.selectOption('#profile-pick', '__global__');
   await checkStates(page, s, 'every app (always on)', { sizes, setScheme, setLook, looks: ['standard'], keys: someKeys });
   await sharedLook('standard');
+
+  // The page in Spanish: longer words in the same space, and the page's language set for screen
+  // readers. The welcome steps shown again above Logic Pro's switches: every part of the page.
+  await hubApi('/api/prefs', { prefs: { language: 'es' } });
+  await page.waitForFunction(() => document.documentElement.lang === 'es');
+  await page.selectOption('#profile-pick', 'Logic Pro');
+  await page.click('#show-setup');
+  await page.waitForSelector('#setup:not([hidden])');
+  await checkStates(page, s, 'welcome steps and Logic Pro, in Spanish', { looks: ['standard', 'largest text'], sizes, setScheme, setLook });
+  await sharedLook('standard');
+  await hubApi('/api/prefs', { prefs: { language: 'en' } });
   await ctx.close();
 }
 
@@ -552,6 +563,32 @@ async function checkGazeStage() {
   await states('paused', { keys: someKeys });
   await press('#pauseOverlay [data-action=resume]');
   await sharedLook('standard');
+
+  // GazeStage in Spanish: longer words on the same targets, and the window's language set for
+  // screen readers. The guided setup's busiest step, the three pages and the settings.
+  await hubApi('/api/prefs', { prefs: { language: 'es' } });
+  await win.waitForFunction(() => document.documentElement.lang === 'es');
+  const spanish = (view, more = {}) => states(`${view}, in Spanish`, { looks: ['standard', 'largest text'], ...more });
+  await win.evaluate(() => document.getElementById('settingsBtn').click());
+  await win.waitForSelector('#settings.open');
+  await sleep(300);
+  await spanish('settings');
+  await press('[data-cmd=onboarding]');
+  await win.waitForSelector('#onboard.show');
+  await press('[data-ob=next]');
+  await press('[data-ob=nocam]');
+  await spanish('guided setup: how to select');
+  await press('[data-ob=next]');
+  await press('[data-ob=next]');
+  await press('[data-ob=finish-play]');
+  await win.waitForSelector('#onboard:not(.show)', { state: 'attached' });
+  await spanish('instrument');
+  await press('[data-goto=transport]');
+  await spanish('transport');
+  await press('[data-goto=tone]');
+  await spanish('tone pad');
+  await sharedLook('standard');
+  await hubApi('/api/prefs', { prefs: { language: 'en' } });
 }
 
 // ------------------------------------------------------------------ Limitless Color
