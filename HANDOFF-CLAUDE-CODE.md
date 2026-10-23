@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.6 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.7 release. Everything below is the state of the project then.
 
 ---
 
@@ -54,11 +54,11 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 | Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.4, in the suite |
 | Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.1 |
 | Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.5 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.5 |
-| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.4 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.6 |
+| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.7 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.6** (the repo's Latest release) |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.7** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -78,10 +78,16 @@ follows it live, in place, without moving the keyboard focus:
   for theirs with `ui.text("…")` (`words.py`).
 - One-Hand and Zoom (`words.py` in each, #89), Control's page and GazeStage (a `strings-es` table
   in the page, #91), Limitless Sound's page (#83) and the installers (#87) are in Spanish.
+- Color is in Spanish, and its offline helper understands Spanish descriptions (0.1.5, #95): on a
+  blind set written by someone who never saw its rules, 98.3% of Spanish and 96.7% of English
+  descriptions (English was 61.7% before). `cargo run -p color-core --example helper_report`.
+- Zoom understands voice commands in Spanish (0.1.6, #97), measured on real people: 90-91% of
+  its command words heard, 1-2 mistaken zooms in an hour of Spanish read aloud (English: 3.8).
+  It also listens for 325 common Spanish words so talk isn't heard as a command.
 - The website is in Spanish at `/es/` (`docs/es/index.html`, #93).
 - Every one has a test that fails on English with no Spanish, and the Spanish fits at double
   text size wherever the English does.
-- Not yet in Spanish: Limitless Color, Zoom's voice commands, the guides on GitHub.
+- Not yet in Spanish: the guides on GitHub.
 
 Release links (permanent; they always point at the newest suite):
 - https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
@@ -294,6 +300,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
      cuerpos" (the "every body" pun), "Con franqueza: en qué punto estamos", "ratón" or "mouse",
      "83.5 %" or "83,5 %", the level names Conectado / Adaptable / Manos libres / Codiseñado, and
      the macOS buttons named for a Spanish Mac ("Abrir igualmente", «Chip» / «Procesador»).
+   - Color (`apps/color/app/ui/index.html`, `strings-es`): "Afinador", "Ajústalo por mí",
+     "Silenciar", "Soltar"/"Fijar", "Medidor: saturación", the sample session's track names, and
+     the path "Ajustes del Sistema › Accesibilidad › Pantalla › Filtros de color".
+   - Zoom's voice commands (`apps/zoom/README.md`, the Español table): «acercar»/«ampliar»,
+     «alejar»/«reducir», «más altas»/«más bajas», «lupa», «ajustar», «repite». Nobody in the
+     recordings said «acercar», «alejar» or «lupa» alone, so try them on the Mac's mic.
    - On the Mac: set Limitless Sound's language to Español, check Voice offers its Spanish model
      (39 MB) and that replies come in a Spanish voice (System Settings › Accessibility › Spoken
      Content › System voice › Manage Voices adds one), and that VoiceOver reads each window in
