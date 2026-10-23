@@ -50,8 +50,9 @@ jobs:
           cache-dependency-path: apps/gazestage/package-lock.json
 
       # Apple's certificates come from Apple's authority, which macOS trusts. These come from a
-      # throwaway authority made here, which this runner is told to trust the same way: productsign
-      # won't use an identity macOS doesn't trust (a self-signed one isn't found at all).
+      # throwaway authority made here, which this runner is told to trust the same way. productsign
+      # takes neither a self-signed certificate nor one that may also sign code: the installer one
+      # is marked only for installers, as Apple's is (branch diag/productsign tried each shape).
       - name: Make throwaway Developer ID certificates, as .p12 in base64 like the secrets
         run: |
           d="$RUNNER_TEMP/test-certs"; mkdir -p "$d"; cd "$d"
@@ -60,19 +61,20 @@ jobs:
             '[ext]' 'basicConstraints = critical, CA:true' 'keyUsage = critical, keyCertSign, cRLSign' \
             'subjectKeyIdentifier = hash' > ca.cnf
           /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 2 -config ca.cnf -keyout ca.key -out ca.crt
-          make_cert() {  # <file> <name> <Apple's marker for the kind> <extended key usage>
+          make_cert() {  # <file> <name> <Apple's marker for the kind, as a config line> <extended key usage>
             printf '%s\n' '[req]' 'distinguished_name = dn' 'prompt = no' \
               '[dn]' "CN = $2" 'OU = TESTTEAM00' 'O = Limitless Sound test' 'C = US' \
               '[ext]' 'basicConstraints = critical, CA:false' 'keyUsage = critical, digitalSignature' \
               "extendedKeyUsage = $4" 'subjectKeyIdentifier = hash' 'authorityKeyIdentifier = keyid' \
-              "$3 = ASN1:NULL" > "$1.cnf"
+              "$3" > "$1.cnf"
             /usr/bin/openssl req -new -newkey rsa:2048 -nodes -config "$1.cnf" -keyout "$1.key" -out "$1.csr"
             /usr/bin/openssl x509 -req -in "$1.csr" -CA ca.crt -CAkey ca.key -CAcreateserial -days 2 \
               -extfile "$1.cnf" -extensions ext -out "$1.crt"
             /usr/bin/openssl pkcs12 -export -inkey "$1.key" -in "$1.crt" -name "$2" -passout pass:test-password -out "$1.p12"
           }
-          make_cert app "$TEST_APP_IDENTITY" 1.2.840.113635.100.6.1.13 codeSigning
-          make_cert installer "$TEST_PKG_IDENTITY" 1.2.840.113635.100.6.1.14 "codeSigning, 1.2.840.113635.100.4.13"
+          make_cert app "$TEST_APP_IDENTITY" "1.2.840.113635.100.6.1.13 = ASN1:NULL" codeSigning
+          make_cert installer "$TEST_PKG_IDENTITY" "1.2.840.113635.100.6.1.14 = critical, ASN1:NULL" \
+            "critical, 1.2.840.113635.100.4.13"
           {
             echo "APPLE_CERT_P12=$(base64 -i app.p12 | tr -d '\n')"
             echo "APPLE_CERT_PASSWORD=test-password"
