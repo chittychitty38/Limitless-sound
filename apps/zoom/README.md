@@ -97,7 +97,8 @@ Layout: `actions.py` (actions and phrases), `keymaps.py` (per-app keys), `router
 - Not yet tried on a real Mac or Windows PC; Linux is tested. The first Mac and Windows builds need hands-on testing.
 - Not code-signed. Signing needs an Apple Developer ID ($99/year) and a Windows code-signing certificate.
 - Pro Tools Windows Start-key shortcuts (track height, presets) may be caught by Windows itself; needs checking.
-- Voice is English only for now; Vosk has models for 20+ languages.
+- Voice commands are English only for now, even when Zoom's windows are in Spanish; Vosk has models
+  for 20+ languages, but each needs its phrases measured with real speech.
 
 ## Works with the rest of Limitless Sound
 
@@ -116,6 +117,8 @@ When the Limitless Sound hub is running, Zoom joins the suite by itself:
   motion the dwell bar fills in steps instead of sliding, and menus and tooltips don't animate.
   Zoom tells the suite which of these settings it's using (Limitless Access Standard level 2,
   Adaptive).
+- Zoom's windows, menu and spoken messages are in the language picked in Limitless Sound, English
+  or Spanish, or the computer's language until the hub is running. A new choice shows straight away.
 
 Without the hub nothing changes. The link is `limitless_zoom/suite.py`, using a copy of
 `shared/clients/python/limitless_link.py`.
