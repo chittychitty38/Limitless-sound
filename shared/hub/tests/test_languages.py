@@ -16,6 +16,8 @@ def test_a_language_is_its_primary_tag_and_only_one_the_suite_has():
     assert languages.tag("es-MX") == "es"
     assert languages.tag("es_ES.UTF-8") == "es"
     assert languages.tag("EN-us") == "en"
+    assert languages.tag("pt-BR") == "pt"
+    assert languages.tag("pt_PT.UTF-8") == "pt"
     assert languages.tag("fr-FR") is None
     assert languages.tag(None) is None
     assert languages.tag(3) is None
@@ -25,6 +27,7 @@ def test_the_computers_language_is_the_first_one_the_suite_has():
     assert languages.system_language(lambda: ["es-MX", "en-US"]) == "es"
     assert languages.system_language(lambda: ["fr-FR", "es-ES"]) == "es"
     assert languages.system_language(lambda: ["fr-FR", "de-DE"]) == "en"
+    assert languages.system_language(lambda: ["pt-BR", "en-US"]) == "pt"
     assert languages.system_language(lambda: []) == "en"
 
     def broken():
@@ -44,6 +47,7 @@ def test_language_takes_only_languages_the_suite_has(bus):  # noqa: F811
     assert bus.set_prefs({"language": "fr"})["language"] == "es"
     assert bus.set_prefs({"language": 5})["language"] == "es"
     assert bus.set_prefs({"language": "en"})["language"] == "en"
+    assert bus.set_prefs({"language": "pt-BR"})["language"] == "pt"
 
 
 def test_every_app_hears_the_language(bus):  # noqa: F811
@@ -93,6 +97,9 @@ def test_a_voice_for_the_language_clearer_ones_first():
     assert speech.voice_for("es", [("Eddy (Spanish (Spain))", "es_ES")]) == "Eddy (Spanish (Spain))"
     assert speech.voice_for("es", [("Microsoft Sabina Desktop", "es-MX")]) == "Microsoft Sabina Desktop"
     assert speech.voice_for("es", [("Albert", "en_US")]) is None
+    # Brazil's voice first, as Voice speaks Brazilian Portuguese; Portugal's when it's the only one
+    assert speech.voice_for("pt", [("Joana", "pt_PT"), ("Luciana", "pt_BR")]) == "Luciana"
+    assert speech.voice_for("pt", [("Joana", "pt_PT")] + VOICES) == "Joana"
 
 
 def test_the_speaker_reads_each_language_with_its_voice_and_looks_again_for_a_new_one():
@@ -133,6 +140,17 @@ def test_the_page_offers_every_language_in_its_own_name():
 
 def _page():
     return (Path(languages.__file__).parent / "web" / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_language_the_page_has_no_words_for_shows_it_in_english():
+    """Portuguese is a language the suite has (Limitless Voice speaks it) before the page has its
+    words: the page then reads in English, as an app without the language does."""
+    page = _page()
+    tables = set(re.findall(r'<script type="application/json" id="strings-(\w+)">', page))
+    assert "es" in tables
+    assert re.search(r"const STRINGS = \{ (\w+: JSON\.parse\(\$\(\"strings-\w+\"\)\.textContent\)(, )?)+ \};", page)
+    assert 'next = STRINGS[next] ? next : "en";' in page
+    assert set(re.findall(r'(\w+): JSON\.parse\(\$\("strings-', page)) == tables
 
 
 def _spanish(page):

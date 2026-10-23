@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 # Each in its own name, so a person who reads only that language can find it.
-LANGUAGES = {"en": "English", "es": "Español"}
+LANGUAGES = {"en": "English", "es": "Español", "pt": "Português"}
 DEFAULT = "en"
 
 
