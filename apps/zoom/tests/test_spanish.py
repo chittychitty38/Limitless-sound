@@ -1,6 +1,6 @@
 """Limitless Zoom in the suite's language: every word it shows or says has Spanish, every window
 shows it, and the words change in place when the musician picks another language in Limitless
-Sound. Voice commands stay English: that needs a Spanish speech model."""
+Sound. Voice commands in Spanish are test_voice_language.py's."""
 
 import ast
 import os

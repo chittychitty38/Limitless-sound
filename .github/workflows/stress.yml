@@ -309,8 +309,13 @@ jobs:
           if [ "${{ needs.changes.outputs.spanish_voice }}" = "true" ] && [ "${{ steps.words.outputs.cache-hit }}" != "true" ]; then
             python stress/tools/get_command_words.py command-words-es --lang es
           fi
-          if [ "${{ needs.changes.outputs.spanish_zoom }}" = "true" ] && [ "${{ steps.zoom_words.outputs.cache-hit }}" != "true" ]; then
-            python stress/tools/get_command_words.py zoom-words-es --lang es --zoom
+          if [ "${{ needs.changes.outputs.spanish_zoom }}" = "true" ]; then
+            if [ "${{ steps.zoom_words.outputs.cache-hit }}" != "true" ]; then
+              python stress/tools/get_command_words.py zoom-words-es --lang es --zoom
+            fi
+            # Every Spanish phrase Zoom listens for, in a synthetic voice, to say over music
+            sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
+            python stress/tools/make_speech.py "$RUNNER_TEMP/speech-es" --zoom es
           fi
       - if: steps.talk.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -334,10 +339,11 @@ jobs:
             tests="stress/test_voice_language.py stress/test_voice_real_speech.py stress/test_command_words.py"
           fi
           if [ "${{ needs.changes.outputs.spanish_zoom }}" = "true" ]; then
-            tests="$tests stress/test_zoom_language.py stress/test_zoom_real_speech.py"
+            tests="$tests stress/test_zoom_language.py stress/test_zoom_real_speech.py stress/test_zoom_noise.py"
           fi
           VOICE_LANGUAGE=es ZOOM_LANGUAGE=es VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-es" \
             COMMAND_WORDS_DIR="$PWD/command-words-es" ZOOM_WORDS_DIR="$PWD/zoom-words-es" \
+            TTS_WAV_DIR="$RUNNER_TEMP/speech-es" \
             python -m pytest $tests -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
