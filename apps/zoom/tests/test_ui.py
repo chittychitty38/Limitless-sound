@@ -211,17 +211,20 @@ def test_layer_from_voice_and_badge(qapp, tmp_path):
 
 def test_remote_command(qapp, tmp_path):
     app, b = make_app(tmp_path)
-    # Like "--do out": the sender is another process and waits for the app's answer.
-    code = ("import sys; from PySide6.QtCore import QCoreApplication; "
+    # Like "--do out": the sender is another process and waits for the app's answer. It times
+    # only send_remote, which waits up to 3 s for the app's "ok": starting Python and importing
+    # Qt took 2.8 s on its own on a busy Intel Mac runner, so timing the whole process can't
+    # tell an answer from a timeout.
+    code = ("import sys, time; from PySide6.QtCore import QCoreApplication; "
             "from limitless_zoom.app import send_remote; app = QCoreApplication([]); "
-            "sys.exit(0 if send_remote('out', 3000) else 1)")
+            "t = time.monotonic(); sent = send_remote('out', 3000); "
+            "sys.exit(1 if not sent else 0 if time.monotonic() - t < 2.5 else 2)")
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     proc = subprocess.Popen([sys.executable, "-c", code], cwd=root)
     t0 = time.monotonic()
-    while proc.poll() is None and time.monotonic() - t0 < 10:
+    while proc.poll() is None and time.monotonic() - t0 < 30:
         QTest.qWait(20)
-    assert proc.returncode == 0
-    assert time.monotonic() - t0 < 2.5  # answered, not timed out
+    assert proc.returncode == 0, "no answer within 2.5 s" if proc.returncode == 2 else proc.returncode
     for _ in range(50):
         QTest.qWait(20)
         if b.sent:
