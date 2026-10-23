@@ -281,8 +281,9 @@ sign_app() {
   export -f sign_one
   export APP_IDENTITY KEYCHAIN ROOT
   # Programs and libraries first, then the bundles holding them (deepest first), the app last.
-  SIGN_ENT=$ent xargs -0 -n 1 -P "$JOBS" bash -c 'sign_one "$SIGN_ENT" "$1"' _ < "$work/exe"
-  SIGN_ENT="" xargs -0 -n 1 -P "$JOBS" bash -c 'sign_one "$SIGN_ENT" "$1"' _ < "$work/lib"
+  # "$BASH" is this same bash: an exported function may not reach a different version of it.
+  SIGN_ENT=$ent xargs -0 -n 1 -P "$JOBS" "$BASH" -c 'sign_one "$SIGN_ENT" "$1"' _ < "$work/exe"
+  SIGN_ENT="" xargs -0 -n 1 -P "$JOBS" "$BASH" -c 'sign_one "$SIGN_ENT" "$1"' _ < "$work/lib"
   while IFS= read -r -d '' b; do
     case $b in
       *.app | *.appex | *.xpc) sign_one "$ent" "$b" ;;  # a helper process: same entitlements

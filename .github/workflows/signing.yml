@@ -239,8 +239,10 @@ jobs:
           if ((& $installed) -ne "hello from a signed program") { throw "The installed program didn't run" }
           "The signed program and installer both run."
 
-      - name: An installer already signed is kept as it is (the suite's -SkipSigned)
+      - name: Files already signed are kept as they are (the suite's -SkipSigned, several files at once)
         run: |
-          $hash = (Get-FileHash test\Limitless-Test-Setup.exe).Hash
-          & .github\scripts\win-sign.ps1 -SkipSigned test\Limitless-Test-Setup.exe
-          if ((Get-FileHash test\Limitless-Test-Setup.exe).Hash -ne $hash) { throw "-SkipSigned signed it again" }
+          $files = @("test\Limitless-Test-Setup.exe", "test\Limitless Test\hello.exe")
+          $before = $files | ForEach-Object { (Get-FileHash $_).Hash }
+          & .github\scripts\win-sign.ps1 -SkipSigned @files
+          $after = $files | ForEach-Object { (Get-FileHash $_).Hash }
+          if (Compare-Object $before $after) { throw "-SkipSigned signed a file again" }
