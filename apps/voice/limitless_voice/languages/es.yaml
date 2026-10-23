@@ -257,6 +257,149 @@ texts:
   Toggle record arm on the selected track: Arma o desarma la grabación de la pista seleccionada
   Split the clip at the selection: Divide el clip en la selección
   Opens Export Audio/Video: Abre Exportar audio/vídeo
+  # Voice's windows (words.py): the main window, the menu bar menu, Settings, the setup guide
+  # and the floating display. Words with "&" before a letter are reached with Alt and that letter.
+  # How words are put together, the same in Spanish:
+  "{app}: {state}": "{app}: {state}"
+  "<b>{title}</b><br>{how}": "<b>{title}</b><br>{how}"
+  "{phrases}   ({note})": "{phrases}   ({note})"
+  "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>": "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>"
+  'Say something, like "{phrase}".': 'Di algo, por ejemplo "{phrase}".'
+  Last thing heard: Lo último que se oyó
+  What happened: Lo que pasó
+  App receiving commands: Aplicación que recibe los comandos
+  Permission needed: Permiso necesario
+  Open settings: Abrir Ajustes
+  I've done it, check again: Ya lo hice, comprobar de nuevo
+  "✓ All set": "✓ Todo listo"
+  Language: Idioma
+  "&Microphone": "&Micrófono"
+  Microphone: Micrófono
+  Microphone to listen with: Micrófono con el que escuchar
+  Refresh: Actualizar
+  Refresh microphone list: Actualizar la lista de micrófonos
+  Microphone level: Nivel del micrófono
+  Microphone problem: Problema con el micrófono
+  System default microphone: Micrófono predeterminado del sistema
+  "{name} (default)": "{name} (predeterminado)"
+  "Using {microphone}": "Usando {microphone}"
+  "Couldn't list microphones: {error}": "No se pudo obtener la lista de micrófonos: {error}"
+  "Lost that microphone ({error}). Switched to the default one.": "Se perdió ese micrófono ({error}). Ahora se usa el predeterminado."
+  "Microphone problem: {error}. Retrying…": "Problema con el micrófono: {error}. Reintentando…"
+  "&History": "&Historial"
+  History of commands: Historial de comandos
+  What can I say?: ¿Qué puedo decir?
+  Settings: Ajustes
+  My commands folder: Carpeta de mis comandos
+  "That didn't work: {error}": "Eso no funcionó: {error}"
+  "Couldn't change the login setting: {error}": "No se pudo cambiar el inicio automático: {error}"
+  "Couldn't use that shortcut: {error}": "No se pudo usar ese atajo: {error}"
+  "Couldn't find an app called {name}": "No se encontró ninguna aplicación llamada {name}"
+  AppleScript failed: AppleScript no funcionó
+  AppleScript only works on a Mac: AppleScript solo funciona en un Mac
+  opening apps isn't supported here: abrir aplicaciones no funciona en este equipo
+  Allow Limitless Voice to use the microphone: Permite que Limitless Voice use el micrófono
+  Open Microphone settings, turn on Limitless Voice, then come back.: Abre los ajustes de Micrófono, activa Limitless Voice y vuelve aquí.
+  Allow Limitless Voice to control the computer: Permite que Limitless Voice controle el equipo
+  Open Accessibility settings, turn on Limitless Voice, then come back. This is what lets spoken commands press keys in Logic and Pro Tools.: Abre los ajustes de Accesibilidad, activa Limitless Voice y vuelve aquí. Es lo que permite que los comandos de voz pulsen teclas en Logic y Pro Tools.
+  # the menu bar menu
+  "Show {app}": "Mostrar {app}"
+  Run setup again…: Repetir la configuración…
+  "Quit {app}": "Salir de {app}"
+  # the floating display
+  "What {app} heard": "Lo que oyó {app}"
+  Listening state: Estado de la escucha
+  Heard: Lo que oyó
+  # what can I say, and Settings
+  Close: Cerrar
+  Save: Guardar
+  Say what happened out loud: Decir en voz alta lo que pasa
+  Speaking speed: Velocidad de la voz
+  Start listening when the app opens: Empezar a escuchar al abrir la aplicación
+  Listen for command words only (more accurate; turn off if commands are missed): Escuchar solo las palabras de los comandos (más preciso; desactívalo si no se reconocen los comandos)
+  Keep this window on top of other apps: Mantener esta ventana por encima de las demás aplicaciones
+  Text size: Tamaño del texto
+  High contrast colours: Colores de alto contraste
+  "e.g. {example}, or {other}": "p. ej., {example} o {other}"
+  Keyboard shortcut to turn listening on and off: Atajo de teclado para activar y desactivar la escucha
+  Listen on/off shortcut: Atajo para activar o desactivar la escucha
+  Language to listen and answer in: Idioma en el que escucha y responde
+  "Same as Limitless Sound ({language})": "Igual que Limitless Sound ({language})"
+  "{language} ({size} download)": "{language} (descarga de {size})"
+  About the language: Sobre el idioma
+  Speech model: Modelo de voz
+  Speech model for listening: Modelo de voz para escuchar
+  "{model} (installed)": "{model} (instalado)"
+  "{model} ({size} download)": "{model} (descarga de {size})"
+  # the speech models' names, from each language file
+  English (US), fast: Inglés (EE. UU.), rápido
+  English (US), large, slower: Inglés (EE. UU.), grande, más lento
+  English (India), fast: Inglés (India), rápido
+  Spanish, fast: Español, rápido
+  Portuguese, fast: Portugués, rápido   # Brazilian Portuguese's, on its way (voice/portuguese)
+  # the setup guide
+  "Set up {app}": "Configurar {app}"
+  Setup step: Paso de la configuración
+  "Step {n} of {total}": "Paso {n} de {total}"
+  Back: Atrás
+  Continue: Continuar
+  "Start using {app}": "Empezar a usar {app}"
+  Welcome to Limitless Voice: Te damos la bienvenida a Limitless Voice
+  Welcome to Limitless Voice. Setup takes about a minute. Press Continue.: Te damos la bienvenida a Limitless Voice. La configuración dura un minuto más o menos. Pulsa Continuar.
+  "Run Logic Pro, Pro Tools and your whole computer with your voice.<br><br>Say <b>“{bar}”</b>, <b>“{solo}”</b> or <b>“{mixer}”</b>, and it happens in the app you're working in.<br><br>Everything runs on this computer. Your voice is never recorded or sent anywhere, and it works without internet.<br><br>Setup takes about a minute.": "Maneja Logic Pro, Pro Tools y todo tu equipo con la voz.<br><br>Di <b>“{bar}”</b>, <b>“{solo}”</b> o <b>“{mixer}”</b> y se hace en la aplicación en la que estás trabajando.<br><br>Todo funciona en este equipo. Tu voz nunca se graba ni se envía a ningún sitio, y funciona sin internet.<br><br>La configuración dura un minuto más o menos."
+  First, Limitless Voice needs to hear you. Press Allow microphone.: Primero, Limitless Voice necesita oírte. Pulsa Permitir micrófono.
+  Let Limitless Voice hear you: Deja que Limitless Voice te oiga
+  "Your computer will ask whether Limitless Voice may use the microphone. Choose <b>Allow</b>.<br><br>Audio is turned into words on this computer and then thrown away.": "Tu equipo te preguntará si Limitless Voice puede usar el micrófono. Elige <b>Permitir</b>.<br><br>El audio se convierte en palabras en este equipo y luego se descarta."
+  Allow microphone: Permitir micrófono
+  Microphone permission: Permiso del micrófono
+  "✓ Microphone allowed": "✓ Micrófono permitido"
+  The microphone is turned off for Limitless Voice. Press the button to open Microphone settings, turn on Limitless Voice, and come back.: El micrófono está desactivado para Limitless Voice. Pulsa el botón para abrir los ajustes de Micrófono, activa Limitless Voice y vuelve aquí.
+  Open Microphone settings: Abrir los ajustes de Micrófono
+  Next, allow Limitless Voice to control the computer. Press the button, turn on Limitless Voice in the list, then come back.: Ahora, permite que Limitless Voice controle el equipo. Pulsa el botón, activa Limitless Voice en la lista y vuelve aquí.
+  Let your voice press the keys: Deja que tu voz pulse las teclas
+  "To play, record and edit for you, Limitless Voice presses keys in Logic and Pro Tools, the same way you would.<br><br>macOS needs your OK for that:<br>1. Press <b>Open Accessibility settings</b>.<br>2. Turn on the switch next to <b>Limitless Voice</b> (you may need your password).<br>3. Come back here. This page notices by itself.": "Para reproducir, grabar y editar por ti, Limitless Voice pulsa teclas en Logic y Pro Tools, igual que lo harías tú.<br><br>macOS necesita tu permiso para eso:<br>1. Pulsa <b>Abrir los ajustes de Accesibilidad</b>.<br>2. Activa el interruptor junto a <b>Limitless Voice</b> (puede que necesites tu contraseña).<br>3. Vuelve aquí. Esta página se da cuenta sola."
+  Open Accessibility settings: Abrir los ajustes de Accesibilidad
+  Permission to press keys: Permiso para pulsar teclas
+  Skip for now (commands won't work until this is on): Saltar por ahora (los comandos no funcionarán hasta que esto esté activado)
+  "✓ Allowed. Limitless Voice can press keys for you.": "✓ Permitido. Limitless Voice puede pulsar teclas por ti."
+  Allowed: Permitido
+  Waiting for the switch to be turned on…: Esperando a que actives el interruptor…
+  "Let's check the microphone. Say: {phrase}.": "Vamos a probar el micrófono. Di: {phrase}."
+  Check your microphone: Prueba tu micrófono
+  "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>The bar should move when you talk. A headset or a mic close to your mouth works best when speakers are playing.": "Elige el micrófono que vas a usar y di <b>“{phrase}”</b>.<br>La barra debería moverse cuando hablas. Unos auriculares con micrófono o un micrófono cerca de la boca funcionan mejor cuando suenan los altavoces."
+  What was heard: Lo que se oyó
+  Listening…: Escuchando…
+  "✓ Heard “{text}”. Your microphone works.": "✓ Oído: “{text}”. Tu micrófono funciona."
+  Got it. Your microphone works.: Entendido. Tu micrófono funciona.
+  "Heard “{text}”. Try once more: “{phrase}”.": "Oído: “{text}”. Prueba otra vez: “{phrase}”."
+  Choose how Limitless Voice tells you what it did.: Elige cómo te avisa Limitless Voice de lo que hace.
+  How should it answer you?: ¿Cómo quieres que te responda?
+  Say what happened out loud (“Recording”, “Bar 32”): Decir en voz alta lo que pasa (“Grabando”, “Compás 32”)
+  Show what I said at the bottom of the screen: Mostrar lo que dije en la parte de abajo de la pantalla
+  Larger text: Texto más grande
+  Start Limitless Voice when I log in: Abrir Limitless Voice al iniciar sesión
+  "You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. Say {help} any time for the full list.": "Todo listo. Haz clic en Logic o Pro Tools y prueba: {play}, {bar} o {mixer}. Di {help} cuando quieras para ver la lista completa."
+  You're all set: Todo listo
+  Click into Logic Pro or Pro Tools and try one of these. Limitless Voice keeps working from the menu bar when this window is closed.: Haz clic en Logic Pro o Pro Tools y prueba uno de estos. Limitless Voice sigue funcionando desde la barra de menús cuando cierras esta ventana.
+  every command for the app you're in: todos los comandos de la aplicación en la que estás
+  transport: transporte
+  jump anywhere: ir a cualquier punto
+  the selected track: la pista seleccionada
+  windows and views: ventanas y vistas
+  repeat anything: repetir cualquier comando
+  any shortcut: cualquier atajo
+  pause listening: pausar la escucha
+  # Commands the windows suggest saying, in the words Spanish listens for (test_spanish.py tries each)
+  what can I say: qué puedo decir
+  play: reproducir
+  go to bar thirty two: ir al compás treinta y dos
+  solo track: solo pista
+  show the mixer: mostrar el mezclador
+  play  /  stop  /  record: reproducir  /  parar  /  grabar
+  solo track  /  mute track: solo pista  /  silenciar pista
+  nudge right four times: desplazar a la derecha cuatro veces
+  press command S: pulsa comando ese
+  go to sleep  /  wake up: a dormir  /  despierta
 
 # For each built-in pack, for each command by its first English phrase: what to say in Spanish.
 # A list is every way to say the command; a mapping gives them per English phrase, where the

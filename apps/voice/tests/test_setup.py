@@ -3,6 +3,7 @@ shared text size, contrast and motion settings (no mic, no real OS, no hub)."""
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _home = tempfile.mkdtemp()
@@ -13,14 +14,16 @@ from PySide6.QtCore import QAbstractAnimation, Qt  # noqa: E402
 from PySide6.QtGui import QFont  # noqa: E402
 from PySide6.QtWidgets import QApplication, QLabel  # noqa: E402
 
+from limitless_voice import app as app_module  # noqa: E402
 from limitless_voice.app import HIGH_CONTRAST, MainWindow  # noqa: E402
 from limitless_voice.look import TEXT_SIZE  # noqa: E402
 from limitless_voice.onboarding import (  # noqa: E402
     ControlPermissionPage, MicCheckPage, MicPermissionPage, PreferencesPage, ReadyPage, WelcomePage)
 from limitless_voice.platforms.dryrun import DryRunPlatform  # noqa: E402
-from limitless_voice.settings import Settings  # noqa: E402
+from limitless_voice.settings import Settings, data_dir  # noqa: E402
 
 app = QApplication.instance() or QApplication([])
+SPANISH_MODEL = data_dir() / "models" / "vosk-model-small-es-0.42"
 
 
 class FakeListener:
@@ -56,12 +59,17 @@ class FakeSpeaker:
         return lambda *a, **k: None
 
 
-def make(mic="ask", control=False):
+def make(mic="ask", control=False, language=""):
+    """The main window with a dry-run Mac, Pro Tools in front, no mic. language="es": chosen in
+    Settings, with its speech model here, so it listens and shows Spanish (remove SPANISH_MODEL
+    after)."""
     p = DryRunPlatform("mac", app="Pro Tools")
     p.mic_state, p.control_state = mic, control
-    s = Settings(speak_feedback=False)
-    w = MainWindow(s, p, model_path="unused")
-    w.listener.stop()
+    s = Settings(speak_feedback=False, language=language)
+    if language == "es":
+        (SPANISH_MODEL / "conf").mkdir(parents=True, exist_ok=True)   # as if downloaded; never loaded
+    with mock.patch.object(app_module, "Listener", lambda *a, **k: FakeListener()):   # no mic thread
+        w = MainWindow(s, p, model_path="unused")
     w.listener = FakeListener()
     w._listening_started = False
     w.speaker = FakeSpeaker()

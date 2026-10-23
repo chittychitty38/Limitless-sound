@@ -94,6 +94,8 @@ When the Limitless Sound hub is running, Limitless Control joins the suite by it
   it), white and yellow on black, and nothing that slides or fades. The browser's own
   high-contrast and reduce-motion settings count too; whichever asks for more wins. Control
   reports what it applied as the state `prefs.applied`.
+- The settings page is in the suite's **language**, English or Spanish. What Control says out
+  loud stays in English for now.
 
-Without the hub nothing changes. The link is `limitless_control/suite.py`, using a copy of
-`shared/clients/python/limitless_link.py`.
+Without the hub nothing changes, and the settings page is in the computer's language. The link
+is `limitless_control/suite.py`, using a copy of `shared/clients/python/limitless_link.py`.

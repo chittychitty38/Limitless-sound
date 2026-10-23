@@ -146,6 +146,8 @@ the limit names its busiest processes (#62). To run it again before the default 
   to "main /docs" in repo settings so it updates by itself.
 - Each app's Download link finds that app's newest release by itself (GitHub's API, in the page);
   the version written in the page is only the fallback.
+- In Spanish at `/es/` (`docs/es/index.html`), linked both ways. Copy `docs/es/` to `gh-pages`
+  too. The site check fails if its styles drift from the English page's or English is left on it.
 - Branding (Bennet: "lock it in"): night navy `#13121f`, cream `#f3eee4`, crimson pill buttons
   `#d2334c`, lavender italic accent `#b4b0fa` (Instrument Serif), Bricolage Grotesque headings,
   JetBrains Mono uppercase tracked labels, Atkinson Hyperlegible body, the LAS heart logo
