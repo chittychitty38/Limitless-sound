@@ -1,0 +1,28 @@
+# Every pull request leaves a branch behind. This deletes the ones whose pull request was merged
+# and that have no commits since, and keeps everything else (.github/scripts/merged-branches.py).
+# Run it from Actions › Clean up merged branches › Run workflow. A deleted branch can be restored
+# from its pull request's page.
+name: Clean up merged branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list what would be deleted"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/scripts/merged-branches.py ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
