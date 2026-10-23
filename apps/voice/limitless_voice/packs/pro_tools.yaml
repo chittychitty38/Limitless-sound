@@ -14,10 +14,12 @@ commands:
     do: {keys: space}
     repeatable: false
     instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  # F12, not Command+Space: on a Mac, Command+Space opens Spotlight before Pro Tools sees it.
+  # Avid lists F12 as Record on both systems (Limitless Control uses it too).
   - say: ["record", "start recording"]
     fuzzy: false
     instant: true
-    do: {keys: cmd+space}
+    do: {keys: f12}
     reply: Recording
     repeatable: false
   - say: ["loop playback", "toggle loop", "loop"]
@@ -75,12 +77,14 @@ commands:
   - say: ["arm", "arm track", "record enable", "disarm"]
     do: {keys: shift+r}
     help: Record-enable selected tracks
+  # Control-; and Control-P (Start on Windows) work with Commands Keyboard Focus off; ; and P
+  # alone only work with it on.
   - say: ["next track", "track down"]
-    do: {keys: ";"}
-    help: Move the edit selection down a track (verify)
+    do: {keys: "ctrl+;"}
+    help: Move the edit selection down a track
   - say: ["previous track", "track up"]
-    do: {keys: p}
-    help: Move the edit selection up a track (verify)
+    do: {keys: ctrl+p}
+    help: Move the edit selection up a track
 
   # --- edit modes and tools ---------------------------------------------
   - say: ["shuffle mode", "shuffle"]

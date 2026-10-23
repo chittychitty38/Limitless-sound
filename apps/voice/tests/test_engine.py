@@ -96,12 +96,52 @@ class Matching(unittest.TestCase):
         e.handle("record")
         e.handle("bounce")
         e.handle("midi editor")
-        self.assertEqual(pressed(p), ["cmd+space", "opt+cmd+b", "ctrl+="])
+        self.assertEqual(pressed(p), ["f12", "opt+cmd+b", "ctrl+="])
         e, p = engine("ProTools", os_name="windows")   # Windows reports the exe name
         e.handle("record")
         e.handle("bounce")
         e.handle("midi editor")
-        self.assertEqual(pressed(p), ["ctrl+space", "alt+ctrl+b", "win+="])
+        self.assertEqual(pressed(p), ["f12", "alt+ctrl+b", "win+="])
+
+    def test_ableton_live_mac_and_windows(self):
+        # The Mac calls the app "Live"; Windows reports the exe, "Ableton Live 12 Suite.exe".
+        said = ["play", "record", "metronome", "go to start", "loop selection", "new audio track",
+                "new midi track", "solo track", "mute", "arm track", "split", "consolidate", "quantize",
+                "show the mixer", "browser", "clip view", "automation", "zoom in", "zoom out",
+                "taller tracks", "zoom to fit", "export audio", "redo"]
+        mac = ["space", "f9", "o", "home", "cmd+l", "cmd+t", "cmd+shift+t", "s", "0", "c", "cmd+e",
+               "cmd+j", "cmd+u", "cmd+opt+m", "cmd+opt+b", "cmd+opt+3", "a", "=", "-", "opt+=", "w",
+               "cmd+shift+r", "cmd+shift+z"]
+        for app, os_name, keys in [("Live", "mac", mac),
+                                   ("Ableton Live", "windows",
+                                    [k.replace("cmd", "ctrl").replace("opt", "alt") for k in mac[:-1]] + ["ctrl+y"])]:
+            e, p = engine(app, os_name)
+            for phrase in said:
+                self.assertTrue(e.handle(phrase, phrase).handled, f"{os_name}: {phrase}")
+            self.assertEqual([k.replace("alt+ctrl", "ctrl+alt") for k in pressed(p)], keys, os_name)
+
+    def test_keys_that_act_on_tracks_not_regions_or_spotlight(self):
+        # Logic: M and S mute and solo the track; Control-M and Control-S act on regions.
+        e, p = engine("Logic Pro")
+        for phrase in ("mute track", "solo track"):
+            e.handle(phrase, phrase)
+        self.assertEqual(pressed(p), ["m", "s"])
+        # Pro Tools: F12 records on both systems; Command+Space is Spotlight on a Mac.
+        for os_name in ("mac", "windows"):
+            e, p = engine("Pro Tools", os_name)
+            e.handle("record", "record")
+            self.assertEqual(pressed(p), ["f12"], os_name)
+
+    def test_ableton_live_delete_and_duplicate_are_held_to_three(self):
+        for os_name in ("mac", "windows"):
+            for phrase in ("delete fifty times", "duplicate fifty times", "duplicate track twenty times"):
+                e, p = engine("Live" if os_name == "mac" else "Ableton Live", os_name)
+                e.handle(phrase)
+                self.assertLessEqual(len(pressed(p)), 3, f"{os_name}: {phrase} -> {pressed(p)}")
+            e, p = engine("Live" if os_name == "mac" else "Ableton Live", os_name)
+            r = e.handle("delete", "the lead")          # the open recognizer disagrees: ask first
+            self.assertTrue(r.message.startswith("Say yes to"))
+            self.assertEqual(pressed(p), [])
 
     def test_global_windows_overrides(self):
         e, p = engine("Notepad", os_name="windows")
@@ -151,16 +191,16 @@ class Matching(unittest.TestCase):
         e, p = engine("Finder")
         r = e.handle("play")
         self.assertFalse(r.handled)
-        self.assertEqual(r.message, '"play" works in Logic Pro and Pro Tools. '
+        self.assertEqual(r.message, '"play" works in Ableton Live, Logic Pro and Pro Tools. '
                                     'Bring one of them to the front, then say it again.')
         self.assertEqual(p.log, [])
         r = e.handle("show the piano roll")
         self.assertEqual(r.message, '"show the piano roll" works in Logic Pro. '
                                     'Bring it to the front, then say it again.')
-        # Logic is Mac only, so Windows only offers Pro Tools.
+        # Logic is Mac only, so Windows offers Live and Pro Tools.
         e, _ = engine("Notepad", os_name="windows")
-        self.assertEqual(e.handle("record").message, '"record" works in Pro Tools. '
-                                                     'Bring it to the front, then say it again.')
+        self.assertEqual(e.handle("record").message, '"record" works in Ableton Live and Pro Tools. '
+                                                     'Bring one of them to the front, then say it again.')
         # Something no app knows still says it wasn't caught.
         e, _ = engine("Finder")
         self.assertEqual(e.handle("make me a sandwich").message, 'Didn\'t catch a command in "make me a sandwich"')

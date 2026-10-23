@@ -1,6 +1,6 @@
 # Limitless Voice
 
-Control Logic Pro, Pro Tools and the rest of your computer with your voice.
+Control Logic Pro, Pro Tools, Ableton Live and the rest of your computer with your voice.
 Built for musicians who can't use, or can't always use, a mouse and keyboard.
 
 Say "go to bar thirty two", "solo track", "nudge right four times", "show the
@@ -17,7 +17,7 @@ installed, and your voice never leaves the machine.
 | **Microphone** | Any mic the computer already recognises: the built-in laptop mic, a USB mic, a headset, a webcam mic or an audio interface input. Any sample rate. A headset or a mic close to your mouth works best when speakers are playing. Bluetooth headsets work, but drop to phone-call quality, so expect more misses. |
 | **Computer** | Anything from roughly the last ten years. Recognition uses about 300 MB of memory and a small share of one CPU core. About 300 MB of disk space. |
 | **Language** | English (US) built in. A more accurate English model and an Indian English model can be downloaded from Settings. |
-| **Apps** | Ready-made commands for Logic Pro (Mac) and Pro Tools (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
+| **Apps** | Ready-made commands for Logic Pro (Mac), Pro Tools and Ableton Live 12 (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
 
 Not covered yet: Linux, Chromebooks, iPad.
 
@@ -177,8 +177,10 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
    accessibility interfaces Logic and Pro Tools expose to screen readers.
 4. **Mixer values by voice** ("track three volume minus six") through a
    virtual Mackie Control / HUI surface, which both DAWs support.
-5. **More apps and languages:** command files for Ableton Live, Studio One,
-   REAPER, GarageBand, FL Studio; Vosk has models for 20+ languages.
+5. **More apps and languages:** command files for Studio One, REAPER,
+   GarageBand and FL Studio; Vosk has models for 20+ languages. Ableton Live's
+   single-letter keys (S solo, C arm, O metronome, A automation) do nothing
+   while Live's Computer MIDI Keyboard is on: check them on a real Live 12.
 
 ## Works with the rest of Limitless Sound
 
