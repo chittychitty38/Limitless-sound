@@ -34,21 +34,43 @@ HANG_ON = 1.5         # seconds after the last sound that still go to it: the pa
 RETRY_FIRST, RETRY_MOST = 3, 30   # seconds between tries while the microphone can't be opened
 
 
+# Words people put around a command ("zoom in please", "uh, fit"). The recognizer knows them,
+# so they never count as other words around a command, and they're ignored.
+FILLERS = ("please", "thanks", "okay", "um", "uh")
+RUN_ON = 0.1   # seconds: a command closer than this to other words was said inside a sentence
+
+
+def runs_on(words, gap=RUN_ON):
+    """Whether the command in Vosk's per-word result runs straight on from other words, with less
+    than gap seconds between: said inside a sentence, not on its own. Vosk times every word,
+    unknown ones too."""
+    words = [w for w in (words or []) if w.get("word") not in FILLERS]
+    known = [i for i, w in enumerate(words) if w.get("word") != "[unk]"]
+    if not known or "start" not in words[known[0]]:
+        return False
+    first, last = words[known[0]], words[known[-1]]
+    before = [w for w in words[:known[0]] if w.get("word") == "[unk]"]
+    after = [w for w in words[known[-1] + 1:] if w.get("word") == "[unk]"]
+    return bool(before and first["start"] - before[-1]["end"] < gap
+                or after and after[0]["start"] - last["end"] < gap)
+
+
 def match_phrase(text, words, min_conf):
     """Map a recognised utterance to an action, or None.
-    words is Vosk's per-word result list with 'conf' scores."""
+    words is Vosk's per-word result list with 'conf' scores and times."""
     # "[unk]" is a breath, a click or a word that isn't a command; one before
-    # or after a command shouldn't stop it working. Two together are words: the
-    # command was part of a sentence. In an hour of people reading aloud, more than
-    # half of what zoomed was ("[unk] [unk] again [unk]", stress/test_zoom_real_speech.py).
-    tokens = text.split()
-    if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])):
+    # or after a command shouldn't stop it working. But a command said inside a
+    # sentence isn't one: two unknown words together, or other words running
+    # straight on from it ("...had to see again"). In an hour of people reading
+    # aloud, that was nearly everything that zoomed (stress/test_zoom_real_speech.py).
+    tokens = [t for t in text.split() if t not in FILLERS]
+    if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])) or runs_on(words):
         return None
     text = " ".join(w for w in tokens if w != "[unk]")
     action = VOICE_PHRASES.get(text)
     if action is None:
         return None
-    words = [w for w in (words or []) if w.get("word") != "[unk]"]
+    words = [w for w in (words or []) if w.get("word") not in ("[unk]", *FILLERS)]
     if words:
         conf = sum(w.get("conf", 1.0) for w in words) / len(words)
         if conf < min_conf:
@@ -58,7 +80,7 @@ def match_phrase(text, words, min_conf):
 
 def grammar():
     vocab = sorted(VOICE_PHRASES)
-    return json.dumps(vocab + ["[unk]"])
+    return json.dumps(vocab + list(FILLERS) + ["[unk]"])
 
 
 def find_model(configured, search_dirs):

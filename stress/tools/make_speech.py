@@ -40,6 +40,7 @@ CHATTER = [
 ZOOM = [
     "zoom in", "zoom out", "closer", "taller", "shorter", "fit", "zoom to fit", "zoom way in",
     "magnifier", "magnify", "again", "do it again", "preset one", "show panel",
+    "zoom in please", "fit please",
 ]
 
 
@@ -77,6 +78,7 @@ def main(out_dir):
     if (ROOT / "apps" / "zoom" / "limitless_zoom").is_dir():
         sys.path.insert(0, str(ROOT / "apps" / "zoom"))
         from limitless_zoom.actions import VOICE_PHRASES
+        from limitless_zoom.voice import FILLERS
         zoom = []
         for v_i, voice in enumerate(voices):
             for i, text in enumerate(ZOOM):
@@ -85,7 +87,8 @@ def main(out_dir):
                     speak(text, out / name, voice)
                 except subprocess.CalledProcessError:
                     continue
-                zoom.append({"say": text, "file": name, "expect": VOICE_PHRASES[text], "voice": voice or "default"})
+                phrase = " ".join(w for w in text.split() if w not in FILLERS)
+                zoom.append({"say": text, "file": name, "expect": VOICE_PHRASES[phrase], "voice": voice or "default"})
         (out / "zoom.json").write_text(json.dumps(zoom, indent=1))
         print(f"{len(zoom)} Zoom command clips")
 

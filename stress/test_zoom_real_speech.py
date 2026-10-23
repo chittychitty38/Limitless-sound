@@ -77,21 +77,6 @@ def test_stray_words_do_not_zoom():
     assert n / len(clips) <= 0.04, f"Zoom acted on {n / len(clips):.1%} of stray words"
 
 
-def _runs_on(res, gap):
-    """Whether the command in a result runs straight on from other words, with less than gap
-    seconds between: said inside a sentence, not on its own. Vosk times every word, the
-    unknown ones too."""
-    words = res.get("result") or []
-    known = [i for i, w in enumerate(words) if w.get("word") != "[unk]"]
-    if not known:
-        return False
-    first, last = words[known[0]], words[known[-1]]
-    before = [w for w in words[:known[0]] if w.get("word") == "[unk]"]
-    after = [w for w in words[known[-1] + 1:] if w.get("word") == "[unk]"]
-    return bool(before and first["start"] - before[-1]["end"] < gap
-                or after and after[0]["start"] - last["end"] < gap)
-
-
 @pytest.mark.skipif(not (MODEL and TALK_DIR), reason="set VOSK_MODEL and LIBRISPEECH_DIR")
 def test_ordinary_talk_rarely_zooms():
     root = Path(TALK_DIR)
@@ -105,11 +90,11 @@ def test_ordinary_talk_rarely_zooms():
         rec = vosk.KaldiRecognizer(_model(), RATE, grammar())
         rec.SetWords(True)
         fired, now = [], {}
-        zoom = VoiceListener(MODEL, lambda action: fired.append((now["utt"], action, now["text"], now["res"])),
+        zoom = VoiceListener(MODEL, lambda action: fired.append((now["utt"], action, now["text"])),
                              lambda status: None)
 
         def result(res):
-            now["text"], now["res"] = res.get("text", ""), res
+            now["text"] = res.get("text", "")
             zoom._result(res)
             zoom.asleep = False
 
@@ -139,16 +124,8 @@ def test_ordinary_talk_rarely_zooms():
     print(f"\n{hours * 60:.1f} minutes of {len(people)} people reading aloud in {time.monotonic() - started:.0f} s: "
           f"Zoom acted {len(fired)} times ({len(fired) / hours:.1f} an hour)")
     for action, k in Counter(f[1] for f in fired).most_common():
-        utt, _, text, _ = next(f for f in fired if f[1] == action)
+        utt, _, text = next(f for f in fired if f[1] == action)
         print(f"  {k:>3} × {action:<10} e.g. heard “{text}” (reading about “{said.get(utt, '')[:70]}”)")
-    # A possible fix, tried on what was heard: a command that runs straight on from other words
-    # doesn't count, however few. What it would cost commands said on their own over music,
-    # stress/test_zoom_noise.py measures.
-    for gap in (0.1, 0.2, 0.3):
-        left = [f for f in fired if not _runs_on(f[3], gap)]
-        print(f"What if a command less than {gap:.1f} s from other words didn't count? Zoom would act "
-              f"{len(left) / hours:.1f} times an hour (now {len(fired) / hours:.1f}): "
-              f"{dict(Counter(f[1] for f in left))}")
     # Measured on CI: 13.2 an hour (Zoom 0.1.2: 16.1 to 17.9, more than half of them a command word
     # inside a sentence). What's left is mostly a command word ending a sentence ("[unk] again")
     # and "for ink" heard as "zoom in". The ceiling leaves a margin.
