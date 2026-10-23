@@ -114,12 +114,12 @@ class Windows(spanish.Languages):
         english = spanish.Windows.on_screen(self.busy(self.make()))
         w = self.busy(self.make(language="pt"))
         self.assertEqual(spanish.Windows.untranslated(self, english, spanish.Windows.on_screen(w)), [])
-        self.assertEqual(w.listen_btn.accessibleName(), 'Ouvindo: diga "vai dormir" para pausar')
+        self.assertEqual(w.listen_btn.accessibleName(), 'Ouvindo: "vai dormir" para pausar')
         self.assertEqual(w.heard_label.text(), "Ouvido: “desfazer”")
         self.assertEqual(w.target_label.text(), "Enviando comandos para: Pro Tools")
         self.assertEqual(w.mic_error.text(), "Problema com o microfone: -9996. Tentando de novo…")
         self.assertEqual([a.text() for a in w.tray_menu.actions() if a.text()],
-                         ['Ouvindo: diga "vai dormir" para pausar', "Parar de ouvir", "Mostrar Limitless Voice",
+                         ['Ouvindo: "vai dormir" para pausar', "Parar de ouvir", "Mostrar Limitless Voice",
                           "O que eu posso dizer?", "Configurar de novo…", "Sair do Limitless Voice"])
         settings = w.findChild(SettingsDialog)
         self.assertEqual(settings.windowTitle(), "Ajustes")

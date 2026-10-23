@@ -600,7 +600,7 @@ class ChoosingTheLanguage(unittest.TestCase):
             w.language_download.click()
         self.assertEqual(app_module.find_model("vosk-model-small-pt-0.3"), model)   # found next time too
         self.assertEqual((w.lang.code, w.engine.lang.code), ("pt", "pt"))
-        self.assertEqual(w.listen_btn.text(), 'Ouvindo: diga "vai dormir" para pausar')
+        self.assertEqual(w.listen_btn.text(), 'Ouvindo: "vai dormir" para pausar')
         self.assertEqual(self.applied(), ["en", "pt"])
         self.assertIn("Ouvindo em português", w.speaker.said)
 

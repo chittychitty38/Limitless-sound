@@ -213,7 +213,7 @@ texts:
   "Take mode: say stop to end the take": "Modo take: diga parar para terminar o take"
   That command needs a spoken yes, so it can't be run from another app.: Esse comando precisa que você diga sim, então não pode ser usado por outro aplicativo.
   # the window and the floating display
-  'Listening: say "{sleep}" to pause': 'Ouvindo: diga "{sleep}" para pausar'
+  'Listening: say "{sleep}" to pause': 'Ouvindo: "{sleep}" para pausar'
   'Asleep: say "{wake}" or press here to start': 'Em pausa: diga "{wake}" ou clique aqui para começar'
   'Dictating: say "{stop}" to go back to commands': 'Ditando: diga "{stop}" para voltar aos comandos'
   'Take mode: only "{stop}" works until the take ends': 'Modo take: só "{stop}" funciona até o take terminar'
@@ -390,7 +390,7 @@ texts:
   "Step {n} of {total}": "Etapa {n} de {total}"
   Back: Voltar
   Continue: Continuar
-  "Start using {app}": "Começar a usar o {app}"
+  "Start using {app}": "Usar o {app}"
   Welcome to Limitless Voice: Boas-vindas ao Limitless Voice
   Welcome to Limitless Voice. Setup takes about a minute. Press Continue.: Boas-vindas ao Limitless Voice. A configuração leva mais ou menos um minuto. Clique em Continuar.
   "Run Logic Pro, Pro Tools and your whole computer with your voice.<br><br>Say <b>“{bar}”</b>, <b>“{solo}”</b> or <b>“{mixer}”</b>, and it happens in the app you're working in.<br><br>Everything runs on this computer. Your voice is never recorded or sent anywhere, and it works without internet.<br><br>Setup takes about a minute.": "Comande o Logic Pro, o Pro Tools e todo o seu computador com a voz.<br><br>Diga <b>“{bar}”</b>, <b>“{solo}”</b> ou <b>“{mixer}”</b> e acontece no aplicativo em que você está trabalhando.<br><br>Tudo funciona neste computador. Sua voz nunca é gravada nem enviada a lugar nenhum, e funciona sem internet.<br><br>A configuração leva mais ou menos um minuto."
@@ -407,13 +407,13 @@ texts:
   "To play, record and edit for you, Limitless Voice presses keys in Logic and Pro Tools, the same way you would.<br><br>macOS needs your OK for that:<br>1. Press <b>Open Accessibility settings</b>.<br>2. Turn on the switch next to <b>Limitless Voice</b> (you may need your password).<br>3. Come back here. This page notices by itself.": "Para tocar, gravar e editar por você, o Limitless Voice aperta teclas no Logic e no Pro Tools, do mesmo jeito que você faria.<br><br>O macOS precisa da sua permissão para isso:<br>1. Clique em <b>Abrir os ajustes de Acessibilidade</b>.<br>2. Ative o botão ao lado de <b>Limitless Voice</b> (talvez seja preciso digitar sua senha).<br>3. Volte aqui. Esta página percebe sozinha."
   Open Accessibility settings: Abrir os ajustes de Acessibilidade
   Permission to press keys: Permissão para apertar teclas
-  Skip for now (commands won't work until this is on): Pular por enquanto (os comandos não vão funcionar até isso estar ativado)
+  Skip for now (commands won't work until this is on): Agora não (sem isso os comandos não funcionam)
   "✓ Allowed. Limitless Voice can press keys for you.": "✓ Permitido. O Limitless Voice pode apertar teclas por você."
   Allowed: Permitido
   Waiting for the switch to be turned on…: Esperando o botão ser ativado…
   "Let's check the microphone. Say: {phrase}.": "Vamos testar o microfone. Diga: {phrase}."
   Check your microphone: Teste seu microfone
-  "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>The bar should move when you talk. A headset or a mic close to your mouth works best when speakers are playing.": "Escolha o microfone que você vai usar e diga <b>“{phrase}”</b>.<br>A barra deve se mexer quando você fala. Um fone com microfone ou um microfone perto da boca funciona melhor quando as caixas de som estão tocando."
+  "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>The bar should move when you talk. A headset or a mic close to your mouth works best when speakers are playing.": "Escolha o microfone e diga <b>“{phrase}”</b>.<br>A barra se mexe quando você fala. Com caixas de som tocando, use um headset ou um microfone perto da boca."
   What was heard: O que foi ouvido
   Listening…: Ouvindo…
   "✓ Heard “{text}”. Your microphone works.": "✓ Ouvido: “{text}”. Seu microfone funciona."
@@ -421,13 +421,13 @@ texts:
   "Heard “{text}”. Try once more: “{phrase}”.": "Ouvido: “{text}”. Tente mais uma vez: “{phrase}”."
   Choose how Limitless Voice tells you what it did.: Escolha como o Limitless Voice avisa o que fez.
   How should it answer you?: Como ele deve responder?
-  Say what happened out loud (“Recording”, “Bar 32”): Dizer em voz alta o que aconteceu (“Gravando”, “Compasso 32”)
-  Show what I said at the bottom of the screen: Mostrar o que eu disse na parte de baixo da tela
+  Say what happened out loud (“Recording”, “Bar 32”): Falar o que aconteceu (“Gravando”, “Compasso 32”)
+  Show what I said at the bottom of the screen: Mostrar o que eu disse embaixo na tela
   Larger text: Texto maior
-  Start Limitless Voice when I log in: Abrir o Limitless Voice quando eu iniciar a sessão
+  Start Limitless Voice when I log in: Abrir o Limitless Voice ao fazer login
   "You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. Say {help} any time for the full list.": "Tudo pronto. Clique no Logic ou no Pro Tools e experimente: {play}, {bar} ou {mixer}. Diga {help} quando quiser para ver a lista completa."
   You're all set: Tudo pronto
-  Click into Logic Pro or Pro Tools and try one of these. Limitless Voice keeps working from the menu bar when this window is closed.: Clique no Logic Pro ou no Pro Tools e experimente um destes. O Limitless Voice continua funcionando pela barra de menus quando esta janela é fechada.
+  Click into Logic Pro or Pro Tools and try one of these. Limitless Voice keeps working from the menu bar when this window is closed.: Clique no Logic Pro ou no Pro Tools e tente um destes. O Limitless Voice segue ativo na barra de menus com esta janela fechada.
   every command for the app you're in: todos os comandos do aplicativo em que você está
   transport: transporte
   jump anywhere: ir para qualquer ponto
