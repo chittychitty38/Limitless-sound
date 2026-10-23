@@ -20,6 +20,7 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
   - **Every Voice window is in Portuguese** and fits wherever the English does, at double text size too. Replies are read by a Brazilian voice when the computer has one.
   - **Only Voice, for now.** The page, the other apps and the installers stay in English when you choose Portuguese, and the language list says so.
   - **Not yet tried by a Brazilian speaker in a real DAW.** Tell us what it gets wrong.
+- **Limitless Voice keeps every word on screen with very large text, in every language.** Its setup guide and main window used to squeeze wrapped lines when the text outgrew them. At double size, the setup guide cut off parts of 24 lines, and the main window half of "Allow Limitless Voice to control the computer". Now a window grows as wide as its words need and scrolls up and down for the rest. The setup guide scrolls to whatever the keyboard moves to.
 
 ### New in 0.2.8
 - **GarageBand, REAPER and FL Studio.** Limitless Voice, Control, One-Hand and Zoom now work in GarageBand 10 (free on every Mac), REAPER 7 and FL Studio, as well as Logic Pro, Pro Tools and Ableton Live. Say "play", "record", "new track", "mixer", or in FL Studio "piano roll" and "channel rack". Or press the same on a controller, a switch or one hand.
