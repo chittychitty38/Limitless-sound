@@ -1,21 +1,21 @@
 ## Limitless Sound v0.2.10 on AMD64 (Windows 10.0.26100)
 
-Installed in 48.0 s.
-The Limitless Sound page (hub 0.2.6) sitting idle: 0.2% CPU, 33 MB.
+Installed in 49.0 s.
+The Limitless Sound page (hub 0.2.6) sitting idle: 0.1% CPU, 33 MB.
 
 | App | Opened by | Joined in | Level | Actions answered | Idle CPU | Memory |
 |---|---|---|---|---|---|---|
-| Limitless One-Hand 0.2.7 | hub | 5.7 s | 2 Adaptive | ✅ 17 | 0.0% | 127 MB |
-| Limitless Voice 0.4.4 | hub | 1.5 s | 2 Adaptive | ✅ 23 | 0.0% | 140 MB |
-| Limitless Zoom 0.1.10 | hub | 2.6 s | 2 Adaptive | ✅ 22 | 0.1% | 248 MB |
-| Limitless Color 0.1.5 | hub | 5.2 s | 2 Adaptive | ✅ 4 | 0.0% | 35 MB |
-| Limitless Control 0.2.8 | hub | 3.1 s | 2 Adaptive | ✅ 20 | 0.0% | 83 MB |
-| GazeStage 0.4.4 | hub | 1.7 s | 2 Adaptive | ✅ 22 | 0.4% | 496 MB |
+| Limitless One-Hand 0.2.7 | hub | 5.7 s | 2 Adaptive | ✅ 17 | 0.1% | 129 MB |
+| Limitless Voice 0.4.4 | hub | 1.6 s | 2 Adaptive | ✅ 23 | 0.1% | 139 MB |
+| Limitless Zoom 0.1.10 | hub | 1.0 s | 2 Adaptive | ✅ 22 | 1.5% | 249 MB |
+| Limitless Color 0.1.5 | hub | 3.6 s | 2 Adaptive | ✅ 4 | 0.0% | 35 MB |
+| Limitless Control 0.2.8 | hub | 3.2 s | 2 Adaptive | ✅ 20 | 0.1% | 83 MB |
+| GazeStage 0.4.4 | hub | 1.2 s | 2 Adaptive | ✅ 22 | 0.9% | 492 MB |
 
 | Suite check | Result |
 |---|---|
 | Every app connected to the suite at the same time | ✅ 6 connected |
-| A shared DAW command (zoom in) reaches an app and is answered within 3 seconds | ✅ Zoom in (0.15 s) |
+| A shared DAW command (zoom in) reaches an app and is answered within 3 seconds | ✅ Zoom in (0.13 s) |
 | The hub can say which apps are open | ✅ Open: Limitless One-Hand, Limitless Voice, Limitless Zoom, Limitless Color, Limitless Control, GazeStage |
 | Limitless Sound's page opens | ✅ 45 KB, with the guided setup, in English and Spanish |
 | The suite's language can be set to Español and back | ✅ en → es → en |

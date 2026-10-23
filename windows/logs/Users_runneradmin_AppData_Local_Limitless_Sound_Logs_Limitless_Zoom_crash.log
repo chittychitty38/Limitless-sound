@@ -1,32 +1,32 @@
 Windows fatal exception: code 0x8001010d
 
-Thread 0x00000f9c (most recent call first):
+Thread 0x000015c0 (most recent call first):
   File "concurrent\futures\thread.py", line 90 in _worker
   File "threading.py", line 1012 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x00000c60 (most recent call first):
+Thread 0x00000690 (most recent call first):
   File "threading.py", line 359 in wait
   File "threading.py", line 655 in wait
   File "limitless_zoom\voice.py", line 367 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x00000f98 (most recent call first):
+Thread 0x00000694 (most recent call first):
   File "pynput\_util\win32.py", line 189 in __iter__
   File "pynput\_util\win32.py", line 356 in _run
   File "pynput\_util\__init__.py", line 216 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x00001e08 (most recent call first):
+Thread 0x00001088 (most recent call first):
   File "limitless_zoom\limitless_link.py", line 225 in _session
   File "limitless_zoom\limitless_link.py", line 201 in _run
   File "threading.py", line 1012 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Current thread 0x000013d0 (most recent call first):
+Current thread 0x00002090 (most recent call first):
   File "limitless_zoom\app.py", line 807 in main
   File "__main__.py", line 5 in <module>

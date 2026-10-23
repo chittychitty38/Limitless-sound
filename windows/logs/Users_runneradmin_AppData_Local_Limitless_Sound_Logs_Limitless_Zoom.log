@@ -1,10 +1,10 @@
-2026-10-23 20:08:19,553 INFO    Limitless Zoom: Started Limitless Zoom 0.1.10 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 20:08:19,555 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
-2026-10-23 20:08:25,256 INFO    Limitless Zoom: Started Limitless Zoom 0.1.10 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 20:08:28,107 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
-2026-10-23 20:08:54,365 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
-2026-10-23 20:08:55,532 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
-2026-10-23 20:08:56,996 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
-2026-10-23 20:08:57,228 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
-2026-10-23 20:08:57,743 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
-2026-10-23 20:08:58,100 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 20:35:46,201 INFO    Limitless Zoom: Started Limitless Zoom 0.1.10 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 20:35:46,203 INFO    Limitless Zoom: --do keysOff: Limitless Zoom isn't running, so nothing was done
+2026-10-23 20:35:52,208 INFO    Limitless Zoom: Started Limitless Zoom 0.1.10 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 20:35:53,468 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 20:36:17,463 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
+2026-10-23 20:36:18,488 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 20:36:19,257 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
+2026-10-23 20:36:19,581 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
+2026-10-23 20:36:20,255 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.; hasta que se descargue el modelo de voz en español (39 MB, solo esta vez), di los comandos en inglés
+2026-10-23 20:36:20,846 INFO    Limitless Zoom: Voice: Microphone problem: Error querying device -1. Retrying.
