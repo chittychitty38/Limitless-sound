@@ -299,6 +299,7 @@ def suite_checks(hub: las_check.Hub, tools: list[str]) -> list[dict]:
         ok, detail = False, str(e)
     checks.append({"id": "S5", "ok": ok, "check": "The suite's language can be set to Español and back", "detail": detail})
     checks.append(apps_follow_language(hub, up))
+    checks.append(apps_leave_portuguese_to_voice(hub, up))
     return checks
 
 
@@ -338,6 +339,52 @@ def apps_follow_language(hub: las_check.Hub, tools: list[str]) -> dict:
     except Exception as e:
         ok, detail = False, str(e)
     return {"id": "S6", "ok": ok, "check": "Every app with Spanish windows follows the suite into Español and back",
+            "detail": detail}
+
+
+# Portuguese is a preview only in Limitless Voice, and the suite's language list says every other
+# app stays in English for it (hub 0.2.5). One that kept its last language would show Spanish.
+ONLY_IN_VOICE = "pt"
+
+
+def apps_leave_portuguese_to_voice(hub: las_check.Hub, tools: list[str]) -> dict:
+    """S7: from Español, set the suite to Português, and every app but Voice says it's showing
+    English within 3 seconds, as the language list promises; set it back, and they follow. Each
+    must show Spanish first, or English after would prove nothing."""
+    def showing():
+        states = hub.state()["states"]
+        return {t: (states.get(f"{t}.prefs.applied") or {}).get("language") for t in tools}
+
+    held = [t for t in tools if t != "voice"]
+
+    def all_in(code):
+        now = showing()
+        return now if all(now[t] == code for t in held) else None
+
+    try:
+        before = hub.state()["prefs"].get("language", "en")
+        hub.prefs({"language": "es"})
+        spanish = las_check.wait_for(lambda: all_in("es"), las_check.REPLY_LIMIT) or showing()
+        took = hub.prefs({"language": ONLY_IN_VOICE}).get("language")
+        there = las_check.wait_for(lambda: all_in("en"), las_check.REPLY_LIMIT) or showing()
+        hub.prefs({"language": before})
+        back = las_check.wait_for(lambda: all_in(before), las_check.REPLY_LIMIT) or showing()
+        unproven = sorted(t for t in held if spanish[t] != "es")
+        stuck = sorted(t for t in held if there[t] != "en")
+        stayed = sorted(t for t in held if back[t] != before)
+        ok = took == ONLY_IN_VOICE and bool(held) and not unproven and not stuck and not stayed
+        english = sorted(t for t in held if there[t] == "en" and t not in unproven)
+        detail = "; ".join(x for x in [
+            f"the suite took {took!r}, not Português" if took != ONLY_IN_VOICE else "",
+            f"in English: {', '.join(english) or 'none'}" if held else "no app to check",
+            f"never showed Spanish first: {', '.join(f'{t} ({spanish[t]})' for t in unproven)}" if unproven else "",
+            f"not in English: {', '.join(f'{t} ({there[t]})' for t in stuck)}" if stuck else "",
+            f"didn't come back: {', '.join(f'{t} ({back[t]})' for t in stayed)}" if stayed else "",
+            f"voice: {there['voice']} (it listens in Portuguese once its model is downloaded)" if "voice" in tools else "",
+        ] if x)
+    except Exception as e:
+        ok, detail = False, str(e)
+    return {"id": "S7", "ok": ok, "check": "Português, a preview only in Voice, leaves every other app in English",
             "detail": detail}
 
 
