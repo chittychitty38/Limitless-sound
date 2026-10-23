@@ -520,7 +520,7 @@ footer p { margin: 0; }
           const good = passed(a);
           const idle = a.idle && a.idle.cpuPercent != null ? `; en reposo, ${esc(a.idle.cpuPercent)}&nbsp;% del procesador` : "";
           const how = good
-            ? `lista en ${esc(a.joinedSeconds)} s, respondió a sus ${esc(a.actionsTried)} comandos${idle}`
+            ? `lista en ${esc(a.joinedSeconds)}&nbsp;s, respondió a sus ${esc(a.actionsTried)} comandos${idle}`
             : why(a);
           const shot = a.screenshot ? ` <a href="${shots}${esc(a.screenshot)}">captura</a>` : "";
           return `<li class="${good ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${good ? "✓" : "✕"}</span>`
@@ -528,7 +528,7 @@ footer p { margin: 0; }
         }).join("");
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
-          + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)} s.</p>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.</p>`
           + `<ul class="prooflist">${apps}</ul></div>`;
       }).join("");
     })
