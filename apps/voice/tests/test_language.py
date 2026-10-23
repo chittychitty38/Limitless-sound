@@ -102,31 +102,38 @@ class SpanishFile(unittest.TestCase):
     def test_every_text_voice_shows_or_says_has_spanish(self):
         """Every reply, status and help line in the code (lang.text, _reply), and every state the
         floating display names, is in the Spanish file."""
-        found = set()
-
-        def strings(node):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str):
-                yield node.value
-            elif isinstance(node, ast.IfExp):
-                yield from strings(node.body)
-                yield from strings(node.orelse)
-            elif isinstance(node, ast.Subscript):
-                yield from strings(node.value)
-            elif isinstance(node, ast.Dict):
-                for v in node.values:
-                    yield from strings(v)
-
-        for path in Path(app_module.__file__).parent.glob("*.py"):
-            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.args:
-                    if node.func.attr == "text":
-                        found.update(strings(node.args[0]))
-                    elif node.func.attr == "_reply" and len(node.args) > 1:
-                        found.update(strings(node.args[1]))
-        from limitless_voice.hud import STATES
-        found.update(label for _, label in STATES.values())
+        found = texts_in_code()
         self.assertGreater(len(found), 60)
         self.assertEqual(sorted(t for t in found if t not in ES.texts), [])
+
+
+def texts_in_code():
+    """Every reply, status and help line in Voice's code (lang.text, _reply), and every state the
+    floating display names: what a language's texts must have."""
+    found = set()
+
+    def strings(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            yield node.value
+        elif isinstance(node, ast.IfExp):
+            yield from strings(node.body)
+            yield from strings(node.orelse)
+        elif isinstance(node, ast.Subscript):
+            yield from strings(node.value)
+        elif isinstance(node, ast.Dict):
+            for v in node.values:
+                yield from strings(v)
+
+    for path in Path(app_module.__file__).parent.glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.args:
+                if node.func.attr == "text":
+                    found.update(strings(node.args[0]))
+                elif node.func.attr == "_reply" and len(node.args) > 1:
+                    found.update(strings(node.args[1]))
+    from limitless_voice.hud import STATES
+    found.update(label for _, label in STATES.values())
+    return found
 
 
 class SpanishEngine(unittest.TestCase):
@@ -278,6 +285,184 @@ class Voices(unittest.TestCase):
         self.assertEqual(pick_voice(ES, windows), "HKEY\\TTS_MS_ES-MX_SABINA_11.0")
 
 
+PT = load("pt")
+PORTUGUESE = {os: PT.translate(p) for os, p in PACKS.items()}
+
+
+def pt_engine(app="Logic Pro", os_name="mac"):
+    p = DryRunPlatform(os_name, app=app)
+    return Engine(p, PORTUGUESE[os_name], own_names=["Limitless Voice"], language=PT), p
+
+
+class PortugueseFile(unittest.TestCase):
+    """Brazilian Portuguese: every command, numbers with "um" and "uma" that are also the article,
+    keys and letters, and every text."""
+
+    def test_every_command_in_every_pack_has_portuguese(self):
+        self.assertEqual(PT.check(builtin_packs()), [])
+
+    def test_every_text_voice_shows_or_says_has_portuguese(self):
+        self.assertEqual(sorted(t for t in texts_in_code() if t not in PT.texts), [])
+        self.assertEqual(sorted(PT.texts), sorted(ES.texts))
+
+    def test_the_english_it_stands_for_is_kept(self):
+        logic = next(p for p in PORTUGUESE["mac"] if p.name == "Logic Pro")
+        play = next(c for c in logic.commands if "tocar" in c.phrases)
+        self.assertEqual(play.english_of("parar"), "stop")
+        self.assertEqual(play.english_of("dá play"), "play")
+        self.assertEqual(play.english_of("parar a reprodução"), "stop playback")
+
+    def test_numbers(self):
+        cases = {"compasso trinta e dois": "compasso 32", "compasso cento e vinte e oito": "compasso 128",
+                 "compasso duzentos e trinta e cinco": "compasso 235", "tempo cento e vinte": "tempo 120",
+                 "mil novecentos e noventa e nove": "1999", "dois mil": "2000", "mil e quinhentos": "1500",
+                 "vinte e um": "21", "compasso um dois oito": "compasso 128", "compasso cem": "compasso 100",
+                 "marcador um": "marcador 1", "compasso um meia": "compasso 16", "duas vezes": "2 vezes",
+                 # the article, not 1
+                 "adicionar uma faixa": "adicionar uma faixa", "avançar um compasso": "avançar um compasso",
+                 "mais uma vez": "mais uma vez", "rock e roll": "rock e roll", "trinta e": "30 e"}
+        for said, want in cases.items():
+            self.assertEqual(PT.numbers.normalize(said), want, said)
+
+    def test_keys_and_letters(self):
+        for said, chord in [("comando shift ene", "cmd+shift+n"), ("comando maiúsculas novembro", "cmd+shift+n"),
+                            ("comando dáblio", "cmd+w"), ("control efe 5", "ctrl+f5"), ("ponto e vírgula", ";"),
+                            ("opção comando bê", "opt+cmd+b"), ("comando zê", "cmd+z"), ("comando e", "cmd+e"),
+                            ("comando para cima", "cmd+up")]:
+            self.assertEqual(spoken_to_chord(said, PT), chord, said)
+
+    def test_which_language(self):
+        self.assertEqual(wanted("", "pt-BR", ""), "pt")
+        self.assertEqual(wanted("", "pt_PT", ""), "pt")
+        self.assertEqual(wanted("es", "pt", ""), "es")
+        self.assertEqual(model_for(PT, "vosk-model-small-es-0.42"), "vosk-model-small-pt-0.3")
+
+
+class PortugueseEngine(unittest.TestCase):
+    def test_commands(self):
+        cases = [
+            ("Logic Pro", "ir para o compasso trinta e dois", ["/", "32", "return"]),
+            ("Pro Tools", "compasso cento e vinte e oito", ["numpad*", "128", "return"]),
+            ("Pro Tools", "deslocar para a direita quatro vezes", ["numpad+"] * 4),
+            ("Pro Tools", "deslocar para a direita duas vezes", ["numpad+"] * 2),
+            ("Pro Tools", "marcador um", ["numpad.", "1", "numpad."]),
+            ("Logic Pro", "aperte comando shift ene", ["cmd+shift+n"]),
+            ("Logic Pro", "tocar", ["space"]),
+            ("Logic Pro", "dá play", ["space"]),
+            ("Pro Tools", "parar", ["space"]),
+            ("Logic Pro", "gravar", ["r"]),
+            ("Logic Pro", "por favor salva o projeto obrigado", ["cmd+s"]),
+            ("Logic Pro", "mostrar o mixer", ["x"]),
+            ("Logic Pro", "mutar a faixa", ["m"]),
+            ("Logic Pro", "mute", ["m"]),
+            ("Logic Pro", "solo", ["s"]),
+            ("Logic Pro", "click", ["k"]),
+            ("Logic Pro", "adicionar uma faixa", ["opt+cmd+n"]),
+            ("Logic Pro", "avançar um compasso", ["."]),
+            ("Ableton Live", "nova faixa midi", ["cmd+shift+t"]),
+            ("Ableton Live", "ir para o compasso trinta e dois", []),   # Live has no key for it
+            ("Logic Pro", "loop", ["c"]),
+            ("Pro Tools", "loop", ["shift+cmd+l"]),
+            ("Logic Pro", "seta para cima", ["up"]),
+            ("Finder", "desfazer", ["cmd+z"]),
+            ("Logic Pro", "cima", []),                   # said all the time, so not alone
+            ("Logic Pro", "esse solo de guitarra", []),
+        ]
+        for app, said, keys in cases:
+            e, p = pt_engine(app)
+            e.handle(said, said)
+            self.assertEqual(pressed(p), keys, f"{said} in {app}")
+
+    def test_destructive_commands_alone_are_infinitives_and_exact(self):
+        """"corta", "cola" and "apaga" are Cut, Paste and Delete only with "isso" after them, and a
+        word a letter away ("pagar", "colou") never throws work away."""
+        for said in ("corta", "recorta", "cola", "apaga", "exclui", "deleta", "duplica", "pagar", "colou",
+                     "cortou", "apagou", "colagem", "duplicado"):
+            for app in ("Logic Pro", "Pro Tools", "Ableton Live"):
+                e, p = pt_engine(app)
+                e.handle(said, said)
+                self.assertEqual(pressed(p), [], f"{said} in {app}")
+        for said, keys in [("recortar", ["cmd+x"]), ("colar", ["cmd+v"]), ("apagar", ["delete"]),
+                           ("excluir isso", ["delete"]), ("corta isso", ["cmd+x"])]:
+            e, p = pt_engine()
+            e.handle(said, said)
+            self.assertEqual(pressed(p), keys, said)
+
+    def test_a_cut_not_heard_twice_asks_first(self):
+        e, p = pt_engine()
+        r = e.handle("recortar", "recordar")      # the open recognizer heard another word
+        self.assertEqual((r.kind, r.message), ("ask", "Diga sim para recortar, ou cancele"))
+        e.handle("sim", "sim")
+        self.assertEqual(pressed(p), ["cmd+x"])
+        e, p = pt_engine()
+        e.handle("apagar cinquenta vezes", "apagar cinquenta vezes")
+        self.assertEqual(pressed(p), ["delete"] * 3)   # never more than three at once
+
+    def test_free_text_needs_the_open_recognizer_too(self):
+        e, p = pt_engine()
+        r = e.handle("abrir a faixa de o compasso", "a bruxa da floresta escura")
+        self.assertFalse(r.handled)
+        self.assertEqual(p.log, [])
+        e.handle("abrir logic", "abrir logic")
+        self.assertEqual([x for x in p.log if x[0] == "open"], [("open", "Logic Pro")])
+
+    def test_yes_cancel_sleep_wake_help_again(self):
+        e, p = pt_engine()
+        r = e.handle("sair do aplicativo", "sair do aplicativo")
+        self.assertEqual((r.kind, r.message), ("ask", "Diga sim para sair deste aplicativo, ou cancele"))
+        self.assertEqual(e.handle("cancelar").message, "Cancelado")
+        self.assertEqual(e.handle("vai dormir").message, "Parei de ouvir")
+        self.assertFalse(e.handle("gravar").handled)
+        self.assertEqual(e.handle("acorda").message, "Ouvindo")
+        r = e.handle("o que eu posso dizer")
+        self.assertEqual(r.kind, "help")
+        self.assertTrue(r.message.startswith("Comandos para Logic Pro:"))
+        self.assertEqual(e.handle("de novo").message, "Ainda não há nada para repetir")
+        e.handle("próxima faixa")
+        e.handle("de novo")
+        self.assertEqual(pressed(p), ["down", "down"])
+
+    def test_take_mode(self):
+        e, p = pt_engine()
+        e.take = True
+        for lyric in ("solo", "silenciar", "desfazer", "salvar", "para"):
+            self.assertEqual(e.handle(lyric).message, "take")
+        r = e.handle("parar")
+        self.assertTrue(r.handled)
+        self.assertEqual((pressed(p), r.english), (["space"], "stop"))
+
+    def test_dictation(self):
+        e, p = pt_engine()
+        e.handle("começar ditado")
+        e.handle("olá vírgula tudo bem ponto de interrogação", "olá vírgula tudo bem ponto de interrogação")
+        e.handle("nova linha")
+        self.assertEqual(e.handle("apaga isso").message, "Apagado")
+        self.assertEqual(e.handle("parar ditado").message, "De volta aos comandos")
+        self.assertEqual([x[1] for x in p.log if x[0] == "type"], [" olá, tudo bem?"])
+
+    def test_the_suite_hears_it_in_english(self):
+        e, p = pt_engine()
+        s = Suite(e)
+        s.link = mock.Mock()
+        s.report(e.handle("parar", "parar"))
+        s.link.did.assert_called_with("stop", "daw.stop")
+        ok, message = s.invoke("do", {"phrase": "go to bar thirty two"}, "x")   # the suite talks English
+        self.assertEqual((ok, message), (True, "Compasso 32"))
+        ok, message = s.invoke("do", {"phrase": "ir para o compasso oito"}, "x")
+        self.assertEqual((ok, message), (True, "Compasso 8"))
+        self.assertEqual(e.from_english("go to bar 32"), "ir para o compasso 32")
+        self.assertEqual(e.from_english("nudge right 4 times", everywhere=True), "deslocar para a direita 4 vezes")
+        self.assertEqual(pressed(p), ["space", "/", "32", "return", "/", "8", "return"])
+
+    def test_a_brazilian_voice_first(self):
+        mac = [("Alex", "en_US"), ("Joana", "pt_PT"), ("Luciana (Enhanced)", "pt_BR")]
+        self.assertEqual(pick_voice(PT, mac), "Luciana (Enhanced)")
+        self.assertEqual(pick_voice(PT, mac[:2]), "Joana")
+        windows = [("HKEY\\TTS_MS_PT-BR_MARIA_11.0",
+                    "HKEY\\TTS_MS_PT-BR_MARIA_11.0 Microsoft Maria Desktop - Portuguese(Brazil)")]
+        self.assertEqual(pick_voice(PT, windows), "HKEY\\TTS_MS_PT-BR_MARIA_11.0")
+
+
 HUB_PREFS = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False, "reduceMotion": False}
 
 
@@ -325,6 +510,22 @@ class ChoosingTheLanguage(unittest.TestCase):
         from test_accessibility import problems, tab_stops
         self.assertEqual(problems(w), [])
         self.assertIn(w.language_download, tab_stops(w))        # the keyboard reaches it
+
+    def test_the_suites_portuguese_offers_its_download_and_then_listens_in_it(self):
+        w = self.w
+        self.hub("welcome", language="pt")
+        self.assertEqual(w.lang.code, "en")
+        self.assertEqual(w.language_download.text(), "Baixar português (31 MB)")
+        self.assertIn("precisa baixar o modelo de voz (31 MB)", w.language_text.text())
+        model = data_dir() / "models" / "vosk-model-small-pt-0.3"
+        self.addCleanup(shutil.rmtree, model, True)
+        with mock.patch.object(app_module, "ensure_model",
+                               side_effect=lambda *a, **k: (model / "conf").mkdir(parents=True) or model):
+            w.language_download.click()
+        self.assertEqual((w.lang.code, w.engine.lang.code), ("pt", "pt"))
+        self.assertEqual(w.listen_btn.text(), 'Ouvindo: diga "vai dormir" para pausar')
+        self.assertEqual(self.applied(), ["en", "pt"])
+        self.assertIn("Ouvindo em português", w.speaker.said)
 
     def test_offline_the_offer_stays(self):
         w = self.w
