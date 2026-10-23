@@ -48,7 +48,8 @@ CATALOG: dict[str, dict[str, dict]] = {
         "play": {"label": "Play / stop", "keys": "space", "say": "Play stop"},
         "record": {"label": "Record", "keys": "f12", "say": "Record"},
         "start": {"label": "Go to start", "keys": "return", "say": "Start"},
-        "end": {"label": "Go to end", "keys": "mod+return", "say": "End"},
+        # Option+Return on a Mac (Alt on Windows); Command+Return isn't Go to end.
+        "end": {"label": "Go to end", "keys": "alt+return", "say": "End"},
         "undo": {"label": "Undo", "keys": "mod+z", "say": "Undo"},
         "redo": {"label": "Redo", "keys": "mod+shift+z", "say": "Redo"},
         "arm": {"label": "Record-arm selected tracks", "keys": "shift+r", "say": "Armed"},
