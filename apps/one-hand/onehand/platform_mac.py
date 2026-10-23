@@ -11,6 +11,7 @@ from AppKit import NSRunningApplication, NSWorkspace
 
 from .engine import PASS, SUPPRESS, Tap
 from .keys import MAC_CODES
+from .words import t
 
 # Marks keys we type ourselves so the tap lets them through. Keys typed by
 # other software (Accessibility Keyboard, Switch Control, Voice Control)
@@ -70,7 +71,7 @@ class MacBackend:
         tap = Quartz.CGEventTapCreate(Quartz.kCGSessionEventTap, Quartz.kCGHeadInsertEventTap,
                                       Quartz.kCGEventTapOptionDefault, mask, self._callback, None)
         if not tap:
-            self.error = "macOS has not given Limitless One-Hand permission to use the keyboard yet."
+            self.error = t("macOS has not given Limitless One-Hand permission to use the keyboard yet.")
             ready.set()
             return
         source = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
@@ -191,8 +192,8 @@ class MacBackend:
         return {"Accessibility": ax, "Input Monitoring": listen}
 
     def permission_help(self):
-        return ("Open System Settings → Privacy & Security, then turn on Limitless One-Hand under "
-                "both Accessibility and Input Monitoring.")
+        return t("Open System Settings → Privacy & Security, then turn on Limitless One-Hand under "
+                 "both Accessibility and Input Monitoring.")
 
     def open_permission_settings(self, which="Accessibility"):
         url = INPUT_MONITORING_URL if which == "Input Monitoring" else ACCESSIBILITY_URL

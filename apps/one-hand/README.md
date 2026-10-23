@@ -42,6 +42,7 @@ Windows may show "Windows protected your PC" because the app is new. Choose **Mo
 - **ON badge:** a yellow badge at the top of the screen shows when one-hand mode is on, even over a full-screen DAW.
 - Options: sounds, spoken "on/off", larger text, keep the window on top, start with the mode on, and open at login. VoiceOver reads out each change.
 - **Limitless Sound settings:** with the Limitless Sound hub running, the window and the ON badge follow the text size, high contrast and reduce motion you set once for the whole suite, the moment you change them. If One-Hand's own Larger text is bigger, it keeps that. High contrast makes everything pure black with white text and edges; reduce motion keeps the key you pressed lit instead of flashing it, and stops menus and lists sliding or fading.
+- **English or Spanish:** the window, menu, badge, key names and spoken "on/off" are in the language you pick in Limitless Sound, or your computer's language until the hub is running. Pick another and they change straight away.
 - Works alongside on-screen keyboards, Switch Control, Voice Control and other assistive tools: keys they type go through one-hand mode too.
 
 For two-key shortcuts one finger at a time, also turn on Sticky Keys (Mac: Accessibility → Keyboard; Windows: Settings → Accessibility → Keyboard).
