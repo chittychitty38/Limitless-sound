@@ -391,14 +391,16 @@ jobs:
         continue-on-error: true
         run: |
           export DIAG_PER_WORD=25 WER_FILES=100
-          ls models
-          VOICE_LANGUAGE=es VOSK_MODEL="$PWD/models/vosk-model-small-es-0.42" COMMAND_WORDS_DIR="$PWD/command-words-es" \
+          ES=vosk-model-small-es-0.42
+          if [ ! -d "models/$ES" ]; then
+            curl -sSfL -o es.zip "https://alphacephei.com/vosk/models/${ES}.zip" && python -m zipfile -e es.zip models/
+          fi
+          [ -d command-words-es ] || python stress/tools/get_command_words.py command-words-es --lang es --per-word 25 \
+            --words dos,tres,cuatro,cinco,seis,siete,ocho,nueve,diez,veinte,treinta,grabar,parar,guardar,solo,ayuda
+          [ -d fleurs-es ] || python stress/tools/get_fleurs.py fleurs-es --lang es_419 --minutes 25
+          VOICE_LANGUAGE=es VOSK_MODEL="$PWD/models/$ES" COMMAND_WORDS_DIR="$PWD/command-words-es" \
             TALK_DIR="$PWD/fleurs-es" python stress/tools/diag_clips.py \
             dos,tres,cuatro,cinco,seis,siete,ocho,nueve,diez,veinte,treinta,grabar,parar,guardar,solo,ayuda 2>&1 \
-            | grep -v "Ignoring word missing" || true
-          VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" COMMAND_WORDS_DIR="$PWD/command-words-pt" \
-            TALK_DIR="$PWD/fleurs-pt" python stress/tools/diag_clips.py \
-            dois,três,quatro,cinco,seis,sete,oito,nove,dez,vinte,trinta,gravar,parar,salvar,solo,ajuda 2>&1 \
             | grep -v "Ignoring word missing" || true
       - shell: bash
         run: |
