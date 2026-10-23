@@ -322,7 +322,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.portuguese == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 45
     env:
       MODEL: vosk-model-small-pt-0.3
     steps:
@@ -373,35 +373,6 @@ jobs:
         with:
           path: command-words-pt
           key: ${{ steps.words.outputs.cache-primary-key }}
-      # TEMPORARY: is it the clips or the model? The Spanish model and recordings as a control.
-      - uses: actions/cache/restore@v4
-        with:
-          path: models
-          key: vosk-vosk-model-small-es-0.42
-      - uses: actions/cache/restore@v4
-        with:
-          path: command-words-es
-          key: command-words-es-none
-          restore-keys: command-words-es-
-      - uses: actions/cache/restore@v4
-        with:
-          path: fleurs-es
-          key: fleurs-es-${{ hashFiles('stress/tools/get_fleurs.py') }}
-      - shell: bash
-        continue-on-error: true
-        run: |
-          export DIAG_PER_WORD=25 WER_FILES=100
-          ES=vosk-model-small-es-0.42
-          if [ ! -d "models/$ES" ]; then
-            curl -sSfL -o es.zip "https://alphacephei.com/vosk/models/${ES}.zip" && python -m zipfile -e es.zip models/
-          fi
-          [ -d command-words-es ] || python stress/tools/get_command_words.py command-words-es --lang es --per-word 25 \
-            --words dos,tres,cuatro,cinco,seis,siete,ocho,nueve,diez,veinte,treinta,grabar,parar,guardar,solo,ayuda
-          [ -d fleurs-es ] || python stress/tools/get_fleurs.py fleurs-es --lang es_419 --minutes 25
-          VOICE_LANGUAGE=es VOSK_MODEL="$PWD/models/$ES" COMMAND_WORDS_DIR="$PWD/command-words-es" \
-            TALK_DIR="$PWD/fleurs-es" python stress/tools/diag_clips.py \
-            dos,tres,cuatro,cinco,seis,siete,ocho,nueve,diez,veinte,treinta,grabar,parar,guardar,solo,ayuda 2>&1 \
-            | grep -v "Ignoring word missing" || true
       - shell: bash
         run: |
           VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-pt" \
