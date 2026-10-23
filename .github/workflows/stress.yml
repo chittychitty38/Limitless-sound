@@ -375,10 +375,11 @@ jobs:
           key: ${{ steps.words.outputs.cache-primary-key }}
       - shell: bash
         run: |
-          export VOCAB_LOOKUP='unk ^ple ^plê ^plé ^miu ^miú ^lup ^lúp ^lub ^mix ^miks ^mics ^tei ^téi ^xif ^chif ^shif ^tab ^teb ^quanti ^cuanti ^xaf ^chaf ^xâ ^sli ^esli ^isli ^spo ^espo ^ispo ^rol ^rou ^dabli ^dábli ^[íi]psilon ^(a|bê|be|cê|ce|dê|de|e|é|efe|éfe|ge|gê|jê|agá|aga|i|jota|cá|ka|ele|éle|eme|ême|ene|o|ó|pê|pe|quê|que|erre|esse|tê|te|u|vê|ve|xis|zê|ze|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z|b|c|d)$ ^efe ^éfe ^ene ^ga ^je ^seleç ^selet ^delet ^esc ^alt ^opç ^opt ^coman ^back ^bek ^end$ ^ende ^uin ^win ^cli ^fade ^feid ^take ^mixa ^dá$ ^pro$ ^pra$ ^à$ ^shi ^chi ^escap ^ok ^tá$ ^maiús ^control ^ente ^stop ^sto ^solo ^grid ^gri ^midi ^míd ^mission ^spot ^piano ^zoom ^zum ^clip ^mute ^loop ^play ^metr ^vertical ^transi ^mixer'
+          export VOCAB_LOOKUP='^zar$ ^czar ^quan ^cuan ^canti ^conti ^tizar$ ^izar$ ^zá$ ^sar$ ^ute$ ^mi$ ^ser$ ^is$ ^lipe$ ^lip ^xá ^chá$ ^fou ^fol$ ^que$ ^tei$ ^embaralh ^sport$ ^mike$ ^mai$ ^plai ^plei ^pré$ ^pley ^bau ^xi ^tébi ^tebi ^tabula ^livre$ ^lupi$ ^lupas$ ^rol$ ^mix$ ^dar$ ^tira$ ^tirar$ ^arrasto$ ^lupa$ ^muta$ ^uísque$'
           VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-pt" \
             COMMAND_WORDS_DIR="$PWD/command-words-pt" \
-            python -m pytest stress/test_voice_language.py -v -s --durations=6 2>&1 \
+            python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
+              stress/test_command_words.py -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   gazestage:

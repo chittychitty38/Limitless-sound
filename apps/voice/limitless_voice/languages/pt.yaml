@@ -1,6 +1,8 @@
 # Brazilian Portuguese. Where musicians say it two ways ("faixa" and "trilha" for a track, "recortar"
 # and "cortar" for Cut), both are here, and the English names many keep using (solo, mute, loop,
-# play, click), where the speech model knows them.
+# stop, mixer, take, clique), spelled as words the speech model knows where it doesn't know them
+# (sounds_like below). It doesn't know "play", "shift" or "tab" in any spelling, so those are
+# "tocar", "maiúsculas" and "tabulação" here.
 # Every word must be one the model knows: stress/test_voice_language.py checks, and for a word it
 # doesn't know prints the nearest it does. Destructive commands (Cut, Paste, Delete, Duplicate)
 # are said alone only as infinitives, as the menus name them ("recortar", "colar", "apagar",
@@ -90,29 +92,19 @@ numbers:
 keys:
   names:
     comando: cmd
-    command: cmd
     control: ctrl
     controle: ctrl
     opção: opt
-    option: opt
-    alt: opt
-    shift: shift
     maiúsculas: shift
-    windows: win
     enter: return
-    return: return
     retorno: return
-    tab: tab
+    tabulação: tab
     espaço: space
     barra de espaço: space
     apagar: delete
-    backspace: delete
-    delete: delete
     escape: escape
-    esc: escape
     home: home
     início: home
-    end: end
     fim: end
     esquerda: left
     direita: right
@@ -134,14 +126,15 @@ keys:
     colchete: "["
     abre colchete: "["
     fecha colchete: "]"
-  # The letters' Brazilian names, and the radio alphabet as Brazilians say it.
-  letters: {a: a, bê: b, cê: c, dê: d, e: e, é: e, efe: f, gê: g, agá: h, i: i, jota: j, cá: k, ele: l,
-            eme: m, ene: n, o: o, ó: o, pê: p, quê: q, erre: r, esse: s, tê: t, u: u, vê: v, dáblio: w,
+  # The letters' Brazilian names, as the speech model writes them ("efe", "gê" and "ene" it writes
+  # as the letter itself; it has no "dáblio"), and the radio alphabet as Brazilians say it.
+  letters: {a: a, bê: b, cê: c, dê: d, e: e, é: e, f: f, g: g, agá: h, i: i, jota: j, cá: k, ele: l,
+            eme: m, "n": "n", o: o, ó: o, pê: p, quê: q, erre: r, esse: s, tê: t, u: u, vê: v,
             xis: x, ípsilon: "y", zê: z,
             alfa: a, bravo: b, charlie: c, delta: d, eco: e, golfe: g, hotel: h, índia: i,
-            julieta: j, quilo: k, lima: l, maique: m, novembro: n, oscar: o, papa: p, quebec: q, romeu: r,
-            sierra: s, tango: t, uniforme: u, vítor: v, uísque: w, iânque: "y", zulu: z}
-  f: [efe, f]
+            julieta: j, quilo: k, lima: l, novembro: n, oscar: o, papa: p, quebec: q, romeu: r,
+            sierra: s, tango: t, uniforme: u, vítor: v, uísque: w, zulu: z}
+  f: [f]
 
 # The command recognizer can write a whole sentence in command words, as Spanish's did, since
 # Portuguese's include "de", "o", "a" and "para": "abrir ..." and "escrever ..." take their words
@@ -156,7 +149,14 @@ exact: true
 
 # Words the speech model doesn't know, spelled as words it does. The recognizer listens for
 # these spellings; normalize() turns them back.
-sounds_like: {}
+sounds_like:
+  mute: [mi ute]
+  loop: [lupi]
+  loops: [lupas]
+  mixer: [mix ser]
+  take: [tei que]
+  roll: [rol]
+  spot: [sport]
 
 # Every reply and help line, by its English words. {names} are filled in after.
 texts:
@@ -246,7 +246,7 @@ texts:
   Quantized: Quantizado
   "Marker {n}": "Marcador {n}"
   # help lines from the packs
-  'Press any key or shortcut, e.g. "press command shift n"': 'Aperta qualquer tecla ou atalho, por exemplo "aperte comando shift ene"'
+  'Press any key or shortcut, e.g. "press command shift n"': 'Aperta qualquer tecla ou atalho, por exemplo "aperte comando maiúsculas novembro"'
   Type the words that follow: Escreve as palavras que vêm depois
   'Open or switch to an app, e.g. "open logic pro"': 'Abre um aplicativo ou muda para ele, por exemplo "abrir logic pro"'
   close this window: fechar esta janela
@@ -290,7 +290,7 @@ commands:
            "salvar isso", "salva isso"]
     press enter: ["aperte enter", "aperta enter", "apertar enter", "enter"]
     escape: ["escape", "aperte escape", "aperta escape", "tecla escape"]
-    tab: ["tab", "próximo campo", "campo seguinte"]
+    tab: ["tabulação", "próximo campo", "campo seguinte"]
     previous field: ["campo anterior"]
     # Not "cima" or "direita" alone, as English isn't "up" or "right" alone: they're said all the time.
     move up: ["mover para cima", "move para cima", "seta para cima", "seta pra cima"]
@@ -304,15 +304,15 @@ commands:
                        "muda para {name:text}", "trocar para {name:text}"]
     next window: ["próxima janela", "janela seguinte", "trocar de janela", "mudar de janela"]
     close [the] window: ["fechar [a] janela", "fecha [a] janela", "feche [a] janela"]
-    quit [the] app: ["sair do aplicativo", "fechar [o] aplicativo", "fecha [o] aplicativo", "sair do app",
-                     "fechar [o] app", "encerrar [o] aplicativo"]
+    quit [the] app: ["sair do aplicativo", "fechar [o] aplicativo", "fecha [o] aplicativo",
+                     "encerrar [o] aplicativo"]
     mission control: ["mission control", "mostrar todas as janelas", "todas as janelas", "visão de tarefas"]
     show desktop: ["mostrar [a] área de trabalho", "ver [a] área de trabalho"]
-    spotlight: ["spotlight", "buscar no computador", "pesquisar no computador", "menu iniciar"]
+    spotlight: ["buscar no computador", "pesquisar no computador", "menu iniciar"]
     volume up: ["aumentar [o] volume", "aumenta [o] volume", "mais volume", "mais alto"]
     volume down: ["diminuir [o] volume", "diminui [o] volume", "abaixar [o] volume", "abaixa [o] volume",
                   "menos volume", "mais baixo"]
-    mute volume: ["silenciar [o] som", "tirar [o] som", "ativar [o] som", "silenciar [o] áudio", "mutar [o] som"]
+    mute volume: ["silenciar [o] som", "tirar [o] som", "ativar [o] som", "silenciar [o] áudio"]
     set volume to {level:number}: ["volume em {level:number}", "volume no {level:number}",
                                    "volume para {level:number}", "colocar [o] volume em {level:number}",
                                    "coloca [o] volume em {level:number}"]
@@ -321,7 +321,7 @@ commands:
 
   Logic Pro:
     play: &play
-      play: ["tocar", "toca", "play", "dar play", "dá play", "reproduzir"]
+      play: ["tocar", "toca", "reproduzir"]
       # Not "para" alone: it's also "for", said all the time.
       stop: ["parar", "pare", "stop"]
       start playback: ["iniciar [a] reprodução", "começar [a] reprodução"]
@@ -330,8 +330,7 @@ commands:
                      "iniciar [a] gravação"]
     capture [the] recording: ["capturar [a] gravação", "captura [a] gravação", "capturar isso", "captura isso"]
     cycle: ["ciclo", "loop", "ativar [o] ciclo", "ativar [o] loop", "modo ciclo"]
-    metronome: &metronome ["metrônomo", "click", "clique", "ativar [o] metrônomo", "ativar [o] click",
-                           "ativar [o] clique"]
+    metronome: &metronome ["metrônomo", "clique", "ativar [o] metrônomo", "ativar [o] clique"]
     go to start: &start ["ir para o início", "ir pro início", "voltar para o início", "voltar pro início",
                          "voltar ao início", "ir para o começo", "voltar para o começo", "voltar pro começo",
                          "voltar ao começo", "ao início", "pro início"]
@@ -354,15 +353,15 @@ commands:
     previous track: &previous_track ["faixa anterior", "faixa de cima", "trilha anterior"]
     solo: &solo ["solo", "solo na faixa", "solar [a] faixa", "colocar em solo", "coloca em solo", "dar solo",
                  "tirar [o] solo", "tira [o] solo"]
-    mute: &mute ["mute", "mutar", "muta", "silenciar", "silencia", "silenciar [a] faixa", "silencia [a] faixa",
-                 "mutar [a] faixa", "muta [a] faixa", "dar mute", "tirar [o] mute", "tira [o] mute", "desmutar"]
+    mute: &mute ["mute", "muta", "silenciar", "silencia", "silenciar [a] faixa", "silencia [a] faixa",
+                 "muta [a] faixa", "dar mute", "tirar [o] mute", "tira [o] mute"]
     arm: &arm ["armar", "arma", "armar [a] faixa", "arma [a] faixa", "ativar [a] gravação", "desarmar", "desarma"]
     split: ["dividir", "divide", "dividir aqui", "divide aqui", "dividir no cursor", "cortar aqui", "corta aqui"]
     join: ["unir", "une", "unir [as] regiões", "une [as] regiões", "juntar", "junta", "juntar [as] regiões"]
     repeat region: ["repetir [a] região", "repetir [as] regiões", "repete [a] região"]
     quantize: &quantize ["quantizar", "quantiza", "quantizar isso", "quantiza isso"]
     delete: &delete ["apagar", "excluir", "deletar", "apagar isso", "apaga isso", "excluir isso", "exclui isso",
-                     "deletar isso", "deleta isso", "remover isso", "remove isso"]
+                     "deletar isso", "remover isso", "remove isso"]
     set locators: ["ciclo na seleção", "loop na seleção"]
     mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer", "mesa de mixagem"]
     library: ["biblioteca", "mostrar [a] biblioteca", "ver [a] biblioteca", "esconder [a] biblioteca"]
@@ -371,7 +370,7 @@ commands:
     piano roll: ["piano roll", "editor de teclado", "mostrar [o] piano roll", "mostrar [o] editor de teclado"]
     score: ["partitura", "editor de partitura", "mostrar [a] partitura"]
     smart controls: ["controles inteligentes", "mostrar [os] controles inteligentes"]
-    loops: ["loops", "navegador de loops", "loops da apple"]
+    loops: ["loops", "navegador de loops"]
     browser: ["navegador", "navegadores", "navegador de arquivos", "explorador de arquivos"]
     global tracks: ["faixas globais", "trilhas globais", "faixa de tempo", "mostrar [as] faixas globais"]
     automation: ["automação", "mostrar [a] automação", "ver [a] automação"]
@@ -381,7 +380,7 @@ commands:
     zoom in vertical: &taller ["aproximar na vertical", "ampliar na vertical", "faixas mais altas"]
     zoom out vertical: &shorter ["afastar na vertical", "reduzir na vertical", "faixas mais baixas"]
     zoom to fit: &fit ["ajustar à janela", "ajustar à seleção", "zoom na seleção", "ajustar [o] zoom"]
-    bounce: ["exportar [a] mixagem", "exportar [o] projeto", "fazer [o] bounce"]
+    bounce: ["exportar [a] mixagem", "exportar [o] projeto"]
 
   Pro Tools:
     play: *play
@@ -409,15 +408,16 @@ commands:
     arm: *arm
     next track: *next_track
     previous track: *previous_track
-    shuffle mode: ["modo shuffle", "shuffle"]
-    slip mode: ["modo slip", "slip", "modo livre"]
+    # The speech model knows no spelling of "shuffle" or "slip"
+    shuffle mode: ["modo embaralhar", "embaralhar"]
+    slip mode: ["modo livre"]
     spot mode: ["modo spot", "spot"]
     grid mode: ["modo grid", "grid", "modo grade", "grade"]
     zoomer: ["ferramenta zoom", "ferramenta de zoom", "lupa"]
     trimmer: ["ferramenta de aparar", "ferramenta aparar"]
-    selector: ["seletor", "ferramenta seletor", "ferramenta de seleção"]
+    selector: ["ferramenta de seleção", "ferramenta seleção"]
     grabber: ["ferramenta mão", "ferramenta de mão", "mãozinha"]
-    scrubber: ["ferramenta de arrasto", "ferramenta scrub"]
+    scrubber: ["ferramenta de arrasto"]
     pencil: ["lápis", "ferramenta lápis", "ferramenta de lápis"]
     redo: *redo
     separate: ["separar", "separa", "separar [o] clipe", "dividir", "divide", "dividir aqui", "cortar aqui",
@@ -427,7 +427,7 @@ commands:
     repeat: ["repetir", "repetir [o] clipe", "repete [o] clipe"]
     # Not "recortar": it's Cut.
     trim to selection: ["aparar na seleção", "apara na seleção", "aparar [o] clipe"]
-    fades: ["fades", "fade", "criar fades", "fazer fades", "fazer [o] fade"]
+    fades: ["fade", "criar [o] fade", "fazer [o] fade"]
     consolidate: ["consolidar", "consolida", "consolidar [o] clipe"]
     quantize: *quantize
     delete: *delete
@@ -435,7 +435,7 @@ commands:
     zoom in: *zoom_in
     zoom out: *zoom_out
     zoom to fit: *fit
-    bounce: ["exportar [a] mixagem", "exportar para [o] disco", "bounce para [o] disco"]
+    bounce: ["exportar [a] mixagem", "exportar para [o] disco"]
     save as: ["salvar como", "salva como"]
 
   # Live's own names where Brazilian musicians use them: clipe, loop, MIDI, retorno.

@@ -309,8 +309,19 @@ class PortugueseFile(unittest.TestCase):
         logic = next(p for p in PORTUGUESE["mac"] if p.name == "Logic Pro")
         play = next(c for c in logic.commands if "tocar" in c.phrases)
         self.assertEqual(play.english_of("parar"), "stop")
-        self.assertEqual(play.english_of("dá play"), "play")
+        self.assertEqual(play.english_of("toca"), "play")
         self.assertEqual(play.english_of("parar a reprodução"), "stop playback")
+
+    def test_english_names_spelled_as_words_the_model_knows(self):
+        """The small Portuguese model doesn't know "mute", "loop" or "mixer": it hears "mi ute",
+        "lupi" and "mix ser", which are written back as the English names."""
+        from limitless_voice.engine import normalize
+        packs = PORTUGUESE["mac"]
+        phrases = PT.recognizer_phrases(packs)
+        for heard, said in [("mi ute", "mute"), ("lupi", "loop"), ("mostrar o mix ser", "mostrar o mixer"),
+                            ("piano rol", "piano roll"), ("sair do modo tei que", "sair do modo take")]:
+            self.assertIn(heard, phrases)
+            self.assertEqual(normalize(heard, PT), said)
 
     def test_numbers(self):
         cases = {"compasso trinta e dois": "compasso 32", "compasso cento e vinte e oito": "compasso 128",
@@ -325,8 +336,8 @@ class PortugueseFile(unittest.TestCase):
             self.assertEqual(PT.numbers.normalize(said), want, said)
 
     def test_keys_and_letters(self):
-        for said, chord in [("comando shift ene", "cmd+shift+n"), ("comando maiúsculas novembro", "cmd+shift+n"),
-                            ("comando dáblio", "cmd+w"), ("control efe 5", "ctrl+f5"), ("ponto e vírgula", ";"),
+        for said, chord in [("comando maiúsculas n", "cmd+shift+n"), ("comando maiúsculas novembro", "cmd+shift+n"),
+                            ("comando uísque", "cmd+w"), ("control f 5", "ctrl+f5"), ("ponto e vírgula", ";"),
                             ("opção comando bê", "opt+cmd+b"), ("comando zê", "cmd+z"), ("comando e", "cmd+e"),
                             ("comando para cima", "cmd+up")]:
             self.assertEqual(spoken_to_chord(said, PT), chord, said)
@@ -346,17 +357,20 @@ class PortugueseEngine(unittest.TestCase):
             ("Pro Tools", "deslocar para a direita quatro vezes", ["numpad+"] * 4),
             ("Pro Tools", "deslocar para a direita duas vezes", ["numpad+"] * 2),
             ("Pro Tools", "marcador um", ["numpad.", "1", "numpad."]),
-            ("Logic Pro", "aperte comando shift ene", ["cmd+shift+n"]),
+            ("Logic Pro", "aperte comando maiúsculas n", ["cmd+shift+n"]),
             ("Logic Pro", "tocar", ["space"]),
-            ("Logic Pro", "dá play", ["space"]),
+            ("Logic Pro", "toca", ["space"]),
             ("Pro Tools", "parar", ["space"]),
             ("Logic Pro", "gravar", ["r"]),
             ("Logic Pro", "por favor salva o projeto obrigado", ["cmd+s"]),
             ("Logic Pro", "mostrar o mixer", ["x"]),
-            ("Logic Pro", "mutar a faixa", ["m"]),
-            ("Logic Pro", "mute", ["m"]),
+            ("Logic Pro", "muta a faixa", ["m"]),
+            ("Logic Pro", "mi ute", ["m"]),
             ("Logic Pro", "solo", ["s"]),
-            ("Logic Pro", "click", ["k"]),
+            ("Logic Pro", "clique", ["k"]),
+            ("Logic Pro", "lupi", ["c"]),
+            ("Logic Pro", "sala", []),                   # a letter from "salva", but another word
+            ("Logic Pro", "parte", []),
             ("Logic Pro", "adicionar uma faixa", ["opt+cmd+n"]),
             ("Logic Pro", "avançar um compasso", ["."]),
             ("Ableton Live", "nova faixa midi", ["cmd+shift+t"]),
