@@ -126,15 +126,17 @@ jobs:
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   # Voice and Zoom hearing real people instead of a synthetic voice: Google Speech Commands
-  # (single words, thousands of speakers) for how often a command is heard, and LibriSpeech
-  # (an hour of people reading aloud) for how often ordinary talk fires one. Both CC BY 4.0,
-  # fetched once and cached, never committed. stress/tools/get_real_speech.py says what's kept.
+  # (single words, thousands of speakers) for how often a command is heard, LibriSpeech
+  # (an hour of people reading aloud) for how often ordinary talk fires one, and the
+  # Multilingual Spoken Words Corpus for the command words Speech Commands doesn't have
+  # ("record", "cut", "paste" ...). All CC BY 4.0, fetched once and cached, never committed.
+  # stress/tools/get_real_speech.py and get_command_words.py say what's kept.
   voice-real-speech:
     name: Voice and Zoom vs real people (ubuntu-latest)
     needs: changes
     if: needs.changes.outputs.voice == 'true' || needs.changes.outputs.zoom == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25   # about 15 with the recordings cached, a minute or two more without
+    timeout-minutes: 35   # about 20 with the recordings cached, a few minutes more without
     env:
       MODEL: vosk-model-small-en-us-0.15
     steps:
@@ -159,6 +161,12 @@ jobs:
           path: real-speech
           key: real-speech-${{ hashFiles('stress/tools/get_real_speech.py') }}
       - if: steps.has.outputs.voice == 'yes'
+        id: words
+        uses: actions/cache/restore@v4
+        with:
+          path: command-words
+          key: command-words-${{ hashFiles('stress/tools/get_command_words.py') }}
+      - if: steps.has.outputs.voice == 'yes'
         name: Install, fetch the speech model the app ships and the recordings
         shell: bash
         run: |
@@ -171,19 +179,28 @@ jobs:
           if [ "${{ steps.data.outputs.cache-hit }}" != "true" ]; then
             python stress/tools/get_real_speech.py real-speech
           fi
+          if [ "${{ steps.words.outputs.cache-hit }}" != "true" ]; then
+            python stress/tools/get_command_words.py command-words
+          fi
       - if: steps.has.outputs.voice == 'yes' && steps.data.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: real-speech
           key: ${{ steps.data.outputs.cache-primary-key }}
+      - if: steps.has.outputs.voice == 'yes' && steps.words.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: command-words
+          key: ${{ steps.words.outputs.cache-primary-key }}
       - if: steps.has.outputs.voice == 'yes'
         shell: bash
         run: |
           # The recognizer warns about every command word the small model doesn't know each time
           # it's built, thousands of times here; each warning is shown once.
           VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
-            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
-            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py -v -s --durations=5 2>&1 \
+            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" COMMAND_WORDS_DIR="$PWD/command-words" \
+            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py \
+              stress/test_command_words.py -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   gazestage:
