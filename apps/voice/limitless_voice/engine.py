@@ -97,6 +97,12 @@ class Engine:
         self.suite = None        # the Limitless Sound link: other apps' actions by voice
         self._last_typed = ""
 
+    def set_language(self, language, packs):
+        """Listen and answer in another language, with the packs in it (Language.translate).
+        A question waiting for yes, and what "again" would repeat, were in the old one."""
+        self.lang, self.packs = language, packs
+        self.pending = self.last = None
+
     # -- context -------------------------------------------------------
 
     def _is_own(self, app):

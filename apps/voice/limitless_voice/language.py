@@ -20,7 +20,7 @@ which talks in English, hears that "parar" was a stop and not a play.
 """
 
 import re
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 import yaml
@@ -86,7 +86,7 @@ class Language:
         """Voice's own phrases, so the recognizer knows them too."""
         sets = ("wake", "sleep", "cancel", "yes", "again", "help", "dictation_on", "dictation_off",
                 "take_stop", "take_off", "recognize")
-        return set().union(*(self.words[k] for k in sets))
+        return {w for k in sets for w in self.words[k]}
 
     def recognizer_phrases(self, packs):
         """Everything the command recognizer should listen for, with these packs."""
@@ -167,7 +167,7 @@ class Language:
                         if eng not in c.phrases:
                             problems.append(f"{pack.name}: {c.phrases[0]!r} has no English phrase {eng!r}")
                 t = self._translate(c, spec)
-                want = sorted(set(s for _, slots in c._compiled for s in slots))
+                want = sorted({s for _, slots in c._compiled for s in slots})
                 for phrase, (_, slots) in zip(t.phrases, t._compiled):
                     if sorted(set(slots)) != want:
                         problems.append(f"{pack.name}: {phrase!r} has slots {slots}, English has {want}")
@@ -209,7 +209,7 @@ def builtin_packs():
     return list(merged.values())
 
 
-@lru_cache(maxsize=None)
+@cache
 def load(code):
     """The language with this code ("en", "es"), or English if there's no such language."""
     path = LANGUAGE_DIR / f"{code}.yaml"
@@ -226,6 +226,23 @@ def available():
 
 def supported(code):
     return bool(code) and (LANGUAGE_DIR / f"{code}.yaml").is_file()
+
+
+def wanted(own="", suite=None, remembered=""):
+    """The language to listen and answer in: the one chosen in Voice's Settings, else Limitless
+    Sound's (or the one it last sent, while the hub isn't running), else English. A language
+    Voice doesn't have yet means English: "es-MX" is Spanish, "fr" is English for now."""
+    for code in (own, suite, remembered):
+        if code:
+            code = str(code).lower().replace("_", "-").split("-")[0]
+            return code if supported(code) else "en"
+    return "en"
+
+
+def model_for(language, chosen=""):
+    """The speech model for a language: the one chosen in Settings if it's for this language,
+    else the language's first."""
+    return chosen if chosen in language.models else language.model
 
 
 def model_language(model):

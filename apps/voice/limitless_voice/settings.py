@@ -26,6 +26,7 @@ def user_packs_dir():
 class Settings:
     mic_name: str = ""             # empty = system default
     model: str = ""                # empty = default model
+    language: str = ""             # "en", "es"; empty = the same as Limitless Sound's
     speak_feedback: bool = True    # say what happened out loud
     voice_rate: int = 190          # words per minute for spoken feedback
     start_listening: bool = True   # awake at launch (else asleep until "wake up")

@@ -12,7 +12,9 @@ With the Limitless Sound hub running:
   hears another app's announcement.
 - The suite's shared text size, high contrast and reduced motion settings
   apply to every Voice window (see look.py), and Voice tells the suite the
-  values it's using. So does its language, unless one is chosen in Voice.
+  values it's using. So does its language, unless one is chosen in Voice:
+  Voice reports the language it's listening in, so the hub reads Voice's
+  replies with a voice for it.
 - The suite talks in English: the intents and phrases other apps send are
   English, and what Voice reports is too, whatever language it listens in.
 Without the hub, none of this does anything.
@@ -111,6 +113,8 @@ class Suite:
         self._words: set[str] = set()       # the same forms as plain words, for the recognizer
         self._listening = None
         self.prefs: dict = {}               # the suite's shared settings; empty until the hub sends them
+        self.language = "en"                # the language Voice listens and answers in, for prefs.applied
+        self._look: dict = {}
         self.link = Link("voice", "Limitless Voice", __version__, actions=OWN_ACTIONS,
                          on_invoke=self.invoke, on_event=self.on_event, on_actions=self.on_actions,
                          on_prefs=self.on_prefs, on_connected=self.on_connected, dispatch=dispatch)
@@ -181,7 +185,8 @@ class Suite:
             return False, e.lang.text("Limitless Voice has no action {action}.", action=repr(action))
         self.on_change()
         self.report_state()
-        return True, e.lang.text({"sleep": "Asleep", "wake": "Listening", "toggle": "Listening" if e.awake else "Asleep",
+        return True, e.lang.text({"sleep": "Asleep", "wake": "Listening",
+                                  "toggle": "Listening" if e.awake else "Asleep",
                                   "takeGuard": "Take mode: say stop to end the take",
                                   "takeGuardOff": "All commands back on"}[action])
 
@@ -243,9 +248,12 @@ class Suite:
         self.prefs = dict(prefs)
         self.on_look()
 
-    def report_look(self, look):
-        """Tell the suite the shared settings Voice honors, with the values it's using now."""
-        self.link.state("prefs.applied", dict(look))
+    def report_look(self, look=None):
+        """Tell the suite the shared settings Voice honors, with the values it's using now: the
+        look, and the language it's listening in (English until another one's model is here)."""
+        if look is not None:
+            self._look = dict(look)
+        self.link.state("prefs.applied", {**self._look, "language": self.language})
 
     def say(self, text):
         return self.link.say(text)

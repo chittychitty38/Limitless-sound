@@ -12,12 +12,11 @@ english_name: Spanish
 models:
   vosk-model-small-es-0.42: {label: "Spanish, fast", size: "39 MB"}
 
-# Replies are read by a Spanish system voice: on a Mac the first of these that's installed, else
-# any voice for "es"; on Windows any voice whose name or language says Spanish.
+# Replies are read by a Spanish system voice (voice_out.py): on a Mac the first of these that's
+# installed, else any voice for "es"; on Windows any whose name or language says Spanish.
 voice:
-  locale: es
-  mac: [Paulina, Mónica, Juan, Jorge, Diego, Marisol, Angélica, Francisca]
-  match: [spanish, español, es-, es_]
+  mac: [Paulina, Mónica, Monica, Juan, Jorge, Diego, Marisol, Angélica, Francisca]
+  match: [spanish, español]
 
 words:
   wake: [despierta, despiértate, empieza a escuchar, empezar a escuchar, computadora despierta, ordenador despierta]
@@ -175,7 +174,28 @@ texts:
   Click into the app you want to control (Logic, Pro Tools…): Haz clic en la aplicación que quieras controlar (Logic, Pro Tools…)
   That didn't work: Eso no funcionó
   Still listening from the menu bar: Sigo escuchando desde la barra de menús
+  Go to sleep: Dejar de escuchar
+  Wake up: Empezar a escuchar
+  Still listening. Open it again from the menu bar icon.: Sigo escuchando. Vuelve a abrirlo desde el icono de la barra de menús.
+  # choosing the language, and downloading it
+  Listening in {language}: Escuchando en español
+  "{language} is downloaded once ({size}), then works without internet.": "El español se descarga una vez ({size}) y luego funciona sin internet."
+  "To listen in {language}, Limitless Voice needs to download its speech model ({size}). Until then, it keeps listening as before.": "Para escuchar en español, Limitless Voice necesita descargar su modelo de voz ({size}). Mientras tanto, sigue escuchando como antes."
+  Download {language} ({size}): Descargar español ({size})
+  Download speech model: Descargar el modelo de voz
+  "Limitless Voice needs the {label} speech model ({size}). It's downloaded once and then works without internet. Download it now?": "Para escuchar en español, Limitless Voice necesita su modelo de voz ({size}). Se descarga una vez y luego funciona sin internet. ¿Descargarlo ahora?"
+  Downloading speech model…: Descargando el modelo de voz…
+  Cancel: Cancelar
+  Download failed: No se pudo descargar
+  "Couldn't download the model: {error}\nCheck the internet connection and try again.": "No se pudo descargar el modelo: {error}\nComprueba la conexión a internet y vuelve a intentarlo."
+  # Where to add a voice: the names are the ones in Spanish on the Mac and in Windows.
+  "There's no {language} voice on this Mac, so replies are read in its own voice. To add one: System Settings › Accessibility › Spoken Content › System voice › Manage Voices.": "Este Mac no tiene una voz en español, así que las respuestas se leen con su voz normal. Para añadir una: Ajustes del Sistema › Accesibilidad › Contenido leído › Voz del sistema › Gestionar voces."
+  "There's no {language} voice on this computer, so replies are read in its own voice. To add one: Settings › Time & language › Speech › Add voices.": "Este equipo no tiene una voz en español, así que las respuestas se leen con su voz normal. Para añadir una: Configuración › Hora e idioma › Voz › Agregar voces."
+  "There's no {language} voice on this computer, so replies are read in its own voice.": "Este equipo no tiene una voz en español, así que las respuestas se leen con su voz normal."
   # what can I say
+  What you can say: Lo que puedes decir
+  Search commands: Buscar comandos
+  Commands: Comandos
   "Commands for {app}. Words in [brackets] are optional; {number} means say a number.": "Comandos para {app}. Las palabras entre [corchetes] son opcionales; {number} significa decir un número."
   always: siempre
   repeats the last command: repite el último comando
