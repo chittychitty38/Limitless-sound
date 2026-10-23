@@ -12,13 +12,15 @@ Each language gives its number words as a table (languages/<code>.yaml, "numbers
   joiners    words that join numbers, and what they may follow: English "and" after a scale
              ("one hundred and five"), Spanish "y" after tens ("treinta y dos")
   homophones words heard in place of a number, trusted only right after a word that expects one
+  articles   number words that are also the article "a" (Portuguese "um", "uma"): numbers only
+             right after a word that expects one, or inside a number ("trinta e um")
   misheard   number words that, before an ordinary word, are really another word ("go two sleep")
 """
 
 
 class Numbers:
     def __init__(self, units, tens, hundreds=None, scales=None, joiners=None, homophones=None,
-                 expects_number=(), misheard=None, misheard_unless_before=()):
+                 expects_number=(), misheard=None, misheard_unless_before=(), articles=()):
         self.units = dict(units)
         self.tens = dict(tens)
         self.hundreds = dict(hundreds or {})
@@ -28,6 +30,7 @@ class Numbers:
         self.expects = set(expects_number)
         self.misheard = dict(misheard or {})
         self.misheard_unless = set(misheard_unless_before)
+        self.articles = set(articles)
         self.words = set(self.units) | set(self.tens) | set(self.hundreds) | set(self.scales)
 
     @classmethod
@@ -132,6 +135,8 @@ class Numbers:
             # Only trust homophones ("for" -> 4) right after a word that expects a number.
             expecting = run or (bool(out) and out[-1] in self.expects)
             word = self.homophones.get(tok, tok) if expecting else tok
+            if word in self.articles and not expecting:
+                word = None   # "adicionar uma faixa": the article, not 1
             if word in self.words or (run and self._may_join(word, run[-1])):
                 run.append(word)
             else:

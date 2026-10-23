@@ -374,7 +374,7 @@ class ChoosingTheLanguage(unittest.TestCase):
         dialog = app_module.SettingsDialog(w, self.s, w.suite_language())
         items = [dialog.language.itemText(i) for i in range(dialog.language.count())]
         self.assertEqual(items, ["Same as Limitless Sound (English)", "English (40 MB download)",
-                                 "Español (39 MB download)"])
+                                 "Español (39 MB download)", "Português (31 MB download)"])
         dialog.language.setCurrentIndex(dialog.language.findData("es"))
         self.assertEqual(dialog.model.itemData(0), "vosk-model-small-es-0.42")
         self.assertEqual(dialog.language_note.text(),
