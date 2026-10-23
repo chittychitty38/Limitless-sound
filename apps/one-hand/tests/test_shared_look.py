@@ -15,7 +15,7 @@ from onehand.platform_sim import SimBackend  # noqa: E402
 from onehand.settings import Prefs, load_layouts  # noqa: E402
 
 DEFAULTS = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False, "reduceMotion": False,
-            "dwellMs": 800, "scanMs": 1200}
+            "dwellMs": 800, "scanMs": 1200, "language": "en"}
 
 
 @pytest.fixture
@@ -74,7 +74,8 @@ def test_welcome_settings_reach_window_and_badge(win):
     assert color(win, QPalette.ColorRole.Window) == "#000000"
     assert "border: 4px solid #000" in win.badge.label.styleSheet()
     assert not QApplication.isEffectEnabled(Qt.UIEffect.UI_AnimateCombo)
-    assert applied(win) == {"textScale": 1.5, "highContrast": True, "reduceMotion": True}
+    assert applied(win) == {"textScale": 1.5, "highContrast": True, "reduceMotion": True,
+                            "language": "en"}
 
 
 def test_reduced_motion_keeps_the_pressed_key_lit(win):
@@ -92,15 +93,15 @@ def test_reduced_motion_keeps_the_pressed_key_lit(win):
 
 def test_changes_apply_live_and_go_back(win):
     hub(win, "welcome")
-    assert applied(win) == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+    assert applied(win) == {"textScale": 1.0, "highContrast": False, "reduceMotion": False, "language": "en"}
     hub(win, "prefs", highContrast=True, reduceMotion=True)
     assert "background: #000" in win.styleSheet()
-    assert applied(win) == {"textScale": 1.0, "highContrast": True, "reduceMotion": True}
+    assert applied(win) == {"textScale": 1.0, "highContrast": True, "reduceMotion": True, "language": "en"}
     hub(win, "prefs")
     assert win.styleSheet() == style(1.0)
     assert QApplication.isEffectEnabled(Qt.UIEffect.UI_AnimateCombo)
     assert not any(card.steady for _, _, card in win.cards)
-    assert applied(win) == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+    assert applied(win) == {"textScale": 1.0, "highContrast": False, "reduceMotion": False, "language": "en"}
 
 
 def test_larger_text_and_the_suite_text_size_use_the_bigger(win):
