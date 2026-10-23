@@ -1,0 +1,44 @@
+# Temporary: how soon Voice acts after a word ends, and what shorter endpoint silences cost.
+name: Diagnose Voice latency
+
+on:
+  push:
+    branches: [diag/voice-latency]
+
+jobs:
+  latency:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [default, r2-0.3, r2-0.25-r3-0.6]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MODEL: vosk-model-small-en-us-0.15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install, fetch the model and the recordings, tune the endpoint
+        shell: bash
+        run: |
+          pip install -q pytest psutil numpy pyyaml platformdirs vosk==0.3.44 soundfile
+          mkdir -p models
+          curl -sSfL -o model.zip "https://alphacephei.com/vosk/models/${MODEL}.zip"
+          python -m zipfile -e model.zip models/
+          python stress/tools/get_real_speech.py real-speech > /dev/null
+          cp -r "models/$MODEL" tuned
+          case "${{ matrix.variant }}" in
+            r2-0.3) sed -i 's/rule2.min-trailing-silence=.*/rule2.min-trailing-silence=0.3/' tuned/conf/model.conf ;;
+            r2-0.25-r3-0.6) sed -i -e 's/rule2.min-trailing-silence=.*/rule2.min-trailing-silence=0.25/' \
+                                   -e 's/rule3.min-trailing-silence=.*/rule3.min-trailing-silence=0.6/' tuned/conf/model.conf ;;
+          esac
+          cat tuned/conf/model.conf
+      - name: Real people
+        shell: bash
+        run: |
+          VOSK_MODEL="$PWD/tuned" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
+            LIBRISPEECH_DIR="$PWD/real-speech/librispeech" \
+            python -m pytest stress/test_voice_real_speech.py -v -s 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { next } { print; fflush() }' || true
