@@ -23,7 +23,7 @@ from collections import deque
 from fnmatch import fnmatchcase
 from typing import Callable, Optional
 
-from . import catalog, routes as routes_mod, setup as setup_mod
+from . import catalog, languages, routes as routes_mod, setup as setup_mod
 
 PROTOCOL = 1
 TOOL_ID = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
@@ -38,6 +38,7 @@ DEFAULT_PREFS = {
     "reduceMotion": False,
     "dwellMs": 800,         # dwell time for eye, head and pointer selection
     "scanMs": 1200,         # switch scanning speed
+    "language": languages.DEFAULT,  # one of languages.LANGUAGES
 }
 
 
@@ -93,6 +94,9 @@ class Bus:
         self.clock = clock
         self.settings = settings
         settings.setdefault("routes", [dict(r) for r in routes_mod.DEFAULT_ROUTES])
+        if "language" not in settings.get("prefs", {}):
+            # First start: the computer's own language, when the suite has it.
+            settings.setdefault("prefs", {})["language"] = languages.system_language()
         settings["prefs"] = {**DEFAULT_PREFS, **settings.get("prefs", {})}
         settings.setdefault("intentOrder", list(catalog.DEFAULT_INTENT_ORDER))
         self.tools: dict[str, Conn] = {}
@@ -135,7 +139,7 @@ class Bus:
             elif op == "state":
                 self._state(conn, msg)
             elif op == "say":
-                self.say(_clean_text(msg.get("text")), source=conn.tool or "hub")
+                self.say(_clean_text(msg.get("text")), source=conn.tool or "hub", lang=msg.get("lang"))
             elif op == "result":
                 self._result(msg)
             elif op == "actions":
@@ -377,7 +381,7 @@ class Bus:
 
     def _hub_action(self, act: str, args: dict, source: str) -> dict:
         if act == "say":
-            self.say(_clean_text(args.get("text")), source=source)
+            self.say(_clean_text(args.get("text")), source=source, lang=args.get("lang"))
             return {"ok": True, "message": "Said it"}
         if act == "status":
             names = [c.name for c in self.tools.values()]
@@ -459,11 +463,22 @@ class Bus:
 
     # ---------------------------------------------------------------- speech, prefs, settings
 
-    def say(self, text: str, source: str = "hub") -> None:
+    def say(self, text: str, source: str = "hub", lang=None) -> None:
         if not text or not self.settings["prefs"].get("speak", True):
             return
         if self.speaker is not None:
-            self.speaker.say(text)
+            self.speaker.say(text, lang=self.language_of(source, lang))
+
+    def language_of(self, source: str, lang=None) -> str:
+        """The language text is in: the one it names, else the one its app reported
+        following in prefs.applied, else English. So Voice answering in Spanish is read by a
+        Spanish voice while an app still in English keeps an English one."""
+        if languages.tag(lang):
+            return languages.tag(lang)
+        applied = self.states.get(f"{source}.prefs.applied")
+        if isinstance(applied, dict) and languages.tag(applied.get("language")):
+            return languages.tag(applied["language"])
+        return languages.DEFAULT
 
     def set_prefs(self, changes: dict) -> dict:
         with self.lock:
@@ -474,6 +489,9 @@ class Bus:
                 default = DEFAULT_PREFS[k]
                 if isinstance(default, bool):
                     prefs[k] = bool(v)
+                elif k == "language":
+                    if languages.tag(v):
+                        prefs[k] = languages.tag(v)
                 elif isinstance(default, (int, float)):
                     try:
                         num = float(v)
@@ -486,6 +504,10 @@ class Bus:
             for conn in self.tools.values():
                 conn.send({"op": "prefs", "prefs": prefs})
             return prefs
+
+    def has_voice(self, lang: str) -> bool:
+        check = getattr(self.speaker, "has_voice", None)
+        return True if check is None else bool(check(lang))
 
     def set_routes(self, new_routes: list) -> list[str]:
         with self.lock:
@@ -527,6 +549,8 @@ class Bus:
         self.log.append({"seq": next(self.log_seq), "time": time.time(), "text": text, "kind": kind})
 
     def snapshot(self, since: int = 0) -> dict:
+        # Asked outside the lock: the first look for a language's voices runs a command.
+        voice = self.has_voice(self.settings["prefs"]["language"])
         with self.lock:
             tools = []
             for tool, spec in catalog.TOOLS.items():
@@ -548,6 +572,8 @@ class Bus:
                 "setupDone": bool(self.settings.get("setupDone")),
                 "setupInputs": self.settings.get("setupInputs", []),
                 "setupChoices": setup_mod.choices(),
+                "languages": languages.LANGUAGES,
+                "languageVoice": voice,
                 "autostart": bool(self.settings.get("autostart")),
                 "log": [e for e in self.log if e["seq"] > since],
             }

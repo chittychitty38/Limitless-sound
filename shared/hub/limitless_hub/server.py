@@ -313,7 +313,8 @@ class Hub:
                     args = body.get("args") if isinstance(body.get("args"), dict) else {}
                     return self._json(hub.invoke_wait(str(body.get("action") or ""), args, "page"))
                 if p == "/api/prefs":
-                    return self._json({"prefs": bus.set_prefs(body.get("prefs") or {})})
+                    prefs = bus.set_prefs(body.get("prefs") or {})
+                    return self._json({"prefs": prefs, "languageVoice": bus.has_voice(prefs["language"])})
                 if p == "/api/routes":
                     problems = bus.set_routes(body.get("routes"))
                     return self._json({"ok": not problems, "problems": problems}, 200 if not problems else 400)
