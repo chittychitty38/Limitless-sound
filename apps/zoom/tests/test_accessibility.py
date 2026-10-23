@@ -144,7 +144,10 @@ def zoom(request, qapp, tmp_path, monkeypatch):
     s["speak"] = False
     app = ZoomApp(s, PermBackend(), use_keys=False, use_voice=False, use_tray=False)
     app.start()
-    QTest.qWait(400)   # setup opens a moment after the panel
+    for _ in range(150):   # setup opens a moment after the panel, later on a busy runner
+        QTest.qWait(20)
+        if app.setup_window is not None:
+            break
     assert app.setup_window is not None
     yield app
     for w in (app.setup_window, app.panel, app.toast, app.badge):

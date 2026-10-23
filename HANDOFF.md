@@ -183,6 +183,10 @@ app, or open an issue.
       while the pointer rests.
 - [ ] Outside a DAW, zoom in/out drives macOS screen zoom (turn on Accessibility → Zoom first if asked).
 - [ ] Hold the switch key: one action per press.
+- [ ] With Limitless Sound in Spanish: if Voice hasn't downloaded Spanish, Zoom says it's downloading
+      it (39 MB) and keeps listening in English meanwhile, then shows «Comandos de voz en español».
+      Say «acercar», «alejar», «más altas», «ajustar» and «otra vez» into a real mic, and talk or sing
+      in Spanish for a few minutes near it: nothing should zoom. Setup lists every Spanish phrase.
 
 #### Limitless Color (any screen)
 - [ ] Turning screen colors on asks for **Screen Recording**; after allowing it (and toggling off

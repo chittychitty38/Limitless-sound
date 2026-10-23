@@ -18,9 +18,9 @@ on:
         description: "How long each soak runs, in seconds"
         default: "600"
       only:
-        description: "Run everything, only the ubuntu jobs that hear real people (Voice in each language, and Zoom), or only Voice in Spanish"
+        description: "Run everything, only the ubuntu jobs that hear real people (Voice and Zoom in each language), only the Spanish one (Voice and Zoom in Spanish), or only Zoom in Spanish"
         type: choice
-        options: [everything, voice-real-people, voice-spanish]
+        options: [everything, voice-real-people, voice-spanish, zoom-spanish]
         default: everything
 
 # A newer push to the same pull request replaces the run still going for the older one.
@@ -49,6 +49,8 @@ jobs:
       zoom: ${{ steps.diff.outputs.zoom }}
       real_people: ${{ steps.diff.outputs.real_people }}
       spanish: ${{ steps.diff.outputs.spanish }}
+      spanish_voice: ${{ steps.diff.outputs.spanish_voice }}
+      spanish_zoom: ${{ steps.diff.outputs.spanish_zoom }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,14 +59,18 @@ jobs:
         shell: bash
         run: |
           only="${{ github.event.inputs.only }}"
-          if [ "$only" = "voice-real-people" ] || [ "$only" = "voice-spanish" ]; then
+          if [ "$only" = "voice-real-people" ] || [ "$only" = "voice-spanish" ] || [ "$only" = "zoom-spanish" ]; then
             for job in engines voice gazestage color zoom; do echo "$job=false" >> "$GITHUB_OUTPUT"; done
             [ "$only" = "voice-real-people" ] && echo "real_people=true" >> "$GITHUB_OUTPUT" || echo "real_people=false" >> "$GITHUB_OUTPUT"
+            [ "$only" = "zoom-spanish" ] && echo "spanish_voice=false" >> "$GITHUB_OUTPUT" || echo "spanish_voice=true" >> "$GITHUB_OUTPUT"
+            echo "spanish_zoom=true" >> "$GITHUB_OUTPUT"
             echo "spanish=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            for job in engines voice gazestage color zoom real_people spanish; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
+            for job in engines voice gazestage color zoom real_people spanish spanish_voice spanish_zoom; do
+              echo "$job=true" >> "$GITHUB_OUTPUT"
+            done
             exit 0
           fi
           changed="$(git diff --name-only HEAD^1 HEAD | grep -v '\.md$' || true)"
@@ -72,7 +78,7 @@ jobs:
           everything='^(stress/conftest\.py|\.github/workflows/stress\.yml)'
           # The speech benchmarks need a speech model, which only the speech jobs fetch: the
           # engine jobs would skip them anyway.
-          speech='^stress/(test_voice_real_speech\.py|test_voice_language\.py|test_zoom_real_speech\.py|test_zoom_noise\.py|test_command_words\.py|tools/)'
+          speech='^stress/(test_voice_real_speech\.py|test_voice_language\.py|test_zoom_real_speech\.py|test_zoom_language\.py|test_zoom_noise\.py|test_command_words\.py|tools/)'
           declare -A own=(
             [engines]="^(apps/|shared/|stress/)"
             [voice]="^(apps/voice/|stress/(test_voice_|test_command_words|tools/))"
@@ -87,13 +93,17 @@ jobs:
             if grep -qE "$everything" <<< "$changed" || [ -n "$mine" ]; then run[$job]=true; else run[$job]=false; fi
             echo "$job=${run[$job]}" >> "$GITHUB_OUTPUT"
           done
-          # Real people: the English job hears Voice's and Zoom's words, the Spanish one only Voice's.
+          # Real people: the English job and the Spanish one each hear Voice's and Zoom's words.
+          # The Spanish one hears only the app that changed.
           if [ "${run[voice]}" = true ] || [ "${run[zoom]}" = true ]; then
             echo "real_people=true" >> "$GITHUB_OUTPUT"
+            echo "spanish=true" >> "$GITHUB_OUTPUT"
           else
             echo "real_people=false" >> "$GITHUB_OUTPUT"
+            echo "spanish=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "spanish=${run[voice]}" >> "$GITHUB_OUTPUT"
+          echo "spanish_voice=${run[voice]}" >> "$GITHUB_OUTPUT"
+          echo "spanish_zoom=${run[zoom]}" >> "$GITHUB_OUTPUT"
 
   engines:
     name: Engines and hub (${{ matrix.os }})
@@ -238,15 +248,16 @@ jobs:
           VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
             LIBRISPEECH_DIR="$PWD/real-speech/librispeech" COMMAND_WORDS_DIR="$PWD/command-words" \
             python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
-              stress/test_zoom_real_speech.py stress/test_command_words.py -v -s --durations=6 2>&1 \
+              stress/test_zoom_language.py stress/test_zoom_real_speech.py stress/test_command_words.py \
+              -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
-  # Voice in Spanish hearing real people: the Multilingual Spoken Words Corpus's Spanish clips of
-  # its command words, and an hour of FLEURS (Latin American Spanish read aloud) for how often
-  # ordinary talk fires a command. Both CC BY 4.0, fetched once and cached, never committed.
-  # Voice only: Zoom listens in English.
+  # Voice and Zoom in Spanish hearing real people: the Multilingual Spoken Words Corpus's Spanish
+  # clips of their command words, and an hour of FLEURS (Latin American Spanish read aloud) for
+  # how often ordinary talk fires a command. Both CC BY 4.0, fetched once and cached, never
+  # committed. On a pull request, only the app that changed.
   voice-real-speech-es:
-    name: Voice in Spanish vs real people (ubuntu-latest)
+    name: Voice and Zoom in Spanish vs real people (ubuntu-latest)
     needs: changes
     if: needs.changes.outputs.spanish == 'true'
     runs-on: ubuntu-latest
@@ -269,10 +280,17 @@ jobs:
           path: fleurs-es
           key: fleurs-es-${{ hashFiles('stress/tools/get_fleurs.py') }}
       - id: words
+        if: needs.changes.outputs.spanish_voice == 'true'
         uses: actions/cache/restore@v4
         with:
           path: command-words-es
           key: command-words-es-${{ hashFiles('stress/tools/get_command_words.py') }}
+      - id: zoom_words
+        if: needs.changes.outputs.spanish_zoom == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: zoom-words-es
+          key: zoom-words-es-${{ hashFiles('stress/tools/get_command_words.py') }}
       - name: Install, fetch the Spanish speech model and the recordings
         shell: bash
         run: |
@@ -288,25 +306,45 @@ jobs:
           if [ "${{ steps.talk.outputs.cache-hit }}" != "true" ]; then
             python stress/tools/get_fleurs.py fleurs-es --lang es_419
           fi
-          if [ "${{ steps.words.outputs.cache-hit }}" != "true" ]; then
+          if [ "${{ needs.changes.outputs.spanish_voice }}" = "true" ] && [ "${{ steps.words.outputs.cache-hit }}" != "true" ]; then
             python stress/tools/get_command_words.py command-words-es --lang es
+          fi
+          if [ "${{ needs.changes.outputs.spanish_zoom }}" = "true" ]; then
+            if [ "${{ steps.zoom_words.outputs.cache-hit }}" != "true" ]; then
+              python stress/tools/get_command_words.py zoom-words-es --lang es --zoom
+            fi
+            # Every Spanish phrase Zoom listens for, in a synthetic voice, to say over music
+            sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
+            python stress/tools/make_speech.py "$RUNNER_TEMP/speech-es" --zoom es
           fi
       - if: steps.talk.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: fleurs-es
           key: ${{ steps.talk.outputs.cache-primary-key }}
-      - if: steps.words.outputs.cache-hit != 'true'
+      - if: needs.changes.outputs.spanish_voice == 'true' && steps.words.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: command-words-es
           key: ${{ steps.words.outputs.cache-primary-key }}
+      - if: needs.changes.outputs.spanish_zoom == 'true' && steps.zoom_words.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: zoom-words-es
+          key: ${{ steps.zoom_words.outputs.cache-primary-key }}
       - shell: bash
         run: |
-          VOICE_LANGUAGE=es VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-es" \
-            COMMAND_WORDS_DIR="$PWD/command-words-es" \
-            python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
-              stress/test_command_words.py -v -s --durations=6 2>&1 \
+          tests=""
+          if [ "${{ needs.changes.outputs.spanish_voice }}" = "true" ]; then
+            tests="stress/test_voice_language.py stress/test_voice_real_speech.py stress/test_command_words.py"
+          fi
+          if [ "${{ needs.changes.outputs.spanish_zoom }}" = "true" ]; then
+            tests="$tests stress/test_zoom_language.py stress/test_zoom_real_speech.py stress/test_zoom_noise.py"
+          fi
+          VOICE_LANGUAGE=es ZOOM_LANGUAGE=es VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-es" \
+            COMMAND_WORDS_DIR="$PWD/command-words-es" ZOOM_WORDS_DIR="$PWD/zoom-words-es" \
+            TTS_WAV_DIR="$RUNNER_TEMP/speech-es" \
+            python -m pytest $tests -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   gazestage:

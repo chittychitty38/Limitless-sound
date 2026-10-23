@@ -1,9 +1,13 @@
 """Offline voice commands with Vosk. Works with any microphone the OS can see,
 no internet, no account. Only the zoom phrases are listened for, which makes a
-small model accurate even through a laptop mic."""
+small model accurate even through a laptop mic. In English or Spanish (LANGUAGES):
+each has its own speech model and its own phrases (actions.py)."""
 
 import json
 import queue
+import re
+import shutil
+import tempfile
 import threading
 import urllib.request
 import zipfile
@@ -11,11 +15,10 @@ from array import array
 from collections import deque
 from pathlib import Path
 
-from .actions import VOICE_PHRASES
+from . import common_words
+from .actions import SPANISH_PHRASES, VOICE_PHRASES
 from .words import t
 
-MODEL_NAME = "vosk-model-small-en-us-0.15"
-MODEL_URL = f"https://alphacephei.com/vosk/models/{MODEL_NAME}.zip"
 WAKE_ACTIONS = {"wake"}
 
 # Silence isn't decoded. The recognizer was nearly all the CPU Zoom used while waiting:
@@ -33,19 +36,129 @@ PRE_ROLL = 1.0        # seconds from before the first sound that go to the recog
 HANG_ON = 1.5         # seconds after the last sound that still go to it: the pause that ends a
                       # command (the model waits 0.5 to 1 s for it), or the next command
 RETRY_FIRST, RETRY_MOST = 3, 30   # seconds between tries while the microphone can't be opened
-
-
-# Words people put around a command ("zoom in please", "uh, fit"). The recognizer knows them,
-# so they never count as other words around a command, and they're ignored.
-FILLERS = ("please", "thanks", "okay", "um", "uh")
 RUN_ON = 0.1   # seconds: a command closer than this to other words was said inside a sentence
+MODEL_URL = "https://alphacephei.com/vosk/models/{name}.zip"
 
 
-def runs_on(words, gap=RUN_ON):
+class Language:
+    """What Zoom listens for in one language, and the speech model that hears it.
+
+    phrases  spoken phrase -> action
+    fillers  words people put around a command ("zoom in please", "uh, fit"). The recognizer
+             knows them, so they never count as other words around a command, and they're
+             ignored. A filler can be two words ("por favor"), ignored only where they come
+             together: "por" alone is another word.
+    others   words listened for only so that the recognizer can write them down instead of the
+             command they sound like; said alone, they do nothing.
+    confidence_offset  added to the voice_confidence setting, which is English's: how much less
+             sure (or more) the recognizer is of what it hears right in this language."""
+
+    def __init__(self, code, name, english_name, model, size, phrases, fillers=(), others=(),
+                 confidence_offset=0.0):
+        self.code, self.name, self.english_name = code, name, english_name   # "es", "Español", "Spanish"
+        self.model, self.size = model, size
+        self.phrases = dict(phrases)
+        self.fillers = tuple(fillers)
+        self.others = tuple(others)
+        self.confidence_offset = confidence_offset
+        self.url = MODEL_URL.format(name=model)
+
+    def __repr__(self):
+        return f"<Language {self.code}>"
+
+    def adding(self, phrases=None, others=()):
+        """The same language with more phrases or other words listened for (the stress tests try
+        some)."""
+        return Language(self.code, self.name, self.english_name, self.model, self.size,
+                        {**self.phrases, **(phrases or {})}, self.fillers, (*self.others, *others),
+                        self.confidence_offset)
+
+    def threshold(self, setting):
+        """The confidence a command needs in this language, for the voice_confidence setting."""
+        return max(0.0, round(setting + self.confidence_offset, 3))
+
+    def grammar(self):
+        """The recognizer's vocabulary: Zoom's phrases, the fillers, the other words, [unk]."""
+        return json.dumps(sorted(self.phrases) + list(self.fillers) + list(self.others) + ["[unk]"],
+                          ensure_ascii=False)
+
+    def words(self):
+        """Every word Zoom listens for in this language."""
+        return {w for p in (*self.phrases, *self.fillers, *self.others) for w in p.split()}
+
+    def match(self, text, words, min_conf):
+        """Map a recognised utterance to an action, or None.
+        words is Vosk's per-word result list with 'conf' scores and times."""
+        # "[unk]" is a breath, a click or a word that isn't a command; one before
+        # or after a command shouldn't stop it working. But a command said inside a
+        # sentence isn't one: two unknown words together, or other words running
+        # straight on from it ("...had to see again"). In an hour of people reading
+        # aloud, that was nearly everything that zoomed (stress/test_zoom_real_speech.py).
+        tokens = without(text.split(), self.fillers)
+        if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])) or runs_on(words, fillers=self.fillers):
+            return None
+        action = self.phrases.get(" ".join(w for w in tokens if w != "[unk]"))
+        if action is None or self.confidence(words) < min_conf:
+            return None
+        return action
+
+    def confidence(self, words):
+        """How sure the recognizer was of the words in Vosk's per-word result, fillers and [unk]
+        left out: the mean of their 'conf' scores (1 when there are none)."""
+        words = [w for w in without(words or [], self.fillers) if w.get("word") != "[unk]"]
+        return sum(w.get("conf", 1.0) for w in words) / len(words) if words else 1.0
+
+    def first(self, action):
+        """The first phrase that does an action: what to suggest saying for it."""
+        return next((p for p, a in self.phrases.items() if a == action), None)
+
+    def by_action(self):
+        """{action: [its phrases]}, in the order they're written."""
+        out = {}
+        for phrase, action in self.phrases.items():
+            out.setdefault(action, []).append(phrase)
+        return out
+
+
+ENGLISH = Language("en", "English", "English", "vosk-model-small-en-us-0.15", "40 MB", VOICE_PHRASES,
+                   fillers=("please", "thanks", "okay", "um", "uh"))
+# vosk-model-small-es-0.42, Apache 2.0 (Alpha Cephei): the same model Limitless Voice uses for
+# Spanish, so a computer that has it for Voice already has it for Zoom (app.py looks there).
+# It also listens for the words said most in Spanish (common_words.py): without them, the model
+# writes down ordinary talk as the nearest command. With them to choose from, it's less sure of
+# the commands it hears right (1 in 20 under 0.64, against 0.92 without), so a command needs 0.15
+# less: 0.40 with the default setting. On real people that heard 90% to 91% of the commands
+# rather than 88%, and an hour of reading aloud zoomed once or twice (stress/test_zoom_language.py).
+SPANISH = Language("es", "Español", "Spanish", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
+                   fillers=("por favor", "gracias"), others=common_words.SPANISH, confidence_offset=-0.15)
+LANGUAGES = {lang.code: lang for lang in (ENGLISH, SPANISH)}
+
+# English, as Zoom always listened (the stress tests use these).
+MODEL_NAME = ENGLISH.model
+FILLERS = ENGLISH.fillers
+
+
+def without(items, fillers):
+    """Words (or Vosk's per-word results) without the fillers among them: a filler of two words
+    only where the two come together."""
+    fillers = sorted((f.split() for f in fillers), key=len, reverse=True)
+    out, i = [], 0
+    while i < len(items):
+        n = next((len(f) for f in fillers if [x.get("word") if isinstance(x, dict) else x
+                                              for x in items[i:i + len(f)]] == f), 0)
+        if n:
+            i += n
+        else:
+            out.append(items[i])
+            i += 1
+    return out
+
+
+def runs_on(words, gap=RUN_ON, fillers=ENGLISH.fillers):
     """Whether the command in Vosk's per-word result runs straight on from other words, with less
     than gap seconds between: said inside a sentence, not on its own. Vosk times every word,
     unknown ones too."""
-    words = [w for w in (words or []) if w.get("word") not in FILLERS]
+    words = without(words or [], fillers)
     known = [i for i, w in enumerate(words) if w.get("word") != "[unk]"]
     if not known or "start" not in words[known[0]]:
         return False
@@ -56,57 +169,62 @@ def runs_on(words, gap=RUN_ON):
                 or after and after[0]["start"] - last["end"] < gap)
 
 
-def match_phrase(text, words, min_conf):
-    """Map a recognised utterance to an action, or None.
-    words is Vosk's per-word result list with 'conf' scores and times."""
-    # "[unk]" is a breath, a click or a word that isn't a command; one before
-    # or after a command shouldn't stop it working. But a command said inside a
-    # sentence isn't one: two unknown words together, or other words running
-    # straight on from it ("...had to see again"). In an hour of people reading
-    # aloud, that was nearly everything that zoomed (stress/test_zoom_real_speech.py).
-    tokens = [t for t in text.split() if t not in FILLERS]
-    if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])) or runs_on(words):
-        return None
-    text = " ".join(w for w in tokens if w != "[unk]")
-    action = VOICE_PHRASES.get(text)
-    if action is None:
-        return None
-    words = [w for w in (words or []) if w.get("word") not in ("[unk]", *FILLERS)]
-    if words:
-        conf = sum(w.get("conf", 1.0) for w in words) / len(words)
-        if conf < min_conf:
-            return None
-    return action
+def match_phrase(text, words, min_conf, language=ENGLISH):
+    """Map a recognised utterance to an action, or None (see Language.match)."""
+    return language.match(text, words, min_conf)
 
 
-def grammar():
-    vocab = sorted(VOICE_PHRASES)
-    return json.dumps(vocab + list(FILLERS) + ["[unk]"])
+def grammar(language=ENGLISH):
+    return language.grammar()
 
 
-def find_model(configured, search_dirs):
-    candidates = [Path(configured)] if configured else []
-    candidates += [Path(d) / MODEL_NAME for d in search_dirs]
+def model_language(path):
+    """The language a Vosk model folder is for, from its name ("vosk-model-small-es-0.42" is
+    Spanish); None when the name doesn't say."""
+    m = re.match(r"vosk-model-(?:small-)?([a-z]{2})(?:[-_]|$)", Path(path).name.lower())
+    return m.group(1) if m else None
+
+
+def is_model(folder):
+    return (Path(folder) / "am").is_dir() or (Path(folder) / "conf").is_dir()
+
+
+def find_model(configured, search_dirs, language=ENGLISH):
+    """The language's speech model: the folder chosen in settings when it's for this language
+    (a folder whose name doesn't say is taken to be English, as it always was), else the
+    language's model in the first of search_dirs that has it."""
+    candidates = []
+    if configured and (model_language(configured) or "en") == language.code:
+        candidates.append(Path(configured))
+    candidates += [Path(d) / language.model for d in search_dirs]
     for c in candidates:
-        if (c / "am").is_dir() or (c / "conf").is_dir():
+        if is_model(c):
             return c
     return None
 
 
-def download_model(dest_dir, progress=None):
+def download_model(dest_dir, progress=None, language=ENGLISH, timeout=30):
+    """Download the language's model and unpack it into dest_dir. It's unpacked beside its final
+    place and moved there once whole, so a download cut off half way is never taken for a model."""
     dest_dir = Path(dest_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
-    zpath = dest_dir / f"{MODEL_NAME}.zip"
-
-    def hook(blocks, bsize, total):
-        if progress and total > 0:
-            progress(min(1.0, blocks * bsize / total))
-
-    urllib.request.urlretrieve(MODEL_URL, zpath, hook)
-    with zipfile.ZipFile(zpath) as z:
-        z.extractall(dest_dir)
-    zpath.unlink()
-    return dest_dir / MODEL_NAME
+    with tempfile.TemporaryDirectory(dir=dest_dir, prefix=".download-") as tmp:
+        zpath = Path(tmp) / f"{language.model}.zip"
+        with urllib.request.urlopen(language.url, timeout=timeout) as resp, open(zpath, "wb") as out:
+            total = int(resp.headers.get("Content-Length") or 0)
+            done = 0
+            while chunk := resp.read(1 << 16):
+                out.write(chunk)
+                done += len(chunk)
+                if progress and total:
+                    progress(min(1.0, done / total))
+        with zipfile.ZipFile(zpath) as z:
+            z.extractall(tmp)
+        dest = dest_dir / language.model
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.move(str(Path(tmp) / language.model), str(dest))
+    return dest
 
 
 def list_microphones():
@@ -204,9 +322,10 @@ class VoiceListener(threading.Thread):
     gets every phrase understood, and on_level(0-1) the microphone loudness."""
 
     def __init__(self, model_path, on_action, on_status, device=None, min_conf=0.55,
-                 on_heard=None, on_level=None):
+                 on_heard=None, on_level=None, language=ENGLISH):
         super().__init__(daemon=True)
         self.model_path, self.device, self.min_conf = model_path, device, min_conf
+        self.language = language   # the phrases listened for, in the model's language
         self.on_action, self.on_status = on_action, on_status
         self.on_heard = on_heard or (lambda text: None)
         self.on_level = on_level or (lambda value: None)
@@ -261,7 +380,7 @@ class VoiceListener(threading.Thread):
                                dtype="int16", channels=channels, callback=callback) as stream:
             # Made once the microphone is open, and kept: building one takes a while.
             if self._recognizer is None or self._recognizer[0] != rate:
-                rec = vosk.KaldiRecognizer(model, rate, grammar())
+                rec = vosk.KaldiRecognizer(model, rate, self.language.grammar())
                 rec.SetWords(True)
                 self._recognizer = (rate, rec)
             hearing = Hearing(self._recognizer[1], self._result)
@@ -284,7 +403,7 @@ class VoiceListener(threading.Thread):
 
     def _result(self, res):
         text = " ".join(res.get("text", "").replace("[unk]", "").split())
-        action = match_phrase(res.get("text", ""), res.get("result"), self.min_conf)
+        action = self.language.match(res.get("text", ""), res.get("result"), self.language.threshold(self.min_conf))
         if text:
             self.on_heard(text if action else t("{heard} (not sure, ignored)", heard=text))
         if action is None:
@@ -298,10 +417,11 @@ class VoiceListener(threading.Thread):
         self.on_action(action)
 
 
-def recognize_file(model_path, wav_path, min_conf=0.55, model=None):
+def recognize_file(model_path, wav_path, min_conf=0.55, model=None, language=ENGLISH):
     """Run a 16-bit WAV recording through the same recogniser the way the microphone's audio
     goes, in 100 ms blocks with silence skipped. Returns the text and action of the last
-    thing heard. Used to test voice in CI. Pass a loaded vosk.Model to skip loading it."""
+    thing heard. Used to test voice in CI. Pass a loaded vosk.Model to skip loading it, and
+    the Language the model is for."""
     import wave
 
     import vosk
@@ -310,7 +430,7 @@ def recognize_file(model_path, wav_path, min_conf=0.55, model=None):
     heard = []
     with wave.open(str(wav_path), "rb") as w:
         rate, channels = w.getframerate(), w.getnchannels()
-        rec = vosk.KaldiRecognizer(model or vosk.Model(str(model_path)), rate, grammar())
+        rec = vosk.KaldiRecognizer(model or vosk.Model(str(model_path)), rate, language.grammar())
         rec.SetWords(True)
         hearing = Hearing(rec, heard.append)
         while True:
@@ -320,4 +440,4 @@ def recognize_file(model_path, wav_path, min_conf=0.55, model=None):
             hearing.hear(pick_channel(data, channels))
         hearing.finish()
     res = next((r for r in reversed(heard) if r.get("text")), {})
-    return res.get("text", ""), match_phrase(res.get("text", ""), res.get("result"), min_conf)
+    return res.get("text", ""), language.match(res.get("text", ""), res.get("result"), language.threshold(min_conf))
