@@ -79,13 +79,13 @@ jobs:
       - run: python -m pytest stress -v -s --durations=10
 
   voice-recognizer:
-    name: Voice vs noise and music (${{ matrix.os }})
+    name: Voice and Zoom vs noise and music (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-latest]
     needs: changes
-    if: needs.changes.outputs.voice == 'true'
+    if: needs.changes.outputs.voice == 'true' || needs.changes.outputs.zoom == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
@@ -118,9 +118,12 @@ jobs:
           python stress/tools/make_speech.py "$RUNNER_TEMP/speech"
       - if: steps.has.outputs.voice == 'yes'
         shell: bash
+        # The recognizer warns about every command word the small model doesn't know each time
+        # it's built; each warning is shown once.
         run: |
           VOSK_MODEL="$PWD/models/$MODEL" TTS_WAV_DIR="$RUNNER_TEMP/speech" \
-            python -m pytest stress/test_voice_stress.py -v -s
+            python -m pytest stress/test_voice_stress.py stress/test_zoom_noise.py -v -s 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   # Voice and Zoom hearing real people instead of a synthetic voice: Google Speech Commands
   # (single words, thousands of speakers) for how often a command is heard, and LibriSpeech

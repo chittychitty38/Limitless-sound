@@ -108,6 +108,11 @@ def test_match_phrase_confidence():
     assert match_phrase("[unk]", [], 0.5) is None
     noisy = [{"word": "[unk]", "conf": 0.2}, {"word": "again", "conf": 0.9}]
     assert match_phrase("[unk] again", noisy, 0.5) == "again"
+    assert match_phrase("[unk] fit [unk]", [], 0.5) == "fit"           # a breath, a click
+    # In a sentence: "...had evidently been propped up anew against the..."
+    assert match_phrase("[unk] [unk] again [unk]", [], 0.5) is None
+    assert match_phrase("[unk] wake up [unk] [unk]", [], 0.5) is None
+    assert match_phrase("zoom [unk] [unk] in", [], 0.5) is None
     assert match_phrase("", [], 0.5) is None
 
 
