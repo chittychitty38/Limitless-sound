@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.4 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.5 release. Everything below is the state of the project then.
 
 ---
 
@@ -51,14 +51,14 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.3, in the suite |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.4, in the suite |
 | Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.9 |
 | Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.4 |
 | Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.4 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.4 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.6 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.3 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.4** (the repo's Latest release) |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.5** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -139,14 +139,17 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.4 passes it
-on all three computers with nothing left to improve** (run 39900701509, on the website):
-- Every app is ready in 0.6–11 s, at Access Standard level 2, with every action answered and no
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.5 passes it
+on all three computers with nothing left to improve** (run 39903737733, on the website):
+- Every app is ready in 1–6 s, at Access Standard level 2, with every action answered and no
   timeouts.
-- Every suite check is green, including Limitless Sound's own page opening (S4, #86).
-- Every app is at or under 1.1% of the CPU sitting idle: Control 1.1% on the Intel Mac, down
-  from 2.8% in 0.2.2; GazeStage 0.3–0.7%.
-- The installer takes 7 s on Apple silicon, 14 s on Intel and 63 s on Windows.
+- Every suite check is green, including two new ones:
+  - Limitless Sound's own page opens, with its Spanish words (S4, #86);
+  - the suite's language can be set to Español and back (S5, #88).
+- Every app is under 3% of the CPU sitting idle; all but one are at or under 0.9%. Zoom read
+  2.6% on the Intel Mac in this run against 0.4% in 0.2.4's, the same code; see the Spotlight
+  gotcha below. Control, at 2.8% in 0.2.2, is now 0.8% or less.
+- The installer takes 11 s on Apple silicon, 17 s on Intel and 42 s on Windows.
 
 An app over the limit names its busiest processes (#62). To run it again before the default
 branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
