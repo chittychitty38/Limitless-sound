@@ -68,6 +68,8 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* Header */
 header.top { position: sticky; top: 0; z-index: 5; background: rgba(19,18,31,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+/* Taller than a fifth of the screen (large text, a phone on its side), it scrolls away with the page */
+header.top.scrolls { position: static; }
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--cream); text-decoration: none; }
 .brand img { width: 46px; height: 46px; }
@@ -112,6 +114,8 @@ nav .pill:hover { border-color: var(--lavender); }
 .meta { margin: 0 0 10px; line-height: 1.9; }
 .live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
 h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
+/* A word wider than a phone with the text made larger breaks, rather than going off the side */
+h1, h2, h3 { overflow-wrap: anywhere; }
 h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
 .lede strong { color: var(--cream); }
@@ -179,9 +183,11 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .panel li { margin-bottom: 4px; }
 
 /* Vision */
-.docs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .docs { grid-template-columns: 1fr; } }
-.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; }
+.docs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .docs { grid-template-columns: minmax(0, 1fr); } }
+/* A card never wider than the screen, at any text size: long words wrap rather than push it out */
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.doc .btn { max-width: 100%; }
 .doc h3 { font-family: var(--display); font-weight: 800; font-size: 1.8rem; line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 14px; }
 .doc p { margin: 0 0 14px; }
 .doc ul { margin: 0 0 22px; padding-left: 1.1em; }
@@ -194,14 +200,14 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 360px) { .levels { grid-template-columns: 1fr; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
-.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; }
+.proofruns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .proofruns { grid-template-columns: minmax(0, 1fr); } }
+.proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; overflow-wrap: anywhere; }
 .proofrun h3 { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 0 0 4px; }
 .subhead { font-family: var(--display); font-weight: 800; font-size: 1.35rem; margin: 36px 0 0; }
 .proofrun .label { display: block; margin-bottom: 14px; }
 .prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
-.prooflist li { display: grid; grid-template-columns: 1.6em 1fr; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.prooflist li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
 .prooflist .ok .mark { color: #7fd6a4; }
 .prooflist .bad .mark { color: var(--red); }
@@ -211,7 +217,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 
 /* Involved */
 .involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
-.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; }
+.involve li { border-top: 2px solid var(--crimson); padding-top: 16px; min-width: 0; overflow-wrap: anywhere; }
 .involve strong { display: block; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.01em; margin-bottom: 4px; }
 .involve span { color: var(--muted); }
 
@@ -394,7 +400,7 @@ footer p { margin: 0; }
     <div class="wrap">
       <p class="kicker label">La prueba, cada noche</p>
       <h2 id="proof-title">Instalado y probado en un equipo <span class="accent">nuevo</span>, cada noche.</h2>
-      <p class="section-lede">Cada noche, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. También se comprueba que el idioma de la suite se puede cambiar a español y volver al inglés. Si algo falla, aparece aquí.</p>
+      <p class="section-lede">Cada noche, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. Y la suite tiene que funcionar unida: el comando de una app llega a otra, y todas las apps siguen a la suite al español y de vuelta. Si algo falla, aparece aquí.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
         <p class="fine">Cargando los resultados de anoche&hellip;</p>
       </div>
@@ -464,6 +470,16 @@ footer p { margin: 0; }
   </div>
 </footer>
 <script>
+// La cabecera se queda arriba solo mientras ocupa menos de una quinta parte de la pantalla: con letra
+// grande, o con el móvil de lado, taparía lo que se lee, así que se va con la página.
+(() => {
+  const top = document.querySelector("header.top");
+  const fit = () => top.classList.toggle("scrolls", top.offsetHeight > innerHeight / 5);
+  new ResizeObserver(fit).observe(top);
+  addEventListener("resize", fit);
+  fit();
+})();
+
 // Each Download button goes to that app's newest release, looked up when the page opens, and the
 // suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
 (async () => {
@@ -498,6 +514,13 @@ footer p { margin: 0; }
     P1: "Lista poco después de abrirla",
     P2: "Sigue funcionando después de pulsar todas sus acciones",
     P4: "Cada acción se hizo o se rechazó con un motivo, sin quedarse sin respuesta",
+    S1: "Todas las apps se conectaron a la suite a la vez",
+    S2: "Un comando del DAW compartido (acercar) llega a una app y responde en menos de 3 segundos",
+    S3: "El hub sabe qué apps están abiertas",
+    S4: "La página de Limitless Sound se abre",
+    S5: "El idioma de la suite se puede poner en español y volver",
+    S6: "Cada app con ventanas en español sigue a la suite al español y de vuelta",
+    S7: "El portugués, una versión previa solo en Limitless Voice, deja las demás apps en inglés",
   };
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const en = (t) => `<span lang="en">${esc(t)}</span>`;
@@ -507,6 +530,14 @@ footer p { margin: 0; }
       && ["connected", "proof"].includes(x.level || "proof"));
     if (!bad) return "";
     return `${checks[bad.id] ? esc(checks[bad.id]) : en(bad.check)}: ${bad.detail ? en(bad.detail) : "falló"}`;
+  };
+  // Las comprobaciones de la suite (S1...): las apps juntas, el idioma compartido.
+  const together = (suite) => {
+    if (!suite || !suite.length) return "";
+    const items = suite.map((s) => `<li class="${s.ok ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${s.ok ? "✓" : "✕"}</span>`
+      + `<span><b>${checks[s.id] ? esc(checks[s.id]) : en(s.check)}<span class="vh">: ${s.ok ? "pasó" : "no pasó"}</span></b><span class="how">${en(s.detail)}</span></span></li>`).join("");
+    return `<p class="fine" style="margin:12px 0 6px">La suite junta: ${suite.filter((s) => s.ok).length} de ${suite.length} comprobaciones pasaron.</p>`
+      + `<ul class="prooflist">${items}</ul>`;
   };
   fetch("../proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
     .then((data) => {
@@ -529,7 +560,7 @@ footer p { margin: 0; }
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
           + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.</p>`
-          + `<ul class="prooflist">${apps}</ul></div>`;
+          + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
     .catch(() => { box.innerHTML = `<p class="fine">Todavía no se han publicado los primeros resultados nocturnos.</p>`; });
