@@ -112,6 +112,11 @@
     <fieldset>
       <legend>2. How should things look and sound?</legend>
       <div class="field">
+        <label for="setup-language">Language · <span lang="es">Idioma</span></label>
+        <select id="setup-language" aria-describedby="language-about"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option></select>
+        <p class="muted" id="language-about">Limitless Voice listens and answers in this language. Apps that don't have it yet stay in English.</p>
+      </div>
+      <div class="field">
         <label for="setup-size">Text size in every app</label>
         <select id="setup-size">
           <option value="1">Normal</option><option value="1.25">Large</option>
@@ -185,6 +190,12 @@
   <section role="tabpanel" id="p-settings" aria-labelledby="t-settings" hidden>
     <h2>For every app</h2>
     <p class="muted">Set these once. Every Limitless Sound app that supports a setting follows it.</p>
+    <div class="field">
+      <label for="pref-language">Language · <span lang="es">Idioma</span></label>
+      <select id="pref-language" aria-describedby="pref-language-about language-voice"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option></select>
+      <p class="muted" id="pref-language-about">Limitless Voice listens and answers in this language. Apps that don't have it yet stay in English.</p>
+      <p class="muted" id="language-voice" hidden></p>
+    </div>
     <div class="check"><input type="checkbox" id="pref-speak"><label for="pref-speak">Spoken feedback</label></div>
     <div class="check"><input type="checkbox" id="pref-oneVoice"><label for="pref-oneVoice">One voice: apps take turns speaking and never repeat each other</label></div>
     <div class="check"><input type="checkbox" id="pref-highContrast"><label for="pref-highContrast">High contrast</label></div>
@@ -218,6 +229,156 @@
     <button id="openLogs">Open the log folder</button>
   </section>
 </main>
+<!-- The page in Spanish: English text → Spanish. Text with no entry stays in English. -->
+<script type="application/json" id="strings-es">
+{
+"Skip to content": "Saltar al contenido",
+"Every Limitless Sound app works as one. Any input can do anything.": "Todas las apps de Limitless Sound funcionan como una sola. Cualquier forma de control puede hacerlo todo.",
+"Sections": "Secciones",
+"My apps": "Mis apps",
+"Do anything": "Haz cualquier cosa",
+"Links": "Enlaces",
+"Settings": "Ajustes",
+"Activity": "Actividad",
+"Limitless Sound has stopped. Open it again from its icon.": "Limitless Sound se ha detenido. Ábrelo de nuevo desde su icono.",
+"Let's set up Limitless Sound for you": "Vamos a preparar Limitless Sound para ti",
+"Two questions. Every app then fits the way you play, and you can change anything later.": "Dos preguntas. Así cada app se adapta a tu forma de tocar, y puedes cambiar cualquier cosa después.",
+"1. How do you like to play?": "1. ¿Cómo te gusta tocar?",
+"Pick everything that fits.": "Elige todo lo que encaje contigo.",
+"2. How should things look and sound?": "2. ¿Cómo quieres que se vea y suene?",
+"Limitless Voice listens and answers in this language. Apps that don't have it yet stay in English.": "Limitless Voice escucha y responde en este idioma. Las apps que aún no lo tienen siguen en inglés.",
+"Text size in every app": "Tamaño del texto en todas las apps",
+"Normal": "Normal",
+"Large": "Grande",
+"Larger": "Más grande",
+"Largest": "Máximo",
+"High contrast": "Alto contraste",
+"Reduce motion": "Reducir movimiento",
+"Say what happens out loud": "Decir en voz alta lo que pasa",
+"Set up my apps": "Preparar mis apps",
+"Skip for now": "Ahora no",
+"Set up again: how I play": "Volver a preparar: cómo toco",
+"Open with Limitless Sound": "Abrir con Limitless Sound",
+"Tick the apps you use. They open together, and when Limitless Sound starts.": "Marca las apps que usas. Se abren juntas, y también cuando se inicia Limitless Sound.",
+"Open my apps now": "Abrir mis apps ahora",
+"Start Limitless Sound when I sign in to this computer": "Iniciar Limitless Sound al iniciar sesión en este equipo",
+"Limitless Sound runs quietly in the background so your apps can work together. Closing this page keeps it running.": "Limitless Sound funciona en segundo plano para que tus apps trabajen juntas. Si cierras esta página, sigue funcionando.",
+"Quit Limitless Sound": "Salir de Limitless Sound",
+"Try any action from any app. Greyed-out ones belong to apps that are closed.": "Prueba cualquier acción de cualquier app. Las que aparecen en gris son de apps cerradas.",
+"Find an action": "Buscar una acción",
+"Use it from a Stream Deck, Shortcuts or a script": "Úsalo desde un Stream Deck, Atajos o un script",
+"Any action has a web address on this computer. Paste it into a Stream Deck \"Website\" button (set to open in the background), a Shortcuts \"Get contents of URL\" step, or AutoHotkey.": "Cada acción tiene una dirección web en este equipo. Pégala en un botón «Sitio web» de Stream Deck (configurado para abrirse en segundo plano), en un paso «Obtener contenido de la URL» de Atajos, o en AutoHotkey.",
+"Action": "Acción",
+"Address": "Dirección",
+"Copy address": "Copiar dirección",
+"Links between apps": "Enlaces entre apps",
+"Like a sidechain: when something happens in one app, another app reacts. Turn any of them on or off.": "Como un sidechain: cuando algo pasa en una app, otra reacciona. Activa o desactiva cualquiera.",
+"Make a new link": "Crear un enlace",
+"When this happens": "Cuando pase esto",
+"Do this": "Haz esto",
+"Add link": "Añadir enlace",
+"For every app": "Para todas las apps",
+"Set these once. Every Limitless Sound app that supports a setting follows it.": "Ajústalos una vez. Cada app de Limitless Sound que admite un ajuste lo sigue.",
+"Spoken feedback": "Respuestas habladas",
+"One voice: apps take turns speaking and never repeat each other": "Una sola voz: las apps hablan por turnos y nunca se repiten",
+"Text size": "Tamaño del texto",
+"Dwell time for eyes, head and pointer (milliseconds)": "Tiempo de permanencia para ojos, cabeza y puntero (milisegundos)",
+"Switch scanning speed (milliseconds per step)": "Velocidad de barrido con pulsador (milisegundos por paso)",
+"Who presses DAW keys first": "Quién pulsa primero las teclas del DAW",
+"When an app asks for something like Record, the first open app in this list that knows the keys does it.": "Cuando una app pide algo como Grabar, lo hace la primera app abierta de esta lista que conoce las teclas.",
+"The newest is at the top.": "Lo más reciente, arriba.",
+"Something not working?": "¿Algo no funciona?",
+"Limitless Sound and every app keep a log file on this computer. It never leaves it unless you send it. When you ask for help, open the folder and attach the file named after the app.": "Limitless Sound y cada app guardan un archivo de registro en este equipo. Nunca sale de él a menos que lo envíes. Cuando pidas ayuda, abre la carpeta y adjunta el archivo con el nombre de la app.",
+"Open the log folder": "Abrir la carpeta de registros",
+"Your DAW": "Tu DAW",
+"Open and linked": "Abierta y conectada",
+"Installed, closed": "Instalada, cerrada",
+"Not installed": "No instalada",
+" · version {version}": " · versión {version}",
+"✓ Uses your text size, contrast and motion settings": "✓ Usa tu tamaño de texto, contraste y movimiento",
+"Open {name}": "Abrir {name}",
+"Open": "Abrir",
+"Tell Limitless Sound where {name} is": "Decir a Limitless Sound dónde está {name}",
+"It's installed somewhere else…": "Está instalada en otro sitio…",
+"Where is {name}? Paste the full path to the app or its .exe.": "¿Dónde está {name}? Pega la ruta completa de la app o de su .exe.",
+"Saved": "Guardado",
+"No actions match.": "Ninguna acción coincide.",
+"Your DAW (whichever app can press the keys)": "Tu DAW (la app que pueda pulsar las teclas)",
+"Which app? (voice, onehand, zoom, color, control, gaze)": "¿Qué app? (voice, onehand, zoom, color, control, gaze)",
+"Done: {message}": "Hecho: {message}",
+"Couldn't: {message}": "No se pudo: {message}",
+"Copied": "Copiado",
+"Press Command C or Control C to copy": "Pulsa Comando C o Control C para copiar",
+"Recording starts (from any app)": "Empieza a grabar (desde cualquier app)",
+"Stop is pressed (from any app)": "Se pulsa Detener (desde cualquier app)",
+"Play / stop is pressed": "Se pulsa Reproducir / detener",
+"Undo is pressed": "Se pulsa Deshacer",
+"Save is pressed": "Se pulsa Guardar",
+"A DAW comes to the front": "Un DAW pasa al frente",
+"Something other than a DAW comes to the front": "Algo que no es un DAW pasa al frente",
+"One-hand mode turns on": "Se activa el modo una mano",
+"One-hand mode turns off": "Se desactiva el modo una mano",
+"Zoom keys turn on": "Se activan las teclas de Zoom",
+"Zoom keys turn off": "Se desactivan las teclas de Zoom",
+"Screen colors turn on": "Se activan los colores de pantalla",
+"Screen colors turn off": "Se desactivan los colores de pantalla",
+"The controller is switched on": "Se enciende el controlador",
+"The controller is switched off": "Se apaga el controlador",
+"Voice goes to sleep": "Voice se duerme",
+"Voice wakes up": "Voice se despierta",
+"Eye tracking starts": "Empieza el seguimiento ocular",
+"Eye tracking stops": "Se detiene el seguimiento ocular",
+"Anything happens in {name}": "Pasa algo en {name}",
+"{label} is {value}": "{label} es {value}",
+"Link on": "Enlace activado",
+"Link off": "Enlace desactivado",
+", then ": ", luego ",
+"When: {when}. Then: {steps}.": "Cuando: {when}. Luego: {steps}.",
+"Remove this link": "Quitar este enlace",
+"Remove": "Quitar",
+"Couldn't save: {problems}": "No se pudo guardar: {problems}",
+"Link added": "Enlace añadido",
+"Link removed": "Enlace quitado",
+"This computer has no voice for {name} yet, so spoken replies use its usual voice. To add one on a Mac: System Settings › Accessibility › Spoken Content › System voice › Manage Voices. On Windows: Settings › Time & language › Speech › Add voices.": "Este equipo aún no tiene una voz para {name}, así que las respuestas habladas usan su voz habitual. Para añadir una en un Mac: Ajustes del Sistema › Accesibilidad › Contenido leído › Voz del sistema › Gestionar voces. En Windows: Configuración › Hora e idioma › Voz › Agregar voces.",
+"Saved for every app": "Guardado para todas las apps",
+"Move {name} up": "Subir {name}",
+"Move {name} down": "Bajar {name}",
+"Up": "Subir",
+"Down": "Bajar",
+"{name} moved to {place}": "{name} pasa al puesto {place}",
+"Quit Limitless Sound? Your apps keep working, but stop linking to each other.": "¿Salir de Limitless Sound? Tus apps siguen funcionando, pero dejan de conectarse entre sí.",
+"Limitless Sound has quit. You can close this page.": "Limitless Sound se ha cerrado. Puedes cerrar esta página.",
+"Limitless Sound will start when you sign in": "Limitless Sound se iniciará al iniciar sesión",
+"Won't start at sign-in": "No se iniciará al iniciar sesión",
+"Couldn't change that: {message}": "No se pudo cambiar: {message}",
+"Pick at least one way you like to play.": "Elige al menos una forma de tocar.",
+"That didn't work: {message}": "No funcionó: {message}",
+"try again": "inténtalo de nuevo",
+"Your apps: {apps}.": "Tus apps: {apps}.",
+"They open together whenever Limitless Sound starts, and every app uses your settings.": "Se abren juntas cada vez que se inicia Limitless Sound, y todas usan tus ajustes.",
+"Open this page from the Limitless Sound icon.": "Abre esta página desde el icono de Limitless Sound.",
+"My voice": "Mi voz",
+"Say “record”, “solo track” or “zoom in”, in Logic Pro, Pro Tools or anywhere.": "Maneja Logic Pro, Pro Tools o cualquier app hablando.",
+"One hand on the keyboard": "Una mano en el teclado",
+"The keys under one hand become play, record, undo and more.": "Las teclas bajo una mano se convierten en reproducir, grabar, deshacer y más.",
+"My eyes or my head": "Mis ojos o mi cabeza",
+"Play notes and run the transport by looking at a webcam, and zoom the session by resting your gaze on big buttons.": "Toca notas y maneja el transporte mirando a una webcam, y amplía la sesión posando la mirada en botones grandes.",
+"A switch or a foot pedal": "Un pulsador o un pedal",
+"One button can reach every command, by scanning.": "Un solo botón llega a todos los comandos, por barrido.",
+"An Xbox Adaptive Controller or a gamepad": "Un Xbox Adaptive Controller o un gamepad",
+"Every button becomes a command you choose.": "Cada botón se convierte en el comando que elijas.",
+"I see colours differently": "Veo los colores de otra forma",
+"The whole screen is recoloured so meters, tracks and plug-ins look right to you.": "Toda la pantalla cambia de color para que medidores, pistas y plug-ins se vean bien para ti.",
+"Bigger text and zoom": "Texto más grande y zoom",
+"Zoom the DAW by voice, one hand, dwell or a switch, with large text in every app.": "Amplía el DAW con la voz, una mano, posando el puntero o con un pulsador, con texto grande en todas las apps.",
+"Voice commands for Logic Pro, Pro Tools and the rest of the computer.": "Comandos de voz para Logic Pro, Pro Tools y el resto del equipo.",
+"One-hand mode turns the keys under one hand into DAW commands.": "El modo una mano convierte las teclas bajo una mano en comandos del DAW.",
+"Zoom the DAW or the whole screen by voice, one hand, dwell or one switch.": "Amplía el DAW o toda la pantalla con la voz, una mano, posando el puntero o un pulsador.",
+"Recolors the whole screen for colorblind musicians.": "Cambia los colores de toda la pantalla para músicos daltónicos.",
+"Xbox Adaptive Controller, switches and gamepads as DAW key commands.": "Xbox Adaptive Controller, pulsadores y gamepads como comandos de teclado del DAW.",
+"Play instruments and run the transport with your eyes, head, a sound or a switch.": "Toca instrumentos y maneja el transporte con los ojos, la cabeza, un sonido o un pulsador."
+}
+</script>
 <script>
 "use strict";
 const params = new URLSearchParams(location.search);
@@ -240,6 +401,33 @@ async function api(path, body) {
   return data;
 }
 function say(text) { $("toast").textContent = ""; setTimeout(() => { $("toast").textContent = text; }, 30); }
+
+// ---------- language: the page follows the suite's language, like every app
+const STRINGS = { es: JSON.parse($("strings-es").textContent) };
+let lang = "en";
+function t(text, vars = {}) {
+  let out = (STRINGS[lang] || {})[text] || text;
+  for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(v);
+  return out;
+}
+// The page's own words, kept in English so they can be put back.
+const fixedText = [], fixedLabels = [];
+{
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode())
+    if (n.nodeValue.trim() && !n.parentElement.closest("script")) fixedText.push([n, n.nodeValue]);
+  for (const e of document.querySelectorAll("[aria-label]")) fixedLabels.push([e, e.getAttribute("aria-label")]);
+}
+function setLanguage(next) {
+  next = STRINGS[next] ? next : "en";
+  if (next === lang) return false;
+  lang = next;
+  document.documentElement.lang = lang;
+  for (const [n, en] of fixedText) n.nodeValue = en.replace(en.trim(), t(en.trim()));
+  for (const [e, en] of fixedLabels) e.setAttribute("aria-label", t(en));
+  for (const e of document.querySelectorAll("[data-en]")) e.textContent = t(e.dataset.en);
+  return true;
+}
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -273,32 +461,32 @@ tabs.forEach((t, i) => {
 try { const saved = sessionStorage.getItem("lsTab"); if (saved && $(saved)) { selectTab($(saved)); window.scrollTo(0, 0); } } catch (e) {}
 
 // ---------- rendering
-const toolName = (id) => (state.tools.find((t) => t.id === id) || {}).name || (id === "hub" ? "Limitless Sound" : id === "daw" ? "Your DAW" : id);
+const toolName = (id) => (state.tools.find((t) => t.id === id) || {}).name || (id === "hub" ? "Limitless Sound" : id === "daw" ? t("Your DAW") : id);
 const actionLabel = (id) => { const a = state.actions.find((x) => x.id === id); return a ? a.label : id; };
 
 function renderTools() {
   const box = $("tools"); box.textContent = "";
-  for (const t of state.tools) {
-    const status = t.connected ? ["on", "Open and linked"] : t.installed ? ["off", "Installed, closed"] : ["missing", "Not installed"];
+  for (const app of state.tools) {
+    const status = app.connected ? ["on", t("Open and linked")] : app.installed ? ["off", t("Installed, closed")] : ["missing", t("Not installed")];
     const card = el("div", { class: "card" },
-      el("h3", {}, t.name),
-      el("p", {}, t.about || ""),
-      el("p", {}, el("span", { class: "status " + status[0] }, status[1]), t.version ? ` · version ${t.version}` : ""));
-    if (t.connected && followsPrefs(t.id)) card.append(el("p", { class: "follows" }, "✓ Uses your text size, contrast and motion settings"));
+      el("h3", {}, app.name),
+      el("p", {}, t(app.about || "")),
+      el("p", {}, el("span", { class: "status " + status[0] }, status[1]), app.version ? t(" · version {version}", { version: app.version }) : ""));
+    if (app.connected && followsPrefs(app.id)) card.append(el("p", { class: "follows" }, t("✓ Uses your text size, contrast and motion settings")));
     const row = el("div", { class: "row" });
-    if (!t.connected && t.installed)
-      row.append(el("button", { onclick: async () => say((await api("/api/open", { tool: t.id })).message) , "aria-label": `Open ${t.name}` }, "Open"));
-    if (!t.installed) {
-      row.append(el("button", { onclick: () => locate(t), "aria-label": `Tell Limitless Sound where ${t.name} is` }, "It's installed somewhere else…"));
+    if (!app.connected && app.installed)
+      row.append(el("button", { onclick: async () => say((await api("/api/open", { tool: app.id })).message) , "aria-label": t("Open {name}", { name: app.name }) }, t("Open")));
+    if (!app.installed) {
+      row.append(el("button", { onclick: () => locate(app), "aria-label": t("Tell Limitless Sound where {name} is", { name: app.name }) }, t("It's installed somewhere else…")));
     }
     card.append(row); box.append(card);
   }
   const st = $("startTools"); st.textContent = "";
-  for (const t of state.tools.filter((x) => !["hub"].includes(x.id))) {
-    const id = "start-" + t.id;
-    const cb = el("input", { type: "checkbox", id, checked: state.startTools.includes(t.id) });
+  for (const app of state.tools.filter((x) => !["hub"].includes(x.id))) {
+    const id = "start-" + app.id;
+    const cb = el("input", { type: "checkbox", id, checked: state.startTools.includes(app.id) });
     cb.addEventListener("change", saveStartTools);
-    st.append(el("div", { class: "check" }, cb, el("label", { for: id }, t.name)));
+    st.append(el("div", { class: "check" }, cb, el("label", { for: id }, app.name)));
   }
   $("autostart").checked = state.autostart;
 }
@@ -307,15 +495,15 @@ function followsPrefs(tool) {
   if (!applied || typeof applied !== "object") return false;
   return ["textScale", "highContrast", "reduceMotion"].every((k) => k in applied && applied[k] === state.prefs[k]);
 }
-async function locate(t) {
-  const path = prompt(`Where is ${t.name}? Paste the full path to the app or its .exe.`);
+async function locate(app) {
+  const path = prompt(t("Where is {name}? Paste the full path to the app or its .exe.", { name: app.name }));
   if (path === null) return;
-  say((await api("/api/install-path", { tool: t.id, path })).message);
+  say((await api("/api/install-path", { tool: app.id, path })).message);
   refresh(true);
 }
 async function saveStartTools() {
   const tools = state.tools.filter((t) => $("start-" + t.id)?.checked).map((t) => t.id);
-  await api("/api/start-tools", { tools }); state.startTools = tools; say("Saved");
+  await api("/api/start-tools", { tools }); state.startTools = tools; say(t("Saved"));
 }
 
 function groupActions(filter) {
@@ -331,9 +519,9 @@ function groupActions(filter) {
 function renderActions() {
   const box = $("actionGroups"); box.textContent = "";
   const groups = groupActions($("filter").value);
-  if (!groups.size) { box.append(el("p", { class: "muted" }, "No actions match.")); return; }
+  if (!groups.size) { box.append(el("p", { class: "muted" }, t("No actions match."))); return; }
   for (const [tool, acts] of groups) {
-    const head = tool === "daw" ? "Your DAW (whichever app can press the keys)" : toolName(tool);
+    const head = tool === "daw" ? t("Your DAW (whichever app can press the keys)") : toolName(tool);
     const list = el("div", { class: "actions-list" });
     for (const a of acts) {
       const needsArg = a.args && Object.keys(a.args).length;
@@ -347,13 +535,13 @@ async function run(a, needsArg) {
   let args = {};
   if (needsArg) {
     for (const name of Object.keys(a.args)) {
-      const v = name === "tool" ? prompt("Which app? (voice, onehand, zoom, color, control, gaze)") : prompt(`${a.label}: ${name}?`);
+      const v = name === "tool" ? prompt(t("Which app? (voice, onehand, zoom, color, control, gaze)")) : prompt(`${a.label}: ${name}?`);
       if (v === null) return;
       args[name] = v;
     }
   }
   const r = await api("/api/invoke", { action: a.id, args });
-  say((r.ok ? "Done: " : "Couldn't: ") + (r.message || a.label));
+  say(t(r.ok ? "Done: {message}" : "Couldn't: {message}", { message: r.message || a.label }));
 }
 function fillSelect(sel, items, keep) {
   const old = keep ? sel.value : null; sel.textContent = "";
@@ -367,8 +555,8 @@ function renderUrlBuilder() {
 function updateUrl() { $("urlOut").value = `${location.origin}/do/${$("urlAction").value}?t=${token}`; }
 $("urlAction").addEventListener("change", updateUrl);
 $("copyUrl").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("urlOut").value); say("Copied"); }
-  catch (e) { $("urlOut").select(); say("Press Command C or Control C to copy"); }
+  try { await navigator.clipboard.writeText($("urlOut").value); say(t("Copied")); }
+  catch (e) { $("urlOut").select(); say(t("Press Command C or Control C to copy")); }
 });
 $("filter").addEventListener("input", renderActions);
 
@@ -386,30 +574,30 @@ const EVENTS = [
 function describeWhen(w) {
   const key = w.event + ("value" in w ? "=" + w.value : "");
   const known = EVENTS.find((e) => e[0] === key);
-  if (known) return known[1];
-  if (w.event.endsWith(".*")) return `Anything happens in ${toolName(w.event.slice(0, -2))}`;
-  return `${actionLabel(w.event)}${"value" in w ? " is " + w.value : ""}`;
+  if (known) return t(known[1]);
+  if (w.event.endsWith(".*")) return t("Anything happens in {name}", { name: toolName(w.event.slice(0, -2)) });
+  return "value" in w ? t("{label} is {value}", { label: actionLabel(w.event), value: w.value }) : actionLabel(w.event);
 }
 function renderLinks() {
   const box = $("links"); box.textContent = "";
   state.routes.forEach((r, i) => {
     const id = "link-" + i;
     const cb = el("input", { type: "checkbox", id, checked: r.on !== false });
-    cb.addEventListener("change", async () => { r.on = cb.checked; await saveRoutes(cb.checked ? "Link on" : "Link off"); });
-    const steps = r.do.map((s) => `${toolName(s.action.split(".")[0])}: ${actionLabel(s.action)}`).join(", then ");
+    cb.addEventListener("change", async () => { r.on = cb.checked; await saveRoutes(t(cb.checked ? "Link on" : "Link off")); });
+    const steps = r.do.map((s) => `${toolName(s.action.split(".")[0])}: ${actionLabel(s.action)}`).join(t(", then "));
     const lab = el("label", { for: id }, r.name || `${describeWhen(r.when)} → ${steps}`,
-      el("small", {}, `When: ${describeWhen(r.when)}. Then: ${steps}.`));
+      el("small", {}, t("When: {when}. Then: {steps}.", { when: describeWhen(r.when), steps })));
     const row = el("div", { class: "link" }, cb, lab);
     if (!r.builtin && !String(r.id).match(/^(take-guard|keys-dont-fight|rest-voice|colors-follow)/))
-      row.append(el("button", { onclick: async () => { state.routes.splice(i, 1); await saveRoutes("Link removed"); renderLinks(); }, "aria-label": "Remove this link" }, "Remove"));
+      row.append(el("button", { onclick: async () => { state.routes.splice(i, 1); await saveRoutes(t("Link removed")); renderLinks(); }, "aria-label": t("Remove this link") }, t("Remove")));
     box.append(row);
   });
-  fillSelect($("newWhen"), EVENTS, true);
+  fillSelect($("newWhen"), EVENTS.map(([k, text]) => [k, t(text)]), true);
   fillSelect($("newDo"), state.actions.filter((a) => !a.args).map((a) => [a.id, `${toolName(a.tool)}: ${a.label}`]), true);
 }
 async function saveRoutes(msg) {
   const r = await api("/api/routes", { routes: state.routes });
-  say(r.ok ? msg : "Couldn't save: " + (r.problems || []).join(" "));
+  say(r.ok ? msg : t("Couldn't save: {problems}", { problems: (r.problems || []).join(" ") }));
 }
 $("addLink").addEventListener("click", async () => {
   const [event, value] = $("newWhen").value.split("=");
@@ -419,10 +607,10 @@ $("addLink").addEventListener("click", async () => {
   const route = { id: "link-" + Date.now(), name: "", when, do: [{ action }], on: true };
   route.name = `${describeWhen(when)}: ${toolName(action.split(".")[0])} ${actionLabel(action).toLowerCase()}.`;
   state.routes.push(route);
-  await saveRoutes("Link added"); renderLinks();
+  await saveRoutes(t("Link added")); renderLinks();
 });
 
-const PREFS = ["speak", "oneVoice", "highContrast", "reduceMotion", "textScale", "dwellMs", "scanMs"];
+const PREFS = ["language", "speak", "oneVoice", "highContrast", "reduceMotion", "textScale", "dwellMs", "scanMs"];
 function renderPrefs() {
   const p = state.prefs;
   for (const k of PREFS) {
@@ -430,6 +618,12 @@ function renderPrefs() {
     if (document.activeElement === e) continue;
     if (e.type === "checkbox") e.checked = !!p[k]; else e.value = String(p[k]);
   }
+  // Replies in a language the computer has no voice for are read in the default voice.
+  const name = (state.languages || {})[p.language] || p.language;
+  $("language-voice").hidden = state.languageVoice !== false;
+  $("language-voice").textContent = state.languageVoice === false
+    ? t("This computer has no voice for {name} yet, so spoken replies use its usual voice. To add one on a Mac: System Settings › Accessibility › Spoken Content › System voice › Manage Voices. On Windows: Settings › Time & language › Speech › Add voices.", { name })
+    : "";
   if (!setupShown) showLook(p);
 }
 function showLook(p) {
@@ -441,36 +635,36 @@ function showLook(p) {
 }
 for (const k of PREFS) {
   $("pref-" + k).addEventListener("change", async (e) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : Number(e.target.value);
+    const v = e.target.type === "checkbox" ? e.target.checked : k === "language" ? e.target.value : Number(e.target.value);
     const r = await api("/api/prefs", { prefs: { [k]: v } });
-    if (r.prefs) { state.prefs = r.prefs; renderPrefs(); say("Saved for every app"); }
+    if (r.prefs) { state.prefs = r.prefs; state.languageVoice = r.languageVoice; renderPrefs(); say(t("Saved for every app")); }
   });
 }
 function renderOrder() {
   const box = $("order"); box.textContent = "";
   const order = state.intentOrder;
   order.forEach((tool, i) => {
-    const up = el("button", { disabled: i === 0, "aria-label": `Move ${toolName(tool)} up`, onclick: () => move(i, -1) }, "Up");
-    const down = el("button", { disabled: i === order.length - 1, "aria-label": `Move ${toolName(tool)} down`, onclick: () => move(i, 1) }, "Down");
+    const up = el("button", { disabled: i === 0, "aria-label": t("Move {name} up", { name: toolName(tool) }), onclick: () => move(i, -1) }, t("Up"));
+    const down = el("button", { disabled: i === order.length - 1, "aria-label": t("Move {name} down", { name: toolName(tool) }), onclick: () => move(i, 1) }, t("Down"));
     box.append(el("li", {}, el("div", { class: "row" }, el("span", {}, toolName(tool)), up, down)));
   });
 }
 async function move(i, d) {
   const o = state.intentOrder; [o[i], o[i + d]] = [o[i + d], o[i]];
   await api("/api/intent-order", { order: o }); renderOrder();
-  say(`${toolName(o[i + d])} moved to ${i + d + 1}`);
+  say(t("{name} moved to {place}", { name: toolName(o[i + d]), place: i + d + 1 }));
   const btns = $("order").querySelectorAll("li")[i + d]?.querySelectorAll("button");
   btns?.[d < 0 ? 0 : 1]?.focus();
 }
 $("openAll").addEventListener("click", async () => say((await api("/api/invoke", { action: "hub.openAll" })).message));
 $("openLogs").addEventListener("click", async () => say((await api("/api/open-logs", {})).message));
 $("quit").addEventListener("click", async () => {
-  if (!confirm("Quit Limitless Sound? Your apps keep working, but stop linking to each other.")) return;
-  await api("/api/quit", {}); say("Limitless Sound has quit. You can close this page.");
+  if (!confirm(t("Quit Limitless Sound? Your apps keep working, but stop linking to each other."))) return;
+  await api("/api/quit", {}); say(t("Limitless Sound has quit. You can close this page."));
 });
 $("autostart").addEventListener("change", async (e) => {
   const r = await api("/api/autostart", { on: e.target.checked });
-  say(r.ok ? (e.target.checked ? "Limitless Sound will start when you sign in" : "Won't start at sign-in") : "Couldn't change that: " + r.message);
+  say(r.ok ? t(e.target.checked ? "Limitless Sound will start when you sign in" : "Won't start at sign-in") : t("Couldn't change that: {message}", { message: r.message }));
 });
 
 // ---------- guided setup: the first time this page opens, and again from My apps
@@ -488,8 +682,9 @@ function renderSetup() {
     const id = "in-" + c.id;
     box.append(el("label", { class: "choice", for: id },
       el("input", { type: "checkbox", id, value: c.id, checked: state.setupInputs.includes(c.id) }),
-      el("span", {}, el("b", {}, c.label), el("small", {}, c.about))));
+      el("span", {}, el("b", { "data-en": c.label }, t(c.label)), el("small", { "data-en": c.about }, t(c.about)))));
   }
+  $("setup-language").value = state.prefs.language || "en";
   $("setup-size").value = String(state.prefs.textScale || 1);
   if (!$("setup-size").value) $("setup-size").value = "1";
   $("setup-contrast").checked = !!state.prefs.highContrast;
@@ -497,26 +692,27 @@ function renderSetup() {
   $("setup-speak").checked = !!state.prefs.speak;
 }
 function setupLook() {
-  return { textScale: Number($("setup-size").value), highContrast: $("setup-contrast").checked,
+  return { language: $("setup-language").value, textScale: Number($("setup-size").value), highContrast: $("setup-contrast").checked,
            reduceMotion: $("setup-motion").checked, speak: $("setup-speak").checked };
 }
-// See the choice at once: the page itself takes the size and contrast picked.
+// See the choice at once: the page itself takes the language, size and contrast picked.
 for (const id of ["setup-size", "setup-contrast", "setup-motion"]) $(id).addEventListener("change", () => showLook(setupLook()));
+$("setup-language").addEventListener("change", () => { if (setLanguage($("setup-language").value)) refresh(true); });
 $("setup-go").addEventListener("click", async () => {
   const inputs = [...$("setup-inputs").querySelectorAll("input:checked")].map((i) => i.value);
   if (!inputs.length) {
-    say("Pick at least one way you like to play.");
+    say(t("Pick at least one way you like to play."));
     $("setup-inputs").querySelector("input")?.focus();
     return;
   }
   const r = await api("/api/setup", { inputs, look: setupLook() });
-  if (!r.ok) { say("That didn't work: " + (r.message || r.error || "try again")); return; }
+  if (!r.ok) { say(t("That didn't work: {message}", { message: r.message || r.error || t("try again") })); return; }
   showSetup(false);
   await refresh(true);
   selectTab($("t-tools"));
   const opened = (r.message || "").replace(/\.$/, "");
-  say(`Your apps: ${r.tools.map(toolName).join(", ")}. ${opened ? opened + ". " : ""}`
-      + "They open together whenever Limitless Sound starts, and every app uses your settings.");
+  say(`${t("Your apps: {apps}.", { apps: r.tools.map(toolName).join(", ") })} ${opened ? opened + ". " : ""}`
+      + t("They open together whenever Limitless Sound starts, and every app uses your settings."));
 });
 $("setup-skip").addEventListener("click", async () => {
   await api("/api/setup", { skip: true });
@@ -530,8 +726,8 @@ function renderLog(entries) {
   logItems = entries.concat(logItems).slice(0, 200);
   const box = $("log");
   for (const e of entries) {
-    const t = new Date(e.time * 1000);
-    box.prepend(el("li", { class: e.kind }, el("time", {}, t.toLocaleTimeString()), e.text));
+    const when = new Date(e.time * 1000);
+    box.prepend(el("li", { class: e.kind }, el("time", {}, when.toLocaleTimeString()), e.text));
   }
   while (box.children.length > 200) box.lastChild.remove();
 }
@@ -541,7 +737,7 @@ async function refresh(force) {
   let s;
   try { s = await api("/api/state?since=" + since); $("offline").hidden = true; }
   catch (e) { $("offline").hidden = false; return; }
-  if (s.error) { $("offline").hidden = false; $("offline").textContent = "Open this page from the Limitless Sound icon."; return; }
+  if (s.error) { $("offline").hidden = false; $("offline").textContent = t("Open this page from the Limitless Sound icon."); return; }
   const newLog = s.log || []; delete s.log;
   if (newLog.length) since = newLog[newLog.length - 1].seq;
   // Only rebuild the page when something changed, so focus and screen readers aren't disturbed.
@@ -550,6 +746,8 @@ async function refresh(force) {
                                 s.autostart, s.prefs, applied]);
   const first = state === null;
   state = s;
+  // While the guided setup is open, the page shows the language picked there.
+  if (setLanguage(setupShown ? $("setup-language").value : s.prefs.language)) force = true;
   if (force || shape !== lastShape) {
     lastShape = shape;
     const focusId = document.activeElement?.id;

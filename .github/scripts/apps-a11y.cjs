@@ -200,6 +200,25 @@ const KB_HELPERS = `(() => {
   };
 })()`;
 
+// A new look reaches the other apps too, and the hub's page redraws its lists a moment later when
+// they report that they've applied it. Tabbing through a list while it's replaced reads as focus
+// jumping back and controls that can't be reached (seen in CI on the Links tab, largest text), so
+// the hub's checks wait until nothing but its activity log has changed for a while.
+async function settled(page, quietMs = 1500, maxMs = 15000) {
+  await page.evaluate(([quietMs, maxMs]) => new Promise((resolve) => {
+    let timer = 0;
+    const cap = setTimeout(() => done(), maxMs);
+    const done = () => { obs.disconnect(); clearTimeout(timer); clearTimeout(cap); resolve(); };
+    const inLog = (node) => (node.nodeType === 1 ? node : node.parentElement)?.closest('#log, [aria-live]');
+    const obs = new MutationObserver((records) => {
+      if (records.every((r) => inLog(r.target))) return;
+      clearTimeout(timer); timer = setTimeout(done, quietMs);
+    });
+    obs.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+    timer = setTimeout(done, quietMs);
+  }), [quietMs, maxMs]);
+}
+
 async function keyboardCheck(page, s, label) {
   await page.evaluate(KB_HELPERS);
   const problems = [];
@@ -366,12 +385,34 @@ async function checkHub(browser) {
     await sharedLook(name);
     await page.waitForFunction(([hc, ts]) => document.documentElement.hasAttribute('data-contrast') === hc
       && Number(getComputedStyle(document.documentElement).getPropertyValue('--scale')) === ts, [LOOKS[name].highContrast, LOOKS[name].textScale]);
+    await settled(page);
   };
   for (const [tab, name] of [['t-tools', 'My apps'], ['t-do', 'Do anything'], ['t-links', 'Links'], ['t-settings', 'Settings'], ['t-activity', 'Activity']]) {
     await page.click('#' + tab);
+    await settled(page);
     await checkStates(page, s, name, { sizes, setScheme, setLook });
   }
   await sharedLook('standard');
+
+  // The page in Spanish: longer words in the same space, and the page's language set for screen
+  // readers. The guided setup, then the tabs with the most words.
+  await hubApi('/api/prefs', { prefs: { language: 'es' } });
+  await page.waitForFunction(() => document.documentElement.lang === 'es');
+  await page.click('#t-tools');
+  await page.click('#setup-again');
+  await page.waitForSelector('#setup:not([hidden])');
+  await checkStates(page, s, 'guided setup, in Spanish', { looks: ['standard', 'largest text'], sizes, setScheme,
+    setLook: async (look) => { await page.selectOption('#setup-size', String(LOOKS[look].textScale)); await sleep(100); } });
+  await page.selectOption('#setup-size', '1');
+  await page.click('#setup-skip');
+  await page.waitForSelector('#setup[hidden]', { state: 'attached' });
+  for (const [tab, name] of [['t-tools', 'My apps'], ['t-settings', 'Settings']]) {
+    await page.click('#' + tab);
+    await settled(page);
+    await checkStates(page, s, `${name}, in Spanish`, { looks: ['standard', 'largest text'], sizes, setScheme, setLook });
+  }
+  await sharedLook('standard');
+  await hubApi('/api/prefs', { prefs: { language: 'en' } });
   await ctx.close();
 }
 

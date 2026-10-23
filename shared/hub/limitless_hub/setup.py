@@ -1,14 +1,14 @@
 """The guided setup: from how a musician plays, which apps open together and how they look.
 
 The settings page asks two questions the first time it opens: how do you like to play,
-and how should things look and sound. plan() turns the answers into the apps to open
+and how should things look and sound, in which language. plan() turns the answers into the apps to open
 with Limitless Sound and the shared settings every app follows. Nothing here is a
 diagnosis: the musician picks what fits, and can change any of it afterwards.
 """
 
 from __future__ import annotations
 
-from . import catalog
+from . import catalog, languages
 
 # Each way of playing, in the order the page shows them, with the apps it brings in.
 INPUTS: dict[str, tuple[str, str, list[str]]] = {
@@ -48,6 +48,8 @@ def plan(inputs: list, look: dict) -> dict:
     for key in ("highContrast", "reduceMotion", "speak"):
         if key in look:
             prefs[key] = bool(look[key])
+    if languages.tag(look.get("language")):
+        prefs["language"] = languages.tag(look["language"])
     return {"inputs": chosen, "tools": tools, "prefs": prefs}
 
 

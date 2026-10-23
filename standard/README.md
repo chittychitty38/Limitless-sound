@@ -42,7 +42,7 @@ The product honors the musician's shared settings, so they set them once for eve
 | Check | Requirement |
 |---|---|
 | A1 | Applies a change to the shared settings within 3 seconds and reports it as the state `prefs.applied` (see [Shared preferences](../shared/PROTOCOL.md#shared-preferences)). |
-| A2 | Honors at least text size (`textScale`), high contrast (`highContrast`) and reduced motion (`reduceMotion`). Products with pointer or switch selection should also honor `dwellMs` and `scanMs`. |
+| A2 | Honors at least text size (`textScale`), high contrast (`highContrast`) and reduced motion (`reduceMotion`). Products with pointer or switch selection should also honor `dwellMs` and `scanMs`, and products that listen or speak should honor `language` where they have it. |
 
 ### Level 3: Hands-free
 

@@ -37,7 +37,7 @@ The first message must be `hello`, within 5 seconds.
 | `invoke` | `action`, `args`, `id`, `depth` | Ask the suite to do something: `zoom.in`, `daw.record`, `hub.say`. The answer comes back as `result` with the same `id`. |
 | `did` | `action`, `intent`?, `value`?, `depth` | "I just did this", whatever input caused it. Becomes the events `<tool>.<action>` and, if the action has an intent, `<intent>`. |
 | `state` | `key`, `value`, `depth` | A state changed. Becomes the event `<tool>.<key>` (or `app.<x>` for shared keys like `app.daw`). Only sent on as an event when the value actually changes. |
-| `say` | `text` | Speak through the suite's one voice. |
+| `say` | `text`, `lang`? | Speak through the suite's one voice. `lang` names the text's language (`"es"`); without it, the hub uses the language this app reported in `prefs.applied`, else English, and reads it with a voice for that language when the computer has one. |
 | `result` | `id`, `ok`, `message` | Answer to an `invoke` from the hub, within 3 seconds. |
 | `ping` | | Hub answers `pong`. |
 
@@ -107,7 +107,10 @@ is switched off and reported.
 ## Shared preferences
 
 `speak`, `oneVoice`, `textScale` (1.0–2.0), `highContrast`, `reduceMotion`, `dwellMs`
-(250–3000), `scanMs` (400–5000). Apps apply the ones they support. When `oneVoice` is on
+(250–3000), `scanMs` (400–5000), `language` (a lowercase BCP 47 primary tag: `"en"` or `"es"`;
+on first start, the computer's own language when the suite has it). Apps apply the ones they
+support. An app that listens or speaks in the chosen language reports it in `prefs.applied`;
+one that doesn't yet carries on in English. When `oneVoice` is on
 and the app is connected, `say` through the hub instead of speaking directly; the Python
 client's `say()` returns `False` when the app should speak for itself.
 

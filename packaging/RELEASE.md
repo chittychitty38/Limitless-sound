@@ -13,6 +13,28 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.4
+- **Every app works with a screen reader and the keyboard alone, and every app's tests now check it.**
+  - VoiceOver reads what Voice heard and what it did. It used to say only "Last thing heard".
+  - Every button is named in words: Zoom's "−" and "+" are "Zoom out" and "Zoom in".
+  - A status line is read again when it changes.
+  - Tab reaches every control, in the order they're shown. One-Hand used to skip the hand that wasn't chosen.
+  - Tab no longer wanders into controls you can't see: GazeStage's closed settings drawer used to hold 42 of them.
+  - Escape cancels choosing a Zoom key.
+  - Every screen made of web pages passes the WCAG 2.2 AA accessibility standard, in light and dark, high contrast and the largest text: Limitless Sound's page, Control's, GazeStage, Color and the Mac installer.
+- **"Stop" stops twice as fast.** Limitless Voice 0.3.6 acts on play, stop and record the moment it has heard them, instead of waiting for you to finish speaking. On recordings of real people, "stop" now takes effect about two-thirds of a second after the word ends, down from more than a second. Every other command still waits, so a slow "nudge right … four times" still works.
+- **Limitless Voice no longer acts on words that weren't commands.** We played it recordings of about 200 real people saying single words, and an hour of 40 people reading aloud. Voice now:
+  - never pressed Cut, Paste or Delete for a word that wasn't one. Before, people's "cat" pressed Cut 64 times in 100. Voice listens twice, once for commands and once for any words, and when the second listener didn't hear "cut", "paste" or "delete" too, Voice 0.3.8 asks "Say yes to cut, or cancel" instead of doing it.
+  - fired no command at all in that hour of talk with Logic Pro in front (4.7 before), and 3.8 with Pro Tools (7.6 before), none of them destructive.
+  - still hears the words it listens for just as well: 91% of them, said by about 200 different people into their own phones and laptops.
+  - opens only an app it heard the name of. On Windows, "open it" could start any app with "it" in its name.
+- **Cut, paste and delete work when you say them.** Real people's "delete" is often heard as "the lead", "paste" as "based" and "cut" as "god". Voice 0.3.8 asks instead of refusing, so a yes gets them done: on the same recordings, "delete" now works 92 times in 100 at once or with a yes, "paste" 84 and "cut" 78, up from 37, 45 and 40. Saying anything other than yes or cancel after a question runs as a new command, so a question asked by mistake never swallows your next one.
+- **"Stop" no longer sends you back to the start.** People's "stop" was heard as "top" 8 times in 100, and "top" alone meant "go to start" in Logic Pro and Pro Tools. It's gone: say "go to start" or "go to the top".
+- **Limitless Voice rests in a quiet room.** Voice 0.3.7 doesn't work on silence. It used to spend about 6% of a processor core listening to an empty room, all the time it was on. The second before each sound is kept, so the start of a command is never cut off.
+- **Limitless Zoom hardly ever zooms while you talk.** A command word said inside a sentence no longer counts, while "zoom in please" still does. In the same hour of people reading aloud, Zoom 0.1.4 zoomed 4 times, down from 17. With a band playing under the commands, it still heard 41 of 42 said by three of the Mac's voices, and all of them on Linux.
+- **GazeStage's tone pad works while it's minimised.** In 0.2.3, when Voice, a controller or another app moved the tone pad while GazeStage was minimised, the Helix or plugin got nothing until GazeStage's window came back. GazeStage 0.4.2 sends the tone pad's MIDI on its own clock, so it goes out on time whatever is in front.
+- **The tone pad's commands follow the Limitless Access Standard.** GazeStage 0.4.2 gives them names the standard allows, so it keeps its level, and Voice, a controller or a Stream Deck can use them the standard way ("tone A" still works). Found by installing 0.2.3 on fresh computers and checking every app.
+
 ### New in 0.2.3
 - **GazeStage's tone pad.** A new Tone page (⌘3) shapes your sound the way the pads play it: with your eyes, your head, dwell or a switch. One point sends two MIDI controllers, left–right and down–up.
   - It drives a Line 6 Helix, HX or POD Go's expression pedals when one is plugged in by USB, or any plugin through MIDI learn.
