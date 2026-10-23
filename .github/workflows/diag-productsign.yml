@@ -1,0 +1,73 @@
+# Throwaway (branch diag/productsign only): which certificate shapes productsign accepts as a
+# Developer ID Installer identity, so the signing test can make one it takes.
+name: Diag productsign
+
+on:
+  push:
+    branches: [diag/productsign]
+
+jobs:
+  try:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Try each certificate shape on a tiny package
+        run: |
+          d="$RUNNER_TEMP/c"; mkdir -p "$d/root"; cd "$d"
+          sw_vers
+          printf '%s\n' '[req]' 'distinguished_name = dn' 'prompt = no' 'x509_extensions = ext' \
+            '[dn]' 'CN = Diag Test Authority' 'O = Limitless Sound test' 'C = US' \
+            '[ext]' 'basicConstraints = critical, CA:true' 'keyUsage = critical, keyCertSign, cRLSign' \
+            'subjectKeyIdentifier = hash' > ca.cnf
+          /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 2 -config ca.cnf -keyout ca.key -out ca.crt
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ca.crt
+          kc="$d/diag.keychain-db"
+          security create-keychain -p pw "$kc"; security unlock-keychain -p pw "$kc"
+          security set-keychain-settings -lut 3600 "$kc"
+          security list-keychains -d user -s "$kc" login.keychain-db
+          pkgbuild --root root --identifier org.limitlesssound.diag --version 1 tiny.pkg
+          make() {  # <n> <issuer: ca|self> <ext lines...>
+            local n=$1 how=$2; shift 2
+            local cn="Developer ID Installer: Diag $n (DIAGTEAM0$n)"
+            { printf '%s\n' '[req]' 'distinguished_name = dn' 'prompt = no' \
+                '[dn]' "CN = $cn" "OU = DIAGTEAM0$n" 'O = Limitless Sound test' 'C = US' '[ext]' \
+                'basicConstraints = critical, CA:false' 'keyUsage = critical, digitalSignature' \
+                'subjectKeyIdentifier = hash'
+              printf '%s\n' "$@"; } > "v$n.cnf"
+            if [ "$how" = self ]; then
+              /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 2 -config "v$n.cnf" -extensions ext \
+                -keyout "v$n.key" -out "v$n.crt" 2>/dev/null
+            else
+              /usr/bin/openssl req -new -newkey rsa:2048 -nodes -config "v$n.cnf" -keyout "v$n.key" -out "v$n.csr" 2>/dev/null
+              /usr/bin/openssl x509 -req -in "v$n.csr" -CA ca.crt -CAkey ca.key -CAcreateserial -days 2 \
+                -extfile "v$n.cnf" -extensions ext -out "v$n.crt" 2>/dev/null
+            fi
+            /usr/bin/openssl pkcs12 -export -inkey "v$n.key" -in "v$n.crt" -name "$cn" -passout pass:pw -out "v$n.p12"
+            security import "v$n.p12" -k "$kc" -f pkcs12 -P pw -T /usr/bin/productsign -T /usr/bin/codesign >/dev/null
+            echo "$n|$how|$*|$cn" >> shapes.txt
+          }
+          make 1 ca 'extendedKeyUsage = critical, 1.2.840.113635.100.4.13' '1.2.840.113635.100.6.1.14 = critical, ASN1:NULL'
+          make 2 ca 'extendedKeyUsage = 1.2.840.113635.100.4.13' '1.2.840.113635.100.6.1.14 = ASN1:NULL'
+          make 3 ca 'extendedKeyUsage = codeSigning, 1.2.840.113635.100.4.13' '1.2.840.113635.100.6.1.14 = ASN1:NULL'
+          make 4 ca '1.2.840.113635.100.6.1.14 = critical, ASN1:NULL'
+          make 5 self 'extendedKeyUsage = critical, 1.2.840.113635.100.4.13' '1.2.840.113635.100.6.1.14 = critical, ASN1:NULL'
+          make 6 ca 'extendedKeyUsage = critical, 1.2.840.113635.100.4.9'
+          make 7 ca 'extendedKeyUsage = codeSigning'
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k pw "$kc" >/dev/null
+          echo "== identities"; security find-identity -p basic "$kc"
+          echo "== results"
+          while IFS='|' read -r n how ext cn; do
+            if out=$(productsign --sign "$cn" --keychain "$kc" tiny.pkg "out$n.pkg" 2>&1); then
+              echo "OK    v$n ($how) $ext"
+            else
+              echo "FAIL  v$n ($how) $ext :: $(tail -1 <<<"$out")"
+            fi
+          done < shapes.txt
+          echo "== with --timestamp, first shape that worked"
+          for n in 1 2 3 4 5 6 7; do
+            [ -f "out$n.pkg" ] || continue
+            cn=$(sed -n "${n}p" shapes.txt | cut -d'|' -f4)
+            productsign --sign "$cn" --keychain "$kc" --timestamp tiny.pkg "ts$n.pkg" && pkgutil --check-signature "ts$n.pkg"
+            break
+          done
+          security delete-keychain "$kc"
