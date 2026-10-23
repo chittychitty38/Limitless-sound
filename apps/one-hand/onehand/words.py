@@ -93,7 +93,7 @@ class Text(str):
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
-def t(text, **values):
+def t(text, /, **values):
     """The text in the language in use, with each {name} filled in from values."""
     out = SPANISH.get(text, text) if language() == "es" else text
     out = _PLACEHOLDER.sub(lambda m: str(values[m.group(1)]) if m.group(1) in values else m.group(0), out)

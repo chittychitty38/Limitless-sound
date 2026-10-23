@@ -89,6 +89,7 @@ def test_no_english_reaches_the_screen_without_t():
 def test_t_fills_in_and_says_it_again_in_another_language(monkeypatch):
     said = t("{key} key: {command}", key="E", command=t("Record"))
     assert said == "E key: Record"
+    assert t("{text}, {values}", text="any name", values="works") == "any name, works"
     monkeypatch.setattr(words, "_suite", "es")
     assert t("Record") == "Grabar" and words.again(said) == "Tecla E: Grabar"
     assert t("Not in the table") == "Not in the table"   # no Spanish: it stays English
