@@ -97,7 +97,7 @@ class ZoomApp(QObject):
         self.ui_effects = QApplication.isEffectEnabled(Qt.UI_General)
 
         self.toast = Toast()
-        self.badge = Toast(persistent=True)
+        self.badge = Toast(persistent=True, about="Zoom keys")
         self.tts = None
         try:
             from PySide6.QtTextToSpeech import QTextToSpeech
