@@ -13,6 +13,15 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.9
+- **A first preview of Limitless Voice in Brazilian Portuguese.** Choose «Português (prévia: só o Limitless Voice)» in the first two questions or in Settings. Voice then listens and answers in Portuguese in Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER and FL Studio. Its speech model (31 MB) downloads once, when you choose Portuguese. Voice 0.4.3.
+  - **Why a preview:** the only free Portuguese speech model we can ship hears less than the Spanish one. Measured on real Brazilian speakers, Voice gets about 6 command words in 10 right the first time, against 8 in 10 in Spanish. Say commands whole and slowly. English is one choice away, and Voice says all this in Portuguese when you choose it.
+  - **The same safety rules as Spanish.** Cut, Paste and Delete fire only on the exact word, and a command word inside a sentence is talk. No word that nobody said made it press Cut, Paste or Delete. In an hour of people reading Portuguese aloud, Voice fired one command.
+  - **Every Voice window is in Portuguese** and fits wherever the English does, at double text size too. Replies are read by a Brazilian voice when the computer has one.
+  - **Only Voice, for now.** The page, the other apps and the installers stay in English when you choose Portuguese, and the language list says so. One-Hand and Zoom used to stay in Spanish if you came from Español; they now show English too (One-Hand 0.2.7, Zoom 0.1.9).
+  - **Not yet tried by a Brazilian speaker in a real DAW.** Tell us what it gets wrong.
+- **Limitless Voice keeps every word on screen with very large text, in every language.** Its setup guide and main window used to squeeze wrapped lines when the text outgrew them. At double size, the setup guide cut off parts of 24 lines, and the main window half of "Allow Limitless Voice to control the computer". Now a window grows as wide as its words need and scrolls up and down for the rest. The setup guide scrolls to whatever the keyboard moves to.
+
 ### New in 0.2.8
 - **GarageBand, REAPER and FL Studio.** Limitless Voice, Control, One-Hand and Zoom now work in GarageBand 10 (free on every Mac), REAPER 7 and FL Studio, as well as Logic Pro, Pro Tools and Ableton Live. Say "play", "record", "new track", "mixer", or in FL Studio "piano roll" and "channel rack". Or press the same on a controller, a switch or one hand.
   - **Only the maker's own keys.** Every key comes from that DAW's own guide (Apple's, Cockos' or Image-Line's). A key the guide doesn't confirm isn't pressed. `apps/voice/DAW-SHORTCUTS.md` lists each one with its source.
