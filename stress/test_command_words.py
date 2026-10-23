@@ -35,6 +35,7 @@ from conftest import need
 need("voice")
 need("zoom")
 
+from limitless_voice.engine import normalize  # noqa: E402
 from limitless_zoom.voice import recognize_file  # noqa: E402
 from test_voice_real_speech import (  # noqa: E402
     MODEL, WORKERS, _agreeing, _making, _pick, _sums, _waited, hear_word, kind, right, score)
@@ -45,6 +46,12 @@ needs_words = pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MOD
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
 ZOOM = {"fit": "fit", "taller": "taller", "shorter": "shorter", "again": "again", "zoom": None}
+
+
+def _trusting(heard):
+    """The other way round, also measured here only: as if the open recognizer always heard
+    what the command recognizer did, so no command ever waits for the two to agree."""
+    return [(c, c if normalize(c) else o) for c, o in heard]
 
 
 def _median(xs):
@@ -71,6 +78,7 @@ def test_real_people_saying_voice_commands():
 
     tally, instead, wrong = score(used, jobs, heard, kinds)
     what_if, _, _ = score(used, jobs, [_agreeing(h, False) for h in heard], kinds)
+    trusting, _, _ = score(used, jobs, [_trusting(h) for h in heard], kinds)
     soon = defaultdict(list)
     for (w, f), h in zip(jobs, heard):
         if kinds[w] == "command" and f in _waited and right(w, h, kinds[w])[0]:
@@ -111,6 +119,28 @@ def test_real_people_saying_voice_commands():
     print(f"What if every one-word command needed the open recognizer to hear that word too? Right "
           f"{if_hits / tries:.1%} (now {hits / tries:.1%}). Per word: "
           + ", ".join(f"{w} {tally[w]['hits']}→{what_if[w]['hits']}" for w in commands))
+    trust_hits, _ = _sums(trusting, commands)
+    print(f"And if no command needed that, not even a destructive one? Right {trust_hits / tries:.1%}, "
+          f"{sum(trusting[w]['destructive'] for w in used)} destructive from a wrong word. Per word: "
+          + ", ".join(f"{w} {tally[w]['hits']}→{trusting[w]['hits']}" for w in commands if trusting[w]["hits"] != tally[w]["hits"]))
+
+    # Floors from what CI measured (ubuntu-latest, 100 clips a word, October 2026), less a margin:
+    # results move a little from one runner's CPU to another's. Measured: 73.4% of commands right;
+    # the weakest, "cut", 39% (the open recognizer hears people's "cut" as "god", "come" or
+    # "good", and a destructive command needs it to agree); no destructive key from a word that
+    # wasn't said; stray words fired a command 0.9% of the time; record, play and stop acted on a
+    # median 0.53 to 0.60 s after the word ended, everything a median 1.12 s.
+    rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
+    assert hits / tries >= 0.69, f"only {hits / tries:.1%} of the command words were right"
+    worst = min(commands, key=rate.get)
+    assert rate[worst] >= 0.32, f"“{worst}” was right only {rate[worst]:.0%} of the time"
+    assert destroyed == 0, f"a word that wasn't said pressed a destructive key {destroyed} times"
+    if strays:
+        assert 1 - quiet / stray_tries <= 0.03, f"stray words fired a command {1 - quiet / stray_tries:.1%} of the time"
+    instant = [x for w in ("record", "play", "stop") for x in soon[w]]
+    if instant:
+        assert _median(instant) <= 0.8, f"record, play and stop went a median {_median(instant):.2f} s after the word"
+    assert _median(every) <= 1.35, f"commands were acted on a median {_median(every):.2f} s after the word"
 
 
 @needs_words
@@ -135,4 +165,13 @@ def test_real_people_saying_zoom_commands():
         print(f"{w:<8} {what} {hits[w]}/{tries[w]} ({hits[w] / tries[w]:.0%})"
               + ("; instead: " + ", ".join(f"“{k}” ×{n}" for k, n in instead[w].most_common(3)) if instead[w] else ""))
     commands = [w for w in words if ZOOM[w]]
-    print(f"Zoom's commands: {sum(hits[w] for w in commands)}/{sum(tries[w] for w in commands)} right")
+    right_all = sum(hits[w] for w in commands) / sum(tries[w] for w in commands)
+    print(f"Zoom's commands: {sum(hits[w] for w in commands)}/{sum(tries[w] for w in commands)} right ({right_all:.1%})")
+
+    # Floors from what CI measured, less a margin: 92.0% right (fit 87%, taller 24 of 25,
+    # shorter 97%, again 91%), and "zoom" alone never zoomed in 100 tries.
+    assert right_all >= 0.88, f"only {right_all:.1%} of Zoom's commands were right"
+    worst = min(commands, key=lambda w: hits[w] / tries[w])
+    assert hits[worst] / tries[worst] >= 0.80, f"“{worst}” was right only {hits[worst] / tries[worst]:.0%} of the time"
+    if "zoom" in tries:
+        assert tries["zoom"] - hits["zoom"] <= 3, f"“zoom” alone zoomed {tries['zoom'] - hits['zoom']} times"
