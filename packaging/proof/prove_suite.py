@@ -424,6 +424,10 @@ def summary(proof: dict) -> str:
     lines = [f"## Limitless Sound {proof['suiteVersion']} on {c.get('model') or c['arch']} ({c['os']})", ""]
     if proof.get("installSeconds") is not None:
         lines.append(f"Installed in {proof['installSeconds']} s.")
+    hub = proof.get("hubIdle") or {}
+    if proof.get("hubVersion") or hub:
+        lines.append(f"The Limitless Sound page (hub {proof.get('hubVersion') or '?'}) sitting idle: "
+                     f"{hub.get('cpuPercent', '—')}% CPU, {hub.get('memoryMB', '—')} MB.")
     lines += ["", "| App | Opened by | Joined in | Level | Actions answered | Idle CPU | Memory |",
               "|---|---|---|---|---|---|---|"]
     for a in proof["apps"]:
@@ -467,6 +471,7 @@ def main(argv=None) -> int:
     screenshot(out / "shots" / "hub.png")
     proof = {"when": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "standard": las_check.STANDARD,
              "suiteVersion": args.suite_version, "installSeconds": args.install_seconds,
+             "hubVersion": las_check.link_info().get("version", ""),
              "computer": computer(), "apps": [], "suite": []}
 
     for tool in tools:

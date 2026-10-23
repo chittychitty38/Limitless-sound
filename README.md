@@ -51,9 +51,9 @@ size, contrast and motion once, and every app follows, live.
 
 Every app also works on its own, exactly the same without the others.
 
-## Proven every night
+## Proven on fresh computers
 
-Every night a fresh Apple silicon Mac, a fresh Intel Mac and a fresh Windows PC download the
+With every release, a fresh Apple silicon Mac, a fresh Intel Mac and a fresh Windows PC download the
 suite from the links above, install it, open every app and run the Access Standard test kit
 against each one: it must join the suite, answer every one of its commands within three
 seconds, keep running, be ready in seconds and sit quietly when idle. The results, failures
@@ -85,7 +85,7 @@ apps/<app>/                 one folder per app, self-contained (its own dependen
 shared/hub/                 Limitless Sound, the hub (Python, standard library only)
 shared/clients/             Limitless Link clients, plus the app log and Mac keyboard helpers
 standard/                   the Limitless Access Standard and its test kit
-packaging/                  the suite installers (Mac .pkg, Windows .exe) and the nightly proof
+packaging/                  the suite installers (Mac .pkg, Windows .exe) and the proof on fresh computers
 docs/                       the website
 .github/workflows/          one workflow per app, the suite, the stress tests and the proof
 ```

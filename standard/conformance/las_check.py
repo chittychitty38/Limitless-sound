@@ -73,7 +73,8 @@ def start_private_hub(home: Path):
     return hub, Hub(info["http"], info["token"])
 
 
-def live_hub() -> Hub:
+def link_info() -> dict:
+    """What the running hub wrote for its apps: ports, token, pid and its version."""
     from_env = os.environ.get("LIMITLESS_SOUND_HOME")
     if from_env:
         folder = Path(from_env)
@@ -83,7 +84,11 @@ def live_hub() -> Hub:
         folder = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "Limitless Sound"
     else:
         folder = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "Limitless Sound"
-    info = json.loads((folder / "link.json").read_text())
+    return json.loads((folder / "link.json").read_text())
+
+
+def live_hub() -> Hub:
+    info = link_info()
     return Hub(info["http"], info["token"])
 
 
