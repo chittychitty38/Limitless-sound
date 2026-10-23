@@ -152,17 +152,19 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.5 passes it
-on all three computers with nothing left to improve** (run 39903737733, on the website):
-- Every app is ready in 1–6 s, at Access Standard level 2, with every action answered and no
-  timeouts.
-- Every suite check is green, including two new ones:
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.6 passes it
+on all three computers** (run 39922456834, on the website):
+- Every app is ready in 1–9 s, at Access Standard level 2, with every action answered and no
+  timeouts. The installer takes 10 s on Apple silicon, 24 s on Intel and 48 s on Windows.
+- Every suite check is green, S1 to S6:
   - Limitless Sound's own page opens, with its Spanish words (S4, #86);
-  - the suite's language can be set to Español and back (S5, #88).
-- Every app is under 3% of the CPU sitting idle; all but one are at or under 0.9%. Zoom read
-  2.6% on the Intel Mac in this run against 0.4% in 0.2.4's, the same code; see the Spotlight
-  gotcha below. Control, at 2.8% in 0.2.2, is now 0.8% or less.
-- The installer takes 11 s on Apple silicon, 17 s on Intel and 42 s on Windows.
+  - the suite's language can be set to Español and back (S5, #88);
+  - One-Hand, Zoom, Control and GazeStage each say they're showing Spanish within 3 s of the
+    suite switching, and English again after (S6, #96). Voice is named but not held: it reports
+    the language it listens in, English until its Spanish model is downloaded. Color is named
+    until its Spanish ships (#95); then drop it from `NOT_IN_SPANISH` in `prove_suite.py`.
+- Every app is at or under 2% of the CPU sitting idle (Zoom 2.0% and GazeStage 1.7% on the
+  Intel Mac, everything else 1% or less). See the Spotlight gotcha below for Intel Mac readings.
 
 An app over the limit names its busiest processes (#62). To run it again before the default
 branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
@@ -389,5 +391,6 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   sees, run the smoke test with a fontconfig file that offers only DejaVu (`FONTCONFIG_FILE`).
 - GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
   account limit"), after a day of many suite builds: each one downloads every app for three
-  computers. The suite build and an app's release job then fail at the download step with no
-  code at fault. Re-run the failed job later; don't change code for it.
+  computers. On 2026-10-23 it refused Control's builds for over an hour. The suite build now takes
+  such an app from its release instead (`newest-builds.sh`, #94), the same files made by the same
+  run. An app's own release job can't, as it makes that release: re-run the failed job later.
