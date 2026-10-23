@@ -15,6 +15,7 @@ from array import array
 from collections import deque
 from pathlib import Path
 
+from . import common_words
 from .actions import SPANISH_PHRASES, VOICE_PHRASES
 from .words import t
 
@@ -114,8 +115,10 @@ ENGLISH = Language("en", "English", "English", "vosk-model-small-en-us-0.15", "4
                    fillers=("please", "thanks", "okay", "um", "uh"))
 # vosk-model-small-es-0.42, Apache 2.0 (Alpha Cephei): the same model Limitless Voice uses for
 # Spanish, so a computer that has it for Voice already has it for Zoom (app.py looks there).
+# It also listens for the words said most in Spanish (common_words.py): without them, the model
+# writes down ordinary talk as the nearest command.
 SPANISH = Language("es", "Español", "Spanish", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
-                   fillers=("por favor", "gracias"))
+                   fillers=("por favor", "gracias"), others=common_words.SPANISH)
 LANGUAGES = {lang.code: lang for lang in (ENGLISH, SPANISH)}
 
 # English, as Zoom always listened (the stress tests use these).

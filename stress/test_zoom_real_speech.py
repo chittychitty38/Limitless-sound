@@ -35,7 +35,7 @@ from conftest import need
 
 need("zoom")
 
-from limitless_zoom.voice import LANGUAGES, Hearing, VoiceListener, recognize_file, without  # noqa: E402
+from limitless_zoom.voice import LANGUAGES, Hearing, Language, VoiceListener, recognize_file, without  # noqa: E402
 
 LANG = LANGUAGES[os.environ.get("ZOOM_LANGUAGE") or "en"]
 MODEL = os.environ.get("VOSK_MODEL")
@@ -45,27 +45,23 @@ PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 RATE = 16000
 
-MIN_CONF = 0.55                      # the app's default
+MIN_CONF = 0.55                            # the app's default (voice_confidence)
 THRESHOLDS = (0.0, 0.4, 0.55, 0.7, 0.85)   # what another one would do, measured here
 
 
 def variants():
     """Other ways Zoom could listen in the language, measured here and not in the app: what Zoom
     would hear of real people saying its words (test_zoom_language.py), and what an hour of
-    ordinary talk would set off. "others" are words listened for only to be written down instead
-    of a command they sound like."""
+    ordinary talk would set off. "Other words" are listened for only to be written down instead of
+    a command they sound like (limitless_zoom/common_words.py)."""
     if LANG.code != "es":
         return {}
-    from zoom_trial_words import NEAR, SHORT, TOP300, TOP1000, TOP3000
-
-    def common(top):
-        return SHORT + [w for w in top if w not in NEAR]
+    from zoom_words_es import NEAR, TOP1000
+    alone = Language(LANG.code, LANG.name, LANG.english_name, LANG.model, LANG.size, LANG.phrases, LANG.fillers)
     return {
-        "+ 300 common": LANG.adding(others=SHORT + TOP300),
-        "+ 1000 common": LANG.adding(others=SHORT + TOP1000),
-        "+ 300, not near": LANG.adding(others=common(TOP300)),
-        "+ 1000, not near": LANG.adding(others=common(TOP1000)),
-        "+ 3000, not near": LANG.adding(others=common(TOP3000)),
+        "no other words": alone,
+        "1000 common words": LANG.adding(others=[w for w in TOP1000 if w not in NEAR]),
+        "and their neighbours": LANG.adding(others=TOP1000 + NEAR),
     }
 
 _mine = threading.local()
@@ -195,6 +191,6 @@ def test_ordinary_talk_rarely_zooms():
         # (Zoom 0.1.2: 16.1 to 17.9, nearly all a command word inside a sentence; 0.1.3: 13.2).
         "en": 7,
         # FLEURS es_419, the first hour of its dev split.
-        "es": 20,
+        "es": 4,
     }[LANG.code]
     assert len(fired) / hours <= ceiling, f"Zoom acted {len(fired) / hours:.1f} times an hour of talk"

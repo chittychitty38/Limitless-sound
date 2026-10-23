@@ -189,5 +189,5 @@ def test_real_people_saying_zoom_commands():
                 + (f" ({instead2[w].most_common(1)[0][0]})" if instead2[w] else "") for w in changed))
 
     # Floors from what CI measured (ubuntu-latest, up to 100 clips a word), less a margin.
-    assert right >= 0.5, f"only {right:.1%} of Zoom's {LANG.name} commands were right"
-    assert fired <= 0.2, f"words that aren't commands zoomed {fired:.1%} of the time"
+    assert right >= 0.80, f"only {right:.1%} of Zoom's {LANG.name} commands were right"
+    assert fired <= 0.16, f"words that aren't commands zoomed {fired:.1%} of the time"

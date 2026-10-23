@@ -82,6 +82,21 @@ def test_por_favor_and_gracias_around_a_spanish_command_are_fine():
     assert SPANISH.confidence([w("acercar", 0, .5, 0.6), w("por", .5, .6, 0.2), w("favor", .6, .8, 0.2)]) == 0.6
 
 
+def test_common_spanish_words_are_written_down_and_do_nothing():
+    # The Spanish model writes talk down as the nearest command unless it has other words to
+    # choose: common_words.py. Said alone they do nothing; around a command, it isn't one.
+    assert len(SPANISH.others) > 300 and not ENGLISH.others
+    assert {"de", "la", "y", "que", "para"} <= set(SPANISH.others) <= SPANISH.words()
+    assert "de" in json.loads(SPANISH.grammar())
+    assert SPANISH.match("para", [w("para", 0, .3)], 0.5) is None
+    assert SPANISH.match("para reducir", [w("para", 0, .3), w("reducir", .8, 1.3)], 0.5) is None
+    assert SPANISH.match("reducir el", [w("reducir", 0, .4), w("el", .9, 1.0)], 0.5) is None
+    assert SPANISH.match("más altas", [w("más", 0, .3), w("altas", .3, .7)], 0.5) == "taller"   # "más" is one too
+    # Not a word that sounds like a one-word command: it would take the commands people say.
+    single = [p for p in SPANISH.phrases if " " not in p]
+    assert not [o for o in SPANISH.others for c in single if o != c and (o in c or c in o) and abs(len(o) - len(c)) <= 2]
+
+
 def test_what_to_say_first_and_by_action():
     assert ENGLISH.first("in") == "zoom in" and SPANISH.first("in") == "acercar"
     assert SPANISH.by_action()["out"][:2] == ["alejar", "reducir"]
