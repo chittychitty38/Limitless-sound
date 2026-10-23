@@ -13,6 +13,16 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.8
+- **GarageBand, REAPER and FL Studio.** Limitless Voice, Control, One-Hand and Zoom now work in GarageBand 10 (free on every Mac), REAPER 7 and FL Studio, as well as Logic Pro, Pro Tools and Ableton Live. Say "play", "record", "new track", "mixer", or in FL Studio "piano roll" and "channel rack". Or press the same on a controller, a switch or one hand.
+  - **Only the maker's own keys.** Every key comes from that DAW's own guide (Apple's, Cockos' or Image-Line's). A key the guide doesn't confirm isn't pressed. `apps/voice/DAW-SHORTCUTS.md` lists each one with its source.
+  - **The same key in every app.** Every app presses the same key for the same thing in every DAW, and a test checks 166 of them on every change.
+  - **FL Studio's R gets the suite ready to record but doesn't start.** Say "record mode", then "play".
+  - **FL Studio's undo and redo share one key**, so Voice tells you to press it rather than guessing.
+  - **Not yet tried in the real DAWs.** Tell us what doesn't work.
+  - Voice 0.4.2, Control 0.2.8, One-Hand 0.2.6.
+- **Zoom no longer loads its speech model again when the language changes.** Switching the suite between English and Spanish used to reload it each time. The last proof caught Zoom using twice its memory and 5% of an Intel Mac sitting idle. Zoom 0.1.8.
+
 ### New in 0.2.7
 - **Every app in Spanish, Limitless Color included.** With the language set to Español, Color's tuner, setup guide, eye check, menus and answers are in Spanish. Color 0.1.5.
 - **Limitless Color understands what you tell it far better, in English and Spanish.** We tested its built-in offline helper on descriptions written by someone who never saw its rules:
