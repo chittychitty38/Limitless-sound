@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.9 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.10 release. Everything below is the state of the project then.
 
 ---
 
@@ -51,14 +51,14 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.5, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.3 |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.6, in the suite |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.4 |
 | Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.7 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.9 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.10 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
 | Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.8 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.9** (the repo's Latest release) |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.10** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -72,6 +72,9 @@ same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85). Voice's setup
 window grow as wide as their words need and scroll up and down for the rest (`look.UpAndDown`,
 #103), and so do Settings' contents, with Save and Cancel always in view (0.4.4): before, at
 double text, the setup guide cut off parts of 24 lines and Settings was 972 px wide.
+Nothing scrolls sideways: the website at double text on a 320 px phone (#113), and every web
+screen at every look (`apps-a11y.cjs` fails on any sideways scroll, #116; Limitless Sound's own
+setup did, at 51 px, until hub 0.2.6).
 
 **English and Spanish.** One shared language (`language`, "en" or "es") in Limitless Sound's
 settings, chosen in the first two questions or from the computer's language, and every app
@@ -115,7 +118,8 @@ Release links (permanent; they always point at the newest suite):
 
 Nothing is signed. macOS needs **System Settings → Privacy & Security → Open Anyway** once,
 Windows SmartScreen needs **More info → Run anyway**. Signing needs an Apple Developer ID and a
-Windows code-signing certificate, which Bennet doesn't have yet.
+Windows code-signing certificate, which Bennet doesn't have yet; the builds are ready for them
+(`SIGNING.md`, open item 4).
 
 ### How the hub works
 Hub on 127.0.0.1: TCP 47900 (NDJSON, apps connect) and HTTP 47901 (settings page and one-shot
@@ -146,6 +150,11 @@ identical. Every app works alone without the hub.
   `packaging/mac`, `packaging/windows`: the installers. `packaging/proof`: the proof script.
 - `standard/`: Limitless Access Standard draft and its test kit (`standard/conformance/las_check.py`).
 - `docs/`: the public website (also copied to the `gh-pages` branch).
+- `SIGNING.md`: Bennet's guide to the certificates and secrets. `.github/scripts/mac-sign.sh` and
+  `win-sign.ps1` do the signing; `signing.yml` tests them with throwaway certificates.
+- `translations/`: the native speakers' read (`es.md`, `pt.md`), with the two report forms in
+  `.github/ISSUE_TEMPLATE/`.
+- `.github/workflows/branches.yml`: deletes branches whose pull request was merged (open item 5).
 - Older prototypes in Bennet's Claude project files (Karabiner one-hand, Hammerspoon zoom,
   AdaptiveMapper Swift, browser color tuner) are superseded by the apps above. Ignore them.
 
@@ -172,14 +181,19 @@ joins the suite, presses every action it offers, and measures start time and idl
 each app's log and crash reports in the workflow log. Results go to the `proof-results` branch
 and the website's Proof section (`proof-results-test` from a PR). It runs on a pull request that
 changes the proof, and nightly (or with "Run workflow") once the default branch is `main` (open
-item 3).
+item 3). Until then the website and README say the proof runs "with every release", which is
+what has happened; say "every night" again once the nightly runs do. Each run records the
+versions of every app and of Limitless Sound's page (the hub) and the page's idle load. The
+README's badge (`.github/scripts/proof-badge.py`, from `latest.json`, #113) says how many of the
+three computers the latest release passed on; it lives at `proof/badge.svg` on `gh-pages`.
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.9 passes it
-on all three computers** (run 39946732776, on the website):
-- Every app is ready in under 8 s, at Access Standard level 2, with every action answered and no
-  timeouts. The installer takes 10 s on Apple silicon, 15 s on Intel and 55 s on Windows.
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.10 passes it
+on all three computers, twice** (runs 40016678351 and 40020260322; the second is on the website
+and the README's badge):
+- Every app is ready in under 7 s, at Access Standard level 2, with every action answered and no
+  timeouts. The installer takes 12–17 s on Apple silicon, 17–19 s on Intel and 48 s on Windows.
 - Every suite check is green, S1 to S7:
   - Limitless Sound's own page opens, with its Spanish words (S4, #86);
   - the suite's language can be set to Español and back (S5, #88);
@@ -188,20 +202,25 @@ on all three computers** (run 39946732776, on the website):
     reports the language it listens in, English until its Spanish model is downloaded.
   - From Español, Português leaves every app but Voice in English within 3 s (S7, #107). Each
     must show Spanish first, so an app that ignores the switch can't pass.
-- Every app is under 3% of the CPU sitting idle except Zoom on the Intel Mac: 3.2%, and 3.3% on
-  P3's second look 50 s later (open item 12). Everything else is 1.7% or less.
+- Every app is under 3% of the CPU sitting idle on every computer in both runs, and Limitless
+  Sound's page (hub 0.2.6) 0.5% or less. All but Zoom stay at 1.6% or less. Zoom on the Intel Mac
+  sat at the 3% line through 0.2.9 (2.7–3.7%); one cause was that it asked macOS about every one
+  of its permissions every second. Zoom 0.1.10 asks only about the two it needs, every 5 s while
+  one is missing and every 10 s once both are granted (#111). In 0.2.10 it read 0.9% and then
+  2.5% (and 0.1% then 1.5% on Windows), so something else still wakes it now and then (open
+  item 12).
 - P3 watches an app over 3% once more, 30 s later, and judges that reading (#107): one 15 s
   reading can't tell a spike from steady use (Zoom on Intel read 3.7% and 2.9% in two runs of
   the same 0.2.9).
 - P5 (#104) compares each app's idle memory with the last published proof on the same kind of
   computer and warns at 1.5x and 50 MB more. The 0.2.7 proof found Zoom 0.1.6 at twice its
   memory (510 MB on Apple silicon) and 5.3% idle CPU on Intel: it loaded its speech model again
-  on each language switch. Zoom 0.1.8 (#101) fixed it: 184 / 250 / 250 MB in 0.2.9.
+  on each language switch. Zoom 0.1.8 (#101) fixed it: 186–193 / 253 / 248 MB in 0.2.10.
 
 An app over the limit names its busiest processes (#62). To run it again before the default
 branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
 `proof-results` branch at a commit with the tree of `proof-results-test` (`git commit-tree`), and
-copy its `latest.json` to `proof/latest.json` on `gh-pages`.
+copy its `latest.json` and `badge.svg` to `proof/` on `gh-pages`.
 
 ## Public website and branding
 
@@ -272,19 +291,39 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    "GazeStage Notes". Other apps move it with GazeStage's actions `xySet`, `xySnapA`–`D`,
    `xyCenter`, `xyLeft`… (0.4.2, #70). **Untested with real Line 6
    hardware**; `HANDOFF.md` has the steps. The CC1/2 mapping comes from Line 6's MIDI table.
-3. **Default branch → `main`.** The repo's default branch is still `zoom-view-control`. Ask
-   Bennet to change it at **GitHub › the repo › Settings › General › Default branch** (or run
-   `gh repo edit chittychitty38/Limitless-sound --default-branch main` with his OK). Until then
-   the nightly proof and nightly stress runs don't run, no workflow can be started by hand, and the
-   suite installers aren't refreshed after an app release (see "How releases work").
-4. **Signing.** Apple Developer ID ($99/year) for a signed, notarized `.pkg`, and a Windows
-   certificate for the installers. Bennet's decision; once he has them, add them as repo secrets.
-   Voice's workflow already signs and notarizes when the `APPLE_*` secrets exist; the other
-   apps and the suite `.pkg` need the same steps added.
-5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
-   merged, and the throwaway `diag/control-startup`, `diag/control-idle`, `diag/gazestage-idle`
-   and `diag/zoom-idle`).
-   Ask Bennet first; cloud sessions weren't allowed to delete them.
+3. **Default branch → `main`.** The repo's default branch is still `zoom-view-control`. Bennet
+   said yes to changing it, but cloud sessions can't change repo settings. On the Mac, with his
+   OK, run `gh repo edit chittychitty38/Limitless-sound --default-branch main`, or he clicks
+   **GitHub › the repo › Settings › General › Default branch › ⇄ (Switch to another branch) ›
+   main › Update**. Until then the nightly proof and nightly stress runs don't run, no workflow
+   can be started by hand, and the suite installers aren't refreshed after an app release (see
+   "How releases work"). While there: **Settings › General › Pull Requests › Automatically
+   delete head branches** stops new branches piling up.
+4. **Signing: the builds are ready, the certificates are Bennet's decision** (#115).
+   `SIGNING.md` walks him through it in plain words. Every build signs once its secrets exist and
+   stays exactly as now until then.
+   - Mac: the Apple Developer Program ($99 a year), two certificates (Developer ID Application
+     and Developer ID Installer) saved as .p12, an app-specific password, nine repo secrets, then
+     **Actions › Limitless Sound Suite › Run workflow** (needs the default branch to be `main`,
+     item 3). Every app, the suite `.pkg` and its notarization go through
+     `.github/scripts/mac-sign.sh`; GazeStage and Color feed the same secrets to electron-builder
+     and Tauri.
+   - Windows: since June 2023 a new code-signing certificate can't be downloaded as a .pfx file,
+     which is all `.github/scripts/win-sign.ps1` signs with. He has to pick a cloud signing
+     service first (Azure Trusted Signing, about $10 a month, or SSL.com eSigner); then connect it
+     in `win-sign.ps1` and GazeStage's workflow.
+   - The **Signing check** workflow signs, installs and runs real builds with throwaway
+     certificates from a throwaway authority whenever the scripts change. Notarization can't be
+     tried without Apple: the first real signed build is its first test.
+   - Ask before buying anything or adding secrets. Once a signed build works, take the
+     **Open Anyway** / **Run anyway** steps out of the README, the site and the release notes.
+5. **Clean up merged branches.** Bennet said to delete the merged ones only. Once the default
+   branch is `main` (item 3): **Actions › Clean up merged branches › Run workflow**, first with
+   "Only list what would be deleted" ticked (#109). It deletes a branch only when its pull request
+   was merged with that same last commit, and keeps `main`, `gh-pages`, `proof-results`,
+   `proof-results-test`, `zoom-view-control` and every unmerged branch. A deleted branch can be
+   restored from its pull request's page. The throwaway `diag/*` branches have no merged PR, so
+   they stay: ask Bennet before deleting those.
 6. **Voice: stray single words.** On real people's recordings (`stress/test_voice_real_speech.py`,
    `stress/test_command_words.py`, each run prints these):
    - Voice hears 91% of the words it listens for, and 73% of real people's DAW command words at
@@ -360,12 +399,13 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 11. **Press the corrected DAW keys once in the real DAWs** (#85): Logic's track mute and solo
     (M, S), Pro Tools' record (F12, on a laptop too), next/previous track (Control-; and
     Control-P) and go to end (Option-Return).
-12. **Zoom's idle CPU on the proof's Intel Mac** (a 2012 Mac mini) sits at the 3% line: 2.7% in
-    0.2.8, 2.9–3.7% in 0.2.9, steady across P3's second look. Apple silicon reads 0.3%, Windows
-    0.0%, and Voice 0.9% on the same Mac, though its silence gate is a copy of Zoom's (`SpeechGate`
-    in `apps/zoom/limitless_zoom/voice.py`). Measure Zoom's threads on a real Intel Mac before
-    changing anything (see the gotchas on idle CPU); its background download of the Spanish model
-    after the suite switches to Español was ruled out.
+12. **Zoom sitting idle on an old Intel Mac.** Under the 3% line in both 0.2.10 proofs, but it
+    varies: 0.9% and 2.5% on the proof's Intel Mac (a 2012 Mac mini), 0.1% and 1.5% on Windows,
+    while Voice, which has the same silence gate (`SpeechGate` in
+    `apps/zoom/limitless_zoom/voice.py`), reads 0.3–0.9% on that Mac. The permission check every
+    second was one cause (#111); the Spanish model download was ruled out (#107). Each reading is one 15 s window,
+    and P3 only looks again above 3%. On a real Intel Mac, sample Zoom's threads for a few minutes
+    at rest (py-spy, or macOS's `sample`) before changing anything.
 
 ## Gotchas learned the hard way
 
@@ -461,9 +501,25 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   up and down, asks for the width they need), and no fixed minimum size stops a window growing.
   Compare a translation with English on the same machine, and check a few fonts locally
   (DejaVu Sans, Carlito, Liberation Sans) at 1x to 2.3x text before pushing.
+- A page that's fine on a laptop can scroll sideways on a phone at double text: a grid column
+  of `1fr` won't shrink below its longest word (use `minmax(0, 1fr)`), a `<select>` is as wide as
+  its longest option (`max-width: 100%`), a fieldset won't shrink below its contents
+  (`min-width: 0`), and long words need `overflow-wrap: anywhere`. A sticky header taller than a
+  fifth of a phone's screen at double text hides what it scrolls over: the site's turns static
+  then. `site-a11y.cjs` and `apps-a11y.cjs` check all of it.
+- Qt's `QFormLayout.WrapLongRows` decides each row's wrap by its own label, but places every
+  field after the longest label: one long label squeezes the short rows' fields. Keep labels
+  short, or put the field under the label yourself.
+- `productsign` takes only an installer certificate from an authority the Mac trusts and marked
+  for installers alone: a self-signed one, or one that may also sign code, is "not an installer
+  signing identity". Apple's real ones are fine; the Signing check's throwaway ones copy their
+  shape (branch `diag/productsign` tried seven shapes on macOS 15).
+- Cloud sessions couldn't change repo settings (the default branch) or delete branches; the
+  session's network refused both. Do those from the Mac, with Bennet's OK.
 - Before blaming a cause, find a measurement that could prove it wrong. Zoom's 3.7% idle in the
   first 0.2.9 proof looked like its Spanish model downloading after S6; P3's second look read
-  3.2% then 3.3%, which ruled that out. A re-run of one proof job publishes the first attempt's
+  3.2% then 3.3%, which ruled that out. One cause was in an old profile of its threads all along:
+  a permission check every second (#111). A re-run of one proof job publishes the first attempt's
   results again (artifacts share a name): push a commit for a fresh run instead.
 - GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
   account limit"), after a day of many suite builds: each one downloads every app for three
