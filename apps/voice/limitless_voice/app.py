@@ -540,7 +540,7 @@ class MainWindow(QMainWindow):
             self.listener.use_command_vocabulary = self.settings.command_vocabulary
             self.listener.set_phrases(self._phrases())
         if dlg.chosen_language().code != self.lang.code:
-            self.apply_language(download=True)   # chosen just now: ask to download it now
+            self.apply_language(download=True)   # chosen just now, so downloaded now if need be
         elif self.settings.model != old_model:
             path = ensure_model(self, self.settings.model)
             if path:

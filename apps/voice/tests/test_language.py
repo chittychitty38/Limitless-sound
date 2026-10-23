@@ -7,7 +7,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from test_setup import FakeListener, make  # noqa: F401  (sets up a private config folder first)
+# first: it sets up a private config folder and an offscreen screen
+from test_setup import make
+
+# isort: split
 from limitless_voice import app as app_module
 from limitless_voice.engine import Engine
 from limitless_voice.grammar import DEFAULT_PACK_DIR, load_packs
@@ -366,10 +369,9 @@ class ChoosingTheLanguage(unittest.TestCase):
         self.assertEqual(w.lang.code, "es")
 
     def test_settings_can_choose_it_and_say_its_a_download(self):
-        from limitless_voice.app import SettingsDialog
         from test_accessibility import problems
         w = self.w
-        dialog = SettingsDialog(w, self.s, w.suite_language())
+        dialog = app_module.SettingsDialog(w, self.s, w.suite_language())
         items = [dialog.language.itemText(i) for i in range(dialog.language.count())]
         self.assertEqual(items, ["Same as Limitless Sound (English)", "English (40 MB download)",
                                  "Español (39 MB download)"])
