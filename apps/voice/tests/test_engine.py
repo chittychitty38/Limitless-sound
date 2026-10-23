@@ -96,12 +96,12 @@ class Matching(unittest.TestCase):
         e.handle("record")
         e.handle("bounce")
         e.handle("midi editor")
-        self.assertEqual(pressed(p), ["cmd+space", "opt+cmd+b", "ctrl+="])
+        self.assertEqual(pressed(p), ["f12", "opt+cmd+b", "ctrl+="])
         e, p = engine("ProTools", os_name="windows")   # Windows reports the exe name
         e.handle("record")
         e.handle("bounce")
         e.handle("midi editor")
-        self.assertEqual(pressed(p), ["ctrl+space", "alt+ctrl+b", "win+="])
+        self.assertEqual(pressed(p), ["f12", "alt+ctrl+b", "win+="])
 
     def test_ableton_live_mac_and_windows(self):
         # The Mac calls the app "Live"; Windows reports the exe, "Ableton Live 12 Suite.exe".
@@ -119,6 +119,18 @@ class Matching(unittest.TestCase):
             for phrase in said:
                 self.assertTrue(e.handle(phrase, phrase).handled, f"{os_name}: {phrase}")
             self.assertEqual([k.replace("alt+ctrl", "ctrl+alt") for k in pressed(p)], keys, os_name)
+
+    def test_keys_that_act_on_tracks_not_regions_or_spotlight(self):
+        # Logic: M and S mute and solo the track; Control-M and Control-S act on regions.
+        e, p = engine("Logic Pro")
+        for phrase in ("mute track", "solo track"):
+            e.handle(phrase, phrase)
+        self.assertEqual(pressed(p), ["m", "s"])
+        # Pro Tools: F12 records on both systems; Command+Space is Spotlight on a Mac.
+        for os_name in ("mac", "windows"):
+            e, p = engine("Pro Tools", os_name)
+            e.handle("record", "record")
+            self.assertEqual(pressed(p), ["f12"], os_name)
 
     def test_ableton_live_delete_and_duplicate_are_held_to_three(self):
         for os_name in ("mac", "windows"):

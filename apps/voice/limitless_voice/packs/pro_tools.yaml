@@ -14,10 +14,12 @@ commands:
     do: {keys: space}
     repeatable: false
     instant: true   # timing matters: runs as soon as it's heard (audio.py)
+  # F12, not Command+Space: on a Mac, Command+Space opens Spotlight before Pro Tools sees it.
+  # Avid lists F12 as Record on both systems (Limitless Control uses it too).
   - say: ["record", "start recording"]
     fuzzy: false
     instant: true
-    do: {keys: cmd+space}
+    do: {keys: f12}
     reply: Recording
     repeatable: false
   - say: ["loop playback", "toggle loop", "loop"]
