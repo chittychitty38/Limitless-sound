@@ -250,11 +250,11 @@ class Engine:
                               else "Didn't catch that")
             params, raw = again[1], heard_open
         # A stray word must never throw work away. The command recognizer can only answer with
-        # command words, so real people's "cat" came back as "cut" 64 times in 100 (stress/
-        # test_voice_real_speech.py). One word that would press Cut, Paste or Delete counts only
-        # if the open recognizer heard that word too.
-        if (alternative is not None and len(said.split()) == 1 and self._destroys(cmd, params)
-                and said not in normalize(alternative).split()):
+        # command words, so real people's "cat" came back as "cut" 64 times in 100, and once as
+        # "cut that" (stress/test_voice_real_speech.py). A command that would press Cut, Paste or
+        # Delete counts only if the open recognizer heard its first word too.
+        if (alternative is not None and self._destroys(cmd, params)
+                and said.split()[0] not in normalize(alternative).split()):
             heard_open = normalize(alternative)
             return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
                           else "Didn't catch that")
