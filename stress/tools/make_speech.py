@@ -1,11 +1,13 @@
-"""Make the spoken clips for the voice stress tests (stress/test_voice_stress.py).
+"""Make the spoken clips for the voice stress tests (stress/test_voice_stress.py and
+stress/test_zoom_noise.py).
 
     python stress/tools/make_speech.py OUT_DIR
 
 Uses the Mac's own voice (`say`) on macOS and espeak-ng elsewhere. Writes 16 kHz
 mono WAV files plus commands.json, which lists what each command clip should do.
 What it should do comes from running the phrase through Limitless Voice's own
-engine as text, so the list never drifts from the command packs.
+engine as text, so the list never drifts from the command packs. zoom.json does the
+same for Limitless Zoom's phrases, from Zoom's own table.
 """
 
 import json
@@ -33,6 +35,11 @@ CHATTER = [
     "that was a good take", "can we record the bridge next week", "is the click too loud for you",
     "i messed up the last bar again", "do you want a coffee before we start", "my phone keeps ringing",
     "the guitar is a little out of tune", "let me stretch my hands for a minute",
+]
+
+ZOOM = [
+    "zoom in", "zoom out", "closer", "taller", "shorter", "fit", "zoom to fit", "zoom way in",
+    "magnifier", "magnify", "again", "do it again", "preset one", "show panel",
 ]
 
 
@@ -67,6 +74,20 @@ def main(out_dir):
         speak(text, out / f"chatter_{i:02d}.wav")
     (out / "commands.json").write_text(json.dumps(manifest, indent=1))
     print(f"{len(manifest)} command clips and {len(CHATTER)} chatter clips in {out}")
+    if (ROOT / "apps" / "zoom" / "limitless_zoom").is_dir():
+        sys.path.insert(0, str(ROOT / "apps" / "zoom"))
+        from limitless_zoom.actions import VOICE_PHRASES
+        zoom = []
+        for v_i, voice in enumerate(voices):
+            for i, text in enumerate(ZOOM):
+                name = f"zoom_{v_i}_{i:02d}.wav"
+                try:
+                    speak(text, out / name, voice)
+                except subprocess.CalledProcessError:
+                    continue
+                zoom.append({"say": text, "file": name, "expect": VOICE_PHRASES[text], "voice": voice or "default"})
+        (out / "zoom.json").write_text(json.dumps(zoom, indent=1))
+        print(f"{len(zoom)} Zoom command clips")
 
 
 if __name__ == "__main__":

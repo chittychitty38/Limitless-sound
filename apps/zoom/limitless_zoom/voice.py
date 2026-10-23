@@ -38,8 +38,13 @@ def match_phrase(text, words, min_conf):
     """Map a recognised utterance to an action, or None.
     words is Vosk's per-word result list with 'conf' scores."""
     # "[unk]" is a breath, a click or a word that isn't a command; one before
-    # or after a command shouldn't stop it working.
-    text = " ".join(w for w in text.split() if w != "[unk]")
+    # or after a command shouldn't stop it working. Two together are words: the
+    # command was part of a sentence. In an hour of people reading aloud, more than
+    # half of what zoomed was ("[unk] [unk] again [unk]", stress/test_zoom_real_speech.py).
+    tokens = text.split()
+    if any(a == b == "[unk]" for a, b in zip(tokens, tokens[1:])):
+        return None
+    text = " ".join(w for w in tokens if w != "[unk]")
     action = VOICE_PHRASES.get(text)
     if action is None:
         return None
