@@ -67,6 +67,12 @@ def level_of(pcm):
     return min(1.0, rms * 8)
 
 
+# How long the command recognizer must hear nothing new after an instant command (play, stop,
+# record) before it's reported. Waiting for the utterance to end takes a second or more: people
+# reading words aloud were heard a median 1.1 s after the word ended (stress/test_voice_real_speech.py).
+INSTANT_AFTER = 0.3
+
+
 def build_grammar(phrases):
     """The command recognizer's phrase list. [unk] soaks up everything else."""
     return sorted(p for p in phrases if p and p.isascii()) + ["[unk]"]
@@ -78,10 +84,14 @@ class Listener:
     on_text(command_transcript, open_transcript)   one finished utterance
     on_level(0.0..1.0)                              about 10 times a second
     on_error(message)                               mic lost or failed; we keep retrying
+    instant(command_transcript) -> bool             optional: a command to report the moment the
+                                                    command recognizer has heard just that, with
+                                                    nothing new for INSTANT_AFTER seconds, rather
+                                                    than at the end of the utterance
     """
 
     def __init__(self, model_path, phrases, on_text, on_level=None, on_error=None,
-                 device=None, use_command_vocabulary=True):
+                 device=None, use_command_vocabulary=True, instant=None):
         self.model_path = model_path
         self.phrases = phrases
         self.on_text = on_text
@@ -96,6 +106,10 @@ class Listener:
         self._cmd_parts = []
         self._rebuild = False
         self.paused = False
+        self.instant = instant
+        self._steady = ("", 0.0)   # the command recognizer's words so far, and for how long
+        self._early = False        # this utterance's command has been reported already
+        self._rate = 16000
 
     # -- lifecycle -------------------------------------------------------
 
@@ -133,6 +147,7 @@ class Listener:
     def _make_recognizers(self, rate):
         import vosk
         model = self.load_model()
+        self._rate = rate
         recs = {"open": vosk.KaldiRecognizer(model, rate)}
         if self.use_command_vocabulary:
             grammar = json.dumps(build_grammar(self.phrases))
@@ -186,7 +201,7 @@ class Listener:
                     # the phrase list changed (an app joined or left the suite)
                     self._rebuild = False
                     recs = self._make_recognizers(rate)
-                    self._cmd_parts = []
+                    self._forget()
                 if self.paused:
                     was_paused = True
                     continue
@@ -194,16 +209,33 @@ class Listener:
                     # forget anything half-heard while we were talking
                     for rec in recs.values():
                         rec.Reset()
-                    self._cmd_parts = []
+                    self._forget()
                     was_paused = False
                 self._feed(recs, data)
+
+    def _forget(self):
+        self._cmd_parts = []
+        self._steady = ("", 0.0)
+        self._early = False
 
     def _feed(self, recs, data):
         # The command recognizer may end a phrase a moment before the open
         # one does; keep its pieces until the open recognizer says the
-        # utterance is over, then report both transcripts together.
-        if "commands" in recs and recs["commands"].AcceptWaveform(data):
-            self._cmd_parts.append(json.loads(recs["commands"].Result()).get("text", ""))
+        # utterance is over, then report both transcripts together. An
+        # instant command goes as soon as it's heard (_check_instant).
+        if "commands" in recs:
+            if recs["commands"].AcceptWaveform(data):
+                self._cmd_parts.append(json.loads(recs["commands"].Result()).get("text", ""))
+                self._steady = ("", 0.0)
+                self._check_instant(recs, " ".join(p for p in self._cmd_parts if p).strip(), ended=True)
+            elif self.instant is not None:
+                partial = json.loads(recs["commands"].PartialResult()).get("partial", "")
+                words = " ".join(p for p in self._cmd_parts + [partial] if p).strip()
+                said, held = self._steady
+                held = held + len(data) / 2 / self._rate if words == said else 0.0
+                self._steady = (words, held)
+                if held >= INSTANT_AFTER - 1e-6:
+                    self._check_instant(recs, words)
         if not recs["open"].AcceptWaveform(data):
             return
         open_text = json.loads(recs["open"].Result()).get("text", "")
@@ -212,6 +244,22 @@ class Listener:
             self._cmd_parts.append(json.loads(recs["commands"].FinalResult()).get("text", ""))
             recs["commands"].Reset()
             cmd_text = " ".join(p for p in self._cmd_parts if p).strip()
-            self._cmd_parts = []
+        early = self._early
+        self._forget()
+        if early and not cmd_text.replace("[unk]", "").strip():
+            return   # its command went already, and nothing else was said that could be one
         if open_text or cmd_text.replace("[unk]", "").strip():
             self.on_text(cmd_text or open_text, open_text)
+
+    def _check_instant(self, recs, words, ended=False):
+        """Report an instant command (play, stop, record) now, with the open recognizer's words
+        so far, then start the command recognizer afresh for whatever comes next."""
+        if self.instant is None or not words or not self.instant(words):
+            return
+        so_far = json.loads(recs["open"].PartialResult()).get("partial", "")
+        self.on_text(words, so_far)
+        if not ended:
+            recs["commands"].Reset()
+        self._cmd_parts = []
+        self._steady = ("", 0.0)
+        self._early = True

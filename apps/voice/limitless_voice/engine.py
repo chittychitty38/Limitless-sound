@@ -269,6 +269,18 @@ class Engine:
             return self._reply(raw, f"Say yes to {cmd.help or cmd.phrases[0]}, or cancel")
         return self._run(raw, cmd, params, times)
 
+    def instant(self, heard):
+        """Whether the command recognizer's words so far are, exactly, a command to run the moment
+        it's said (play, stop, record; stop in take mode), so the listener needn't wait for the
+        end of the utterance. Called from the listener's thread, so it only reads, and doesn't
+        ask which app is in front: handle() decides that on the main thread as usual."""
+        if not self.awake or self.dictating or self.pending or "[unk]" in heard:
+            return False
+        text = normalize(heard)
+        if self.take:
+            return text in TAKE_STOP
+        return any(cmd.instant and cmd.match(text) is not None for pack in self.packs for cmd in pack.commands)
+
     # -- helpers -------------------------------------------------------
 
     @staticmethod
