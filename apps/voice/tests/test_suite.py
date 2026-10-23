@@ -105,6 +105,18 @@ class Reporting(unittest.TestCase):
         s.report(e.handle("undo"))
         self.assertEqual(s.link.did_log, [("stop", "daw.stop"), ("undo", "daw.undo")])
 
+    def test_fl_studios_record_mode_doesnt_start_take_mode(self):
+        # R only switches FL Studio's record mode: play then records. Reporting it as a recording
+        # would put take mode on, and the "play" that starts the take would go unheard.
+        s, e, p = make("FL Studio")
+        s.report(e.handle("record mode"))
+        s.report(e.handle("play"))
+        self.assertEqual(pressed(p), ["r", "space"])
+        self.assertEqual(s.link.did_log, [("play", "daw.play")])
+        s, e, p = make("REAPER")
+        s.report(e.handle("record"))
+        self.assertEqual((pressed(p), s.link.did_log), (["cmd+r"], [("record", "daw.record")]))
+
     def test_unrelated_commands_report_nothing(self):
         s, e, _ = make()
         s.report(e.handle("show the mixer"))
