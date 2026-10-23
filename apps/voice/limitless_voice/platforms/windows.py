@@ -19,6 +19,21 @@ EXE_NAMES = {
 }
 
 
+def best_shortcut(name, shortcuts):
+    """The Start menu shortcut "open {name}" means: the same name, or else the shortest one with
+    those whole words in it. "logic" finds "Logic Pro X", but "it" never opens "Git Bash"."""
+    wanted = name.lower().split()
+    best = None
+    for lnk in shortcuts:
+        words = Path(lnk).stem.lower().split()
+        if "".join(words) == "".join(wanted):
+            return lnk
+        if wanted and any(words[i:i + len(wanted)] == wanted for i in range(len(words))) \
+                and (best is None or len(Path(lnk).stem) < len(Path(best).stem)):
+            best = lnk
+    return best
+
+
 class WindowsPlatform(Platform):
     os_name = "windows"
     NUMPAD_VK = {
@@ -63,24 +78,11 @@ class WindowsPlatform(Platform):
 
     def open_app(self, name):
         """Find a Start menu shortcut whose name matches and launch it."""
-        wanted = name.lower().replace(" ", "")
         roots = [
             Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "Microsoft/Windows/Start Menu/Programs",
             Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
         ]
-        best = None
-        for root in roots:
-            if not root.exists():
-                continue
-            for lnk in root.rglob("*.lnk"):
-                stem = lnk.stem.lower().replace(" ", "")
-                if stem == wanted:
-                    best = lnk
-                    break
-                if wanted in stem and (best is None or len(stem) < len(best.stem)):
-                    best = lnk
-            if best and best.stem.lower().replace(" ", "") == wanted:
-                break
+        best = best_shortcut(name, [lnk for root in roots if root.exists() for lnk in root.rglob("*.lnk")])
         if not best:
             raise RuntimeError(f"Couldn't find an app called {name}")
         os.startfile(str(best))

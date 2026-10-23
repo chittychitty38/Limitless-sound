@@ -55,6 +55,11 @@ class Command:
                 out.extend(_expand_optional(p))
         return out
 
+    @property
+    def free_text(self):
+        """Whether a phrase has a {text} slot, which takes any words at all."""
+        return any(kind == "text" for _, slots in self._compiled for _, kind in slots)
+
     def match(self, text):
         for regex, slots in self._compiled:
             m = regex.match(" " + text)

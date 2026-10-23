@@ -60,18 +60,18 @@ recognizer.
   dev-clean: 40 people (20 women, 20 men) reading books aloud, 95 seconds each. None of it is
   meant as a command, so everything it fires is a false trigger.
 
-What one CI run measured (ubuntu-latest, October 2026). Results move a little from one runner's
-CPU to another's: over three runs, 91.2% to 91.6% of words right, and 1.9 to 4.7 commands an hour
-of talk with Logic Pro in front. The tests' floors sit a little below what any run measured.
+What CI measured (ubuntu-latest, October 2026; Voice 0.3.5 unless it says otherwise). Results
+move a little from one runner's CPU to another's: over four runs, 91.2% to 91.6% of words right.
+The tests' floors sit a little below what any run measured.
 
 | Voice, with Logic Pro in front | |
 |---|---|
-| Words Voice listens for, said by real people | **91.6% right** (1648 of 1800) |
-| Commands on their own: stop, no, forward | 96%, 96%, 86% |
-| Numbers | three 96%, two 95%, one 93%, six 92%, seven 91%, zero 91%, four 90%, five 89%, nine 89%, eight 82% |
-| Other words it listens for | yes 97%, right 95%, down 93%, left 93%, up 84% |
-| Talk: commands fired per hour | **4.7** (Logic Pro), **7.6** (Pro Tools); **0 destructive** |
-| Stray words that aren't commands: fired something | **21.6%** of the time; a destructive key on 3.8% |
+| Words Voice listens for, said by real people | **91.4% right** (1645 of 1800) |
+| Commands on their own: stop, no, forward | 96%, 96%, 85% |
+| Numbers | three 96%, two 94%, one 93%, six 92%, seven 91%, zero 91%, four 90%, five 89%, nine 89%, eight 83% |
+| Other words it listens for | yes 96%, right 95%, down 93%, left 93%, up 83% |
+| Talk: commands fired per hour | **0** (Logic Pro), **3.8** (Pro Tools); **0 destructive**. Voice 0.3.4: 4.7 and 7.6 |
+| Stray words that aren't commands: fired something | **17.9%** of the time; **never a destructive key**. Voice 0.3.4: 21.6%, a destructive key on 3.8% |
 
 | Zoom | |
 |---|---|
@@ -82,22 +82,25 @@ What goes wrong, from the printed tables:
 
 - **A stray word fires the nearest command.** The command recognizer can only answer with
   command words, so a short word that isn't one comes back as the closest that is. Out of 100
-  people each: "cat" fired a command 68 times, 64 of them Cut (Cmd+X); "happy" fired Copy 80
-  times; "wow" 59 times, nearly all volume up; "follow" 55 times, nearly all Solo; "bird" 27 times, mostly
-  Record. The open recognizer heard the real word nearly every time ("cut / cat").
-- **Talk in full sentences is mostly fine**: a handful of commands an hour, none destructive.
-  What does fire is the command recognizer's guess with most of the sentence unknown
-  ("[unk] enter [unk] [unk]" pressed Return, "stop [unk] [unk] [unk]" pressed Play).
+  people each: "happy" fires Copy 80 times; "wow" 60 times, nearly all volume up; "follow" 55
+  times, nearly all Solo; "bird" 27 times, mostly Record. The open recognizer hears the real word
+  nearly every time ("copy / happy"). Voice 0.3.4 also pressed Cut for "cat" 64 times in 100;
+  since 0.3.5 a one-word Cut, Paste or Delete needs the open recognizer to hear it too.
+- **Talk in full sentences rarely fires anything**, and nothing destructive. Voice 0.3.4 acted
+  on the command recognizer's guess at a sentence it mostly couldn't place ("[unk] enter [unk]
+  [unk]" pressed Return, "stop [unk] [unk] [unk]" pressed Play) and on a half-heard "open the
+  [unk] [unk] that" (an app called "the that"). Since 0.3.5 those go by the open transcript. What
+  still fires in Pro Tools is short: "heal separation [unk] a" for "illustration long pepper".
 - **People's "eight" comes back as "a"** 6 times in 100, and "forward" as "four" 9 times.
 - **Zoom's "again"** fires from ordinary talk about 6 times an hour.
 
-The test also tries two possible fixes on what it heard, without changing the app. If a one-word
-destructive command (Cut, Paste, Delete) needed the open recognizer to hear the same word,
-stray words would press no destructive key (64 now), and every word above would score the same.
-If every one-word command needed that, stray words would fire 1.3% of the time instead of
-21.6%, but "forward" would drop from 86% to 52% (the open recognizer hears "for") and "stop"
-from 96% to 91%. Speech Commands has no "cut", "paste" or "delete", so what the first fix costs
-people who really say them isn't measured here.
+The test also tries possible fixes on what it heard, without changing the app. The first, a
+one-word destructive command needing the open recognizer to hear the same word, cost no word
+above anything and is in Voice 0.3.5. The next, every one-word command needing that, would
+bring stray words down from 17.9% to 1.3%, but "forward" would drop from 85% to 52% (the open
+recognizer hears "for") and "stop" from 96% to 92%, so it isn't done. Speech Commands has no
+"cut", "paste", "delete", "record" or "solo", so what such a rule costs people who really say
+them isn't measured here; recordings of real people saying those words would settle it.
 
 Run it yourself (the downloads are 2.6 GB, once; the tests take about 12 minutes on 4 cores):
 
