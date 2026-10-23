@@ -17,6 +17,11 @@ on:
       seconds:
         description: "How long each soak runs, in seconds"
         default: "600"
+      only:
+        description: "Run everything, or only the ubuntu jobs that hear real people (Voice in each language, and Zoom)"
+        type: choice
+        options: [everything, voice-real-people]
+        default: everything
 
 # A newer push to the same pull request replaces the run still going for the older one.
 concurrency:
@@ -32,7 +37,8 @@ jobs:
   # On a pull request, each job runs only when something it tests changed: that app, its own
   # stress tests, what they share, or this workflow. macOS runners are few (five at once for the
   # whole repo), so a change to one app's tests shouldn't queue every app's jobs behind them.
-  # Main, the nightly run and a manual run always run everything.
+  # Main, the nightly run and a manual run always run everything, unless a manual run asks for
+  # only the real-people jobs: they run on ubuntu alone, so they don't wait for a Mac.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -41,6 +47,8 @@ jobs:
       gazestage: ${{ steps.diff.outputs.gazestage }}
       color: ${{ steps.diff.outputs.color }}
       zoom: ${{ steps.diff.outputs.zoom }}
+      real_people: ${{ steps.diff.outputs.real_people }}
+      spanish: ${{ steps.diff.outputs.spanish }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,8 +56,13 @@ jobs:
       - id: diff
         shell: bash
         run: |
+          if [ "${{ github.event.inputs.only }}" = "voice-real-people" ]; then
+            for job in engines voice gazestage color zoom; do echo "$job=false" >> "$GITHUB_OUTPUT"; done
+            for job in real_people spanish; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            for job in engines voice gazestage color zoom; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
+            for job in engines voice gazestage color zoom real_people spanish; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
             exit 0
           fi
           changed="$(git diff --name-only HEAD^1 HEAD | grep -v '\.md$' || true)"
@@ -57,7 +70,7 @@ jobs:
           everything='^(stress/conftest\.py|\.github/workflows/stress\.yml)'
           # The speech benchmarks need a speech model, which only the speech jobs fetch: the
           # engine jobs would skip them anyway.
-          speech='^stress/(test_voice_real_speech\.py|test_zoom_real_speech\.py|test_zoom_noise\.py|test_command_words\.py|tools/)'
+          speech='^stress/(test_voice_real_speech\.py|test_voice_language\.py|test_zoom_real_speech\.py|test_zoom_noise\.py|test_command_words\.py|tools/)'
           declare -A own=(
             [engines]="^(apps/|shared/|stress/)"
             [voice]="^(apps/voice/|stress/(test_voice_|test_command_words|tools/))"
@@ -65,15 +78,20 @@ jobs:
             [gazestage]="^(apps/gazestage/|stress/gazestage_)"
             [color]="^(apps/color/|stress/color/)"
           )
+          declare -A run
           for job in engines voice gazestage color zoom; do
             mine="$(grep -E "${own[$job]}" <<< "$changed" || true)"
             [ "$job" = engines ] && mine="$(grep -vE "$speech" <<< "$mine" || true)"
-            if grep -qE "$everything" <<< "$changed" || [ -n "$mine" ]; then
-              echo "$job=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "$job=false" >> "$GITHUB_OUTPUT"
-            fi
+            if grep -qE "$everything" <<< "$changed" || [ -n "$mine" ]; then run[$job]=true; else run[$job]=false; fi
+            echo "$job=${run[$job]}" >> "$GITHUB_OUTPUT"
           done
+          # Real people: the English job hears Voice's and Zoom's words, the Spanish one only Voice's.
+          if [ "${run[voice]}" = true ] || [ "${run[zoom]}" = true ]; then
+            echo "real_people=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "real_people=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "spanish=${run[voice]}" >> "$GITHUB_OUTPUT"
 
   engines:
     name: Engines and hub (${{ matrix.os }})
@@ -152,7 +170,7 @@ jobs:
   voice-real-speech:
     name: Voice and Zoom vs real people (ubuntu-latest)
     needs: changes
-    if: needs.changes.outputs.voice == 'true' || needs.changes.outputs.zoom == 'true'
+    if: needs.changes.outputs.real_people == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35   # about 20 with the recordings cached, a few minutes more without
     env:
@@ -217,7 +235,75 @@ jobs:
           # it's built, thousands of times here; each warning is shown once.
           VOSK_MODEL="$PWD/models/$MODEL" SPEECH_COMMANDS_DIR="$PWD/real-speech/speech_commands" \
             LIBRISPEECH_DIR="$PWD/real-speech/librispeech" COMMAND_WORDS_DIR="$PWD/command-words" \
-            python -m pytest stress/test_voice_real_speech.py stress/test_zoom_real_speech.py \
+            python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
+              stress/test_zoom_real_speech.py stress/test_command_words.py -v -s --durations=6 2>&1 \
+            | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
+
+  # Voice in Spanish hearing real people: the Multilingual Spoken Words Corpus's Spanish clips of
+  # its command words, and an hour of FLEURS (Latin American Spanish read aloud) for how often
+  # ordinary talk fires a command. Both CC BY 4.0, fetched once and cached, never committed.
+  # Voice only: Zoom listens in English.
+  voice-real-speech-es:
+    name: Voice in Spanish vs real people (ubuntu-latest)
+    needs: changes
+    if: needs.changes.outputs.spanish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MODEL: vosk-model-small-es-0.42
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: models
+          key: vosk-${{ env.MODEL }}
+      # Restored and saved as separate steps, so a failing test still keeps the download.
+      - id: talk
+        uses: actions/cache/restore@v4
+        with:
+          path: fleurs-es
+          key: fleurs-es-${{ hashFiles('stress/tools/get_fleurs.py') }}
+      - id: words
+        uses: actions/cache/restore@v4
+        with:
+          path: command-words-es
+          key: command-words-es-${{ hashFiles('stress/tools/get_command_words.py') }}
+      - name: Install, fetch the Spanish speech model and the recordings
+        shell: bash
+        run: |
+          pip install pytest psutil numpy pyyaml platformdirs vosk==0.3.44 soundfile
+          if [ ! -d "models/$MODEL" ]; then
+            mkdir -p models
+            curl -sSfL -o model.zip "https://alphacephei.com/vosk/models/${MODEL}.zip"
+            python -m zipfile -e model.zip models/
+          fi
+          # The model's size, accuracy and licence, as its publisher's list gives them
+          curl -sSfL https://alphacephei.com/vosk/models | tr '\n' ' ' | grep -oE "${MODEL}</a>.{0,400}" \
+            | sed -E 's/<[^>]+>/ /g; s/ +/ /g' | head -1 || true
+          if [ "${{ steps.talk.outputs.cache-hit }}" != "true" ]; then
+            python stress/tools/get_fleurs.py fleurs-es --lang es_419
+          fi
+          if [ "${{ steps.words.outputs.cache-hit }}" != "true" ]; then
+            python stress/tools/get_command_words.py command-words-es --lang es
+          fi
+      - if: steps.talk.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: fleurs-es
+          key: ${{ steps.talk.outputs.cache-primary-key }}
+      - if: steps.words.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: command-words-es
+          key: ${{ steps.words.outputs.cache-primary-key }}
+      - shell: bash
+        run: |
+          VOICE_LANGUAGE=es VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-es" \
+            COMMAND_WORDS_DIR="$PWD/command-words-es" \
+            python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
               stress/test_command_words.py -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 

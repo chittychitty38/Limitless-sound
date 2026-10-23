@@ -75,5 +75,6 @@ def test_every_word_voice_listens_for_is_known():
     print(f"\n{Path(MODEL).name}: {len(known)} words. {LANG.english_name}: {len(words)} words Voice listens for, "
           f"{len(unknown)} unknown: {', '.join(unknown) or 'none'}")
     if readme.is_file():
-        print("Its README begins: " + " / ".join(readme.read_text(errors="replace").splitlines()[:6]))
+        lines = [x.strip() for x in readme.read_text(errors="replace").splitlines() if x.strip()]
+        print("Its README: " + " / ".join(lines[:4] + [x for x in lines[4:] if "licen" in x.lower()]))
     assert not unknown, f"the {Path(MODEL).name} model doesn't know: {', '.join(unknown)}"

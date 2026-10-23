@@ -79,8 +79,9 @@ def test_real_people_saying_voice_commands():
     kinds = {w: kind(w) for w in words}
     commands = [w for w in words if kinds[w] == "command"]
     strays = [w for w in words if kinds[w] == "other"]
-    left_out = [w for w in words if kinds[w] == "word"]
-    used = commands + strays
+    # Words Voice listens for that do nothing alone, like numbers: right when heard as themselves.
+    listened = [w for w in words if kinds[w] == "word"]
+    used = commands + listened + strays
     jobs = [(w, f) for w in used for f in _pick(root / w)]
     _making.clear()
     started = time.monotonic()
@@ -98,8 +99,7 @@ def test_real_people_saying_voice_commands():
 
     print(f"\n{len(jobs)} clips of {len(used)} {LANG.english_name} words, heard in {took:.0f} s with {WORKERS} at once "
           f"({sum(_making):.0f} s of it building recognizers). In front: Logic Pro. Heard as "
-          f"“command transcript / open transcript”. "
-          + (f"Left out, as Voice listens for them but alone they do nothing: {', '.join(left_out)}." if left_out else ""))
+          f"“command transcript / open transcript”.")
     print(f"\n{'word':<12} {'right':>13}  {'asked':>5}  {'wrong cmd':>12}  {'acts after':>10}  {'what-if':>7}  most often heard instead")
     for w in commands:
         t = tally[w]
@@ -108,6 +108,10 @@ def test_real_people_saying_voice_commands():
         miss = ", ".join(f"“{k}” ×{n}" for k, n in instead[w].most_common(3))
         print(f"{w:<12} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  {t['asked']:>5}  {wrong_cmd:>12}  {after:>10}  "
               f"{what_if[w]['hits'] / t['tries']:>7.0%}  {miss}")
+    for w in listened:
+        t = tally[w]
+        print(f"{w:<12} {t['hits']:>4}/{t['tries']:<4} {t['hits'] / t['tries']:>4.0%}  heard as itself"
+              + (f"; instead {', '.join(f'“{k}” ×{n}' for k, n in instead[w].most_common(3))}" if instead[w] else ""))
     for w in strays:
         t = tally[w]
         print(f"{w:<12} stray word: fired a command {t['tries'] - t['hits']}/{t['tries']}"
@@ -127,6 +131,10 @@ def test_real_people_saying_voice_commands():
     print(f"Asked to confirm instead (\"Say yes to cut, or cancel\"): {asked_more} times, so "
           f"{(hits + asked_more) / tries:.1%} were right at once or with a yes. Per word: "
           + ", ".join(f"{w} {tally[w]['asked']}" for w in commands if tally[w]["asked"]))
+    if listened:
+        lh, lt = _sums(tally, listened)
+        print(f"Words Voice listens for that do nothing alone ({', '.join(listened)}): {lh}/{lt} heard as "
+              f"themselves ({lh / lt:.1%}).")
     if strays:
         quiet, stray_tries = _sums(tally, strays)
         q2, _ = _sums(what_if, strays)
