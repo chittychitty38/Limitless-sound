@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.7 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.8 release. Everything below is the state of the project then.
 
 ---
 
@@ -19,7 +19,7 @@ Start by doing this, in order:
    `gh repo clone chittychitty38/Limitless-sound LimitlessSound && cd LimitlessSound`
    (install `gh`, `python@3.12`, `node@22`, `rustup-init` with Homebrew first if missing).
 2. Ask Bennet, in one message, which Mac he is on (Apple silicon or Intel, macOS version),
-   which DAWs he has (Logic Pro, Pro Tools, Ableton) and which hardware is with him today
+   which DAWs he has (Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio) and which hardware is with him today
    (mic, webcam, Xbox Adaptive Controller, switches, foot pedal, Line 6 Helix).
 3. Show him the "Open items" list below and ask which one to do first. If he has no
    preference, start with the hands-on Mac test (item 1).
@@ -52,13 +52,13 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
 | Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.4, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.1 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.5 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.6 |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.2 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.6 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.8 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.7 |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.8 |
 | GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.7** (the repo's Latest release) |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.8** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -310,12 +310,19 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
      (39 MB) and that replies come in a Spanish voice (System Settings › Accessibility › Spoken
      Content › System voice › Manage Voices adds one), and that VoiceOver reads each window in
      Spanish.
-10. **More DAWs for Voice.** Voice has Logic Pro, Pro Tools and Ableton Live 12 (#85). The
-    research for FL Studio, REAPER and GarageBand, each shortcut with its official source or
-    marked unconfirmed, is in `apps/voice/DAW-SHORTCUTS.md`. With the DAW on the Mac, confirm the
-    keys there and write the pack (`apps/voice/limitless_voice/packs/`), then add it to
-    `stress/test_daw_keys_agree.py`. On a real Live 12, check the single-letter keys (S solo,
-    C arm, O metronome) with Live's Computer MIDI Keyboard off.
+10. **Try the three new DAWs** (#99): Voice, Control, One-Hand and Zoom work in GarageBand 10,
+    REAPER 7 and FL Studio, besides Logic Pro, Pro Tools and Ableton Live 12. Every key came
+    from the maker's guide (Apple's, Cockos', Image-Line's), read through excerpts because the
+    cloud session couldn't open those sites; anything unconfirmed was left out.
+    `apps/voice/DAW-SHORTCUTS.md` starts with what shipped, each key's source, and ends with the
+    checklist for a real Mac or PC. The main ones:
+    - GarageBand: every shipped key, and Zoom's Command-arrow zoom keys (unconfirmed, kept).
+      Then read Help › Main window shortcuts and add the cycle, metronome and zoom keys it gives.
+    - REAPER: Cmd+M opens the mixer on a Mac (not Minimize); which way + and − zoom.
+    - FL Studio: "record mode" then "play"; F5–F9 on a Mac; Page Up/Down and Shift+4 to zoom.
+    - That each app notices each DAW in front (including `FL64 (scaled).exe`, older REAPER64.app).
+    On a real Live 12, also check the single-letter keys (S solo, C arm, O metronome) with Live's
+    Computer MIDI Keyboard off.
 11. **Press the corrected DAW keys once in the real DAWs** (#85): Logic's track mute and solo
     (M, S), Pro Tools' record (F12, on a laptop too), next/previous track (Control-; and
     Control-P) and go to end (Option-Return).
@@ -396,6 +403,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   and lose a background agent's uncommitted work: commit and push early.
 - Limitless Sound's page has every English word in Spanish too. `test_languages.py` fails when a
   new English word on the page has no Spanish entry: add one to the `strings-es` table.
+- An app that can change its speech model (Voice, Zoom) must not load the same one again when
+  nothing it listens with changes: each load costs a second of CPU and ~150 MB that Python
+  keeps. Zoom 0.1.6 did it on every language switch and doubled its memory (#101). The proof's
+  P5 now warns when an app's idle memory grows 1.5x over the last published proof.
+- A test that times a child process times Python and Qt starting too (2.8 s on a busy Intel Mac
+  runner): time the call inside the child instead (Zoom's `test_remote_command`, #99).
 - Every app's Spanish has a test that fails on a word with no Spanish: add the Spanish next to
   the English (`strings-es` in a page, `words.py` in One-Hand and Zoom, `languages/es.yaml`
   `texts` in Voice). GazeStage's smoke test holds the Spanish to the English at double text size
