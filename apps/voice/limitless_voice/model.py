@@ -41,7 +41,8 @@ def _search_dirs():
 def find_model(name=DEFAULT_MODEL):
     for d in _search_dirs():
         candidate = d / name
-        if (candidate / "am").is_dir() or (candidate / "conf").is_dir():
+        # Older models, like the Portuguese one, keep everything in one folder, with no am/ or conf/
+        if (candidate / "am").is_dir() or (candidate / "conf").is_dir() or (candidate / "final.mdl").is_file():
             return candidate
     return None
 

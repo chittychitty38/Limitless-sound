@@ -25,7 +25,7 @@ from . import __version__, applog, mac_keys, words
 from .audio import Listener, list_input_devices
 from .engine import Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs
-from .look import LiveText, add_item, grow, in_use, label, resize_text, sized
+from .look import LiveText, UpAndDown, add_item, grow, in_use, label, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .language import ENGLISH, available, load as load_language, model_for, model_language, wanted
 from .platforms import current_os, get_platform
@@ -199,11 +199,12 @@ class SettingsDialog(QDialog):
         words.show(self.language.setAccessibleDescription, ui.text("Language to listen and answer in"))
         same = load_language(self.suite_language).name
         add_item(self.language, ui.text("Same as Limitless Sound ({language})", language=same), "")
-        for code, name in available():
+        for code, _ in available():
             lang = load_language(code)
             here = any(find_model(m) for m in lang.models)
-            add_item(self.language, name if here else
-                     ui.text("{language} ({size} download)", language=name, size=lang.models[lang.model]["size"]), code)
+            add_item(self.language, lang.label if here else
+                     ui.text("{language} ({size} download)", language=lang.label, size=lang.models[lang.model]["size"]),
+                     code)
         self.language.setCurrentIndex(max(0, self.language.findData(settings.language)))
         add_row(form, ui.text("Language"), self.language)
         self.language_note = LiveText(ui.text("About the language"))
@@ -240,8 +241,23 @@ class SettingsDialog(QDialog):
         missing = not find_model(model_for(lang, self.settings.model))
         note = lang.text("{language} is downloaded once ({size}), then works without internet.",
                          language=lang.name, size=lang.models[lang.model]["size"]) if missing else ""
+        note = " ".join(t for t in (lang.preview, note) if t)   # a preview says so first
         self.language_note.setText(note)
         self.language_note.setVisible(bool(note))
+        self._room_for_note()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._room_for_note()   # a note set before the window opened, as when Portuguese is already chosen
+
+    def _room_for_note(self):
+        """Room for a longer note (a preview's), all of it on screen: the window doesn't grow for
+        a wrapped label by itself."""
+        self.language_note.setMinimumHeight(0)
+        if self.isVisible() and self.language_note.text():
+            self.layout().activate()
+            self.language_note.setMinimumHeight(self.language_note.heightForWidth(self.language_note.width()))
+            self.adjustSize()
 
     def apply(self):
         s = self.settings
@@ -463,7 +479,7 @@ class MainWindow(QMainWindow):
             buttons.addWidget(b)
         layout.addLayout(buttons)
 
-        self.setCentralWidget(root)
+        self.setCentralWidget(UpAndDown(root))
         self.resize(560, 620)
         self._fill_mics()
         self.mic_combo.currentIndexChanged.connect(self._mic_changed)

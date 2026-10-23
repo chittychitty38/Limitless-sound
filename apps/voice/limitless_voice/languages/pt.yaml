@@ -1,0 +1,708 @@
+# Brazilian Portuguese. Where musicians say it two ways ("faixa" and "trilha" for a track, "recortar"
+# and "cortar" for Cut), both are here, and the English names many keep using (solo, mute, loop,
+# stop, mixer, take, clique), spelled as words the speech model knows where it doesn't know them
+# (sounds_like below). It doesn't know "play", "shift" or "tab" in any spelling, so those are
+# "tocar", "maiúsculas" and "tabulação" here.
+# Every word must be one the model knows: stress/test_voice_language.py checks, and for a word it
+# doesn't know prints the nearest it does. A command said alone is the infinitive, as the menus name
+# it ("tocar", "voltar", "recortar", "apagar"), never "toca", "volta", "corta" or "apaga": the small
+# speech model hears real people's short imperatives far less often (toca 32%, volta 41%, aproxima
+# 29%, against tocar 63%, voltar 63%, juntar 90%; stress/test_command_words.py), and for Cut, Paste,
+# Delete and Duplicate a word that sounds like one must never throw work away (in Spanish, real
+# people's "corte" came back as "corta" and pressed Cut). Imperatives are fine before more words
+# ("silencia a faixa", "divide aqui").
+# See language.py for what each section is, and en.yaml for the English it follows.
+
+code: pt
+name: Português
+english_name: Portuguese
+# A preview, and Settings says so. The only small Portuguese speech model under a permissive licence
+# hears real people's command words about 6 times in 10, where Spanish's hears 8 in 10: on the same
+# kind of recordings it hears nothing at all in a third of them (Spanish's: 4%), and on read
+# sentences it gets 27% of words wrong (Spanish's: 15%). See stress/README.md.
+preview:
+  label: Português (prévia)
+  # Said in Portuguese whatever language the windows are in, as the download note is. English stays
+  # one choice away, for musicians who already know the DAW terms in English.
+  note: 'Prévia: em português, o Limitless Voice entende cerca de 6 em cada 10 comandos ditos por pessoas reais, menos que em inglês e espanhol. Os comandos funcionam melhor ditos inteiros e devagar, como "tocar", "voltar" e "salvar". Se você já conhece os termos em inglês, os comandos em inglês, que o Voice entende com mais frequência, continuam disponíveis: é só escolher English aqui.'
+
+# vosk-model-small-pt-0.3, Apache 2.0 (Alpha Cephei, alphacephei.com/vosk/models).
+# Downloaded once when Portuguese is chosen; the installers ship only English.
+models:
+  vosk-model-small-pt-0.3: {label: "Portuguese, fast", size: "31 MB"}
+
+# Replies are read by a Portuguese system voice (voice_out.py): on a Mac the first of these that's
+# installed (Brazil's first), else any voice for "pt"; on Windows any whose name or language says
+# Portuguese.
+voice:
+  mac: [Luciana, Felipe, Fernanda, Joana, Catarina]
+  match: [portuguese, português]
+
+words:
+  wake: [acorda, acordar, começar a ouvir, comece a ouvir, começa a ouvir, computador acorda]
+  sleep: [vai dormir, dormir, pode dormir, parar de ouvir, pare de ouvir, para de ouvir]
+  cancel: [cancelar, cancela, não, esquece, deixa pra lá, deixa para lá]
+  "yes": [sim, confirmar, confirma, pode, pode fazer, faça isso, sim por favor]
+  again: [de novo, outra vez, mais uma vez, repete isso, repita isso, faz de novo, faça de novo]
+  help: [o que eu posso dizer, o que posso dizer, mostrar comandos, mostrar os comandos, mostra os comandos,
+         ajuda]
+  dictation_on: [começar ditado, começar o ditado, iniciar ditado, iniciar o ditado, modo ditado, ativar ditado,
+                 ativar o ditado, ditado ligado]
+  dictation_off: [parar ditado, parar o ditado, terminar ditado, terminar o ditado, encerrar ditado,
+                  encerrar o ditado, modo comandos, modo comando, desativar ditado, desativar o ditado,
+                  ditado desligado]
+  take_stop: [parar, pare, para, stop, parar gravação, parar a gravação, pare a gravação, parar reprodução,
+              parar a reprodução, pare a reprodução, parar o take]
+  take_off: [sair do modo take, modo take desligado, todos os comandos]
+  scratch: [apaga isso, apagar isso, risca isso]
+  new_line: [nova linha, quebra de linha, próxima linha]
+  new_paragraph: [novo parágrafo]
+  times: [vezes, vez]
+  twice: []
+  filler_start: [por favor, hum, é, então, bom, ei, ei computador, oi computador, computador, ok, okay, tá]
+  filler_end: [por favor, obrigado, obrigada, valeu]
+  recognize: [apaga isso, apagar isso, risca isso, nova linha, quebra de linha, próxima linha, novo parágrafo,
+              vezes, vez, por favor, e,
+              # Said alone, these do nothing: they're here so the command recognizer can write them
+              # down instead of the command they sound like. Other forms of the command words
+              # ("gravado" isn't "gravar"), words a letter from a destructive one ("pagar" and
+              # "apagar"), and words said alone all the time ("isso", "nada").
+              gravado, gravada, gravação, gravou, grave, gravando, tocando, tocou, toque, reprodução, parado,
+              parada, parou, salvo, salvou, dividido, divisão, união, unido, cortado, corte, corta, cortou,
+              recorte, recorta, colado, cola, colou, apagado, apaga, apagou, pagar, paga, pagou, excluído, cópia,
+              copiado, duplicado, silêncio, sola, voltou, acorde, isso, nada, este, aqui]
+
+punctuation:
+  vírgula: ","
+  ponto: "."
+  ponto final: "."
+  ponto de interrogação: "?"
+  ponto de exclamação: "!"
+  dois pontos: ":"
+  ponto e vírgula: ";"
+  travessão: " -"
+  abre aspas: ' "'
+  fecha aspas: '"'
+
+numbers:
+  units: {zero: 0, um: 1, uma: 1, dois: 2, duas: 2, três: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8,
+          nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, catorze: 14, quatorze: 14, quinze: 15,
+          dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19}
+  tens: {vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90}
+  hundreds: {cem: 100, cento: 100, duzentos: 200, duzentas: 200, trezentos: 300, trezentas: 300,
+             quatrocentos: 400, quinhentos: 500, seiscentos: 600, setecentos: 700, oitocentos: 800,
+             novecentos: 900}
+  scales: {mil: 1000}
+  # "cento e vinte e oito", "mil e quinhentos", "trinta e dois"
+  joiners: {e: [tens, hundreds, scales]}
+  # "um" and "uma" are also the article: "adicionar uma faixa" isn't "adicionar 1 faixa".
+  articles: [um, uma]
+  # "meia" is six when Brazilians read out digits ("compasso um meia")
+  homophones: {meia: seis}
+  expects_number: [compasso, faixa, trilha, marcador, tempo, canal, número, memória]
+
+keys:
+  names:
+    comando: cmd
+    control: ctrl
+    controle: ctrl
+    opção: opt
+    maiúsculas: shift
+    enter: return
+    retorno: return
+    tabulação: tab
+    espaço: space
+    barra de espaço: space
+    apagar: delete
+    escape: escape
+    home: home
+    início: home
+    fim: end
+    esquerda: left
+    direita: right
+    cima: up
+    para cima: up
+    baixo: down
+    para baixo: down
+    ponto: "."
+    vírgula: ","
+    barra: /
+    menos: "-"
+    hífen: "-"
+    traço: "-"
+    igual: "="
+    mais: "="
+    ponto e vírgula: ;
+    apóstrofo: "'"
+    barra invertida: \
+    colchete: "["
+    abre colchete: "["
+    fecha colchete: "]"
+  # The letters' Brazilian names, as the speech model writes them ("efe", "gê" and "ene" it writes
+  # as the letter itself; it has no "dáblio"), and the radio alphabet as Brazilians say it.
+  letters: {a: a, bê: b, cê: c, dê: d, e: e, é: e, f: f, g: g, agá: h, i: i, jota: j, cá: k, ele: l,
+            eme: m, "n": "n", o: o, ó: o, pê: p, quê: q, erre: r, esse: s, tê: t, u: u, vê: v,
+            xis: x, ípsilon: "y", zê: z,
+            alfa: a, bravo: b, charlie: c, delta: d, eco: e, golfe: g, hotel: h, índia: i,
+            julieta: j, quilo: k, lima: l, novembro: n, oscar: o, papa: p, quebec: q, romeu: r,
+            sierra: s, tango: t, uniforme: u, vítor: v, uísque: w, zulu: z}
+  f: [f]
+
+# The command recognizer can write a whole sentence in command words, as Spanish's did, since
+# Portuguese's include "de", "o", "a" and "para": "abrir ..." and "escrever ..." take their words
+# from the open recognizer only.
+free_text_needs_both: true
+# A near miss never cuts, pastes or deletes: "pagar" is one letter from "apagar".
+exact_destructive: true
+# And no command runs on a near miss at all: real people's "sala" (room) was Save, "parte" (part)
+# Play, "muita" Mute and "copa" Copy, each a letter from a command (stress/test_command_words.py),
+# and a reader's "para" (for) pressed Play (test_voice_real_speech.py).
+exact: true
+# When the open recognizer heard two words or more without the command recognizer's first, or
+# two more words than it, it was talk: in an hour of people reading aloud, the command recognizer
+# heard "parar" in "quando você liga para alguém que", "dividir" in "o que alguns casos de vírus
+# ebola ocorreram", "solo" in "polo químicas" and "para" in "se para se" (test_voice_real_speech.py).
+sentence_words: 2
+
+# Words the speech model doesn't know, spelled as words it does. The recognizer listens for
+# these spellings; normalize() turns them back.
+sounds_like:
+  mute: [mi ute]
+  loop: [lupi]
+  loops: [lupas]
+  mixer: [mix ser]
+  take: [tei que]
+  roll: [rol]
+  spot: [sport]
+  # nearest to "quanti-zar" of the words it knows
+  quantizar: [quantia azar]
+
+# Every reply and help line, by its English words. {names} are filled in after.
+texts:
+  # the engine
+  Listening: Ouvindo
+  Going to sleep: Parei de ouvir
+  All commands back on: Todos os comandos funcionam de novo
+  Cancelled: Cancelado
+  Dictation on. Say stop dictation to go back to commands.: Ditado ativado. Diga parar ditado para voltar aos comandos.
+  Dictation is off. To start it, say begin dictation.: O ditado está desativado. Para começar, diga começar ditado.
+  Nothing to repeat yet: Ainda não há nada para repetir
+  OK: Certo
+  "{some} and {last}": "{some} e {last}"
+  '"{text}" works in {apps}. Bring it to the front, then say it again.': '"{text}" funciona em {apps}. Traga-o para a frente e diga de novo.'
+  '"{text}" works in {apps}. Bring one of them to the front, then say it again.': '"{text}" funciona em {apps}. Traga um deles para a frente e diga de novo.'
+  Didn't catch a command in "{text}": Não entendi nenhum comando em "{text}"
+  Didn't catch that: Não entendi
+  Didn't catch a command: Não entendi nenhum comando
+  Say yes to {what}, or cancel: Diga sim para {what}, ou cancele
+  ", {n} times": ", {n} vezes"
+  Dictation on: Ditado ativado
+  Back to commands: De volta aos comandos
+  Scratched: Apagado
+  New line: Nova linha
+  New paragraph: Novo parágrafo
+  "Typed: {text}": "Digitado: {text}"
+  "Commands for {app}:": "Comandos para {app}:"
+  any app: qualquer aplicativo
+  "{n} commands available. They're listed on screen.": "{n} comandos disponíveis. Eles estão na tela."
+  # for the rest of the suite
+  Which command? Send the words to run, like "solo track".: Qual comando? Envie as palavras a dizer, como "solo".
+  "{command} works when Logic Pro or Pro Tools is in front.": "{command} funciona quando o Logic Pro ou o Pro Tools está na frente."
+  "Limitless Voice has no action {action}.": "O Limitless Voice não tem a ação {action}."
+  Asleep: Em pausa
+  "Take mode: say stop to end the take": "Modo take: diga parar para terminar o take"
+  That command needs a spoken yes, so it can't be run from another app.: Esse comando precisa que você diga sim, então não pode ser usado por outro aplicativo.
+  # the window and the floating display
+  'Listening: say "{sleep}" to pause': 'Ouvindo: "{sleep}" para pausar'
+  'Asleep: say "{wake}" or press here to start': 'Em pausa: diga "{wake}" ou clique aqui para começar'
+  'Dictating: say "{stop}" to go back to commands': 'Ditando: diga "{stop}" para voltar aos comandos'
+  'Take mode: only "{stop}" works until the take ends': 'Modo take: só "{stop}" funciona até o take terminar'
+  Take mode: Modo take
+  Dictating: Ditando
+  "Heard: “{text}”": "Ouvido: “{text}”"
+  "Sending commands to: {app}": "Enviando comandos para: {app}"
+  Click into the app you want to control (Logic, Pro Tools…): Clique no aplicativo que você quer controlar (Logic, Pro Tools…)
+  That didn't work: Isso não funcionou
+  Still listening from the menu bar: Continuo ouvindo pela barra de menus
+  Go to sleep: Parar de ouvir
+  Wake up: Começar a ouvir
+  Still listening. Open it again from the menu bar icon.: Continuo ouvindo. Abra de novo pelo ícone na barra de menus.
+  # choosing the language, and downloading it
+  Listening in {language}: Ouvindo em português
+  "{language} is downloaded once ({size}), then works without internet.": "O português é baixado uma vez ({size}) e depois funciona sem internet."
+  "To listen in {language}, Limitless Voice needs to download its speech model ({size}). Until then, it keeps listening as before.": "Para ouvir em português, o Limitless Voice precisa baixar o modelo de voz ({size}). Até lá, continua ouvindo como antes."
+  Download {language} ({size}): Baixar português ({size})
+  Download speech model: Baixar o modelo de voz
+  "Limitless Voice needs the {label} speech model ({size}). It's downloaded once and then works without internet. Download it now?": "Para ouvir em português, o Limitless Voice precisa do modelo de voz ({size}). Ele é baixado uma vez e depois funciona sem internet. Baixar agora?"
+  Downloading speech model…: Baixando o modelo de voz…
+  Cancel: Cancelar
+  Download failed: Não foi possível baixar
+  "Couldn't download the model: {error}\nCheck the internet connection and try again.": "Não foi possível baixar o modelo: {error}\nVerifique a conexão com a internet e tente de novo."
+  # Where to add a voice: the names are the ones in Brazilian Portuguese on the Mac and in Windows.
+  "There's no {language} voice on this Mac, so replies are read in its own voice. To add one: System Settings › Accessibility › Spoken Content › System voice › Manage Voices.": "Este Mac não tem uma voz em português, então as respostas são lidas com a voz padrão. Para adicionar uma: Ajustes do Sistema › Acessibilidade › Conteúdo Falado › Voz do Sistema › Gerenciar Vozes."
+  "There's no {language} voice on this computer, so replies are read in its own voice. To add one: Settings › Time & language › Speech › Add voices.": "Este computador não tem uma voz em português, então as respostas são lidas com a voz padrão. Para adicionar uma: Configurações › Hora e idioma › Fala › Adicionar vozes."
+  "There's no {language} voice on this computer, so replies are read in its own voice.": "Este computador não tem uma voz em português, então as respostas são lidas com a voz padrão."
+  # what can I say
+  What you can say: O que você pode dizer
+  Search commands: Buscar comandos
+  Commands: Comandos
+  "Commands for {app}. Words in [brackets] are optional; {number} means say a number.": "Comandos para {app}. As palavras entre [colchetes] são opcionais; {number} significa dizer um número."
+  always: sempre
+  repeats the last command: repete o último comando
+  "... N times   (e.g. nudge right 4 times)": "... N vezes   (por exemplo, deslocar para a direita 4 vezes)"
+  # replies from the packs
+  "{chord}": "{chord}"
+  Undone: Desfeito
+  Redone: Refeito
+  Saved: Salvo
+  "Opening {name}": "Abrindo {name}"
+  "Volume {level}": "Volume {level}"
+  Recording: Gravando
+  Captured: Capturado
+  "Bar {bar}": "Compasso {bar}"
+  New audio track: Nova faixa de áudio
+  New instrument track: Nova faixa de instrumento
+  Quantized: Quantizado
+  "Marker {n}": "Marcador {n}"
+  # help lines from the packs
+  'Press any key or shortcut, e.g. "press command shift n"': 'Aperta qualquer tecla ou atalho, por exemplo "aperte comando maiúsculas novembro"'
+  Type the words that follow: Escreve as palavras que vêm depois
+  'Open or switch to an app, e.g. "open logic pro"': 'Abre um aplicativo ou muda para ele, por exemplo "abrir logic pro"'
+  close this window: fechar esta janela
+  quit this app: sair deste aplicativo
+  Opens Go to Position, types the bar, presses Return: Abre Ir para a posição, digita o compasso e aperta Return
+  Toggle solo on the selected track: Liga ou desliga o solo da faixa selecionada
+  Toggle mute on the selected track: Liga ou desliga o mute da faixa selecionada
+  Toggle record enable on the selected track (verify): Liga ou desliga a gravação da faixa selecionada (verificar)
+  Focuses the main counter (Bars|Beats), types the bar, presses Return: Vai para o contador principal (compassos e tempos), digita o compasso e aperta Return
+  Period, number, period on the keypad recalls a memory location: Ponto, número e ponto no teclado numérico chamam um local de memória
+  Toggle the MIDI Editor window (verify on Windows, where it's Start+=): Mostra ou esconde a janela do editor MIDI (verificar no Windows, onde é Iniciar+=)
+  Solo selected tracks: Solo nas faixas selecionadas
+  Mute selected tracks: Mute nas faixas selecionadas
+  Record-enable selected tracks: Ativa a gravação das faixas selecionadas
+  Move the edit selection down a track: Desce a seleção de edição uma faixa
+  Move the edit selection up a track: Sobe a seleção de edição uma faixa
+  New MIDI track: Nova faixa MIDI
+  New return track: Nova faixa de retorno
+  Switch the selected track off or on (Live's track activator): Desliga ou liga a faixa selecionada (o ativador de faixa do Live)
+  Toggle record arm on the selected track: Arma ou desarma a gravação da faixa selecionada
+  Split the clip at the selection: Divide o clipe na seleção
+  Opens Export Audio/Video: Abre Exportar áudio/vídeo
+  # GarageBand, REAPER and FL Studio
+  Opens the New Track dialog: Abre a janela Nova faixa
+  Split items at the edit cursor: Divide os itens no cursor de edição
+  Opens the Render dialog: Abre a janela Render
+  Record mode: Modo de gravação
+  Switches record mode on or off; say play to start recording: Liga ou desliga o modo de gravação; diga tocar para começar a gravar
+  Toggle the metronome (not from the Piano roll): Liga ou desliga o metrônomo (não pelo Piano roll)
+  Move the playback marker to the start (Playlist): Leva o marcador de reprodução para o início (Playlist)
+  Next bar (Song mode): Próximo compasso (modo Song)
+  Previous bar (Song mode): Compasso anterior (modo Song)
+  Select the next channel in the Channel Rack: Seleciona o próximo canal no Channel Rack
+  Select the previous channel in the Channel Rack: Seleciona o canal anterior no Channel Rack
+  Solo the selected Mixer track (with the Mixer in front): Solo na faixa selecionada do Mixer (com o Mixer na frente)
+  Step back through FL Studio's undo history: Volta um passo no histórico do FL Studio
+  FL Studio has no redo key. To step forward again, say press command z.: O FL Studio não tem tecla para refazer. Para avançar um passo, diga aperte comando zê.
+  Opens the render options for a WAV file: Abre as opções para exportar um arquivo WAV
+  # Voice's windows (words.py): the main window, the menu bar menu, Settings, the setup guide
+  # and the floating display. Words with "&" before a letter are reached with Alt and that letter.
+  # How words are put together, the same in Portuguese:
+  "{app}: {state}": "{app}: {state}"
+  "<b>{title}</b><br>{how}": "<b>{title}</b><br>{how}"
+  "{phrases}   ({note})": "{phrases}   ({note})"
+  "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>": "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>"
+  'Say something, like "{phrase}".': 'Diga alguma coisa, por exemplo "{phrase}".'
+  Last thing heard: A última coisa ouvida
+  What happened: O que aconteceu
+  App receiving commands: Aplicativo que recebe os comandos
+  Permission needed: Permissão necessária
+  Open settings: Abrir Ajustes
+  I've done it, check again: Já fiz, verificar de novo
+  "✓ All set": "✓ Tudo pronto"
+  Language: Idioma
+  "&Microphone": "&Microfone"
+  Microphone: Microfone
+  Microphone to listen with: Microfone para ouvir
+  Refresh: Atualizar
+  Refresh microphone list: Atualizar a lista de microfones
+  Microphone level: Nível do microfone
+  Microphone problem: Problema com o microfone
+  System default microphone: Microfone padrão do sistema
+  "{name} (default)": "{name} (padrão)"
+  "Using {microphone}": "Usando {microphone}"
+  "Couldn't list microphones: {error}": "Não foi possível listar os microfones: {error}"
+  "Lost that microphone ({error}). Switched to the default one.": "Esse microfone foi perdido ({error}). Agora é usado o padrão."
+  "Microphone problem: {error}. Retrying…": "Problema com o microfone: {error}. Tentando de novo…"
+  "&History": "&Histórico"
+  History of commands: Histórico de comandos
+  What can I say?: O que eu posso dizer?
+  Settings: Ajustes
+  My commands folder: Pasta dos meus comandos
+  "That didn't work: {error}": "Isso não funcionou: {error}"
+  "Couldn't change the login setting: {error}": "Não foi possível mudar a abertura ao iniciar a sessão: {error}"
+  "Couldn't use that shortcut: {error}": "Não foi possível usar esse atalho: {error}"
+  "Couldn't find an app called {name}": "Não foi encontrado nenhum aplicativo chamado {name}"
+  AppleScript failed: O AppleScript não funcionou
+  AppleScript only works on a Mac: O AppleScript só funciona em um Mac
+  opening apps isn't supported here: abrir aplicativos não funciona neste computador
+  Allow Limitless Voice to use the microphone: Permita que o Limitless Voice use o microfone
+  Open Microphone settings, turn on Limitless Voice, then come back.: Abra os ajustes de Microfone, ative o Limitless Voice e volte aqui.
+  Allow Limitless Voice to control the computer: Permita que o Limitless Voice controle o computador
+  Open Accessibility settings, turn on Limitless Voice, then come back. This is what lets spoken commands press keys in Logic and Pro Tools.: Abra os ajustes de Acessibilidade, ative o Limitless Voice e volte aqui. É isso que permite que os comandos falados apertem teclas no Logic e no Pro Tools.
+  # the menu bar menu
+  "Show {app}": "Mostrar {app}"
+  Run setup again…: Configurar de novo…
+  "Quit {app}": "Sair do {app}"
+  # the floating display
+  "What {app} heard": "O que o {app} ouviu"
+  Listening state: Estado da escuta
+  Heard: Ouvido
+  # what can I say, and Settings
+  Close: Fechar
+  Save: Salvar
+  Say what happened out loud: Dizer em voz alta o que aconteceu
+  Speaking speed: Velocidade da fala
+  Start listening when the app opens: Começar a ouvir quando o aplicativo abrir
+  Listen for command words only (more accurate; turn off if commands are missed): Ouvir só palavras de comando (mais preciso; desative se perder comandos)
+  Keep this window on top of other apps: Manter esta janela na frente dos outros aplicativos
+  Text size: Tamanho do texto
+  High contrast colours: Cores de alto contraste
+  "e.g. {example}, or {other}": "por exemplo, {example} ou {other}"
+  Keyboard shortcut to turn listening on and off: Atalho de teclado para ligar e desligar a escuta
+  Listen on/off shortcut: Atalho para ligar ou desligar a escuta
+  Language to listen and answer in: Idioma em que ouve e responde
+  "Same as Limitless Sound ({language})": "Igual ao Limitless Sound ({language})"
+  "{language} ({size} download)": "{language} (download de {size})"
+  About the language: Sobre o idioma
+  Speech model: Modelo de voz
+  Speech model for listening: Modelo de voz para ouvir
+  "{model} (installed)": "{model} (instalado)"
+  "{model} ({size} download)": "{model} (download de {size})"
+  # the speech models' names, from each language file
+  English (US), fast: Inglês (EUA), rápido
+  English (US), large, slower: Inglês (EUA), grande, mais lento
+  English (India), fast: Inglês (Índia), rápido
+  Spanish, fast: Espanhol, rápido
+  Portuguese, fast: Português, rápido
+  # the setup guide
+  "Set up {app}": "Configurar o {app}"
+  Setup step: Etapa da configuração
+  "Step {n} of {total}": "Etapa {n} de {total}"
+  Back: Voltar
+  Continue: Continuar
+  "Start using {app}": "Usar o {app}"
+  Welcome to Limitless Voice: Boas-vindas ao Limitless Voice
+  Welcome to Limitless Voice. Setup takes about a minute. Press Continue.: Boas-vindas ao Limitless Voice. A configuração leva mais ou menos um minuto. Clique em Continuar.
+  "Run Logic Pro, Pro Tools and your whole computer with your voice.<br><br>Say <b>“{bar}”</b>, <b>“{solo}”</b> or <b>“{mixer}”</b>, and it happens in the app you're working in.<br><br>Everything runs on this computer. Your voice is never recorded or sent anywhere, and it works without internet.<br><br>Setup takes about a minute.": "Comande o Logic Pro, o Pro Tools e todo o seu computador com a voz.<br><br>Diga <b>“{bar}”</b>, <b>“{solo}”</b> ou <b>“{mixer}”</b> e acontece no aplicativo em que você está trabalhando.<br><br>Tudo funciona neste computador. Sua voz nunca é gravada nem enviada a lugar nenhum, e funciona sem internet.<br><br>A configuração leva mais ou menos um minuto."
+  First, Limitless Voice needs to hear you. Press Allow microphone.: Primeiro, o Limitless Voice precisa ouvir você. Clique em Permitir microfone.
+  Let Limitless Voice hear you: Deixe o Limitless Voice ouvir você
+  "Your computer will ask whether Limitless Voice may use the microphone. Choose <b>Allow</b>.<br><br>Audio is turned into words on this computer and then thrown away.": "O computador vai perguntar se o Limitless Voice pode usar o microfone. Escolha <b>Permitir</b>.<br><br>O áudio vira palavras neste computador e depois é descartado."
+  Allow microphone: Permitir microfone
+  Microphone permission: Permissão do microfone
+  "✓ Microphone allowed": "✓ Microfone permitido"
+  The microphone is turned off for Limitless Voice. Press the button to open Microphone settings, turn on Limitless Voice, and come back.: O microfone está desativado para o Limitless Voice. Clique no botão para abrir os ajustes de Microfone, ative o Limitless Voice e volte aqui.
+  Open Microphone settings: Abrir os ajustes de Microfone
+  Next, allow Limitless Voice to control the computer. Press the button, turn on Limitless Voice in the list, then come back.: Agora, permita que o Limitless Voice controle o computador. Clique no botão, ative o Limitless Voice na lista e volte aqui.
+  Let your voice press the keys: Deixe sua voz apertar as teclas
+  "To play, record and edit for you, Limitless Voice presses keys in Logic and Pro Tools, the same way you would.<br><br>macOS needs your OK for that:<br>1. Press <b>Open Accessibility settings</b>.<br>2. Turn on the switch next to <b>Limitless Voice</b> (you may need your password).<br>3. Come back here. This page notices by itself.": "Para tocar, gravar e editar por você, o Limitless Voice aperta teclas no Logic e no Pro Tools, do mesmo jeito que você faria.<br><br>O macOS precisa da sua permissão para isso:<br>1. Clique em <b>Abrir os ajustes de Acessibilidade</b>.<br>2. Ative o botão ao lado de <b>Limitless Voice</b> (talvez seja preciso digitar sua senha).<br>3. Volte aqui. Esta página percebe sozinha."
+  Open Accessibility settings: Abrir os ajustes de Acessibilidade
+  Permission to press keys: Permissão para apertar teclas
+  Skip for now (commands won't work until this is on): Agora não (sem isso os comandos não funcionam)
+  "✓ Allowed. Limitless Voice can press keys for you.": "✓ Permitido. O Limitless Voice pode apertar teclas por você."
+  Allowed: Permitido
+  Waiting for the switch to be turned on…: Esperando o botão ser ativado…
+  "Let's check the microphone. Say: {phrase}.": "Vamos testar o microfone. Diga: {phrase}."
+  Check your microphone: Teste seu microfone
+  "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>The bar should move when you talk. A headset or a mic close to your mouth works best when speakers are playing.": "Escolha o microfone e diga <b>“{phrase}”</b>.<br>A barra se mexe quando você fala. Com caixas de som tocando, use um headset ou um microfone perto da boca."
+  What was heard: O que foi ouvido
+  Listening…: Ouvindo…
+  "✓ Heard “{text}”. Your microphone works.": "✓ Ouvido: “{text}”. Seu microfone funciona."
+  Got it. Your microphone works.: Entendi. Seu microfone funciona.
+  "Heard “{text}”. Try once more: “{phrase}”.": "Ouvido: “{text}”. Tente mais uma vez: “{phrase}”."
+  Choose how Limitless Voice tells you what it did.: Escolha como o Limitless Voice avisa o que fez.
+  How should it answer you?: Como ele deve responder?
+  Say what happened out loud (“Recording”, “Bar 32”): Falar o que aconteceu (“Gravando”, “Compasso 32”)
+  Show what I said at the bottom of the screen: Mostrar o que eu disse embaixo na tela
+  Larger text: Texto maior
+  Start Limitless Voice when I log in: Abrir o Limitless Voice ao fazer login
+  "You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. Say {help} any time for the full list.": "Tudo pronto. Clique no Logic ou no Pro Tools e experimente: {play}, {bar} ou {mixer}. Diga {help} quando quiser para ver a lista completa."
+  You're all set: Tudo pronto
+  Click into Logic Pro or Pro Tools and try one of these. Limitless Voice keeps working from the menu bar when this window is closed.: Clique no Logic Pro ou no Pro Tools e tente um destes. O Limitless Voice segue ativo na barra de menus com esta janela fechada.
+  every command for the app you're in: todos os comandos do aplicativo em que você está
+  transport: transporte
+  jump anywhere: ir para qualquer ponto
+  the selected track: a faixa selecionada
+  windows and views: janelas e visualizações
+  repeat anything: repetir qualquer comando
+  any shortcut: qualquer atalho
+  pause listening: pausar a escuta
+  # Commands the windows suggest saying, in the words Portuguese listens for
+  what can I say: o que eu posso dizer
+  play: tocar
+  go to bar thirty two: ir para o compasso trinta e dois
+  solo track: solo na faixa
+  show the mixer: mostrar o mixer
+  play  /  stop  /  record: tocar  /  parar  /  gravar
+  solo track  /  mute track: solo na faixa  /  silenciar a faixa
+  nudge right four times: deslocar para a direita quatro vezes
+  press command S: aperte comando esse
+  go to sleep  /  wake up: vai dormir  /  acorda
+
+# For each built-in pack, for each command by its first English phrase: what to say in Portuguese.
+# A list is every way to say the command; a mapping gives them per English phrase, where the
+# suite needs to know which was meant (play or stop). Shared lists are written once (&name) and
+# reused (*name).
+commands:
+  Everywhere:
+    press {chord:keys}: ["aperte {chord:keys}", "aperta {chord:keys}", "apertar {chord:keys}",
+                         "pressione {chord:keys}", "pressionar {chord:keys}", "tecla {chord:keys}"]
+    type {words:text}: ["escreva {words:text}", "escreve {words:text}", "escrever {words:text}",
+                        "digite {words:text}", "digita {words:text}", "digitar {words:text}"]
+    undo: ["desfazer", "desfazer isso", "desfaz isso"]
+    redo: &redo ["refazer", "refazer isso", "refaz isso"]
+    copy: ["copiar", "copiar isso", "copia isso"]
+    cut: ["recortar", "cortar", "recortar isso", "recorta isso", "cortar isso", "corta isso"]
+    paste: ["colar", "colar isso", "cola isso"]
+    select all: ["selecionar tudo", "seleciona tudo", "selecione tudo"]
+    # Not "salva" alone: real people's "sala" (room) came back as "salva" 23 times in 100.
+    save: ["salvar", "salvar [o] projeto", "salva [o] projeto", "salvar [a] sessão", "salva [a] sessão",
+           "salvar isso", "salva isso"]
+    press enter: ["aperte enter", "aperta enter", "apertar enter", "enter"]
+    escape: ["escape", "aperte escape", "aperta escape", "tecla escape"]
+    tab: ["tabulação", "próximo campo", "campo seguinte"]
+    previous field: ["campo anterior"]
+    # Not "cima" or "direita" alone, as English isn't "up" or "right" alone: they're said all the time.
+    move up: ["mover para cima", "move para cima", "seta para cima", "seta pra cima"]
+    move down: ["mover para baixo", "move para baixo", "seta para baixo", "seta pra baixo"]
+    move left: ["mover para a esquerda", "move para a esquerda", "seta para a esquerda", "seta esquerda"]
+    move right: ["mover para a direita", "move para a direita", "seta para a direita", "seta direita"]
+    page up: ["página para cima", "subir página", "página anterior"]
+    page down: ["página para baixo", "descer página", "próxima página"]
+    # Not "ir para ...": "ir para o compasso trinta e dois" would open an app by that name.
+    open {name:text}: ["abrir {name:text}", "abre {name:text}", "abra {name:text}", "mudar para {name:text}",
+                       "muda para {name:text}", "trocar para {name:text}"]
+    next window: ["próxima janela", "janela seguinte", "trocar de janela", "mudar de janela"]
+    close [the] window: ["fechar [a] janela", "fecha [a] janela", "feche [a] janela"]
+    quit [the] app: ["sair do aplicativo", "fechar [o] aplicativo", "fecha [o] aplicativo",
+                     "encerrar [o] aplicativo"]
+    mission control: ["mission control", "mostrar todas as janelas", "todas as janelas", "visão de tarefas"]
+    show desktop: ["mostrar [a] área de trabalho", "ver [a] área de trabalho"]
+    spotlight: ["buscar no computador", "pesquisar no computador", "menu iniciar"]
+    volume up: ["aumentar [o] volume", "aumenta [o] volume", "mais volume", "mais alto"]
+    volume down: ["diminuir [o] volume", "diminui [o] volume", "abaixar [o] volume", "abaixa [o] volume",
+                  "menos volume", "mais baixo"]
+    mute volume: ["silenciar [o] som", "tirar [o] som", "ativar [o] som", "silenciar [o] áudio"]
+    set volume to {level:number}: ["volume em {level:number}", "volume no {level:number}",
+                                   "volume para {level:number}", "colocar [o] volume em {level:number}",
+                                   "coloca [o] volume em {level:number}"]
+    zoom screen in: ["ampliar [a] tela", "aproximar [a] tela"]
+    zoom screen out: ["reduzir [a] tela", "afastar [a] tela"]
+
+  Logic Pro:
+    play: &play
+      play: ["tocar", "reproduzir"]
+      # "para" too, how Brazilians say stop: real people's "parar" and "pare" came back as "para"
+      # 10 times in 63, and without it were missed. It's also "for", said all the time, but a
+      # sentence with it in isn't a command (sentence_words). "pare" is the stop sign.
+      stop: ["parar", "pare", "para", "stop"]
+      start playback: ["iniciar [a] reprodução", "começar [a] reprodução"]
+      stop playback: ["parar [a] reprodução", "pare [a] reprodução", "parar de tocar", "para de tocar"]
+    record: &record ["gravar", "começar a gravar", "comece a gravar", "começa a gravar",
+                     "iniciar [a] gravação"]
+    capture [the] recording: ["capturar [a] gravação", "captura [a] gravação", "capturar isso", "captura isso"]
+    cycle: ["ciclo", "loop", "ativar [o] ciclo", "ativar [o] loop", "modo ciclo"]
+    metronome: &metronome ["metrônomo", "clique", "ativar [o] metrônomo", "ativar [o] clique"]
+    go to start: &start ["ir para o início", "ir pro início", "voltar para o início", "voltar pro início",
+                         "voltar ao início", "ir para o começo", "voltar para o começo", "voltar pro começo",
+                         "voltar ao começo", "ao início", "pro início"]
+    forward: ["avançar", "para frente", "pra frente", "próximo compasso", "compasso seguinte",
+              "avançar [um] compasso"]
+    back: ["voltar", "retroceder", "para trás", "pra trás", "compasso anterior", "voltar [um] compasso"]
+    go to bar {bar:number}: &bar ["ir para o compasso {bar:number}", "ir pro compasso {bar:number}",
+                                  "ir ao compasso {bar:number}", "compasso {bar:number}",
+                                  "pular para o compasso {bar:number}", "vai para o compasso {bar:number}",
+                                  "vá para o compasso {bar:number}"]
+    new track: &new_track ["nova faixa", "faixa nova", "novas faixas", "nova trilha", "trilha nova",
+                           "adicionar [uma] faixa", "adicionar [uma] trilha", "criar [uma] faixa"]
+    new audio track: ["nova faixa de áudio", "nova trilha de áudio", "adicionar [uma] faixa de áudio",
+                      "adicionar [uma] trilha de áudio"]
+    new instrument track: ["nova faixa de instrumento", "nova trilha de instrumento", "novo instrumento de software",
+                           "adicionar [uma] faixa de instrumento", "adicionar [uma] trilha de instrumento"]
+    duplicate track: ["duplicar [a] faixa", "duplica [a] faixa", "duplicar [a] trilha", "duplica [a] trilha",
+                      "nova faixa com os mesmos ajustes"]
+    next track: &next_track ["próxima faixa", "faixa seguinte", "faixa de baixo", "próxima trilha", "trilha seguinte"]
+    previous track: &previous_track ["faixa anterior", "faixa de cima", "trilha anterior"]
+    solo: &solo ["solo", "solo na faixa", "solar [a] faixa", "colocar em solo", "coloca em solo", "dar solo",
+                 "tirar [o] solo", "tira [o] solo"]
+    # Not "muta" alone: people's "muita" (much) came back as "muta".
+    mute: &mute ["mute", "silenciar", "silenciar [a] faixa", "silencia [a] faixa",
+                 "muta [a] faixa", "dar mute", "tirar [o] mute", "tira [o] mute"]
+    # Not "arma" alone: it's also a weapon, and the model hears it right only 4 times in 24.
+    arm: &arm ["armar", "armar [a] faixa", "arma [a] faixa", "ativar [a] gravação", "desarmar"]
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir no cursor", "cortar aqui", "corta aqui"]
+    join: ["unir", "unir [as] regiões", "une [as] regiões", "juntar", "juntar [as] regiões"]
+    repeat region: ["repetir [a] região", "repetir [as] regiões", "repete [a] região"]
+    quantize: &quantize ["quantizar", "quantizar isso", "quantificar"]
+    delete: &delete ["apagar", "excluir", "deletar", "apagar isso", "apaga isso", "excluir isso", "exclui isso",
+                     "deletar isso", "remover isso", "remove isso"]
+    set locators: ["ciclo na seleção", "loop na seleção"]
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer", "mesa de mixagem"]
+    library: ["biblioteca", "mostrar [a] biblioteca", "ver [a] biblioteca", "esconder [a] biblioteca"]
+    inspector: ["inspetor", "mostrar [o] inspetor", "ver [o] inspetor"]
+    editor: ["editor", "editores", "mostrar [o] editor", "ver [o] editor"]
+    piano roll: ["piano roll", "editor de teclado", "mostrar [o] piano roll", "mostrar [o] editor de teclado"]
+    score: ["partitura", "editor de partitura", "mostrar [a] partitura"]
+    smart controls: ["controles inteligentes", "mostrar [os] controles inteligentes"]
+    loops: ["loops", "navegador de loops"]
+    browser: ["navegador", "navegadores", "navegador de arquivos", "explorador de arquivos"]
+    global tracks: ["faixas globais", "trilhas globais", "faixa de tempo", "mostrar [as] faixas globais"]
+    automation: ["automação", "mostrar [a] automação", "ver [a] automação"]
+    musical typing: ["teclado musical", "digitação musical"]
+    zoom in: &zoom_in ["aproximar", "ampliar", "mais zoom", "aumentar [o] zoom"]
+    zoom out: &zoom_out ["afastar", "reduzir", "menos zoom", "diminuir [o] zoom"]
+    zoom in vertical: &taller ["aproximar na vertical", "ampliar na vertical", "faixas mais altas"]
+    zoom out vertical: &shorter ["afastar na vertical", "reduzir na vertical", "faixas mais baixas"]
+    zoom to fit: &fit ["ajustar à janela", "ajustar à seleção", "zoom na seleção", "ajustar [o] zoom"]
+    bounce: ["exportar [a] mixagem", "exportar [o] projeto"]
+
+  Pro Tools:
+    play: *play
+    record: *record
+    loop playback: ["reprodução em loop", "loop", "ativar [o] loop"]
+    metronome: *metronome
+    go to start: *start
+    go to bar {bar:number}: *bar
+    new marker: ["novo marcador", "marcador novo", "adicionar [um] marcador", "colocar [um] marcador",
+                 "novo local de memória"]
+    go to marker {n:number}: ["ir para o marcador {n:number}", "ir pro marcador {n:number}", "marcador {n:number}",
+                              "vai para o marcador {n:number}", "local de memória {n:number}"]
+    # Not "mover para a direita": that's the arrow key, as "move right" is in English.
+    nudge right: ["deslocar para a direita", "desloca para a direita", "empurrar para a direita",
+                  "empurra para a direita", "deslocar para frente"]
+    nudge left: ["deslocar para a esquerda", "desloca para a esquerda", "empurrar para a esquerda",
+                 "empurra para a esquerda", "deslocar para trás"]
+    mixer: ["mixer", "mostrar [o] mixer", "janela de edição", "mostrar [a] janela de edição", "janela de mixagem",
+            "alternar [o] mixer"]
+    midi editor: ["editor midi", "editor de midi", "mostrar [o] editor midi"]
+    workspace: ["espaço de trabalho", "mostrar [o] espaço de trabalho"]
+    new track: *new_track
+    solo: *solo
+    mute: *mute
+    arm: *arm
+    next track: *next_track
+    previous track: *previous_track
+    # The speech model knows no spelling of "shuffle" or "slip"
+    shuffle mode: ["modo embaralhar", "embaralhar"]
+    slip mode: ["modo livre"]
+    spot mode: ["modo spot", "spot"]
+    grid mode: ["modo grid", "grid", "modo grade", "grade"]
+    zoomer: ["ferramenta zoom", "ferramenta de zoom", "lupa"]
+    trimmer: ["ferramenta de aparar", "ferramenta aparar"]
+    selector: ["ferramenta de seleção", "ferramenta seleção"]
+    grabber: ["ferramenta mão", "ferramenta de mão", "mãozinha"]
+    scrubber: ["ferramenta de arrasto"]
+    pencil: ["lápis", "ferramenta lápis", "ferramenta de lápis"]
+    redo: *redo
+    separate: ["separar", "separar [o] clipe", "dividir", "dividir aqui", "cortar aqui",
+               "corta aqui"]
+    heal: ["reparar", "reparar [a] separação", "repara [a] separação"]
+    duplicate: ["duplicar", "duplicar isso", "duplica isso"]
+    repeat: ["repetir", "repetir [o] clipe", "repete [o] clipe"]
+    # Not "recortar": it's Cut.
+    trim to selection: ["aparar na seleção", "apara na seleção", "aparar [o] clipe"]
+    fades: ["fade", "criar [o] fade", "fazer [o] fade"]
+    consolidate: ["consolidar", "consolidar [o] clipe"]
+    quantize: *quantize
+    delete: *delete
+    tab to transient: ["próximo transiente", "ir para o próximo transiente", "transiente seguinte"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
+    zoom to fit: *fit
+    bounce: ["exportar [a] mixagem", "exportar para [o] disco"]
+    save as: ["salvar como", "salva como"]
+
+  # Live's own names where Brazilian musicians use them: clipe, loop, MIDI, retorno.
+  Ableton Live:
+    play: *play
+    record: *record
+    metronome: *metronome
+    go to start: *start
+    loop: ["loop", "ativar [o] loop", "loop na seleção"]
+    new track: ["nova faixa", "faixa nova", "nova faixa de áudio", "nova trilha", "nova trilha de áudio",
+                "adicionar [uma] faixa", "adicionar [uma] faixa de áudio", "adicionar [uma] trilha"]
+    new midi track: ["nova faixa midi", "nova faixa de instrumento", "nova trilha midi", "adicionar [uma] faixa midi",
+                     "adicionar [uma] faixa de instrumento"]
+    new return track: ["nova faixa de retorno", "adicionar [uma] faixa de retorno"]
+    duplicate: ["duplicar", "duplicar [a] faixa", "duplica [a] faixa", "duplicar isso", "duplica isso",
+                "duplicar [o] clipe", "duplica [o] clipe"]
+    solo: *solo
+    mute: *mute
+    arm: *arm
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir [o] clipe", "divide [o] clipe"]
+    consolidate: ["consolidar", "consolidar [os] clipes", "unir", "unir [os] clipes", "juntar", "juntar [os] clipes"]
+    quantize: *quantize
+    delete: *delete
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]
+    browser: ["navegador", "mostrar [o] navegador", "esconder [o] navegador", "ver [o] navegador", "biblioteca"]
+    clip view: ["visão de clipe", "vista do clipe", "mostrar [o] clipe", "editor", "mostrar [o] editor", "piano roll",
+                "editor de teclado"]
+    automation: ["automação", "mostrar [a] automação", "modo [de] automação"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
+    zoom in vertical: *taller
+    zoom out vertical: *shorter
+    zoom to selection: ["zoom na seleção", "ajustar à seleção", "aproximar na seleção"]
+    zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo"]
+    export: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]
+
+  # GarageBand, REAPER and FL Studio keep their own names for their windows (Playlist, Channel
+  # Rack, Piano roll, Mixer), as Brazilian musicians use them.
+  GarageBand:
+    play: *play
+    record: *record
+    new track: *new_track
+    automation: ["automação", "mostrar [a] automação", "ver [a] automação"]
+    musical typing: ["teclado musical", "digitação musical"]
+
+  REAPER:
+    play: *play
+    record: *record
+    loop: ["loop", "ativar [o] loop", "reprodução em loop"]
+    go to start: *start
+    go to end: ["ir para o fim", "ir pro fim", "ir para o final", "ir para o fim do projeto"]
+    new marker: &new_marker ["novo marcador", "marcador novo", "adicionar [um] marcador", "colocar [um] marcador"]
+    new track: *new_track
+    next track: *next_track
+    previous track: *previous_track
+    redo: *redo
+    split: ["dividir", "dividir aqui", "divide aqui", "dividir no cursor"]
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]
+    zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo", "ajustar ao projeto"]
+    render: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]
+
+  FL Studio:
+    play: *play
+    # Not "gravar": R only switches record mode, and play then records.
+    record mode: ["modo gravação", "modo de gravação", "ativar [o] modo de gravação", "armar gravação"]
+    metronome: *metronome
+    go to start: *start
+    forward: ["avançar", "para frente", "pra frente", "próximo compasso", "compasso seguinte", "avançar [um] compasso"]
+    back: ["voltar", "retroceder", "para trás", "pra trás", "compasso anterior", "voltar [um] compasso"]
+    new marker: *new_marker
+    # The Channel Rack's channels, which Brazilians also call tracks.
+    next channel: ["próximo canal", "canal seguinte", "próxima faixa", "faixa seguinte"]
+    previous channel: ["canal anterior", "faixa anterior"]
+    solo: *solo
+    undo: ["desfazer", "desfazer isso", "desfaz isso"]
+    redo: *redo
+    mixer: ["mixer", "mostrar [o] mixer", "esconder [o] mixer", "ver [o] mixer"]
+    piano roll: ["piano roll", "editor de teclado", "mostrar [o] piano roll", "mostrar [o] editor de teclado",
+                 "editor", "mostrar [o] editor"]
+    # The Playlist is where the tracks are; the Channel Rack holds the channels.
+    playlist: ["janela de faixas", "mostrar [as] faixas", "ver [as] faixas"]
+    channel rack: ["janela de canais", "mostrar [os] canais", "ver [os] canais"]
+    browser: ["navegador", "mostrar [o] navegador", "esconder [o] navegador", "ver [o] navegador", "biblioteca"]
+    zoom in: *zoom_in
+    zoom out: *zoom_out
+    zoom to fit: ["ajustar à janela", "ajustar [o] zoom", "mostrar tudo", "ver tudo"]
+    export: ["exportar", "exportar áudio", "exportar [a] mixagem", "exportar [o] projeto"]

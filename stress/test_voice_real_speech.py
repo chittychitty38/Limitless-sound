@@ -409,6 +409,10 @@ def test_ordinary_talk_rarely_fires_commands():
         # 1.0 an hour (a reader's "aromáticas" heard as "automatización"), Pro Tools 0, none
         # destructive.
         "es": {"Logic Pro": 3, "Pro Tools": 3},
+        # FLEURS pt_br, the first hour of its dev split. Measured (Voice 0.4.3, two runs): 1.0 an
+        # hour in each, Escape heard in a pause, none destructive. Before Portuguese took a sentence
+        # around a command word for talk, 8 an hour.
+        "pt": {"Logic Pro": 3, "Pro Tools": 3},
     }[LANG.code]
     too_many = []
     for app, most in ceiling.items():

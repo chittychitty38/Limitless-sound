@@ -107,7 +107,7 @@ is switched off and reported.
 ## Shared preferences
 
 `speak`, `oneVoice`, `textScale` (1.0–2.0), `highContrast`, `reduceMotion`, `dwellMs`
-(250–3000), `scanMs` (400–5000), `language` (a lowercase BCP 47 primary tag: `"en"` or `"es"`;
+(250–3000), `scanMs` (400–5000), `language` (a lowercase BCP 47 primary tag: `"en"`, `"es"` or `"pt"`;
 on first start, the computer's own language when the suite has it). Apps apply the ones they
 support. An app that listens or speaks in the chosen language reports it in `prefs.applied`;
 one that doesn't yet carries on in English. When `oneVoice` is on

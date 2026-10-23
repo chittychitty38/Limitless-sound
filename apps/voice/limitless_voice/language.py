@@ -5,6 +5,8 @@ The command packs (packs/*.yaml) are written in English and hold every shortcut 
 file, languages/<code>.yaml, with:
 
   models       the speech models for it; the first is the one to use
+  preview      for a language whose speech model hears much less than the others: what Settings
+               says about it, in the language ("Prévia: ..."), and its name there ("label")
   voice        how to find a system voice for spoken replies
   words        Voice's own phrases: wake, sleep, yes, cancel, again, help, dictation...
   numbers      its number words (see numbers.py)
@@ -15,6 +17,12 @@ file, languages/<code>.yaml, with:
                open recognizer (see engine.py)
   exact_destructive      true when Cut, Paste, Delete and the like run only on their exact
                words, never a near miss
+  exact        true when every command runs only on its exact words: in a language whose
+               short words are a letter apart ("sala" and "salva"), a near miss is another word
+  sentence_words  a number, N: when the open recognizer heard N words or more without the
+               command recognizer's first, or N more words than it placed, it was talk, and
+               only its words count for commands (see engine.py). 0, the default, leaves it to
+               the command recognizer
   commands     for each built-in pack, for each command (by its first English phrase),
                the phrases to say in this language
 
@@ -45,6 +53,9 @@ class Language:
         self.code = data["code"]
         self.name = data["name"]                    # in the language itself: "Español"
         self.english_name = data.get("english_name", self.name)
+        preview = data.get("preview") or {}
+        self.label = preview.get("label", self.name)   # its name in Settings: "Português (prévia)"
+        self.preview = preview.get("note", "")         # what Settings says about it
         self.models = dict(data["models"])           # name -> {label, size}
         self.model = next(iter(self.models))
         self.voice = data.get("voice") or {}
@@ -62,6 +73,8 @@ class Language:
         self.commands = data.get("commands") or {}
         self.free_text_needs_both = bool(data.get("free_text_needs_both"))
         self.exact_destructive = bool(data.get("exact_destructive"))
+        self.exact = bool(data.get("exact"))
+        self.sentence_words = int(data.get("sentence_words") or 0)
         self._sounds = [(re.compile(rf"\b{re.escape(a)}\b"), w)
                         for w, aliases in self.sounds_like.items() for a in aliases]
 
@@ -140,7 +153,7 @@ class Language:
             spoken = {cmd.phrases[0]: [spec] if isinstance(spec, str) else spec}
         phrases = [p for ps in spoken.values() for p in ps]
         from .engine import Engine
-        fuzzy = cmd.fuzzy and not (self.exact_destructive and Engine._destroys(cmd, {}))
+        fuzzy = cmd.fuzzy and not self.exact and not (self.exact_destructive and Engine._destroys(cmd, {}))
         out = Command(phrases=phrases, action=cmd.action, pack=cmd.pack, reply=self.text(cmd.reply),
                       confirm=cmd.confirm, repeatable=cmd.repeatable, help=self.text(cmd.help),
                       fuzzy=fuzzy, instant=cmd.instant, english=cmd.phrases, language=self)

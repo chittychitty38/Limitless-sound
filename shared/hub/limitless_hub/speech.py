@@ -23,7 +23,8 @@ DUPLICATE_WINDOW = 1.5  # seconds: the same words twice in this time are said on
 MAX_QUEUE = 3           # older announcements are dropped rather than read out late
 RELIST_AFTER = 30.0     # seconds: a voice added in the computer's settings is found this soon
 # Clearer voices first, where the computer has them; otherwise any voice for the language.
-PREFERRED = {"es": ("Paulina", "Mónica", "Monica", "Juan", "Jorge")}
+# Portuguese: Brazil's first, as Limitless Voice speaks Brazilian Portuguese.
+PREFERRED = {"es": ("Paulina", "Mónica", "Monica", "Juan", "Jorge"), "pt": ("Luciana", "Felipe", "Fernanda")}
 _LIST_WINDOWS = ("Add-Type -AssemblyName System.Speech; "
                  "(New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices() | "
                  "Where-Object Enabled | ForEach-Object { $_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name }")

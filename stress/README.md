@@ -14,7 +14,7 @@ memory that keeps climbing over a long session.
 | `test_zoom_real_speech.py` | Limitless Zoom hearing the same recordings: do stray words or ordinary talk zoom the screen? In Spanish too: see [Zoom in Spanish](#zoom-in-spanish) below. |
 | `test_zoom_language.py` | Every word Zoom listens for in a language is one its speech model knows, and real people saying Zoom's Spanish command words. See [Zoom in Spanish](#zoom-in-spanish) below. |
 | `test_command_words.py` | Voice and Zoom hearing real people say their own command words ("record", "cut", "paste", "fit" ...), which Speech Commands doesn't have. See [Command words](#command-words) below. |
-| `test_voice_language.py` | Every word Voice listens for in a language is one its speech model knows. See [Spanish](#spanish) below. |
+| `test_voice_language.py` | Every word Voice listens for in a language is one its speech model knows. See [Spanish](#spanish) and [Portuguese](#portuguese) below. |
 | `test_zoom_noise.py` | Limitless Zoom's commands said with a band playing under them, at three loudness levels: still heard? Does the band zoom by itself? In English, and every Spanish phrase. |
 | `test_control_stress.py` | Limitless Control: switch contact bounce, a trigger held at the threshold with a tremor, unplugging mid-press, every input mashed at once, a soak. |
 | `test_zoom_stress.py` | Limitless Zoom: held switch and zoom keys, a lost key-up, a key storm, every action in every app. |
@@ -326,6 +326,72 @@ ZOOM_LANGUAGE=es VOSK_MODEL=/path/to/vosk-model-small-es-0.42 ZOOM_WORDS_DIR=/tm
   stress/test_zoom_real_speech.py stress/test_zoom_noise.py -v -s
 ```
 
+### Portuguese
+
+Voice in Brazilian Portuguese (`VOICE_LANGUAGE=pt`) gets the same checks, in its own CI job, with
+MSWC's Portuguese clips (Common Voice Portuguese, mostly Brazilian) and an hour of FLEURS
+Brazilian Portuguese (pt_br). Its stray words are a letter from a command ("sala" and "salvar",
+"parte" and "pare", "muita" and "muta") or a command's other meaning ("arma", a weapon). The
+command words are the infinitives Voice listens for when a command is said alone; MSWC's
+Portuguese has no "mute" or "loop", so the English names aren't measured.
+
+What CI measured, Voice 0.4.3 with Logic Pro in front (runs 39932330009 and 39932381616):
+
+| | Portuguese | Spanish |
+|---|---|---|
+| Command words right at once | **61.6% to 62.7%** (565 clips, 23 words) | 83.5% to 83.6% |
+| At once or with a yes | 62.1% to 63.0% | 84.2% |
+| Destructive key from a word not said | 0 | 0 |
+| Stray words that fired a command | 5.7% to 6.0% ("sala" heard as "solo" or "salvar") | 6.2% to 6.5% |
+| Words it listens for, heard as themselves | 52.3% to 52.8% (numbers, and other forms of command words) | 81.9% |
+| An hour of reading aloud: commands fired in Logic Pro / Pro Tools | 1.0 / 1.0, none destructive (FLEURS) | 1.0 / 0 |
+| Acts after the word, median | 1.54 s; play, stop, record 0.6 to 0.9 s | 1.38 s; 0.57 s |
+
+**Portuguese is a preview, because of its speech model.** The only small Portuguese model under a
+licence the suite can ship is vosk-model-small-pt-0.3, an older model than the Spanish one. It
+hears nothing at all in about a third of the clips. A control in CI (runs 39917114601 and
+39920195367) ruled out the recordings: the same harness, the same 16 kinds of word (two to ten,
+twenty, thirty, "gravar"/"grabar", "parar", "salvar"/"guardar", "solo", "ajuda"/"ayuda"), 25 clips
+each:
+
+| | Portuguese model, Portuguese clips | Spanish model, Spanish clips |
+|---|---|---|
+| Heard nothing at all, as the tests feed a clip (0.5 s of silence before) | 33% | 4% |
+| The word itself | 60% | 86% |
+| With nothing before / 0.5 s of room noise each side / 1 s each side | 38% / 33% / 32% nothing | 4% / 4% / 5% nothing |
+| The clips: loudest, speech length, speech from the start / to the end | -4.6 dBFS, 0.36 s, 0.30 s / 0.33 s | -5.2 dBFS, 0.34 s, 0.31 s / 0.34 s |
+| FLEURS read sentences, open recognizer alone, word error rate (100 recordings) | 27.4% | 14.8% |
+
+The clips are alike and padding doesn't change anything, so it's the model; Alpha Cephei's own
+list gives it 32.6% word errors on Common Voice's test set. The only other Portuguese model it
+lists, FalaBrasil's (1.6 GB), is under the GPL.
+
+What was fixed on the way, from these runs:
+
+- **Words the model doesn't know.** It knows no "mute", "loop", "mixer", "take" or "roll", so
+  they're spelled as words it does ("mi ute", "lupi", "mix ser", "tei que", "rol"), and no
+  spelling at all of "play", "shift", "tab", "shuffle" or "slip", so those are said in Portuguese.
+  It keeps its graph in the model's own folder (no `graph/`), and Voice now finds such a model.
+- **Near misses.** Real people's "sala" pressed Save 47 times in 100, "parte" Play, "muita" Mute
+  and "copa" Copy, each a letter from a command. Portuguese runs no command on a near miss.
+- **Short imperatives.** People's "toca" was right 32% of the time and "tocar" 63%, "volta" 41%
+  and "voltar" 63%, "aproxima" 29%. A command said alone is the infinitive, as the menus name it.
+- **Sentences.** The command recognizer heard "parar" in "quando você liga para alguém que",
+  "dividir" in a sentence about Ebola, "solo" in "polo químicas" and "para" in "se para se": 8
+  commands an hour of reading. When the open recognizer heard two words or more without the
+  command's, or two more words than it, it's talk. Now 1 an hour, Escape heard in a pause.
+
+Run it yourself (about 500 MB is read, once: 260 MB of MSWC's 1.2 GB Portuguese archive, its
+lists, and 90 MB of FLEURS's 2.7 GB):
+
+```sh
+python stress/tools/get_command_words.py /tmp/command-words-pt --lang pt
+python stress/tools/get_fleurs.py /tmp/fleurs-pt --lang pt_br
+VOICE_LANGUAGE=pt VOSK_MODEL=/path/to/vosk-model-small-pt-0.3 COMMAND_WORDS_DIR=/tmp/command-words-pt \
+  TALK_DIR=/tmp/fleurs-pt python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
+  stress/test_command_words.py -v -s
+```
+
 The recordings are not in this repository, and must not be committed. They are all under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/):
 
@@ -336,13 +402,15 @@ The recordings are not in this repository, and must not be committed. They are a
 - Multilingual Spoken Words Corpus: MLCommons,
   [mlcommons.org/datasets/multilingual-spoken-words](https://mlcommons.org/datasets/multilingual-spoken-words/);
   Mazumder et al., 2021, NeurIPS Datasets and Benchmarks. Made from Mozilla Common Voice (CC0).
-  The English and the Spanish clips.
+  The English, Spanish and Portuguese clips.
 - FLEURS: Alexis Conneau, Min Ma, Simran Khanuja, Yu Zhang, Vera Axelrod, Siddharth Dalmia,
   Jason Riesa, Clara Rivera and Ankur Bapna, "FLEURS: Few-shot Learning Evaluation of Universal
-  Representations of Speech", 2022. Google. The Latin American Spanish hour.
+  Representations of Speech", 2022. Google. The Latin American Spanish and the Brazilian Portuguese
+  hours.
 
-The speech models aren't in this repository either. The English one is Apache 2.0, and so is
-the Spanish one, vosk-model-small-es-0.42 (Alpha Cephei, alphacephei.com/vosk/models).
+The speech models aren't in this repository either. The English one is Apache 2.0, and so are
+the Spanish one, vosk-model-small-es-0.42, and the Portuguese one, vosk-model-small-pt-0.3 (Alpha
+Cephei, alphacephei.com/vosk/models).
 
 None of this replaces a person with a real mic, webcam, controller and DAW. That checklist is in
 [HANDOFF.md](../HANDOFF.md).

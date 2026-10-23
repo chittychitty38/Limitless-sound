@@ -16,6 +16,7 @@ Its English has no "redo" or "metronome", and no word shorter than three letters
 "zoom" is too: Zoom's commands start with it, but alone it isn't one.
 --lang es fetches Voice's Spanish command words instead (WORDS below says which), and words that
 sound like them but aren't commands ("grabación", "pagar", "corte"), to check those stay quiet.
+--lang pt does the same for Brazilian Portuguese ("gravar", "pagar" and "apagar", "parte" and "pare").
 --zoom fetches Limitless Zoom's words in the language instead (ZOOM below), for
 stress/test_zoom_language.py: in English they're among Voice's.
 Who said each clip comes from MSWC's split lists (an anonymous id and a gender per clip).
@@ -77,6 +78,20 @@ WORDS = {
            "uno dos tres cuatro cinco seis siete ocho nueve diez veinte treinta "
            "grabación grabado grabó pagar paga corte corto guardia silencio mezcla parada sola unión "
            "reproducción dividido detenido cola paso nada este").split(),
+    # The same for Brazilian Portuguese: its commands that work alone with Logic Pro in front
+    # ("não" is cancel, "dormir" sleep, "ajuda" help); numbers; other forms of command words and
+    # words said alone all the time, which Voice listens for so they're written as themselves
+    # ("gravação", "pagar", which is a letter from "apagar", "isso"); and words a letter from a
+    # command, or a command's other meaning, that shouldn't do anything ("parte" and "pare", "sala"
+    # and "salvar", "muita" and "muta", "arma", a weapon). Not the imperatives "toca", "volta",
+    # "corta" or "apaga": they're the same commands, only not said alone.
+    "pt": ("gravar tocar reproduzir parar pare salvar solo cortar colar apagar ciclo avançar "
+           "voltar dividir juntar biblioteca navegador ajuda afastar reduzir "
+           "dormir esquece não "
+           "uma dois duas três quatro cinco seis sete oito nove dez vinte trinta "
+           "gravação grave tocando toque parado parada parou salvou corte cortado divisão união silêncio "
+           "reprodução voltou pagar paga pagou isso nada aqui este "
+           "parte sala salva muita arma copa troca aroma calar").split(),
 }
 
 # Limitless Zoom's words, where they aren't among Voice's. Spanish: the commands said alone, and
