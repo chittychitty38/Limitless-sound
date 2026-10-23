@@ -132,7 +132,7 @@ main { position: relative; display: grid; grid-template-rows: auto 1fr; gap: var
 
 #play { grid-template-rows: auto 1fr; gap: var(--gap); }
 .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.6em, 1fr)); gap: var(--gap); }   /* one row unless the text is very large */
-.controls .target { min-height: 76px; font-size: 1em; }
+.controls .target { min-height: 76px; font-size: 1em; padding-inline: 0; }   /* room for one long word at double size */
 .controls .target small { font-size: .75em; }
 #pads { display: grid; gap: var(--gap); min-height: 0; }
 #pads .target { font-size: 1.9em; }

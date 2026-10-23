@@ -129,16 +129,18 @@ def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
     server = app._serve()
     base = f"http://127.0.0.1:{server.server_address[1]}"
 
-    def served_look():
+    def served(key="look"):
         req = urllib.request.Request(base + "/api/state", headers={"X-Token": app.token})
-        return json.loads(urllib.request.urlopen(req, timeout=5).read())["look"]
+        return json.loads(urllib.request.urlopen(req, timeout=5).read())[key]
+
 
     def applied():
         return [m["value"] for m in sent if m.get("op") == "state" and m.get("key") == "prefs.applied"]
 
     try:
-        # On its own, the page looks as it always did.
-        assert served_look() == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+        # On its own, the page looks as it always did, in the computer's language.
+        assert served() == {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+        assert served("language") is None
         prefs = {"speak": True, "oneVoice": True, "textScale": 1.0, "highContrast": False, "reduceMotion": False,
                  "dwellMs": 800, "scanMs": 1200}
         link._handle({"op": "welcome", "prefs": prefs, "actions": [], "states": {}})
@@ -146,16 +148,35 @@ def test_hub_prefs_reach_the_settings_page(app, monkeypatch):
 
         link._handle({"op": "prefs", "prefs": {**prefs, "textScale": 1.5, "highContrast": True, "reduceMotion": True}})
         look = {"textScale": 1.5, "highContrast": True, "reduceMotion": True}
-        assert served_look() == look
+        assert served() == look
         assert applied()[-1] == look
 
+        # The suite's language: the page shows it, and the suite hears it is in use.
+        link._handle({"op": "prefs", "prefs": {**prefs, "language": "es"}})
+        assert served("language") == "es"
+        assert applied()[-1] == {"textScale": 1.0, "highContrast": False, "reduceMotion": False, "language": "es"}
+
         page = urllib.request.urlopen(base + "/", timeout=5).read().decode()
-        assert "applyLook(st.look)" in page
+        assert "applyLook(st.look)" in page and "setLanguage(st.language || systemLanguage())" in page
         assert ":root.high-contrast {" in page and ".reduce-motion *" in page
         assert "font: calc(18px * var(--scale))" in page
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_the_hub_reads_what_control_says_in_english(app, monkeypatch):
+    """The page can be in Spanish, but what Control says out loud is still English."""
+    sent = []
+    link = app.suite.link
+    monkeypatch.setattr(link, "_send", lambda msg: sent.append(msg) or True)
+    link.connected, link.prefs = True, {"oneVoice": True, "language": "es"}
+    assert app.suite.say("Record")
+    assert sent == [{"op": "say", "text": "Record", "lang": "en"}]
+    link.prefs = {"oneVoice": False}                          # one voice off: Control speaks itself
+    assert not app.suite.say("Record") and len(sent) == 1
+    link.connected = False
+    assert not app.suite.say("Record")
 
 
 def test_opening_settings_never_waits_for_the_browser(app, monkeypatch):

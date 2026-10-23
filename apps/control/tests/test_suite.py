@@ -161,3 +161,15 @@ def test_shared_settings_are_applied_and_reported(setup):
     s.on_connected(True)                                       # joining again: say it again
     s.on_prefs({**prefs, "reduceMotion": True})
     assert s.link.log[-1] == ("state", "prefs.applied", {**look, "reduceMotion": True})
+
+
+def test_the_settings_page_takes_the_suites_language_and_says_so(setup):
+    app, s = setup
+    s.on_prefs({"textScale": 1.0, "language": "es"})
+    assert app.language == "es" and app.news
+    assert s.link.log[-1] == ("state", "prefs.applied", {**OWN_LOOK, "language": "es"})
+    s.on_prefs({"textScale": 1.0, "language": "fr"})          # one the page doesn't have: English
+    assert app.language == "en"
+    assert s.link.log[-1] == ("state", "prefs.applied", {**OWN_LOOK, "language": "en"})
+    s.on_connected(False)                                      # no hub: the computer's language
+    assert app.language is None

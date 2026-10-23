@@ -1,20 +1,20 @@
 {
   "name": "gazestage",
   "productName": "GazeStage",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Eye, head and sound control for Pro Tools and virtual instruments. Limitless Sound.",
   "main": "main.js",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/lib.test.mjs && node test/smoke.mjs",
+    "test": "node --test test/lib.test.mjs test/languages.test.mjs && node test/smoke.mjs",
     "test:packaged": "node test/smoke.mjs --packaged",
     "postinstall": "node scripts/fetch-assets.mjs",
     "dist:mac-arm64": "electron-builder --mac --arm64 --publish never",
     "dist:mac-x64": "electron-builder --mac --x64 --publish never",
     "dist:win": "electron-builder --win --x64 --publish never",
     "dist:linux": "electron-builder --linux dir --x64 --publish never",
-    "test:unit": "node --test test/lib.test.mjs"
+    "test:unit": "node --test test/lib.test.mjs test/languages.test.mjs"
   },
   "devDependencies": {
     "@mediapipe/tasks-vision": "0.10.14",

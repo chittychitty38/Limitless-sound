@@ -7,6 +7,7 @@ from ctypes import wintypes
 from pathlib import Path
 
 from .base import AppRef, Platform
+from ..words import ui
 
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
@@ -84,7 +85,7 @@ class WindowsPlatform(Platform):
         ]
         best = best_shortcut(name, [lnk for root in roots if root.exists() for lnk in root.rglob("*.lnk")])
         if not best:
-            raise RuntimeError(f"Couldn't find an app called {name}")
+            raise RuntimeError(ui.text("Couldn't find an app called {name}", name=name))   # shown in the window
         os.startfile(str(best))
 
     def permission_problems(self):
