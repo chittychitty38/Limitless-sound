@@ -85,22 +85,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Round 1 (commit 591a6f8, run 39879230355) measured small-en-us-0.15, en-us-0.22-lgraph,
+        # en-us-daanzu-20200905-lgraph, and the big en-us-0.22 as Voice's open recognizer with
+        # small or lgraph commands. Round 2: daanzu again (is its gain real?), and which of
+        # Voice's two recognizers the gain comes from.
         include:
-          - label: small-en-us-0.15 (shipped)
-            model: vosk-model-small-en-us-0.15
-            open_model: ""
-          - label: en-us-0.22-lgraph
-            model: vosk-model-en-us-0.22-lgraph
-            open_model: ""
-          - label: en-us-daanzu-20200905-lgraph
+          - label: en-us-daanzu-20200905-lgraph (again)
             model: vosk-model-en-us-daanzu-20200905-lgraph
             open_model: ""
-          - label: small-0.15 commands + 0.22 open (Voice only)
+          - label: daanzu commands + small-0.15 open (Voice only)
+            model: vosk-model-en-us-daanzu-20200905-lgraph
+            open_model: vosk-model-small-en-us-0.15
+          - label: small-0.15 commands + daanzu open (Voice only)
             model: vosk-model-small-en-us-0.15
-            open_model: vosk-model-en-us-0.22
-          - label: 0.22-lgraph commands + 0.22 open (Voice only)
-            model: vosk-model-en-us-0.22-lgraph
-            open_model: vosk-model-en-us-0.22
+            open_model: vosk-model-en-us-daanzu-20200905-lgraph
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
@@ -190,3 +188,75 @@ jobs:
             $TIMER python -m pytest stress/test_zoom_real_speech.py -v -s --durations=5 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
           echo "Zoom tests took $(( $(date +%s) - started )) s"
+
+  # Every model's cost on one runner, so the numbers compare: in round 1 each model ran on
+  # whatever CPU its runner had (EPYC 7763, 9V74, 9V45, Xeon 8573C). Two rounds, interleaved.
+  cost-all:
+    name: Cost of every model on one runner
+    needs: [fetch-model, fetch-speech]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VOICE_SHA }}
+          path: voice035
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/vosk-model-small-en-us-0.15
+          key: diag-vosk-vosk-model-small-en-us-0.15
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/vosk-model-en-us-0.22-lgraph
+          key: diag-vosk-vosk-model-en-us-0.22-lgraph
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/vosk-model-en-us-daanzu-20200905-lgraph
+          key: diag-vosk-vosk-model-en-us-daanzu-20200905-lgraph
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: models/vosk-model-en-us-0.22
+          key: diag-vosk-vosk-model-en-us-0.22
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: real-speech
+          key: real-speech-${{ hashFiles('stress/tools/get_real_speech.py') }}
+          fail-on-cache-miss: true
+      - name: Install, and say what this runner is
+        run: |
+          pip install pytest psutil numpy pyyaml platformdirs vosk==0.3.44 soundfile
+          nproc; lscpu | grep -E 'Model name|^CPU\(s\)|MHz'; free -m
+          du -sb models/*
+      - name: Cost of each model and pairing, twice
+        run: |
+          small=models/vosk-model-small-en-us-0.15 lgraph=models/vosk-model-en-us-0.22-lgraph
+          daanzu=models/vosk-model-en-us-daanzu-20200905-lgraph big=models/vosk-model-en-us-0.22
+          cost() {
+            echo "==== round $round: $*"
+            python -I stress/tools/model_cost.py "$@" --talk real-speech/librispeech 2>&1 \
+              | grep -E '^COST |Error|Traceback' | grep -v '^COST machine' || true
+          }
+          for round in 1 2; do
+            cost voice $small --repo voice035
+            cost voice $lgraph --repo voice035
+            cost voice $daanzu --repo voice035
+            cost voice $daanzu --open-model $small --repo voice035
+            cost voice $small --open-model $daanzu --repo voice035
+            cost voice $small --open-model $big --repo voice035
+            cost voice $lgraph --open-model $big --repo voice035
+            cost zoom $small --repo .
+            cost zoom $lgraph --repo .
+            cost zoom $daanzu --repo .
+          done
