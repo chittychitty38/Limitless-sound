@@ -302,10 +302,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 4. **Signing: the builds are ready, the certificates are Bennet's decision** (#115).
    `SIGNING.md` walks him through it in plain words. Every build signs once its secrets exist and
    stays exactly as now until then.
-   - Mac: the Apple Developer Program ($99 a year), two certificates (Developer ID Application
-     and Developer ID Installer) saved as .p12, an app-specific password, nine repo secrets, then
+   - Mac: Bennet is already in the Apple Developer Program (he said so on 2026-10-23). Left: two
+     certificates (Developer ID Application and Developer ID Installer) saved as .p12, an
+     app-specific password, nine repo secrets (`SIGNING.md` steps 2 to 6). Then either
      **Actions › Limitless Sound Suite › Run workflow** (needs the default branch to be `main`,
-     item 3). Every app, the suite `.pkg` and its notarization go through
+     item 3), or a new suite version in `packaging/VERSION`, which builds, signs, notarizes and
+     releases it on its own. Every app, the suite `.pkg` and its notarization go through
      `.github/scripts/mac-sign.sh`; GazeStage and Color feed the same secrets to electron-builder
      and Tauri.
    - Windows: since June 2023 a new code-signing certificate can't be downloaded as a .pfx file,

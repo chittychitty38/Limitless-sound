@@ -21,6 +21,8 @@ repository. GitHub keeps secrets hidden, even from people who can see the code.
 
 ### 1. Join the Apple Developer Program
 
+Already a member? Skip to step 2.
+
 1. Go to [developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll/).
 2. Sign in with your Apple Account. It needs two-factor authentication turned on.
 3. Enroll as an **individual**, and pay $99. Apple can take up to two days to confirm it.
@@ -37,6 +39,9 @@ You need two different certificates:
 
 - **Developer ID Application** signs the apps.
 - **Developer ID Installer** signs the suite installer (the .pkg). An app certificate can't sign a .pkg.
+
+Only the person who enrolled (Apple calls them the Account Holder) can make these two. If you
+enrolled as an individual, that's you.
 
 Make them on your Mac:
 
@@ -156,6 +161,10 @@ If you do have a certificate as a .pfx file (an older one, say), add it like thi
 The "Run workflow" button only appears once the repository's main branch is `main`. Check
 at **Settings › General › Default branch**. If it says something else, click the arrows button
 next to it, choose `main`, and confirm.
+
+Or skip the button: ask Claude to release the next suite version. Changing the version in
+`packaging/VERSION` builds the suite and publishes it as a new release, signed and notarized the
+same way.
 
 Then:
 
