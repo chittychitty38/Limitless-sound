@@ -1,6 +1,6 @@
 // Limitless Color in the suite's language: every word in its window, its menus and its answers
 // to other apps has Spanish, and the Spanish keeps every placeholder and tag.
-// Run with: node --test apps/color/app/test/
+// Run with: node --test apps/color/app/test/*.test.mjs
 // (What color-core says, the assistant included, is checked by cargo test -p color-core.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -13,7 +13,9 @@ You describe what looks wrong, for example "what's supposed to be red looks like
 
 **Microphone:** any mic your computer already uses, whether built in, USB or a headset. Press **Talk** and the app starts your computer's own dictation, so there's nothing extra to set up.
 
-**Claude:** optional. Without it, a built-in helper understands the common ways people describe red-green and blue-yellow problems, works offline and costs nothing. With an Anthropic API key, Claude gives smarter answers. The key is kept in the Mac Keychain or Windows Credential Manager.
+**Claude:** optional. Without it, a built-in helper understands the common ways people describe red-green and blue-yellow problems, in English and Spanish, typed or dictated, works offline and costs nothing. With an Anthropic API key, Claude gives smarter answers. The key is kept in the Mac Keychain or Windows Credential Manager.
+
+**Language:** English or Spanish. Color speaks the language chosen in Limitless Sound, or the computer's own when Limitless Sound isn't running.
 
 ## Install
 
@@ -51,6 +53,7 @@ You can run the guide again from the bottom of the window.
 - **Use a screenshot of my session.** Tunes against a picture of your real session instead of the sample.
 - **Save .cube profile.** Saves your profile to Documents › Limitless Color as a standard color lookup file, to back up or share.
 - **Limitless Sound settings.** When the Limitless Sound hub runs, the tuner window follows the text size, high contrast and reduced motion you set there, the moment you change them. They change only the window around your colors, never the swatches, the preview or the screen filter. If your computer is set to reduce motion, the window reduces motion too.
+- **English or Spanish.** The window, the menu bar or tray menu, the setup guide, the assistant and everything Color says to the other apps follow the language you choose in Limitless Sound, the moment you change it, without moving the focus. Without Limitless Sound, Color uses your computer's language. The built-in helper understands both languages either way: Spanish as it's spoken in Mexico, Spain, Argentina, Colombia and elsewhere, with tú, vos or usted, and dictation without accents. With spoken feedback on in Limitless Sound, switching your colors with the shortcut or the menu says so, in your language.
 
 ## How it's built
 
@@ -69,6 +72,15 @@ app/ui                The tuner window (one HTML file, no build step).
 ```
 
 The tuner preview in the window (JavaScript) and the screen filter (Rust) run the same math. A test in `color-core` checks that they give identical colors.
+
+The Spanish is one table in the window's page (`app/ui/index.html`, `strings-es`, English text → Spanish). The window, the app's menus and messages, and the built-in helper all read it. `node --test app/test/*.test.mjs` fails on any English word without Spanish.
+
+The built-in helper is measured on people's own descriptions (`crates/color-core/tests/descriptions`): English and Spanish, each in three sets, the ones its rules were written against, a held-out set and a blind one written by someone who never saw the rules. `cargo run -p color-core --example helper_report` prints how often it does the right thing, and `cargo test` holds each set to a floor.
+
+| Does the right thing | Seen | Held out | Blind |
+|---|---|---|---|
+| English | 100% (113) | 100% (63) | 96.7% (60) |
+| Spanish | 100% (210) | 99.0% (100) | 98.3% (120) |
 
 ### Build it yourself
 
