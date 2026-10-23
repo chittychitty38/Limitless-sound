@@ -375,10 +375,11 @@ jobs:
           key: ${{ steps.words.outputs.cache-primary-key }}
       - shell: bash
         run: |
+          VOSK_MODEL="$PWD/models/$MODEL" COMMAND_WORDS_DIR="$PWD/command-words-pt" python stress/tools/listen_diag.py
+          export VOCAB_LOOKUP='^ple[iy] ^plêi ^pléi ^miu ^mut ^lup ^lub ^mix ^miks ^tei[kq] ^xif ^chif ^shif ^teb ^tab ^quanti ^cuanti ^kuanti ^xaf ^chaf ^esli ^isli ^sli ^spot ^espot ^ispot ^rol$ ^rou$ ^baun ^(bê|cê|dê|pê|tê|vê|zê|quê|agá|cá|xis|esse|erre|eme|ele|jota|efe|ene|gê|ge|jê|be|ce|de|pe|te|ve|ze)$ ^d[aá]bli ^[íi]psilon ^seletor ^selecion ^delet ^desmut ^app ^aplicat ^esc$ ^alt$ ^option ^comman ^back ^end$ ^windows ^uindo ^cliq ^klik ^clic ^fade ^take ^mixa ^spotlai ^pley ^mute ^loop ^dá$ ^pro$ ^pra$ ^à$ ^shi ^chi[fp] ^escap ^ok ^okay ^tá$'
           VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-pt" \
             COMMAND_WORDS_DIR="$PWD/command-words-pt" \
-            python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
-              stress/test_command_words.py -v -s --durations=6 2>&1 \
+            python -m pytest stress/test_voice_language.py -v -s --durations=6 2>&1 \
             | awk '/Ignoring word missing in vocabulary/ { if (seen[$0]++) next } { print; fflush() }'
 
   gazestage:

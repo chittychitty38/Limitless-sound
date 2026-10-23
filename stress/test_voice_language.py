@@ -7,14 +7,16 @@ model's way ("compás", not "compas"). Words it doesn't know are spelled as word
 language's sounds_like ("quantize" as "quant ties"); app names for "open ..." are left out. For
 each word it doesn't know, the nearest words it does are printed.
 
-Reads the vocabulary from the model's graph (graph/Gr.fst), so it needs no recognizer. Needs
-VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
+Reads the vocabulary from the model's graph (graph/Gr.fst, or graph/words.txt), so it needs no
+recognizer. Needs VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
+VOCAB_LOOKUP prints the model's words that match some patterns, to choose a spelling it knows.
 """
 
 from __future__ import annotations
 
 import difflib
 import os
+import re
 import struct
 from pathlib import Path
 
@@ -33,8 +35,14 @@ MODEL = os.environ.get("VOSK_MODEL")
 
 
 def vocabulary(model):
-    """Every word the model knows: the output symbols of its grammar graph, an OpenFst file."""
-    data = (Path(model) / "graph" / "Gr.fst").read_bytes()
+    """Every word the model knows: the output symbols of its grammar graph, an OpenFst file, or
+    for a model without one (the Portuguese), its graph's word list."""
+    graph = Path(model) / "graph"
+    if not (graph / "Gr.fst").is_file() and (graph / "words.txt").is_file():
+        lines = (graph / "words.txt").read_text(encoding="utf-8", errors="replace").splitlines()
+        return {line.split()[0] for line in lines if line.split()}
+    assert (graph / "Gr.fst").is_file(), f"no graph/Gr.fst or graph/words.txt; graph/ has {sorted(os.listdir(graph))}"
+    data = (graph / "Gr.fst").read_bytes()
     pos = 0
 
     def take(fmt):
@@ -82,4 +90,9 @@ def test_every_word_voice_listens_for_is_known():
     if readme.is_file():
         lines = [x.strip() for x in readme.read_text(errors="replace").splitlines() if x.strip()]
         print("Its README: " + " / ".join(lines[:4] + [x for x in lines[4:] if "licen" in x.lower()]))
+    # VOCAB_LOOKUP: patterns, separated by spaces, for spellings to look up when choosing how to
+    # write a word it doesn't know ("^plei ^miu" for "play" and "mute").
+    for pattern in os.environ.get("VOCAB_LOOKUP", "").split():
+        found = sorted(w for w in known if re.search(pattern, w))
+        print(f"  {pattern}: {', '.join(found[:60]) or '-'}" + (f" (+{len(found) - 60})" if len(found) > 60 else ""))
     assert not unknown, f"the {Path(MODEL).name} model doesn't know: {', '.join(unknown)}"
