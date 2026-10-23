@@ -209,13 +209,15 @@ class Engine:
         if text in words["cancel"]:
             return self._reply(raw, "OK")
 
-        # In a language that asks for it (sentence_words), when the open recognizer heard a sentence
-        # without the command recognizer's first word, someone was talking: only the open transcript
-        # counts. A reader's "quando você liga para alguém que" came back from the command
-        # recognizer as "parar" (stress/test_voice_real_speech.py, Portuguese).
+        # In a language that asks for it (sentence_words, N), when the open recognizer heard a
+        # sentence, someone was talking, and only the open transcript counts: N words or more
+        # without the command recognizer's first, or N + 1 more words than it placed. Readers'
+        # "quando você liga para alguém que" came back from the command recognizer as "parar",
+        # and "e acampamento para famílias com" as "para" (stress/test_voice_real_speech.py).
         if alternative is not None and lang.sentence_words:
             command, heard_open = normalize(heard).split(), normalize(alternative).split()
-            if command and len(heard_open) >= lang.sentence_words and command[0] not in heard_open:
+            if command and len(heard_open) >= lang.sentence_words and (
+                    command[0] not in heard_open or len(heard_open) > len(command) + lang.sentence_words):
                 texts = [" ".join(heard_open)]
                 text = texts[0]
         commands = self.commands_for(self.current_app_name())
