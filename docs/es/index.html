@@ -398,11 +398,11 @@ footer p { margin: 0; }
 
   <section id="proof" aria-labelledby="proof-title">
     <div class="wrap">
-      <p class="kicker label">La prueba, cada noche</p>
-      <h2 id="proof-title">Instalado y probado en un equipo <span class="accent">nuevo</span>, cada noche.</h2>
-      <p class="section-lede">Cada noche, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. Y la suite tiene que funcionar unida: el comando de una app llega a otra, y todas las apps siguen a la suite al español y de vuelta. Si algo falla, aparece aquí.</p>
+      <p class="kicker label">La prueba en equipos nuevos</p>
+      <h2 id="proof-title">Instalado y probado en un equipo <span class="accent">nuevo</span>, en cada versión.</h2>
+      <p class="section-lede">En cada versión, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. Y la suite tiene que funcionar unida: el comando de una app llega a otra, y todas las apps siguen a la suite al español y de vuelta. Si algo falla, aparece aquí.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
-        <p class="fine">Cargando los resultados de anoche&hellip;</p>
+        <p class="fine">Cargando los últimos resultados&hellip;</p>
       </div>
       <p class="fine">Estos equipos no tienen micrófono, cámara ni controlador, así que esto demuestra la instalación, el arranque, la suite y cada comando. Las voces, las caras y las manos las prueban músicos. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml" hreflang="en">Cada prueba, completa (en inglés)</a>.</p>
       <h3 class="subhead">Voces reales, no una voz de prueba</h3>
@@ -500,7 +500,7 @@ footer p { margin: 0; }
   } catch { /* keep the written links */ }
 })();
 
-// Last night's proof, from the site's root. The results are written in English: the
+// The latest proof, from the site's root. The results are written in English: the
 // checks a failed app names are said in Spanish here, and anything else stays marked as English.
 (() => {
   const box = document.getElementById("proof-runs");
@@ -565,7 +565,7 @@ footer p { margin: 0; }
           + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
-    .catch(() => { box.innerHTML = `<p class="fine">Todavía no se han publicado los primeros resultados nocturnos.</p>`; });
+    .catch(() => { box.innerHTML = `<p class="fine">Todavía no se han publicado resultados.</p>`; });
 })();
 </script>
 </body>
