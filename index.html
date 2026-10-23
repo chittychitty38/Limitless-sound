@@ -270,7 +270,7 @@ footer p { margin: 0; }
             <span>Windows<small>Windows 10 and 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.9</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.10</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
       </div>
 
       <div class="flex" aria-hidden="true">
@@ -306,7 +306,7 @@ footer p { margin: 0; }
           <p class="tag">Run the DAW by speaking</p>
           <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio or anywhere on the computer. In English or Spanish, and a first preview in Brazilian Portuguese. Fully offline: your voice never leaves the machine.</p>
           <p class="for">For musicians who can&rsquo;t use, or can&rsquo;t always use, a mouse and keyboard.</p>
-          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.3">Download<span class="ver">0.4.3</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
+          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.4">Download<span class="ver">0.4.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>02</span><span>One hand</span></p>
@@ -322,7 +322,7 @@ footer p { margin: 0; }
           <p class="tag">See the session at any size</p>
           <p>Zoom the DAW or the whole screen by voice (in English or Spanish), a one-hand key layer, resting your pointer on big buttons, or a single switch. Every action is shown in large text and said out loud.</p>
           <p class="for">For low-vision musicians, and anyone who can&rsquo;t pinch, scroll or hold modifier keys.</p>
-          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.9">Download<span class="ver">0.1.9</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
+          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.10">Download<span class="ver">0.1.10</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
@@ -396,11 +396,11 @@ footer p { margin: 0; }
 
   <section id="proof" aria-labelledby="proof-title">
     <div class="wrap">
-      <p class="kicker label">Proof, every night</p>
-      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every night.</h2>
-      <p class="section-lede">Every night a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds, and the suite has to work together: a command from one app reaching another, and every app following the suite into Spanish and back. If anything fails, it shows here.</p>
+      <p class="kicker label">Proof on fresh computers</p>
+      <h2 id="proof-title">Installed and tested on a <span class="accent">fresh</span> computer, every release.</h2>
+      <p class="section-lede">With every release, a brand-new Mac (Apple silicon and Intel) and a Windows PC download Limitless Sound from this page, install it and open every app. Each one has to join the suite and answer every one of its commands within three seconds, and the suite has to work together: a command from one app reaching another, and every app following the suite into Spanish and back. If anything fails, it shows here.</p>
       <div class="proofruns" id="proof-runs" aria-live="polite">
-        <p class="fine">Loading last night&rsquo;s results&hellip;</p>
+        <p class="fine">Loading the latest results&hellip;</p>
       </div>
       <p class="fine">These computers have no microphone, camera or controller, so this proves the install, start-up, the suite and every command. Voices, faces and hands are tested by musicians. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml">Every run, in full</a>.</p>
       <h3 class="subhead">Real voices, not a test voice</h3>
@@ -523,6 +523,8 @@ footer p { margin: 0; }
       box.innerHTML = data.runs.map((run) => {
         if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>${esc(run.error)}</p></div>`;
         const ok = run.apps.filter(passed).length;
+        const hub = run.hubIdle && run.hubIdle.cpuPercent != null
+          ? ` The Limitless Sound page${run.hubVersion ? " " + esc(run.hubVersion) : ""} used ${esc(run.hubIdle.cpuPercent)}% of the processor sitting idle.` : "";
         const when = new Date(run.when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
         const apps = run.apps.map((a) => {
           const good = passed(a);
@@ -537,11 +539,11 @@ footer p { margin: 0; }
         }).join("");
         return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
           + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
-          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.</p>`
+          + `<p class="fine" style="margin:0 0 10px">${ok} of ${run.apps.length} apps passed. Installed in ${esc(run.installSeconds)} s.${hub}</p>`
           + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
       }).join("");
     })
-    .catch(() => { box.innerHTML = `<p class="fine">The first nightly results haven&rsquo;t been published yet.</p>`; });
+    .catch(() => { box.innerHTML = `<p class="fine">No results have been published yet.</p>`; });
 })();
 </script>
 </body>
