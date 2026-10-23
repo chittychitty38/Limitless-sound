@@ -76,7 +76,9 @@
   .errors { color: var(--off); font-weight: 600; }
   .ok { color: var(--on); font-weight: 700; }
   .steps { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: step; }
-  .steps li { display: grid; grid-template-columns: calc(44px * var(--scale)) 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  /* A word too long for a phone at the largest text ("emparejamiento") breaks rather than spilling out. */
+  .steps li { display: grid; grid-template-columns: calc(44px * var(--scale)) minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);
+              overflow-wrap: break-word; hyphens: auto; }
   .steps li:last-child { border-bottom: 0; }
   .steps h3 { margin: 0 0 4px; font-size: 1.1rem; }
   .tick { counter-increment: step; width: calc(36px * var(--scale)); height: calc(36px * var(--scale)); border-radius: 50%; border: 2px solid var(--line);
