@@ -314,6 +314,55 @@ def test_setup_sits_still_while_a_permission_stays_missing(qapp, tmp_path):
     w.close()
 
 
+class Asked(PermBackend):
+    """Counts what Zoom asks the Mac about: every permission, or only what Zoom keys need."""
+
+    def __init__(self):
+        super().__init__()
+        self.everything = self.required = 0
+
+    def permissions(self):
+        self.everything += 1
+        return super().permissions()
+
+    def required_permissions(self):
+        self.required += 1
+        return [p for p in super().permissions() if p["required"]]
+
+
+def test_a_missing_permission_is_asked_about_now_and_then_with_setup_closed(qapp, tmp_path):
+    """With Setup closed and Accessibility still missing, Zoom asks only whether its keys can
+    work, every 5 s. Asking the Mac about all four permissions every second cost the proof's
+    Intel Mac about 2% of a core for as long as one stayed missing, a musician who never allows
+    Input Monitoring too. Setup, open, still asks about all of them every second."""
+    s = Settings(tmp_path / "s.json")
+    s["speak"], s["first_run"] = False, False
+    b = Asked()
+    app = ZoomApp(s, b, use_keys=False, use_voice=False, use_tray=False)
+    app.start()
+    assert app.setup_window is None
+    b.everything = b.required = 0
+    for _ in range(3):
+        app._check_permissions()   # what the permission timer does
+    assert (b.everything, b.required) == (0, 3) and app.perm_timer.interval() == 5000
+
+    app.show_setup()
+    assert b.everything == 1 and app.perm_timer.interval() == 1000
+    assert app.setup_window.perm_rows["microphone"][0].text() != "✓"   # shown, though not required
+    app._check_permissions()
+    assert b.everything == 2
+
+    app.setup_window.close()
+    app._check_permissions()
+    assert b.everything == 2 and app.perm_timer.interval() == 5000
+    b.allowed = True
+    app._check_permissions()
+    assert app.perm_timer.interval() == 10000   # all allowed: now and then
+    app.show_setup()   # opened again: what changed while it was closed shows at once
+    assert app.setup_window.perm_rows["accessibility"][0].text() == "✓"
+    app.setup_window.close()
+
+
 def test_nothing_ticks_on_after_every_action(qapp, tmp_path):
     """The conformance kit presses every action. Afterwards only Zoom's slow background
     checks may run: no dwell tick (30 ms), scanning or anything else left going."""

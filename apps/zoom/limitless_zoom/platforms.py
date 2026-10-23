@@ -95,6 +95,11 @@ class Backend:
         the setup window shows them in the suite's language."""
         return []
 
+    def required_permissions(self):
+        """Only the permissions Zoom keys can't work without: what's asked about while Setup is
+        closed."""
+        return [p for p in self.permissions() if p["required"]]
+
     def request_permission(self, key):
         pass
 
@@ -225,8 +230,9 @@ class MacBackend(Backend):
             return "unknown"
         return "ok" if bool(value) else "missing"
 
-    def permissions(self):
-        mic = self._microphone()
+    def required_permissions(self):
+        # Without asking about the microphone and the zoom shortcuts: each question is a trip to
+        # the Mac's privacy service, and these two are asked every few seconds while one is missing.
         return [
             {"key": "accessibility", "title": "Accessibility",
              "why": "Lets Limitless Zoom press zoom keys in Logic, Pro Tools and other apps.",
@@ -234,6 +240,11 @@ class MacBackend(Backend):
             {"key": "input", "title": "Input Monitoring",
              "why": "Lets your zoom key and switch work in every app.",
              "state": self._input_monitoring(), "required": True},
+        ]
+
+    def permissions(self):
+        mic = self._microphone()
+        return self.required_permissions() + [
             {"key": "microphone", "title": "Microphone",
              "why": "For voice commands. Audio is understood on this Mac and never sent anywhere.",
              "state": "missing" if mic == "ask" else mic, "required": False},
