@@ -1,5 +1,6 @@
 """On-screen parts: the big-text toast, the "zoom keys on" badge, the
-big-button panel (dwell and switch scanning), key capture, and the setup assistant."""
+big-button panel (dwell and switch scanning), key capture, and the setup assistant.
+Their words are in the suite's language (words.py)."""
 
 import math
 from typing import NamedTuple
@@ -10,7 +11,9 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFrame, QGridLayou
                                QLabel, QProgressBar, QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
 
+from . import words
 from .actions import LABELS, PANEL_BUTTONS
+from .words import t
 
 HIGHLIGHT = "#ffcc00"
 DWELL = "#4fc3f7"
@@ -41,13 +44,16 @@ class LiveText(QLabel):
     """Words that change on screen: what Zoom did, the zoom keys, what voice heard.
     A screen reader reads the words themselves (on a Mac VoiceOver reads a label's name as its
     words, so these never get a fixed name), `about` says what they are, and each change is
-    posted so a screen reader on the label reads the new words."""
+    posted so a screen reader on the label reads the new words. Its words, and what they are,
+    follow the suite's language."""
 
     def __init__(self, about, text="", parent=None):
         super().__init__(text, parent)
-        self.setAccessibleDescription(about)
+        words.keep(self.setText, text)
+        words.show(self.setAccessibleDescription, about)
 
     def setText(self, text):
+        words.keep(self.setText, text)   # said again in the next language the suite picks
         super().setText(text)
         # Qt posts the name change itself; VoiceOver follows a label's words as its value.
         iface = QAccessible.queryAccessibleInterface(self)
@@ -58,7 +64,7 @@ class LiveText(QLabel):
 class Toast(QWidget):
     """Large, high-contrast text that never takes focus or blocks clicks."""
 
-    def __init__(self, persistent=False, color="#000000", background="#ffcc00", about="What Zoom did"):
+    def __init__(self, persistent=False, color="#000000", background="#ffcc00", about=None):
         super().__init__(None, OVERLAY_FLAGS)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -67,7 +73,7 @@ class Toast(QWidget):
         self.persistent = persistent
         self.colors = (color, background)
         self.where = "center"
-        self.label = LiveText(about, parent=self)
+        self.label = LiveText(about or t("What Zoom did"), parent=self)
         f = QFont()
         f.setPointSize(30)
         f.setBold(True)
@@ -209,22 +215,26 @@ class Panel(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.setWindowTitle("Limitless Zoom")
-        self.setAccessibleName("Limitless Zoom panel")
+        words.show(self.setAccessibleName, t("Limitless Zoom panel"))
         self.scale = scale   # button size; the text can grow bigger still (set_look)
 
         self.buttons = []
         grid = QGridLayout()
         grid.setSpacing(12)
         for i, (name, label) in enumerate(PANEL_BUTTONS):
-            b = DwellButton(label, dwell_ms)
-            b.setAccessibleName(LABELS[name])   # "Zoom in", not the "+" drawn before it
+            # actions.py is in English; its words are in the Spanish table too.
+            b = DwellButton("", dwell_ms)
+            words.show(b.setText, t(label))
+            words.show(b.setAccessibleName, t(LABELS[name]))   # "Zoom in", not the "+" drawn before it
             b.clicked.connect(lambda _=False, n=name: self.action.emit(n))
             b.dwelled.connect(lambda n=name: self.action.emit(n))
             grid.addWidget(b, i // 2, i % 2)
             self.buttons.append(b)
 
-        self.scan_button = DwellButton("Scanning: off", dwell_ms)
-        self.dwell_button = DwellButton("Dwell: on", dwell_ms)
+        self.scan_button = DwellButton("", dwell_ms)
+        self.dwell_button = DwellButton("", dwell_ms)
+        words.show(self.scan_button.setText, t("Scanning: off"))
+        words.show(self.dwell_button.setText, t("Dwell: on"))
         for b in (self.scan_button, self.dwell_button):
             b.setObjectName("small")
         self.scan_button.clicked.connect(self.toggle_scan)
@@ -236,11 +246,11 @@ class Panel(QWidget):
         bar = QHBoxLayout()
         bar.addWidget(self.scan_button)
         bar.addWidget(self.dwell_button)
-        self.status = LiveText("Zoom status")
+        self.status = LiveText(t("Zoom status"))
         self.status.setWordWrap(True)
 
-        self.keys_label = LiveText("Zoom keys", "Zoom keys: off")
-        self.voice_label = LiveText("Voice commands", "Voice: starting…")
+        self.keys_label = LiveText(t("Zoom keys"), t("Zoom keys: off"))
+        self.voice_label = LiveText(t("Voice commands"), t("Voice: {status}", status=t("starting…")))
         self.keys_on = False
         for chip in (self.keys_label, self.voice_label):
             chip.setWordWrap(True)
@@ -314,10 +324,10 @@ class Panel(QWidget):
     def set_keys_state(self, on, key_text):
         self.keys_on = on
         if on:
-            self.keys_label.setText("Zoom keys ON: E in, Q out, S taller, W shorter, A fit. "
-                                    f"Tap {key_text} to turn off.")
+            self.keys_label.setText(t("Zoom keys ON: E in, Q out, S taller, W shorter, A fit. Tap {key} to turn off.",
+                                      key=key_text))
         else:
-            self.keys_label.setText(f"Zoom keys off. Tap {key_text} to turn on.")
+            self.keys_label.setText(t("Zoom keys off. Tap {key} to turn on.", key=key_text))
         self.keys_label.setStyleSheet(self._chip_style(on))
 
     def hideEvent(self, e):
@@ -336,11 +346,11 @@ class Panel(QWidget):
         if self.scanning():
             self.scan_timer.stop()
             self._highlight(-1)
-            self.scan_button.setText("Scanning: off")
+            words.show(self.scan_button.setText, t("Scanning: off"))
         else:
             self._highlight(0)
             self.scan_timer.start()
-            self.scan_button.setText("Scanning: on")
+            words.show(self.scan_button.setText, t("Scanning: on"))
 
     def _advance(self):
         self._highlight((self.scan_index + 1) % len(self.buttons))
@@ -368,7 +378,7 @@ class Panel(QWidget):
             b.dwell_enabled = on
         # The dwell button itself always dwells, so it can be turned back on.
         self.dwell_button.dwell_enabled = True
-        self.dwell_button.setText("Dwell: on" if on else "Dwell: off")
+        words.show(self.dwell_button.setText, t("Dwell: on") if on else t("Dwell: off"))
 
 
 class KeyCaptureDialog(QDialog):
@@ -376,14 +386,16 @@ class KeyCaptureDialog(QDialog):
 
     def __init__(self, title, prompt, start_capture, parent=None, look=Look()):
         super().__init__(parent)
-        self.setWindowTitle(title)
+        words.show(self.setWindowTitle, title)
         self.set_look(look)
         self.key = None
-        self.label = QLabel(prompt + "\n\nYou can also tap Right Option, Right Command, "
-                                     "Right Control or Right Shift on its own. Escape cancels.")
+        self.label = QLabel()
+        words.show(self.label.setText, t("{prompt}\n\nYou can also tap Right Option, Right Command, "
+                                         "Right Control or Right Shift on its own. Escape cancels.", prompt=prompt))
         self.label.setWordWrap(True)
         self.label.setAlignment(Qt.AlignCenter)
-        cancel = QPushButton("Cancel")
+        cancel = QPushButton()
+        words.show(cancel.setText, t("Cancel"))
         cancel.setMinimumHeight(70)
         cancel.clicked.connect(self.reject)
         lay = QVBoxLayout(self)
@@ -419,7 +431,11 @@ class KeyCaptureDialog(QDialog):
 
 
 STATE_MARK = {"ok": ("✓", "#3ddc84"), "missing": ("!", "#ff9f43"), "unknown": ("?", "#9e9e9e")}
-STATE_WORDS = {"ok": "allowed", "missing": "not allowed yet", "unknown": "not known"}   # the marks, read out
+
+
+def state_words(state):
+    """A permission's mark, read out."""
+    return {"ok": t("allowed"), "missing": t("not allowed yet")}.get(state) or t("not known")
 
 SETUP_HIGH_CONTRAST = f"""
     QWidget {{ background:#000; }}
@@ -455,6 +471,13 @@ def setup_style(look):
 """ + (SETUP_HIGH_CONTRAST if look.high_contrast else "")
 
 
+def label(text):
+    """A label whose words follow the suite's language."""
+    w = QLabel()
+    words.show(w.setText, text)
+    return w
+
+
 class Setup(QWidget):
     """The setup assistant: shown on first launch and from the menu.
     Everything updates live, so people can see each step work."""
@@ -468,8 +491,8 @@ class Setup(QWidget):
 
     def __init__(self, key_text, switch_text, mics, current_mic, login=None, parent=None, look=Look()):
         super().__init__(parent, Qt.Window)
-        self.setWindowTitle("Set up Limitless Zoom")
-        self.setAccessibleName("Limitless Zoom setup")
+        words.show(self.setWindowTitle, t("Set up Limitless Zoom"))
+        words.show(self.setAccessibleName, t("Limitless Zoom setup"))
         self.look = look
         self.setStyleSheet(setup_style(look))
 
@@ -478,32 +501,33 @@ class Setup(QWidget):
         lay.setContentsMargins(28, 24, 28, 24)
         lay.setSpacing(12)
 
-        h1 = QLabel("Welcome to Limitless Zoom")
+        h1 = label(t("Welcome to Limitless Zoom"))
         h1.setObjectName("h1")
         h1.setWordWrap(True)
-        intro = QLabel("Zoom Logic, Pro Tools, Ableton or your whole screen with your voice, "
-                       "one key, your eyes or a switch. This takes about a minute.")
+        intro = label(t("Zoom Logic, Pro Tools, Ableton or your whole screen with your voice, "
+                        "one key, your eyes or a switch. This takes about a minute."))
         intro.setObjectName("muted")
         intro.setWordWrap(True)
         lay.addWidget(h1)
         lay.addWidget(intro)
 
         # 1. Permissions (macOS)
-        self.perm_header = self._h2("1. Allow access", lay)
+        self.perm_header = self._h2(t("1. Allow access"), lay)
         self.perm_box = QVBoxLayout()
         lay.addLayout(self.perm_box)
         self.perm_rows = {}
         self.perms = []
 
         # 2. Zoom key
-        self._h2("2. Your zoom key", lay)
+        self._h2(t("2. Your zoom key"), lay)
         card, c = self._card(lay)
         self.key_label = QLabel()
         self.key_label.setWordWrap(True)
-        self.key_state = LiveText("Zoom keys")
+        self.key_state = LiveText(t("Zoom keys"))
         self.key_state.setAlignment(Qt.AlignCenter)
         self.key_state.setMinimumHeight(56)
-        change = self.change_btn = QPushButton("Use a different key…")
+        change = self.change_btn = QPushButton()
+        words.show(change.setText, t("Use a different key…"))
         change.clicked.connect(self.choose_layer)
         c.addWidget(self.key_label)
         c.addWidget(self.key_state)
@@ -512,13 +536,15 @@ class Setup(QWidget):
         self.set_layer_state(False)
 
         # 3. Voice
-        self._h2("3. Voice", lay)
+        self._h2(t("3. Voice"), lay)
         card, c = self._card(lay)
-        c.addWidget(QLabel("Microphone:"))
+        c.addWidget(label(t("Microphone:")))
         self.mic = QComboBox()
-        self.mic.setAccessibleName("Microphone")
-        self.mic.setAccessibleDescription("Microphone for voice commands")   # what VoiceOver reads as its label
-        self.mic.addItem("System default microphone", None)
+        words.show(self.mic.setAccessibleName, t("Microphone"))
+        words.show(self.mic.setAccessibleDescription,
+                   t("Microphone for voice commands"))   # what VoiceOver reads as its label
+        self.mic.addItem("", None)
+        words.show(self.mic.setItemText, t("System default microphone"), 0)
         for m in mics:
             self.mic.addItem(m, m)
         if current_mic in mics:
@@ -528,22 +554,23 @@ class Setup(QWidget):
         self.meter = QProgressBar()
         self.meter.setRange(0, 100)
         self.meter.setTextVisible(False)
-        self.meter.setAccessibleName("Microphone level")
+        words.show(self.meter.setAccessibleName, t("Microphone level"))
         c.addWidget(self.meter)
-        self.heard = LiveText("What voice heard", "Say \u201czoom in\u201d to try it.")
+        self.heard = LiveText(t("What voice heard"), t("Say \u201czoom in\u201d to try it."))
         self.heard.setWordWrap(True)
         c.addWidget(self.heard)
-        self.voice_status = LiveText("Voice status")
+        self.voice_status = LiveText(t("Voice status"))
         self.voice_status.setObjectName("muted")
         self.voice_status.setWordWrap(True)
         c.addWidget(self.voice_status)
 
         # 4. Switch
-        self._h2("4. Switch (optional)", lay)
+        self._h2(t("4. Switch (optional)"), lay)
         card, c = self._card(lay)
         self.switch_label = QLabel()
         self.switch_label.setWordWrap(True)
-        sw = self.switch_btn = QPushButton("Set up my switch…")
+        sw = self.switch_btn = QPushButton()
+        words.show(sw.setText, t("Set up my switch…"))
         sw.clicked.connect(self.choose_switch)
         c.addWidget(self.switch_label)
         c.addWidget(sw, alignment=Qt.AlignLeft)
@@ -552,21 +579,23 @@ class Setup(QWidget):
         # Finish
         self.login = None
         if login is not None:
-            self.login = QCheckBox("Open Limitless Zoom when I log in")
+            self.login = QCheckBox()
+            words.show(self.login.setText, t("Open Limitless Zoom when I log in"))
             self.login.setChecked(login)
             self.login.toggled.connect(self.login_changed)
             lay.addWidget(self.login)
-        self.start_btn = QPushButton("Start zooming")
+        self.start_btn = QPushButton()
+        words.show(self.start_btn.setText, t("Start zooming"))
         self.start_btn.setObjectName("primary")
         self.start_btn.clicked.connect(self._finish)
         lay.addWidget(self.start_btn)
-        tip = QLabel("You can open this again any time from the magnifier icon in the menu bar.")
+        tip = label(t("You can open this again any time from the magnifier icon in the menu bar."))
         tip.setObjectName("muted")
         tip.setWordWrap(True)
         lay.addWidget(tip)
 
         scroll = QScrollArea()
-        scroll.setAccessibleName("Setup steps")   # Tab stops on it, to scroll by keyboard
+        words.show(scroll.setAccessibleName, t("Setup steps"))   # Tab stops on it, to scroll by keyboard
         scroll.setWidget(body)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
@@ -584,7 +613,7 @@ class Setup(QWidget):
         self.set_layer_state(self.layer_on)
 
     def _h2(self, text, lay):
-        h = QLabel(text)
+        h = label(text)
         h.setObjectName("h2")
         h.setWordWrap(True)
         lay.addWidget(h)
@@ -611,12 +640,12 @@ class Setup(QWidget):
                 card.setObjectName("card")
                 h = QHBoxLayout(card)
                 h.setContentsMargins(16, 12, 16, 12)
-                mark = LiveText("Permission")
+                mark = LiveText(t("Permission"))
                 mark.setFixedWidth(44)
                 mark.setAlignment(Qt.AlignCenter)
                 text = QLabel()
                 text.setWordWrap(True)
-                btn = QPushButton("Allow…")
+                btn = QPushButton()
                 btn.clicked.connect(lambda _=False, k=p["key"]: self.request_permission.emit(k))
                 h.addWidget(mark)
                 h.addWidget(text, 1)
@@ -624,18 +653,20 @@ class Setup(QWidget):
                 self.perm_box.addWidget(card)
                 row = self.perm_rows[p["key"]] = (mark, text, btn)
             mark, text, btn = row
+            # The backend names each permission in English; its words are in the Spanish table too.
+            title, why = t(p["title"]), t(p["why"])
             symbol, color = STATE_MARK.get(p["state"], STATE_MARK["unknown"])
-            mark.setAccessibleName(f"{p['title']}: {STATE_WORDS.get(p['state'], STATE_WORDS['unknown'])}")
+            mark.setAccessibleName(t("{name}: {state}", name=title, state=state_words(p["state"])))
             mark.setText(symbol)
             mark.setStyleSheet(f"font-size:{int(30 * self.look.text_scale)}px; font-weight:800;"
                                f"color:{color};")
-            need = "" if p["required"] else " (optional)"
+            name = title if p["required"] else t("{name} (optional)", name=title)
             muted = "#fff" if self.look.high_contrast else "#bbb"
-            text.setText(f"<b>{p['title']}{need}</b><br><span style='color:{muted}'>{p['why']}</span>")
+            text.setText(f"<b>{name}</b><br><span style='color:{muted}'>{why}</span>")
             btn.setVisible(p["state"] != "ok")
-            btn.setText("Open Settings…" if p["state"] == "unknown" else "Allow…")
-            btn.setAccessibleName(f"Open Settings for {p['title']}" if p["state"] == "unknown"
-                                  else f"Allow {p['title']}")
+            btn.setText(t("Open Settings…") if p["state"] == "unknown" else t("Allow…"))
+            btn.setAccessibleName(t("Open Settings for {name}", name=title) if p["state"] == "unknown"
+                                  else t("Allow {name}", name=title))
         if added:
             # These buttons are made after the rest of the window, so Tab would reach them last;
             # it takes them first, where they're shown.
@@ -644,38 +675,39 @@ class Setup(QWidget):
             order = [w for w in order if w is not None]
             for a, b in zip(order, order[1:]):
                 QWidget.setTabOrder(a, b)
-        missing = [p["title"] for p in perms if p["required"] and p["state"] == "missing"]
-        self.start_btn.setText("Start zooming" if not missing
-                               else f"Start (still needs {', '.join(missing)})")
+        missing = [t(p["title"]) for p in perms if p["required"] and p["state"] == "missing"]
+        words.show(self.start_btn.setText, t("Start (still needs {names})", names=", ".join(missing)) if missing
+                   else t("Start zooming"))
 
     def set_key_text(self, key_text):
         self.key_text = key_text
-        self.key_label.setText(f"Tap <b>{key_text}</b> to turn the zoom keys on. Then, with one hand: "
-                               "<b>E</b> zoom in, <b>Q</b> out, <b>S</b> taller, <b>W</b> shorter, "
-                               "<b>A</b> fit. Tap it again to turn them off. Try it now:")
+        words.show(self.key_label.setText, t("Tap <b>{key}</b> to turn the zoom keys on. Then, with one hand: "
+                                             "<b>E</b> zoom in, <b>Q</b> out, <b>S</b> taller, <b>W</b> shorter, "
+                                             "<b>A</b> fit. Tap it again to turn them off. Try it now:", key=key_text))
 
     def set_layer_state(self, on):
         self.layer_on = on
         s, hc = self.look.text_scale, self.look.high_contrast
         if on:
-            self.key_state.setText("ZOOM KEYS ON")
+            self.key_state.setText(t("ZOOM KEYS ON"))
             self.key_state.setStyleSheet(f"background:{HC_HIGHLIGHT if hc else '#ffcc00'}; color:#000;"
                                          f"font-size:{int(24 * s)}px; font-weight:800; border-radius:12px;")
         else:
-            self.key_state.setText(f"Zoom keys off. Tap {self.key_text}.")
+            self.key_state.setText(t("Zoom keys off. Tap {key}.", key=self.key_text))
             colors = ("background:#000; color:#fff; border:3px solid #fff;" if hc
                       else "background:#2a2a2a; color:#ddd;")
             self.key_state.setStyleSheet(colors + f"font-size:{int(20 * s)}px; border-radius:12px;")
 
     def set_switch_text(self, switch_text):
-        self.switch_label.setText(f"If you use a switch, it starts the big-button panel scanning, "
-                                  f"then picks the lit button. Your switch key: <b>{switch_text}</b>.")
+        words.show(self.switch_label.setText, t("If you use a switch, it starts the big-button panel scanning, "
+                                                "then picks the lit button. Your switch key: <b>{key}</b>.",
+                                                key=switch_text))
 
     def set_level(self, value):
         self.meter.setValue(int(value * 100))
 
     def set_heard(self, text):
-        self.heard.setText(f"Heard: \u201c{text}\u201d")
+        self.heard.setText(t("Heard: \u201c{text}\u201d", text=text))
 
     def set_voice_status(self, text):
         self.voice_status.setText(text)

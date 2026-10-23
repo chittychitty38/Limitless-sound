@@ -4,6 +4,8 @@ A combo is written the way people read it: "cmd+right", "alt+cmd+=", "win+esc".
 Key names are lower case: letters, digits, punctuation, f1-f20, arrows, etc.
 """
 
+from .words import t
+
 MODIFIERS = {
     "cmd": "cmd", "command": "cmd", "meta": "cmd",
     "ctrl": "ctrl", "control": "ctrl",
@@ -51,16 +53,16 @@ def parse_combo(text):
 
 
 def format_key(name, os_name="mac"):
-    """Human-readable key name for on-screen text and speech."""
+    """Human-readable key name for on-screen text and speech, in the suite's language."""
     if not name:
-        return "not set"
+        return t("not set")
     mac = os_name == "mac"
-    pretty = {"esc": "Escape", "scroll_lock": "Scroll Lock", "pause": "Pause",
-              "space": "Space", "enter": "Enter", "tab": "Tab",
-              "right_alt": "Right Option" if mac else "Right Alt",
-              "right_ctrl": "Right Control" if mac else "Right Ctrl",
-              "right_cmd": "Right Command" if mac else "Right Windows key",
-              "right_shift": "Right Shift"}
+    pretty = {"esc": t("Escape"), "scroll_lock": t("Scroll Lock"), "pause": t("Pause"),
+              "space": t("Space"), "enter": t("Enter"), "tab": t("Tab"),
+              "right_alt": t("Right Option") if mac else t("Right Alt"),
+              "right_ctrl": t("Right Control") if mac else t("Right Ctrl"),
+              "right_cmd": t("Right Command") if mac else t("Right Windows key"),
+              "right_shift": t("Right Shift")}
     if name in pretty:
         return pretty[name]
     if len(name) > 1 and name[0] == "f" and name[1:].isdigit():

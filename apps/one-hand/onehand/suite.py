@@ -4,13 +4,15 @@ With the Limitless Sound hub running, any other app can switch one-hand mode
 (a controller button, a voice command, a glance in GazeStage), and One-Hand can
 press DAW commands for them: when GazeStage asks for "Record", the layout for the
 app in front knows the keys. The suite's shared text size, high contrast and
-reduce motion settings reach One-Hand's window and badge too. Without the hub,
-none of this does anything.
+reduce motion settings reach One-Hand's window and badge too, and so does its
+language. Without the hub, none of this does anything.
 """
 
+from . import words
 from .engine import Tap
 from .keys import MOD_TO_KEY
 from .limitless_link import Link
+from .words import t
 
 from . import __version__ as VERSION
 
@@ -53,11 +55,12 @@ def combine(larger_text, shared):
 
 
 class Suite:
-    def __init__(self, engine, backend, set_hand, dispatch=None, prefs_changed=None):
+    def __init__(self, engine, backend, set_hand, dispatch=None, prefs_changed=None, language_changed=None):
         self.engine = engine
         self.backend = backend
         self.set_hand = set_hand
         self.prefs_changed = prefs_changed
+        self.language_changed = language_changed
         self.shared = {}   # the suite's shared settings, once the hub sends them
         self.link = Link("onehand", "Limitless One-Hand", VERSION, actions=ACTIONS,
                          on_invoke=self.invoke, on_connected=self._connected, on_prefs=self._prefs,
@@ -73,31 +76,32 @@ class Suite:
     def invoke(self, action, args, source):
         if action in ("on", "off", "toggle"):
             self.engine.set_enabled(not self.engine.enabled if action == "toggle" else action == "on")
-            return True, "One-hand mode " + ("on" if self.engine.enabled else "off")
+            return True, t("One-hand mode on") if self.engine.enabled else t("One-hand mode off")
         if action in ("left", "right"):
             self.set_hand(action)
-            return True, f"{action.title()}-hand layout"
+            return True, t("Left-hand layout") if action == "left" else t("Right-hand layout")
         intent = f"daw.{action}"
         if intent in INTENT_LABELS:
             return self.press(intent)
-        return False, f"One-Hand has no action {action!r}."
+        return False, t("One-Hand has no action {action}.", action=repr(action))
 
     def press(self, intent):
         """Press the keys for an intent in the app in front, using its one-hand layout."""
         app = self.engine.profile_for(self.backend.front_app())
         if not app:
-            return False, "No app One-Hand knows is in front."
+            return False, t("No app One-Hand knows is in front.")
         labels = {l.lower() for l in [INTENT_LABELS[intent], *ALIASES.get(intent, [])]}
         cmd = next((c for c in app["commands"] if c["label"].lower() in labels), None)
+        what = t(INTENT_LABELS[intent])   # a layout label: in the Spanish table too
         if not cmd:
-            return False, f"{app['name']} has no {INTENT_LABELS[intent]} in the one-hand layout."
+            return False, t("{app} has no {command} in the one-hand layout.", app=app["name"], command=what)
         send = getattr(self.backend, "send", None)
         if send is None:
-            return False, "This computer can't press keys."
+            return False, t("This computer can't press keys.")
         names = MOD_TO_KEY[self.engine.platform]
         send(Tap(cmd["send"], tuple(names[m] for m in cmd.get("mods", []))))
         self.link.did(intent.split(".")[1], intent)
-        return True, f"{INTENT_LABELS[intent]} in {app['name']}"
+        return True, t("{command} in {app}", command=what, app=app["name"])
 
     def _connected(self, up):
         if up:  # tell a newly started hub where things stand
@@ -107,6 +111,8 @@ class Suite:
     def _prefs(self, prefs):
         # Sent when the hub connects and whenever the musician changes a shared setting.
         self.shared = prefs
+        if words.follow(prefs.get("language")) and self.language_changed:
+            self.language_changed()
         if self.prefs_changed:
             self.prefs_changed()
 
@@ -114,8 +120,9 @@ class Suite:
         return combine(larger_text, self.shared)
 
     def prefs_applied(self, applied):
-        """Tell the suite which shared settings are now in use, so its settings page knows they arrived."""
-        self.link.state("prefs.applied", dict(applied))
+        """Tell the suite which shared settings are now in use, so its settings page knows they arrived.
+        The language too: the hub reads One-Hand's spoken words with a voice for it."""
+        self.link.state("prefs.applied", {**applied, "language": words.language()})
 
     def mode_changed(self, on):
         self.link.state("mode", bool(on))

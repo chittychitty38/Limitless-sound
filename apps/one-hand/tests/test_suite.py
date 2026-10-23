@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 
+from onehand import words
 from onehand.engine import Engine, Settings, Tap
 from onehand.suite import ACTIONS, INTENT_LABELS, Suite, combine
 
@@ -109,8 +110,26 @@ def test_shared_settings_from_the_hub():
     s._prefs({"speak": True, "textScale": 1.75, "highContrast": True, "reduceMotion": False, "scanMs": 1500})
     assert changed == [{"textScale": 1.75, "highContrast": True, "reduceMotion": False}]
     s.prefs_applied(changed[0])
-    # Only the settings One-Hand really honors, with the values in use.
-    assert reported == [("prefs.applied", {"textScale": 1.75, "highContrast": True, "reduceMotion": False})]
+    # Only the settings One-Hand really honors, with the values in use, and the language it shows.
+    assert reported == [("prefs.applied", {"textScale": 1.75, "highContrast": True, "reduceMotion": False,
+                                           "language": "en"})]
+
+
+def test_the_suites_language_and_answers_in_it():
+    s, _, _, reported = make()
+    changed = []
+    s.language_changed = lambda: changed.append(words.language())
+    s._prefs({"language": "es"})
+    assert changed == ["es"]
+    s._prefs({"language": "es", "textScale": 1.5})   # the same language: nothing to change
+    assert changed == ["es"]
+    assert s.invoke("record", {}, "gaze") == (True, "Grabar en Logic Pro")
+    assert s.invoke("on", {}, "voice") == (True, "Modo una mano activado")
+    s.prefs_applied(s.look(False))
+    assert reported[-1] == ("prefs.applied", {"textScale": 1.5, "highContrast": False, "reduceMotion": False,
+                                              "language": "es"})
+    s._prefs({"textScale": 1.0})   # a hub that sends no language keeps the last one
+    assert words.language() == "es" and changed == ["es"]
 
 
 def test_every_intent_label_exists_somewhere():

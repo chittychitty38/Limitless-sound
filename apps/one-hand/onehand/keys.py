@@ -4,6 +4,8 @@ The engine only ever sees the canonical names on the left. Each platform
 backend translates its own codes to and from these names.
 """
 
+from .words import t
+
 # Canonical name -> macOS virtual keycode (ANSI layout, physical position).
 MAC_CODES = {
     "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7, "c": 8, "v": 9,
@@ -82,9 +84,10 @@ MOD_CAPS = {
 }
 
 
+# Key names are shown in the suite's language: "Space" is "Espacio" in Spanish.
 def cap(key):
-    return KEY_CAPS.get(key, key.upper())
+    return t(KEY_CAPS[key]) if key in KEY_CAPS else key.upper()
 
 
 def shortcut_text(send, mods, platform):
-    return "".join(MOD_CAPS[platform][m] for m in mods) + cap(send)
+    return "".join(t(MOD_CAPS[platform][m]) for m in mods) + cap(send)
