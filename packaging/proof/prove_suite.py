@@ -258,7 +258,48 @@ def suite_checks(hub: las_check.Hub, tools: list[str]) -> list[dict]:
     except Exception as e:
         ok, detail = False, str(e)
     checks.append({"id": "S5", "ok": ok, "check": "The suite's language can be set to Español and back", "detail": detail})
+    checks.append(apps_follow_language(hub, up))
     return checks
+
+
+# Apps not held to Spanish yet, and why. Voice reports the language it listens in, which stays
+# English until its Spanish speech model (39 MB) is downloaded, and the proof doesn't download it.
+NOT_IN_SPANISH = {"voice": "listens in English until its Spanish model is downloaded",
+                  "color": "its windows are English only for now"}
+
+
+def apps_follow_language(hub: las_check.Hub, tools: list[str]) -> dict:
+    """S6: set the suite to Español, and every app with Spanish windows says it's showing Spanish
+    (its prefs.applied language) within 3 seconds; set it back, and they say English again."""
+    def showing():
+        states = hub.state()["states"]
+        return {t: (states.get(f"{t}.prefs.applied") or {}).get("language") for t in tools}
+
+    held = [t for t in tools if t not in NOT_IN_SPANISH]
+
+    def all_in(code):
+        now = showing()
+        return now if all(now[t] == code for t in held) else None
+
+    try:
+        before = hub.state()["prefs"].get("language", "en")
+        hub.prefs({"language": "es"})
+        there = las_check.wait_for(lambda: all_in("es"), las_check.REPLY_LIMIT) or showing()
+        hub.prefs({"language": before})
+        back = las_check.wait_for(lambda: all_in(before), las_check.REPLY_LIMIT) or showing()
+        stuck = sorted(t for t in held if there[t] != "es")
+        stayed = sorted(t for t in held if back[t] != before)
+        ok = bool(held) and not stuck and not stayed
+        detail = "; ".join(x for x in [
+            f"in Spanish: {', '.join(sorted(t for t in held if there[t] == 'es'))}" if held else "no app to check",
+            f"didn't follow: {', '.join(f'{t} ({there[t]})' for t in stuck)}" if stuck else "",
+            f"didn't come back: {', '.join(f'{t} ({back[t]})' for t in stayed)}" if stayed else "",
+            "not yet: " + ", ".join(f"{t} ({NOT_IN_SPANISH[t]})" for t in tools if t in NOT_IN_SPANISH),
+        ] if x)
+    except Exception as e:
+        ok, detail = False, str(e)
+    return {"id": "S6", "ok": ok, "check": "Every app with Spanish windows follows the suite into Español and back",
+            "detail": detail}
 
 
 def summary(proof: dict) -> str:
