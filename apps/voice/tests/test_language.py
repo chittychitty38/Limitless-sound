@@ -407,6 +407,7 @@ class PortugueseEngine(unittest.TestCase):
                                    ("dividir", "o que alguns casos", []),
                                    ("para", "e acampamento para famílias com", []),
                                    ("para", "se para se", []),                    # two more words
+                                   ("apagar", "a pagar", []),   # one word, split: asks first, below
                                    ("para", "para o", ["space"]),
                                    ("parar", "parar", ["space"]), ("parar", "", ["space"]),
                                    ("parar", "pare", ["space"]),            # one word: could be it
@@ -421,6 +422,11 @@ class PortugueseEngine(unittest.TestCase):
         e.handle("começar ditado", "começar ditado")
         e.handle("parar ditado", "para o ditado agora")     # Voice's own words aren't affected
         self.assertFalse(e.dictating)
+        e, p = pt_engine()
+        r = e.handle("apagar", "a pagar")   # the open recognizer split the word: not talk, but asks
+        self.assertEqual((r.kind, pressed(p)), ("ask", []))
+        e.handle("sim", "sim")
+        self.assertEqual(pressed(p), ["delete"])
 
     def test_destructive_commands_alone_are_infinitives_and_exact(self):
         """"corta", "cola" and "apaga" are Cut, Paste and Delete only with "isso" after them, and a
