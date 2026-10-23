@@ -19,6 +19,7 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
   - a field goes under its label when they don't fit side by side;
   - it scrolls, with Save and Cancel always in view.
   - Voice 0.4.4.
+- **Limitless Sound's first two questions fit a narrow window.** Since 0.2.9, the long name of the Portuguese preview in the language menu made the page wider than a phone-sized window. With the largest text it scrolled sideways by almost the width of the screen. It fits again, at every text size. Hub 0.2.6.
 - **Limitless Zoom asks your Mac about permissions less often.** While a permission its keys need was missing, Zoom asked macOS about four permissions every second. On the proof's Intel Mac that was about 2% of the processor, for as long as Zoom ran. Now it asks only about the two its keys need, every 5 seconds, and about all of them only while Setup is open. Its keys still start within 5 seconds of being allowed. Zoom 0.1.10.
 
 ### New in 0.2.9
