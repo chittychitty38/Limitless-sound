@@ -329,6 +329,13 @@ def test_real_people_saying_command_words():
     if every:
         print(f"\nHow soon Voice reports a word it got right, after the word ends: {spread(every)} "
               f"({len(every)} clips). " + "; ".join(f"{w} {spread(soon[w])}" for w in ("stop", "no", "yes") if soon[w]))
+        # Measured on CI: "stop", which goes the moment it's heard (Voice 0.3.6), a median 0.67 s
+        # after the word ended, 9 in 10 within 0.77 s (1.19 s and 1.36 s when it waited for the
+        # end of the utterance); words that still wait, a median 1.13 s.
+        median = lambda xs: sorted(xs)[len(xs) // 2]  # noqa: E731
+        if soon["stop"]:
+            assert median(soon["stop"]) <= 0.85, f"“stop” went a median {median(soon['stop']):.2f} s after it was said"
+        assert median(every) <= 1.35, f"words were acted on a median {median(every):.2f} s after they were said"
 
     # Stray words firing commands is the weak spot this test found. Two possible fixes, tried on
     # what was just heard so their cost and gain can be weighed before changing the app.
