@@ -244,6 +244,13 @@ class SettingsDialog(QDialog):
         note = " ".join(t for t in (lang.preview, note) if t)   # a preview says so first
         self.language_note.setText(note)
         self.language_note.setVisible(bool(note))
+        self.language_note.setMinimumHeight(0)
+        if self.isVisible() and note:
+            # Room for a longer note (a preview's), all of it on screen: the window doesn't grow
+            # for a wrapped label by itself.
+            self.layout().activate()
+            self.language_note.setMinimumHeight(self.language_note.heightForWidth(self.language_note.width()))
+            self.adjustSize()
 
     def apply(self):
         s = self.settings

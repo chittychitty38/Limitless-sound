@@ -643,6 +643,9 @@ class ChoosingTheLanguage(unittest.TestCase):
         dialog.language.setCurrentIndex(dialog.language.findData("pt"))   # a preview says so first
         self.assertTrue(dialog.language_note.text().startswith("Prévia: em português, o Limitless Voice entende "
                                                                "cerca de 6 em cada 10 comandos"))
+        self.assertIn("funcionam melhor ditos inteiros e devagar", dialog.language_note.text())
+        self.assertIn("os comandos em inglês, que o Voice entende com mais frequência, continuam disponíveis: é "
+                      "só escolher English aqui.", dialog.language_note.text())
         self.assertTrue(dialog.language_note.text().endswith("O português é baixado uma vez (31 MB) e depois "
                                                              "funciona sem internet."))
         dialog.language.setCurrentIndex(dialog.language.findData("es"))

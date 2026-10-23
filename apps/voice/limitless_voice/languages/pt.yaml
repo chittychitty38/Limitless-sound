@@ -22,7 +22,9 @@ english_name: Portuguese
 # sentences it gets 27% of words wrong (Spanish's: 15%). See stress/README.md.
 preview:
   label: Português (prévia)
-  note: 'Prévia: em português, o Limitless Voice entende cerca de 6 em cada 10 comandos ditos por pessoas reais, menos que em inglês e espanhol. Diga os comandos inteiros, como "tocar", "voltar" e "salvar".'
+  # Said in Portuguese whatever language the windows are in, as the download note is. English stays
+  # one choice away, for musicians who already know the DAW terms in English.
+  note: 'Prévia: em português, o Limitless Voice entende cerca de 6 em cada 10 comandos ditos por pessoas reais, menos que em inglês e espanhol. Os comandos funcionam melhor ditos inteiros e devagar, como "tocar", "voltar" e "salvar". Se você já conhece os termos em inglês, os comandos em inglês, que o Voice entende com mais frequência, continuam disponíveis: é só escolher English aqui.'
 
 # vosk-model-small-pt-0.3, Apache 2.0 (Alpha Cephei, alphacephei.com/vosk/models).
 # Downloaded once when Portuguese is chosen; the installers ship only English.

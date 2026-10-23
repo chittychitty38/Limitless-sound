@@ -167,6 +167,21 @@ class Windows(spanish.Languages):
             cut += self.cut_off(window, window.windowTitle())
         self.assertEqual(cut, [])
 
+    def test_settings_makes_room_for_the_preview_note(self):
+        """Choosing Português in an open Settings shows its preview note whole, however long."""
+        w = self.make()
+        settings = SettingsDialog(w, w.settings)
+        self.addCleanup(settings.reject)
+        settings.show()
+        QApplication.processEvents()
+        settings.language.setCurrentIndex(settings.language.findData("pt"))
+        QApplication.processEvents()
+        self.assertTrue(settings.language_note.text().startswith("Prévia: em português"))
+        self.assertEqual(self.cut_off(settings, "Settings"), [])
+        settings.language.setCurrentIndex(settings.language.findData("en"))
+        QApplication.processEvents()
+        self.assertEqual(self.cut_off(settings, "Settings"), [])
+
     @staticmethod
     def cut_off(window, name):
         found = []
