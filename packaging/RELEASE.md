@@ -21,6 +21,7 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
   - **Every window is in Spanish, including what screen readers read.** That covers Voice (0.4.1), One-Hand (0.2.5), Zoom (0.1.5), Control's settings page (0.2.7) and GazeStage (0.4.4).
   - **Changing the language changes the words where they are.** The keyboard focus and the screen reader stay put. The Spanish fits at double text size, like the English.
   - Still in English for now: Limitless Color, Zoom's voice commands and the guides.
+  - The website is in Spanish too: https://chittychitty38.github.io/Limitless-sound/es/
 
 ### New in 0.2.5
 - **The first step to Limitless Sound in Spanish.** Choose English or Español once, in the first two questions or in Settings, and every app that has Spanish follows it. A computer set to Spanish starts in Spanish.
