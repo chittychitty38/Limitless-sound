@@ -360,9 +360,9 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 12. **Zoom's idle CPU on the proof's Intel Mac** (a 2012 Mac mini) sits at the 3% line: 2.7% in
     0.2.8, 2.9–3.7% in 0.2.9, steady across P3's second look. Apple silicon reads 0.3%, Windows
     0.0%, and Voice 0.9% on the same Mac, though its silence gate is a copy of Zoom's (`SpeechGate`
-    in `apps/zoom/limitless_zoom/voice.py`). Measure Zoom's threads on a real Intel Mac before changing anything
-    (see the gotchas on idle CPU); its background download of the Spanish model after the suite
-    switches to Español was ruled out.
+    in `apps/zoom/limitless_zoom/voice.py`). Measure Zoom's threads on a real Intel Mac before
+    changing anything (see the gotchas on idle CPU); its background download of the Spanish model
+    after the suite switches to Español was ruled out.
 13. **Voice's Settings at double text** is 972 px wide, in English too: its longest checkbox
     ("Listen for command words only…") doesn't wrap. It fits screens 1280 px wide; a smaller one
     would need the checkbox's explanation as a wrapped line under it.
