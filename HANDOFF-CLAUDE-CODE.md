@@ -158,19 +158,22 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.6 passes it
-on all three computers** (run 39922456834, on the website):
-- Every app is ready in 1–9 s, at Access Standard level 2, with every action answered and no
-  timeouts. The installer takes 10 s on Apple silicon, 24 s on Intel and 48 s on Windows.
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.8 passes it
+on all three computers** (run 39936918797, on the website):
+- Every app is ready in 1–16 s, at Access Standard level 2, with every action answered and no
+  timeouts. The installer takes 12 s on Apple silicon, 18 s on Intel and 81 s on Windows.
 - Every suite check is green, S1 to S6:
   - Limitless Sound's own page opens, with its Spanish words (S4, #86);
   - the suite's language can be set to Español and back (S5, #88);
-  - One-Hand, Zoom, Control and GazeStage each say they're showing Spanish within 3 s of the
-    suite switching, and English again after (S6, #96). Voice is named but not held: it reports
-    the language it listens in, English until its Spanish model is downloaded. Color is named
-    until its Spanish ships (#95); then drop it from `NOT_IN_SPANISH` in `prove_suite.py`.
-- Every app is at or under 2% of the CPU sitting idle (Zoom 2.0% and GazeStage 1.7% on the
-  Intel Mac, everything else 1% or less). See the Spotlight gotcha below for Intel Mac readings.
+  - One-Hand, Zoom, Control, GazeStage and Color each say they're showing Spanish within 3 s of
+    the suite switching, and English again after (S6, #96, #100). Voice is named but not held: it
+    reports the language it listens in, English until its Spanish model is downloaded.
+- Every app is under 3% of the CPU sitting idle (Zoom 2.7% on the Intel Mac, everything else
+  0.8% or less).
+- P5 (#104) compares each app's idle memory with the last published proof on the same kind of
+  computer and warns at 1.5x and 50 MB more. The 0.2.7 proof found Zoom 0.1.6 at twice its
+  memory (510 MB on Apple silicon) and 5.3% idle CPU on Intel: it loaded its speech model again
+  on each language switch. Zoom 0.1.8 (#101) fixed it: 188 / 252 / 249 MB in 0.2.8.
 
 An app over the limit names its busiest processes (#62). To run it again before the default
 branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
