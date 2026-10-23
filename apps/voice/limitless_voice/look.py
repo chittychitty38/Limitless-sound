@@ -6,10 +6,12 @@ wins: the larger text, and high contrast or reduced motion if either asks for it
 Without the hub, only Voice's own settings count.
 
 LiveText is for words that change on screen, so a screen reader follows them too.
+UpAndDown holds what may not fit, so it scrolls instead of squeezing its words.
 """
 
+from PySide6.QtCore import QEvent, QSize, Qt
 from PySide6.QtGui import QAccessible, QAccessibleValueChangeEvent, QFont
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QScrollArea
 
 from . import words
 
@@ -48,6 +50,32 @@ class LiveText(QLabel):
         iface = QAccessible.queryAccessibleInterface(self)
         QAccessible.updateAccessibility(
             QAccessibleValueChangeEvent(self, iface.text(QAccessible.Name) if iface else text))
+
+
+class UpAndDown(QScrollArea):
+    """Holds a window's or a page's contents so that, taller than the window at a large text size
+    or in a longer language, they scroll up and down instead of squeezing their words: a window
+    doesn't make room for wrapped lines by itself. It's as wide as they need, as before, so a
+    window still grows wider for them and nothing scrolls sideways."""
+
+    def __init__(self, widget):
+        super().__init__()
+        self.setWidget(widget)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setFocusPolicy(Qt.NoFocus)
+        widget.installEventFilter(self)
+
+    def minimumSizeHint(self):
+        hint = super().minimumSizeHint()
+        need = self.widget().minimumSizeHint().width() + self.verticalScrollBar().sizeHint().width()
+        return QSize(max(hint.width(), need), hint.height())
+
+    def eventFilter(self, watched, event):
+        if watched is self.widget() and event.type() == QEvent.LayoutRequest:
+            self.updateGeometry()   # its words changed (a language, a text size): the width they need
+        return super().eventFilter(watched, event)
 
 
 def in_use(settings, prefs):

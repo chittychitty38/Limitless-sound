@@ -11,7 +11,9 @@ import subprocess
 import sys
 
 # Each in its own name, so a person who reads only that language can find it.
-LANGUAGES = {"en": "English", "es": "Español"}
+# Portuguese is only in Limitless Voice, and as a preview (about 6 in 10 commands heard at once):
+# its name says so, so nobody picks it expecting the whole suite in Portuguese.
+LANGUAGES = {"en": "English", "es": "Español", "pt": "Português (prévia: só o Limitless Voice)"}
 DEFAULT = "en"
 
 

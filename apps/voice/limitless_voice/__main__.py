@@ -6,7 +6,7 @@
   ... list                         print every phrase
   ... typed                        type phrases in the terminal instead of speaking
   add --dry-run to see what would happen without pressing anything, and
-  --language es to say them in Spanish (English phrases still work with "do")
+  --language es or pt to say them in Spanish or Portuguese (English phrases still work with "do")
 """
 
 import argparse

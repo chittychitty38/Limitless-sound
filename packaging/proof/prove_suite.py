@@ -50,6 +50,12 @@ READY_LIMIT = 15.0   # seconds a musician should ever wait for an app to be read
 IDLE_SECONDS = 15    # how long to watch CPU while everything sits idle
 SETTLE_SECONDS = 5   # quiet time after the last action before that
 IDLE_CPU_LIMIT = 3.0 # % of one core an app may use sitting idle, so laptops last a session
+# An app using half as much memory again as in the last published proof, on the same kind of
+# computer, is worth a look: Zoom 0.1.6 doubled its own by loading its speech model again on
+# each language switch (#101), and only a side-by-side reading of two proofs showed it.
+MEMORY_GROWTH = 1.5
+MEMORY_GROWTH_MB = 50
+LAST_PROOF = "https://raw.githubusercontent.com/{repo}/proof-results/latest.json"
 # A refusal that only says the app didn't answer in time is no answer: the test kit counts any
 # refusal with a reason, and GazeStage's 8 unanswered actions on the Intel Mac passed that way.
 TIMED_OUT = re.compile(r"(didn[’']t|did not|never) answer|still starting|in time|timed out", re.I)
@@ -208,6 +214,40 @@ def open_app(hub: las_check.Hub, tool: str, name: str, bundle: str) -> dict:
         time.sleep(0.5)
     result["joinedSeconds"] = None
     return result
+
+
+def this_computer() -> str:
+    """The name the published results give this kind of computer."""
+    if sys.platform == "darwin":
+        return "mac-apple-silicon" if platform.machine() == "arm64" else "mac-intel"
+    return "windows" if sys.platform == "win32" else sys.platform
+
+
+def last_proof() -> tuple[str, dict]:
+    """The suite version and each app's results (by tool) in the last published proof on this
+    kind of computer; ("", {}) when there isn't one or it can't be read."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "chittychitty38/Limitless-sound")
+    try:
+        with urllib.request.urlopen(LAST_PROOF.format(repo=repo), timeout=20) as page:
+            data = json.loads(page.read().decode("utf-8"))
+    except Exception:
+        return "", {}
+    run = next((r for r in data.get("runs", []) if r.get("arch") == this_computer()), None)
+    if not run:
+        return "", {}
+    return run.get("suiteVersion", ""), {a["tool"]: a for a in run.get("apps", []) if "tool" in a}
+
+
+def memory_check(app: dict, last_version: str, last: dict) -> dict | None:
+    """P5 (a warning): about as much memory sitting idle as in the last published proof."""
+    was = (last.get(app["tool"], {}).get("idle") or {}).get("memoryMB")
+    now = (app.get("idle") or {}).get("memoryMB")
+    if not was or not now:
+        return None
+    grew = now > was * MEMORY_GROWTH and now - was >= MEMORY_GROWTH_MB
+    return {"id": "P5", "ok": not grew, "warn": True,
+            "check": "Uses about as much memory sitting idle as in the last published proof",
+            "detail": f"{now} MB, {was} MB in {last_version or 'the last proof'}"}
 
 
 def suite_checks(hub: las_check.Hub, tools: list[str]) -> list[dict]:
@@ -396,6 +436,11 @@ def main(argv=None) -> int:
                            "check": f"Uses under {IDLE_CPU_LIMIT:.0f}% CPU sitting idle",
                            "detail": "not running" if cpu is None
                            else f"{cpu}%" + (f": {busiest}" if busiest and not ok else "")})
+    last_version, last = last_proof()
+    for a in proof["apps"]:
+        check = memory_check(a, last_version, last)
+        if check:
+            a["proof"].append(check)
     proof["hubIdle"] = idle.get("hub", {})
     screenshot(out / "shots" / "all.png")
 
