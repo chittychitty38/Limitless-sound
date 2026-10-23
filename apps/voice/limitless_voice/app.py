@@ -244,10 +244,17 @@ class SettingsDialog(QDialog):
         note = " ".join(t for t in (lang.preview, note) if t)   # a preview says so first
         self.language_note.setText(note)
         self.language_note.setVisible(bool(note))
+        self._room_for_note()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._room_for_note()   # a note set before the window opened, as when Portuguese is already chosen
+
+    def _room_for_note(self):
+        """Room for a longer note (a preview's), all of it on screen: the window doesn't grow for
+        a wrapped label by itself."""
         self.language_note.setMinimumHeight(0)
-        if self.isVisible() and note:
-            # Room for a longer note (a preview's), all of it on screen: the window doesn't grow
-            # for a wrapped label by itself.
+        if self.isVisible() and self.language_note.text():
             self.layout().activate()
             self.language_note.setMinimumHeight(self.language_note.heightForWidth(self.language_note.width()))
             self.adjustSize()

@@ -20,8 +20,8 @@ import unicodedata
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QHBoxLayout, QProgressBar, QPushButton,
-    QStackedWidget, QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QComboBox, QDialog, QFrame, QHBoxLayout, QProgressBar, QPushButton,
+    QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from . import words
@@ -131,12 +131,20 @@ class SetupWizard(QDialog):
         self.pages = [WelcomePage(self), MicPermissionPage(self), ControlPermissionPage(self),
                       MicCheckPage(self), PreferencesPage(self), ReadyPage(self)]
         for p in self.pages:
-            self.stack.addWidget(p)
+            # A page larger than the window, at a large text size or in a longer language, scrolls
+            # instead of squeezing its words out of sight; _show_focus scrolls to the keyboard.
+            scroll = QScrollArea()
+            scroll.setWidget(p)
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setFocusPolicy(Qt.NoFocus)
+            self.stack.addWidget(scroll)
 
         self.poll = QTimer(self)
         self.poll.timeout.connect(self._refresh)
         self.poll.start(1000)
         self.mic_answer.connect(lambda granted: self._refresh())
+        QApplication.instance().focusChanged.connect(self._show_focus)
         self._show(0)
 
     # -- navigation ------------------------------------------------------
@@ -190,6 +198,13 @@ class SetupWizard(QDialog):
             # bound to the guide, so a guide closed before then doesn't move on
             QTimer.singleShot(900, self, lambda: self.page is page and self.forward())
 
+    def _show_focus(self, old, new):
+        """Scroll the page to whatever the keyboard moved to, from outside the page too (Back,
+        Continue), which the scroll area doesn't do by itself."""
+        scroll = self.stack.currentWidget()
+        if new is not None and scroll.isAncestorOf(new):
+            scroll.ensureWidgetVisible(new, 8, 8)
+
     # -- events from the main window ---------------------------------------
 
     def on_heard(self, heard, alternative):
@@ -202,6 +217,7 @@ class SetupWizard(QDialog):
 
     def done(self, result):
         self.poll.stop()
+        QApplication.instance().focusChanged.disconnect(self._show_focus)
         self.page.left()
         self.settings.first_run_done = True
         self.settings.save()

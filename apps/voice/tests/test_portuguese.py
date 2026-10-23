@@ -159,6 +159,10 @@ class Windows(spanish.Languages):
             w.wizard.show()
             QApplication.processEvents()
             cut.update(self.cut_off(w.wizard, f"setup page {page + 1}"))
+            shown = w.wizard.stack.currentWidget().viewport().width()
+            if w.wizard.pages[page].width() > shown:   # it scrolls sideways to show all its words
+                cut[(f"setup page {page + 1}", "width")] = (f"setup page {page + 1} is "
+                                                            f"{w.wizard.pages[page].width()} wide, shows {shown}")
         for number, window in enumerate(windows):
             QApplication.processEvents()
             size = window.size()
@@ -176,6 +180,18 @@ class Windows(spanish.Languages):
         english = self.fit("en")
         portuguese = self.fit("pt")
         self.assertEqual([what for where, what in portuguese.items() if where not in english], [])
+
+    def test_settings_opened_on_portuguese_shows_the_whole_note(self):
+        """Settings opened with Portuguese already chosen shows its preview note whole, not only
+        when Portuguese is chosen with it open."""
+        w = self.make()
+        w.settings.language = "pt"
+        settings = SettingsDialog(w, w.settings)
+        self.addCleanup(settings.reject)
+        settings.show()
+        QApplication.processEvents()
+        self.assertTrue(settings.language_note.text().startswith("Prévia: em português"))
+        self.assertEqual(list(self.cut_off(settings, "Settings").values()), [])
 
     def test_settings_makes_room_for_the_preview_note(self):
         """Choosing Português in an open Settings shows its preview note whole, however long."""

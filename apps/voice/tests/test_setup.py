@@ -174,6 +174,27 @@ class Wizard(unittest.TestCase):
         self.assertIsInstance(wiz.page, MicCheckPage)
 
 
+    def test_a_page_too_big_for_the_window_scrolls_instead_of_squeezing(self):
+        """At double text, in a setup window that doesn't grow with it, every wrapped line on every
+        page keeps its room: the page scrolls instead. Before, the last page's examples overlapped."""
+        old = QFont(app.font())
+        big = QFont(old)
+        big.setPointSizeF(old.pointSizeF() * 2)
+        app.setFont(big)
+        self.addCleanup(app.setFont, old)
+        self.w, p, _ = make(mic="ask", control=False)
+        self.w.show_setup()
+        wiz = self.w.wizard
+        wiz.show()
+        for i, page in enumerate(wiz.pages):
+            wiz._show(i)
+            app.processEvents()
+            for lbl in page.findChildren(QLabel):
+                if lbl.isVisible() and lbl.wordWrap():
+                    self.assertGreaterEqual(lbl.height() + 1, lbl.heightForWidth(lbl.width()), (i, lbl.text()[:40]))
+        self.assertTrue(wiz.stack.currentWidget().verticalScrollBar().isVisible())   # the eight examples
+
+
 class Hud(unittest.TestCase):
     def test_hud_shows_when_the_window_is_in_the_background(self):
         w, p, _ = make(mic="granted", control=True)
