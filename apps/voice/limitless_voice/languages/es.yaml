@@ -22,9 +22,9 @@ voice:
 words:
   wake: [despierta, despiértate, empieza a escuchar, empezar a escuchar, computadora despierta, ordenador despierta]
   sleep: [a dormir, duérmete, ve a dormir, deja de escuchar, dejar de escuchar]
-  cancel: [cancelar, cancela, "no", olvídalo, déjalo, nada]
+  cancel: [cancelar, cancela, "no", olvídalo, déjalo]
   "yes": [sí, si, confirmar, confirma, hazlo, sí hazlo, sí por favor]
-  again: [otra vez, de nuevo, repite eso, repetir eso, repítelo, una vez más, lo mismo]
+  again: [otra vez, de nuevo, repite eso, repetir eso, repítelo, una vez más]
   help: [qué puedo decir, que puedo decir, mostrar comandos, muestra los comandos, ayuda]
   dictation_on: [empezar dictado, empieza el dictado, iniciar dictado, inicia el dictado, modo dictado,
                  activar dictado, activa el dictado, dictado activado]
@@ -38,7 +38,7 @@ words:
   new_paragraph: [nuevo párrafo]
   times: [veces, vez]
   twice: []
-  filler_start: [por favor, eh, em, este, bueno, oye, oye computadora, oye ordenador, computadora, ordenador,
+  filler_start: [por favor, eh, em, bueno, oye, oye computadora, oye ordenador, computadora, ordenador,
                  ok, okey, vale]
   filler_end: [por favor, gracias]
   recognize: [borra eso, borrar eso, tacha eso, nueva línea, salto de línea, nuevo párrafo, veces, vez, por favor, "y"]
@@ -117,9 +117,10 @@ keys:
     abrir corchete: "["
     cerrar corchete: "]"
   # The letters' Spanish names, and the radio alphabet as it's said in Spanish.
+  # Where the two say it differently, both: "uve" and "ve", "uve doble" and "doble u".
   letters: {a: a, be: b, ce: c, de: d, e: e, efe: f, ge: g, hache: h, i: i, jota: j, ka: k, ele: l,
-            eme: m, ene: n, o: o, pe: p, cu: q, erre: r, ese: s, te: t, u: u, uve: v, uve doble: w,
-            doble uve: w, equis: x, ye: "y", i griega: "y", zeta: z,
+            eme: m, ene: n, o: o, pe: p, cu: q, erre: r, ese: s, te: t, u: u, uve: v, ve: v, uve doble: w,
+            doble uve: w, doble ve: w, doble u: w, equis: x, ye: "y", i griega: "y", zeta: z,
             alfa: a, bravo: b, charlie: c, delta: d, eco: e, foxtrot: f, golf: g, hotel: h, india: i,
             julieta: j, kilo: k, lima: l, mike: m, noviembre: n, óscar: o, papa: p, quebec: q, romeo: r,
             sierra: s, tango: t, uniforme: u, víctor: v, whisky: w, yanqui: "y", zulú: z}
@@ -233,10 +234,11 @@ commands:
     escape: ["escape", "pulsa escape", "tecla escape"]
     tab: ["tabulador", "tab", "siguiente campo", "campo siguiente"]
     previous field: ["campo anterior"]
-    move up: ["arriba", "flecha arriba", "flecha hacia arriba"]
-    move down: ["abajo", "flecha abajo", "flecha hacia abajo"]
-    move left: ["izquierda", "flecha izquierda", "flecha a la izquierda"]
-    move right: ["derecha", "flecha derecha", "flecha a la derecha"]
+    # Not "arriba" or "derecha" alone, as English isn't "up" or "right" alone: they're said all the time.
+    move up: ["mover arriba", "mueve arriba", "flecha arriba", "flecha hacia arriba"]
+    move down: ["mover abajo", "mueve abajo", "flecha abajo", "flecha hacia abajo"]
+    move left: ["mover a la izquierda", "mueve a la izquierda", "flecha izquierda", "flecha a la izquierda"]
+    move right: ["mover a la derecha", "mueve a la derecha", "flecha derecha", "flecha a la derecha"]
     page up: ["página arriba", "subir página", "página anterior"]
     page down: ["página abajo", "bajar página", "página siguiente"]
     open {name:text}: ["abre {name:text}", "abrir {name:text}", "cambia a {name:text}",
@@ -260,7 +262,7 @@ commands:
 
   Logic Pro:
     play: &play
-      play: ["reproducir", "reproduce", "play"]
+      play: ["reproducir", "reproduce", "play", "dale play"]
       stop: ["parar", "detener", "detén", "stop"]
       start playback: ["iniciar reproducción", "empezar reproducción", "inicia la reproducción"]
       stop playback: ["parar reproducción", "para la reproducción", "detener reproducción",
@@ -335,10 +337,11 @@ commands:
                  "poner [un] marcador", "nueva ubicación de memoria"]
     go to marker {n:number}: ["ir al marcador {n:number}", "marcador {n:number}", "ve al marcador {n:number}",
                               "ubicación de memoria {n:number}"]
-    nudge right: ["desplazar a la derecha", "desplaza a la derecha", "mover a la derecha",
-                  "mueve a la derecha", "empujar a la derecha", "empuja a la derecha"]
-    nudge left: ["desplazar a la izquierda", "desplaza a la izquierda", "mover a la izquierda",
-                 "mueve a la izquierda", "empujar a la izquierda", "empuja a la izquierda"]
+    # Not "mover a la derecha": that's the arrow key, as "move right" is in English.
+    nudge right: ["desplazar a la derecha", "desplaza a la derecha", "empujar a la derecha",
+                  "empuja a la derecha", "desplazar adelante"]
+    nudge left: ["desplazar a la izquierda", "desplaza a la izquierda", "empujar a la izquierda",
+                 "empuja a la izquierda", "desplazar atrás"]
     mixer: ["mezclador", "mixer", "mostrar [el] mezclador", "ventana de edición",
             "mostrar [la] ventana de edición", "ventana de mezcla", "alternar mezcla"]
     midi editor: ["editor midi", "editor de midi", "mostrar [el] editor midi"]
@@ -365,7 +368,8 @@ commands:
     heal: ["reparar", "repara", "reparar [la] separación", "repara [la] separación"]
     duplicate: ["duplicar", "duplica", "duplicar eso", "duplica eso", "duplícalo"]
     repeat: ["repetir", "repetir clip", "repite [el] clip"]
-    trim to selection: ["recortar a [la] selección", "recortar", "recorta"]
+    # Not "recorta" alone: it sounds like "corta", which cuts.
+    trim to selection: ["recortar a [la] selección", "recorta a [la] selección", "recortar [el] clip"]
     fades: ["fundidos", "fundido", "crear fundidos", "hacer fundidos", "fades", "fade"]
     consolidate: ["consolidar", "consolida", "consolidar clip"]
     quantize: *quantize

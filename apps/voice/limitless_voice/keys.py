@@ -84,16 +84,13 @@ def spoken_to_chord(words, language=None):
         if tokens[i] in language.f_keys and i + 1 < len(tokens) and tokens[i + 1].isdigit():
             tok, i = names.get("f" + tokens[i + 1]), i + 2   # "f 5" -> F5
         else:
-            # the longest name that fits: "punto y coma" before "punto"
+            # the longest name that fits: "punto y coma" before "punto", "uve doble" before "uve"
             for n in (3, 2, 1):
                 said = " ".join(tokens[i:i + n])
-                if n == 1 or i + n <= len(tokens) and said in names:
+                if n == 1 or i + n <= len(tokens) and (said in names or said in letters):
                     break
-            if said in names:
-                tok, i = names[said], i + n
-            else:
-                tok = letters.get(said) or (said if len(said) == 1 else None)
-                i += 1
+            tok = names.get(said) or letters.get(said) or (said if len(said) == 1 else None)
+            i += n
         if tok is None:
             raise KeyChordError(f"don't know the key {tokens[i - 1]!r}")
         if tok in ("cmd", "ctrl", "opt", "shift", "win"):
