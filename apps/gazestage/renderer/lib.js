@@ -89,6 +89,15 @@ export function displayInUse(own, shared) {
   };
 }
 
+// The language GazeStage shows: the suite's while Limitless Sound is connected (shared: its
+// settings), else the first of the computer's languages that GazeStage has. A suite language
+// GazeStage doesn't have yet is English, as in every Limitless Sound app.
+export function languageInUse(shared, computer = [], have = ['en', 'es']) {
+  const tag = (v) => (typeof v === 'string' ? v.trim().replace(/_/g, '-').split('-')[0].toLowerCase() : '');
+  if (shared && shared.language != null) return have.includes(tag(shared.language)) ? tag(shared.language) : 'en';
+  return computer.map(tag).find((l) => have.includes(l)) || 'en';
+}
+
 // Dwell progress as drawn: smooth, or in quarter steps with reduced motion. Drawing only;
 // a target still fires when the real progress reaches 1.
 export function shownProgress(p, reduceMotion) {

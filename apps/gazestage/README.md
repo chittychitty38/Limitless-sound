@@ -88,6 +88,8 @@ Settings › Display has light or dark, high contrast, text size and the space b
 
 When Limitless Sound is running, GazeStage also follows the suite's shared text size, high contrast and reduced motion settings. It uses whichever is more accessible: the larger text, and high contrast or reduced motion if either one asks for it. Reduced motion turns off animations and fills the dwell ring in steps. It never changes when something is selected. Dwell and switch timing stay GazeStage's own, in Settings › Selecting.
 
+GazeStage is in English or Spanish: the suite's language while Limitless Sound runs, otherwise your computer's. That covers the window, the guided setup, the menu and its answers to other apps. Pro Tools' own menu names and the MIDI port names stay in English, because that is how they appear in Pro Tools.
+
 ## Known limits
 
 - It hasn't been tested yet on a real Pro Tools rig or with a player. The HUI codes for rewind (1), fast forward (2) and stop (3) are unconfirmed.
