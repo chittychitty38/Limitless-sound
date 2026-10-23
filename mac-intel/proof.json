@@ -1,8 +1,8 @@
 {
-  "when": "2026-10-23T09:20:04Z",
+  "when": "2026-10-23T10:15:31Z",
   "standard": "0.1",
-  "suiteVersion": "v0.2.7",
-  "installSeconds": 20.0,
+  "suiteVersion": "v0.2.8",
+  "installSeconds": 18.0,
   "computer": {
     "os": "macOS 15.7.9",
     "arch": "x86_64",
@@ -17,7 +17,7 @@
       "name": "Limitless One-Hand",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless One-Hand",
-      "joinedSeconds": 2.7,
+      "joinedSeconds": 3.3,
       "screenshot": "shots/onehand.png",
       "level": "adaptive",
       "checks": [
@@ -90,7 +90,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "2.7 s"
+          "detail": "3.3 s"
         },
         {
           "id": "P2",
@@ -110,13 +110,20 @@
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
           "detail": "0.3%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "119 MB, 118 MB in v0.2.7"
         }
       ],
       "actionsTried": 17,
-      "version": "0.2.5",
+      "version": "0.2.6",
       "idle": {
         "cpuPercent": 0.3,
-        "memoryMB": 118,
+        "memoryMB": 119,
         "busiest": [
           {
             "process": "Limitless One-Hand",
@@ -130,7 +137,7 @@
       "name": "Limitless Voice",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Voice",
-      "joinedSeconds": 5.5,
+      "joinedSeconds": 3.8,
       "screenshot": "shots/voice.png",
       "level": "adaptive",
       "checks": [
@@ -203,7 +210,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "5.5 s"
+          "detail": "3.8 s"
         },
         {
           "id": "P2",
@@ -222,18 +229,25 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "1.0%"
+          "detail": "0.4%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "154 MB, 153 MB in v0.2.7"
         }
       ],
       "actionsTried": 23,
-      "version": "0.4.1",
+      "version": "0.4.2",
       "idle": {
-        "cpuPercent": 1.0,
-        "memoryMB": 153,
+        "cpuPercent": 0.4,
+        "memoryMB": 154,
         "busiest": [
           {
             "process": "Limitless Voice",
-            "cpuPercent": 1.0
+            "cpuPercent": 0.4
           }
         ]
       }
@@ -243,7 +257,7 @@
       "name": "Limitless Zoom",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Zoom",
-      "joinedSeconds": 4.1,
+      "joinedSeconds": 2.8,
       "screenshot": "shots/zoom.png",
       "level": "adaptive",
       "checks": [
@@ -316,7 +330,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "4.1 s"
+          "detail": "2.8 s"
         },
         {
           "id": "P2",
@@ -332,21 +346,28 @@
         },
         {
           "id": "P3",
-          "ok": false,
+          "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "5.3%: Limitless Zoom 5.3%"
+          "detail": "2.7%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "252 MB, 413 MB in v0.2.7"
         }
       ],
       "actionsTried": 22,
-      "version": "0.1.6",
+      "version": "0.1.8",
       "idle": {
-        "cpuPercent": 5.3,
-        "memoryMB": 413,
+        "cpuPercent": 2.7,
+        "memoryMB": 252,
         "busiest": [
           {
             "process": "Limitless Zoom",
-            "cpuPercent": 5.3
+            "cpuPercent": 2.7
           }
         ]
       }
@@ -356,7 +377,7 @@
       "name": "Limitless Color",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Color",
-      "joinedSeconds": 1.1,
+      "joinedSeconds": 1.2,
       "screenshot": "shots/color.png",
       "level": "adaptive",
       "checks": [
@@ -429,7 +450,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "1.1 s"
+          "detail": "1.2 s"
         },
         {
           "id": "P2",
@@ -449,6 +470,13 @@
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
           "detail": "0.1%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "58 MB, 58 MB in v0.2.7"
         }
       ],
       "actionsTried": 4,
@@ -464,7 +492,7 @@
       "name": "Limitless Control",
       "openedBy": "hub",
       "hubAnswer": "Opening Limitless Control",
-      "joinedSeconds": 2.3,
+      "joinedSeconds": 2.4,
       "screenshot": "shots/control.png",
       "level": "adaptive",
       "checks": [
@@ -537,7 +565,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "2.3 s"
+          "detail": "2.4 s"
         },
         {
           "id": "P2",
@@ -556,18 +584,25 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "0.8%"
+          "detail": "0.7%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "62 MB, 62 MB in v0.2.7"
         }
       ],
       "actionsTried": 20,
-      "version": "0.2.7",
+      "version": "0.2.8",
       "idle": {
-        "cpuPercent": 0.8,
+        "cpuPercent": 0.7,
         "memoryMB": 62,
         "busiest": [
           {
             "process": "Limitless Control",
-            "cpuPercent": 0.8
+            "cpuPercent": 0.7
           }
         ]
       }
@@ -577,7 +612,7 @@
       "name": "GazeStage",
       "openedBy": "hub",
       "hubAnswer": "Opening GazeStage",
-      "joinedSeconds": 4.8,
+      "joinedSeconds": 3.8,
       "screenshot": "shots/gaze.png",
       "level": "adaptive",
       "checks": [
@@ -650,7 +685,7 @@
           "id": "P1",
           "ok": true,
           "check": "Ready within 15 seconds of opening",
-          "detail": "4.8 s"
+          "detail": "3.8 s"
         },
         {
           "id": "P2",
@@ -669,18 +704,25 @@
           "ok": true,
           "warn": true,
           "check": "Uses under 3% CPU sitting idle",
-          "detail": "1.0%"
+          "detail": "0.7%"
+        },
+        {
+          "id": "P5",
+          "ok": true,
+          "warn": true,
+          "check": "Uses about as much memory sitting idle as in the last published proof",
+          "detail": "405 MB, 404 MB in v0.2.7"
         }
       ],
       "actionsTried": 22,
       "version": "0.4.4",
       "idle": {
-        "cpuPercent": 1.0,
-        "memoryMB": 404,
+        "cpuPercent": 0.7,
+        "memoryMB": 405,
         "busiest": [
           {
             "process": "GazeStage Helper (Renderer)",
-            "cpuPercent": 0.5
+            "cpuPercent": 0.3
           },
           {
             "process": "GazeStage",
@@ -688,7 +730,7 @@
           },
           {
             "process": "GazeStage Helper (Renderer)",
-            "cpuPercent": 0.2
+            "cpuPercent": 0.1
           }
         ]
       }
@@ -705,7 +747,7 @@
       "id": "S2",
       "ok": true,
       "check": "A shared DAW command (zoom in) reaches an app and is answered within 3 seconds",
-      "detail": "Zoom in (0.36 s)"
+      "detail": "Zoom in (0.48 s)"
     },
     {
       "id": "S3",
@@ -733,12 +775,12 @@
     }
   ],
   "hubIdle": {
-    "cpuPercent": 0.4,
+    "cpuPercent": 0.3,
     "memoryMB": 24,
     "busiest": [
       {
         "process": "Limitless Sound",
-        "cpuPercent": 0.4
+        "cpuPercent": 0.3
       }
     ]
   }

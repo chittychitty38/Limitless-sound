@@ -1,13 +1,13 @@
 Windows fatal exception: code 0x8001010d
 
-Thread 0x00000844 (most recent call first):
+Thread 0x00002104 (most recent call first):
   File "limitless_voice\limitless_link.py", line 225 in _session
   File "limitless_voice\limitless_link.py", line 201 in _run
   File "threading.py", line 1012 in run
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x000015e8 (most recent call first):
+Thread 0x00001d80 (most recent call first):
   File "threading.py", line 359 in wait
   File "threading.py", line 655 in wait
   File "limitless_voice\audio.py", line 234 in _run
@@ -15,7 +15,7 @@ Thread 0x000015e8 (most recent call first):
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Thread 0x00002568 (most recent call first):
+Thread 0x000021e0 (most recent call first):
   File "pyttsx3\drivers\sapi5.py", line 179 in startLoop
   File "pyttsx3\driver.py", line 184 in runAndWait
   File "pyttsx3\engine.py", line 222 in runAndWait
@@ -24,7 +24,7 @@ Thread 0x00002568 (most recent call first):
   File "threading.py", line 1075 in _bootstrap_inner
   File "threading.py", line 1032 in _bootstrap
 
-Current thread 0x00000710 (most recent call first):
+Current thread 0x00000a64 (most recent call first):
   File "limitless_voice\app.py", line 1004 in run
   File "limitless_voice\__main__.py", line 22 in main
   File "run_app.py", line 8 in <module>

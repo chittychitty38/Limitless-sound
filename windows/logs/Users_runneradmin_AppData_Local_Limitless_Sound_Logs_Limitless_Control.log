@@ -1,13 +1,13 @@
-2026-10-23 09:15:29,351 INFO    Limitless Control: Started Limitless Control 0.2.7 on Windows 2025Server (AMD64), Python 3.12.10
-2026-10-23 09:15:31,427 INFO    comtypes.client._code_cache: Could not import comtypes.gen, trying to create it.
-2026-10-23 09:15:31,427 INFO    comtypes.client._code_cache: Creating comtypes.gen package failed: [WinError 3] The system cannot find the path specified: 'C:\\Users\\runneradmin\\AppData\\Local\\Programs\\Limitless Control\\_internal\\comtypes\\gen'
-2026-10-23 09:15:31,427 INFO    comtypes.client._code_cache: Created a memory-only package.
-2026-10-23 09:15:31,430 INFO    comtypes.client._code_cache: Creating writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\Limitless Control-312'
-2026-10-23 09:15:31,431 INFO    comtypes.client._code_cache: Using writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\Limitless Control-312'
-2026-10-23 09:15:31,432 INFO    Limitless Control.stdout: Limitless Control 0.2.7 running. Settings: http://127.0.0.1:47820/?t=EKKENMa1oMJX6i3KabHnew
-2026-10-23 09:15:31,505 INFO    comtypes.client._generate: Could not import comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4: No module named 'comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4'
-2026-10-23 09:15:31,512 INFO    comtypes.client._generate: # Generating comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4
-2026-10-23 09:15:31,756 INFO    comtypes.client._generate: # Generating comtypes.gen.SpeechLib
-2026-10-23 09:15:31,764 INFO    comtypes.client._generate: Could not import comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0: No module named 'comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0'
-2026-10-23 09:15:31,765 INFO    comtypes.client._generate: # Generating comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0
-2026-10-23 09:15:31,782 INFO    comtypes.client._generate: # Generating comtypes.gen.stdole
+2026-10-23 10:11:51,766 INFO    Limitless Control: Started Limitless Control 0.2.8 on Windows 2025Server (AMD64), Python 3.12.10
+2026-10-23 10:11:53,844 INFO    comtypes.client._code_cache: Could not import comtypes.gen, trying to create it.
+2026-10-23 10:11:53,844 INFO    comtypes.client._code_cache: Creating comtypes.gen package failed: [WinError 3] The system cannot find the path specified: 'C:\\Users\\runneradmin\\AppData\\Local\\Programs\\Limitless Control\\_internal\\comtypes\\gen'
+2026-10-23 10:11:53,844 INFO    comtypes.client._code_cache: Created a memory-only package.
+2026-10-23 10:11:53,847 INFO    comtypes.client._code_cache: Creating writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\Limitless Control-312'
+2026-10-23 10:11:53,848 INFO    comtypes.client._code_cache: Using writeable comtypes cache directory: 'C:\Users\RUNNER~1\AppData\Local\Temp\comtypes_cache\Limitless Control-312'
+2026-10-23 10:11:53,850 INFO    Limitless Control.stdout: Limitless Control 0.2.8 running. Settings: http://127.0.0.1:47820/?t=FXLZQ2DBzcAGaJB1uUjdow
+2026-10-23 10:11:54,169 INFO    comtypes.client._generate: Could not import comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4: No module named 'comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4'
+2026-10-23 10:11:54,176 INFO    comtypes.client._generate: # Generating comtypes.gen._C866CA3A_32F7_11D2_9602_00C04F8EE628_0_5_4
+2026-10-23 10:11:54,392 INFO    comtypes.client._generate: # Generating comtypes.gen.SpeechLib
+2026-10-23 10:11:54,399 INFO    comtypes.client._generate: Could not import comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0: No module named 'comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0'
+2026-10-23 10:11:54,400 INFO    comtypes.client._generate: # Generating comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0
+2026-10-23 10:11:54,416 INFO    comtypes.client._generate: # Generating comtypes.gen.stdole
