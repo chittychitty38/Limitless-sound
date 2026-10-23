@@ -49,14 +49,18 @@ class Language:
              ignored. A filler can be two words ("por favor"), ignored only where they come
              together: "por" alone is another word.
     others   words listened for only so that the recognizer can write them down instead of the
-             command they sound like; said alone, they do nothing."""
+             command they sound like; said alone, they do nothing.
+    confidence_offset  added to the voice_confidence setting, which is English's: how much less
+             sure (or more) the recognizer is of what it hears right in this language."""
 
-    def __init__(self, code, name, english_name, model, size, phrases, fillers=(), others=()):
+    def __init__(self, code, name, english_name, model, size, phrases, fillers=(), others=(),
+                 confidence_offset=0.0):
         self.code, self.name, self.english_name = code, name, english_name   # "es", "Español", "Spanish"
         self.model, self.size = model, size
         self.phrases = dict(phrases)
         self.fillers = tuple(fillers)
         self.others = tuple(others)
+        self.confidence_offset = confidence_offset
         self.url = MODEL_URL.format(name=model)
 
     def __repr__(self):
@@ -66,7 +70,12 @@ class Language:
         """The same language with more phrases or other words listened for (the stress tests try
         some)."""
         return Language(self.code, self.name, self.english_name, self.model, self.size,
-                        {**self.phrases, **(phrases or {})}, self.fillers, (*self.others, *others))
+                        {**self.phrases, **(phrases or {})}, self.fillers, (*self.others, *others),
+                        self.confidence_offset)
+
+    def threshold(self, setting):
+        """The confidence a command needs in this language, for the voice_confidence setting."""
+        return max(0.0, round(setting + self.confidence_offset, 3))
 
     def grammar(self):
         """The recognizer's vocabulary: Zoom's phrases, the fillers, the other words, [unk]."""
@@ -116,9 +125,12 @@ ENGLISH = Language("en", "English", "English", "vosk-model-small-en-us-0.15", "4
 # vosk-model-small-es-0.42, Apache 2.0 (Alpha Cephei): the same model Limitless Voice uses for
 # Spanish, so a computer that has it for Voice already has it for Zoom (app.py looks there).
 # It also listens for the words said most in Spanish (common_words.py): without them, the model
-# writes down ordinary talk as the nearest command.
+# writes down ordinary talk as the nearest command. With them to choose from, it's less sure of
+# the commands it hears right (1 in 20 under 0.64, against 0.92 without), so a command needs 0.15
+# less: 0.40 with the default setting. On real people that heard 91% of the commands rather than
+# 88%, and an hour of reading aloud zoomed once either way (stress/test_zoom_language.py).
 SPANISH = Language("es", "Español", "Spanish", "vosk-model-small-es-0.42", "39 MB", SPANISH_PHRASES,
-                   fillers=("por favor", "gracias"), others=common_words.SPANISH)
+                   fillers=("por favor", "gracias"), others=common_words.SPANISH, confidence_offset=-0.15)
 LANGUAGES = {lang.code: lang for lang in (ENGLISH, SPANISH)}
 
 # English, as Zoom always listened (the stress tests use these).
@@ -391,7 +403,7 @@ class VoiceListener(threading.Thread):
 
     def _result(self, res):
         text = " ".join(res.get("text", "").replace("[unk]", "").split())
-        action = self.language.match(res.get("text", ""), res.get("result"), self.min_conf)
+        action = self.language.match(res.get("text", ""), res.get("result"), self.language.threshold(self.min_conf))
         if text:
             self.on_heard(text if action else t("{heard} (not sure, ignored)", heard=text))
         if action is None:
@@ -428,4 +440,4 @@ def recognize_file(model_path, wav_path, min_conf=0.55, model=None, language=ENG
             hearing.hear(pick_channel(data, channels))
         hearing.finish()
     res = next((r for r in reversed(heard) if r.get("text")), {})
-    return res.get("text", ""), language.match(res.get("text", ""), res.get("result"), min_conf)
+    return res.get("text", ""), language.match(res.get("text", ""), res.get("result"), language.threshold(min_conf))

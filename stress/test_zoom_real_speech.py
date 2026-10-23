@@ -45,7 +45,7 @@ PER_WORD = int(os.environ.get("REAL_SPEECH_PER_WORD", "100"))
 WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 RATE = 16000
 
-MIN_CONF = 0.55                            # the app's default (voice_confidence)
+MIN_CONF = LANG.threshold(0.55)            # with the app's default voice_confidence
 THRESHOLDS = (0.0, 0.4, 0.55, 0.7, 0.85)   # what another one would do, measured here
 
 
@@ -57,7 +57,8 @@ def variants():
     if LANG.code != "es":
         return {}
     from zoom_words_es import NEAR, TOP1000
-    alone = Language(LANG.code, LANG.name, LANG.english_name, LANG.model, LANG.size, LANG.phrases, LANG.fillers)
+    alone = Language(LANG.code, LANG.name, LANG.english_name, LANG.model, LANG.size, LANG.phrases, LANG.fillers,
+                     confidence_offset=LANG.confidence_offset)
     return {
         "no other words": alone,
         "1000 common words": LANG.adding(others=[w for w in TOP1000 if w not in NEAR]),

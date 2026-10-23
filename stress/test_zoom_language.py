@@ -189,5 +189,9 @@ def test_real_people_saying_zoom_commands():
                 + (f" ({instead2[w].most_common(1)[0][0]})" if instead2[w] else "") for w in changed))
 
     # Floors from what CI measured (ubuntu-latest, up to 100 clips a word), less a margin.
-    assert right >= 0.80, f"only {right:.1%} of Zoom's {LANG.name} commands were right"
-    assert fired <= 0.16, f"words that aren't commands zoomed {fired:.1%} of the time"
+    assert right >= 0.87, f"only {right:.1%} of Zoom's {LANG.name} commands were right"
+    worst = min((w for w in commands if t[w]["tries"] >= 20), key=lambda w: t[w]["right"] / t[w]["tries"])
+    assert t[worst]["right"] / t[worst]["tries"] >= 0.75, f"“{worst}” was right only {t[worst]['right']}/{t[worst]['tries']}"
+    assert alike_right is None or alike_right >= 0.62, f"words said like a command were heard as it {alike_right:.1%}"
+    assert fired <= 0.15, f"words that aren't commands zoomed {fired:.1%} of the time"
+    assert wrong <= 2, f"a different action {wrong} times"

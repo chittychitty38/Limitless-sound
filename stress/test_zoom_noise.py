@@ -33,7 +33,7 @@ LANG = LANGUAGES[os.environ.get("ZOOM_LANGUAGE") or "en"]
 MODEL = os.environ.get("VOSK_MODEL")
 TTS = os.environ.get("TTS_WAV_DIR")
 RATE = 16000
-MIN_CONF = 0.55   # the app's default
+MIN_CONF = LANG.threshold(0.55)   # with the app's default voice_confidence
 
 needs_tts = pytest.mark.skipif(not (MODEL and TTS), reason="set VOSK_MODEL and TTS_WAV_DIR")
 _mine = threading.local()

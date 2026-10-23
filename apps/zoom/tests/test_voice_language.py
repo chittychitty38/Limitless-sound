@@ -97,6 +97,33 @@ def test_common_spanish_words_are_written_down_and_do_nothing():
     assert not [o for o in SPANISH.others for c in single if o != c and (o in c or c in o) and abs(len(o) - len(c)) <= 2]
 
 
+def test_a_spanish_command_needs_less_confidence():
+    # With the common words to choose from too, the recognizer is less sure of what it gets right.
+    assert ENGLISH.threshold(0.55) == 0.55 and SPANISH.threshold(0.55) == 0.4 and SPANISH.threshold(0.1) == 0.0
+    heard = [w("acercar", 0, .5, 0.45)]
+    assert SPANISH.match("acercar", heard, SPANISH.threshold(0.55)) == "in"
+    assert SPANISH.match("acercar", heard, SPANISH.threshold(0.7)) is None   # raised in the settings
+    got = []
+    listener = voice.VoiceListener("model", got.append, lambda s: None, language=SPANISH)
+    listener._result({"text": "acercar", "result": heard})
+    listener._result({"text": "acercar", "result": [w("acercar", 0, .5, 0.3)]})
+    assert got == ["in"]
+
+
+def test_the_readme_lists_every_phrase_in_both_languages():
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    table = readme.split("\n## Voice commands\n")[1].split("\n## ")[0]
+    rows = {}
+    for line in table.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if line.startswith("|") and len(cells) == 3 and cells[0] not in ("Action", "---"):
+            rows[cells[0]] = cells[1:]
+    want = {LABELS[a]: [", ".join(f'"{p}"' for p in ENGLISH.by_action().get(a, [])),
+                        ", ".join(f"«{p}»" for p in SPANISH.by_action().get(a, []))]
+            for a in LABELS if a in ENGLISH.by_action() or a in SPANISH.by_action()}
+    assert rows == want
+
+
 def test_what_to_say_first_and_by_action():
     assert ENGLISH.first("in") == "zoom in" and SPANISH.first("in") == "acercar"
     assert SPANISH.by_action()["out"][:2] == ["alejar", "reducir"]
