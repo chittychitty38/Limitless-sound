@@ -6,10 +6,10 @@ name: Stress tests
 
 on:
   pull_request:
-    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml", "!**/*.md"]
   push:
     branches: [main]
-    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml"]
+    paths: ["apps/**", "shared/**", "stress/**", ".github/workflows/stress.yml", "!**/*.md"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -29,11 +29,14 @@ env:
   PYTHONUTF8: "1"   # Windows consoles default to cp1252; the reports print arrows and µ
 
 jobs:
-  # On a pull request, the app-specific stress jobs run only when that app, the stress tests
-  # or this workflow changed. Main, the nightly run and a manual run always run everything.
+  # On a pull request, each job runs only when something it tests changed: that app, its own
+  # stress tests, what they share, or this workflow. macOS runners are few (five at once for the
+  # whole repo), so a change to one app's tests shouldn't queue every app's jobs behind them.
+  # Main, the nightly run and a manual run always run everything.
   changes:
     runs-on: ubuntu-latest
     outputs:
+      engines: ${{ steps.diff.outputs.engines }}
       voice: ${{ steps.diff.outputs.voice }}
       gazestage: ${{ steps.diff.outputs.gazestage }}
       color: ${{ steps.diff.outputs.color }}
@@ -46,21 +49,36 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            for app in voice gazestage color zoom; do echo "$app=true" >> "$GITHUB_OUTPUT"; done
+            for job in engines voice gazestage color zoom; do echo "$job=true" >> "$GITHUB_OUTPUT"; done
             exit 0
           fi
-          changed="$(git diff --name-only HEAD^1 HEAD)"
+          changed="$(git diff --name-only HEAD^1 HEAD | grep -v '\.md$' || true)"
           echo "$changed"
-          for app in voice gazestage color zoom; do
-            if grep -qE "^(apps/$app/|stress/|\.github/workflows/stress\.yml)" <<< "$changed"; then
-              echo "$app=true" >> "$GITHUB_OUTPUT"
+          everything='^(stress/conftest\.py|\.github/workflows/stress\.yml)'
+          # The speech benchmarks need a speech model, which only the speech jobs fetch: the
+          # engine jobs would skip them anyway.
+          speech='^stress/(test_voice_real_speech\.py|test_zoom_real_speech\.py|test_zoom_noise\.py|test_command_words\.py|tools/)'
+          declare -A own=(
+            [engines]="^(apps/|shared/|stress/)"
+            [voice]="^(apps/voice/|stress/(test_voice_|test_command_words|tools/))"
+            [zoom]="^(apps/zoom/|stress/(test_zoom_|test_command_words|tools/))"
+            [gazestage]="^(apps/gazestage/|stress/gazestage_)"
+            [color]="^(apps/color/|stress/color/)"
+          )
+          for job in engines voice gazestage color zoom; do
+            mine="$(grep -E "${own[$job]}" <<< "$changed" || true)"
+            [ "$job" = engines ] && mine="$(grep -vE "$speech" <<< "$mine" || true)"
+            if grep -qE "$everything" <<< "$changed" || [ -n "$mine" ]; then
+              echo "$job=true" >> "$GITHUB_OUTPUT"
             else
-              echo "$app=false" >> "$GITHUB_OUTPUT"
+              echo "$job=false" >> "$GITHUB_OUTPUT"
             fi
           done
 
   engines:
     name: Engines and hub (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.engines == 'true'
     strategy:
       fail-fast: false
       matrix:
