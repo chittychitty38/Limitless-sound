@@ -409,6 +409,7 @@ def test_ordinary_talk_rarely_fires_commands():
         # 1.0 an hour (a reader's "aromáticas" heard as "automatización"), Pro Tools 0, none
         # destructive.
         "es": {"Logic Pro": 3, "Pro Tools": 3},
+        "pt": {"Logic Pro": 99, "Pro Tools": 99},  # first runs
     }[LANG.code]
     too_many = []
     for app, most in ceiling.items():

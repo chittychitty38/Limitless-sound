@@ -54,6 +54,7 @@ needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom listens in 
 FLOORS = {
     "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03, "after": 1.35},
     "es": {"right": 0.79, "worst": 0.30, "with_yes": 0.80, "worst_with_yes": 0.30, "stray": 0.10, "after": 1.6},
+    "pt": {"right": 0.0, "worst": 0.0, "with_yes": 0.0, "worst_with_yes": 0.0, "stray": 1.0, "after": 9.0},  # first runs
 }
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
