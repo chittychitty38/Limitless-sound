@@ -13,6 +13,15 @@ Not sure which you have? Open the Apple menu and choose About This Mac. If "Chip
 3. The Mac installer opens. Click **Continue**, then **Install**, and type your Mac's password. If you picked the download for the other kind of Mac, it tells you which one to get.
 4. Every app is in Applications. Limitless Sound starts, says "Limitless Sound is installed", and its page opens in your browser with two quick questions: how you like to play, and how things should look. Then it opens the apps that fit you.
 
+### New in 0.2.6
+- **Limitless Sound in Spanish, in almost every app.** Choose Español once, in the first two questions or in Settings, and every app follows. A computer set to Spanish starts in Spanish.
+  - **Limitless Voice understands you and answers in Spanish.** Say «ir al compás treinta y dos», «graba» or «mostrar el mezclador» in Logic Pro, Pro Tools or Ableton Live. It knows words from Latin America and from Spain. Its Spanish speech model (39 MB) downloads once, when you choose Spanish. Until then, Voice keeps listening in English and says so. Voice 0.4.0.
+  - **Measured on real people, not on us.** We used 1657 recordings of Spanish speakers saying Voice's 40 command words, cut from sentences they read aloud for Common Voice. Voice gets 83.5% right the first time, and 84.2% when it asks and you answer «sí».
+  - **No word that nobody said made it press Cut, Paste or Delete.** In Spanish those fire only on the exact word: «cortar», «pegar», «eliminar». In an hour of people reading Spanish aloud, Voice fired one command with Logic Pro in front, none with Pro Tools, and none that cuts, pastes or deletes.
+  - **Every window is in Spanish, including what screen readers read.** That covers Voice (0.4.1), One-Hand (0.2.5), Zoom (0.1.5), Control's settings page (0.2.7) and GazeStage (0.4.4).
+  - **Changing the language changes the words where they are.** The keyboard focus and the screen reader stay put. The Spanish fits at double text size, like the English.
+  - Still in English for now: Limitless Color, Zoom's voice commands and the guides.
+
 ### New in 0.2.5
 - **The first step to Limitless Sound in Spanish.** Choose English or Español once, in the first two questions or in Settings, and every app that has Spanish follows it. A computer set to Spanish starts in Spanish.
   - The installers are in Spanish on a Spanish Mac or PC.
