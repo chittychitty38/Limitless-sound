@@ -9,7 +9,8 @@ With the Limitless Sound hub running:
 - The controller reports what it did, its on/off state, its layer and the app
   in front, so links can react ("while recording, Voice only hears stop").
 - The shared text size, high contrast and reduced motion settings change how
-  the settings page looks, and the controller reports them as prefs.applied.
+  the settings page looks, and the shared language is the page's language. The
+  controller reports them as prefs.applied.
 Without the hub, none of this does anything.
 """
 
@@ -40,6 +41,18 @@ OWN = [
 
 # The shared settings Limitless Control honors, as its settings page looks on its own.
 OWN_LOOK = {"textScale": 1.0, "highContrast": False, "reduceMotion": False}
+# The languages the settings page has (web/index.html, strings-es).
+LANGUAGES = ("en", "es")
+
+
+def page_language(prefs: dict) -> str | None:
+    """The settings page's language: the suite's, or English for one the page doesn't have.
+    None when the hub names none, and the page then takes the computer's."""
+    value = prefs.get("language")
+    if value is None:
+        return None
+    tag = str(value).strip().replace("_", "-").split("-")[0].lower()
+    return tag if tag in LANGUAGES else "en"
 
 
 def combine(own: dict, shared: dict) -> dict:
@@ -154,20 +167,33 @@ class Suite:
             self._sent_state = {}
             with self.app.lock:
                 self.report_state()
+        else:
+            # Without the hub, the settings page is in the computer's language.
+            with self.app.lock:
+                self.app.language = None
+            self.app.changed()
 
     def on_prefs(self, prefs: dict) -> None:
         """Shared settings (on joining and on every change): the settings page shows them
         on its next update, and the suite hears which ones are now in use."""
         with self.app.lock:
             look = combine(OWN_LOOK, prefs)
+            language = page_language(prefs)
             self.app.look = look
+            self.app.language = language
             self.app.changed()
-            if self._sent_state.get("prefs.applied") != look:
-                self._sent_state["prefs.applied"] = look
-                self.link.state("prefs.applied", look)
+            applied = {**look, "language": language} if language else look
+            if self._sent_state.get("prefs.applied") != applied:
+                self._sent_state["prefs.applied"] = applied
+                self.link.state("prefs.applied", applied)
 
     def say(self, text: str) -> bool:
-        return self.link.say(text)
+        """Speak through the hub. What Limitless Control says is in English whatever language
+        its settings page is in, so the hub reads it with an English voice."""
+        link = self.link
+        if not (link.connected and link.prefs.get("oneVoice", True)):
+            return False
+        return link._send({"op": "say", "text": text, "lang": "en"})
 
     def suite_actions(self) -> list[dict]:
         """Other apps' actions, for the settings page's pick list."""
