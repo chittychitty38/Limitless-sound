@@ -2,8 +2,8 @@
 import sys
 
 from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QBoxLayout, QButtonGroup, QCheckBox, QComboBox, QFrame, QGridLayout,
+from PySide6.QtGui import QAccessible, QAccessibleValueChangeEvent, QAction, QActionGroup, QKeySequence, QShortcut
+from PySide6.QtWidgets import (QApplication, QBoxLayout, QCheckBox, QComboBox, QFrame, QGridLayout,
                                QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QStackedWidget, QStyle,
                                QSystemTrayIcon, QVBoxLayout, QWidget)
 
@@ -84,6 +84,24 @@ def repolish(widget):
         child.style().polish(child)
 
 
+class LiveText(QLabel):
+    """Words that change on screen: the mode, the key just tried, what setup is waiting for.
+    A screen reader reads the words themselves (on a Mac VoiceOver reads a label's name as its
+    words, so these never get a fixed name), `about` says what they are, and each change is
+    posted so a screen reader on the label reads the new words."""
+
+    def __init__(self, about, text="", **props):
+        super().__init__(text, **props)
+        self.setAccessibleDescription(about)
+
+    def setText(self, text):
+        super().setText(text)
+        # Qt posts the name change itself; VoiceOver follows a label's words as its value.
+        iface = QAccessible.queryAccessibleInterface(self)
+        QAccessible.updateAccessibility(
+            QAccessibleValueChangeEvent(self, iface.text(QAccessible.Text.Name) if iface else text))
+
+
 class KeyCard(QFrame):
     def __init__(self):
         super().__init__()
@@ -138,9 +156,10 @@ class OnBadge(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow)
+        self.setWindowTitle(APP_NAME)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel()
+        self.label = LiveText("One-hand mode")
         lay.addWidget(self.label)
         self._floated = False
         self.set_look(1.0, False)
@@ -188,7 +207,8 @@ class PermissionPage(QWidget):
             box = QFrame(objectName="step")
             row = QHBoxLayout(box)
             row.setContentsMargins(16, 12, 16, 12)
-            tick = QLabel("○", objectName="tick")   # its width grows with the text, in style()
+            tick = LiveText(f"Step {n}", "○", objectName="tick")   # its width grows with the text, in style()
+            tick.setAccessibleName(f"{name} not allowed yet")   # the circle, in words
             row.addWidget(tick)
             text = QLabel(f"<b>Step {n}: {name}</b><br>Switch on <b>Limitless One-Hand</b>. It {why}.",
                           wordWrap=True)
@@ -203,14 +223,14 @@ class PermissionPage(QWidget):
                       "<b>Limitless One-Hand</b> from Applications. If macOS asks to quit and reopen the app, "
                       "choose <b>Quit &amp; Reopen</b>.", objectName="hint", wordWrap=True)
         outer.addWidget(tips)
-        self.status = QLabel(objectName="status", wordWrap=True)
+        self.status = LiveText("Setup status", objectName="status", wordWrap=True)
         outer.addWidget(self.status)
         row = QHBoxLayout()
         self.reopen = QPushButton("Reopen One-Hand", objectName="primary")
         self.reopen.clicked.connect(main.relaunch)
         self.reopen.hide()
         later = QPushButton("Look around first")
-        later.setAccessibleName("Skip for now and look at the key map")
+        later.setAccessibleDescription("Skip for now and look at the key map")
         later.clicked.connect(lambda: main.show_main())
         row.addWidget(self.reopen)
         row.addWidget(later)
@@ -226,8 +246,8 @@ class PermissionPage(QWidget):
         for name, (box, tick, btn) in self.steps.items():
             done = status.get(name, False)
             box.setProperty("done", done)
-            tick.setText("✓" if done else "○")
             tick.setAccessibleName(f"{name} {'allowed' if done else 'not allowed yet'}")
+            tick.setText("✓" if done else "○")
             btn.setVisible(not done)
             repolish(box)
         if all(status.values()) and tried:
@@ -272,8 +292,8 @@ class MainWindow(QWidget):
         self.pages = QStackedWidget()
         outer.addWidget(self.pages)
         self.permission_page = PermissionPage(self)
-        self.pages.addWidget(self._scrolling(self.permission_page))
-        self.pages.addWidget(self._scrolling(self._build_main()))
+        self.pages.addWidget(self._scrolling(self.permission_page, "Set up keyboard access"))
+        self.pages.addWidget(self._scrolling(self._build_main(), "One-Hand settings and key map"))
 
         self._main_thread = MainThread()
         self.suite = Suite(self.engine, backend, self.set_hand, dispatch=self._main_thread.call.emit,
@@ -302,8 +322,9 @@ class MainWindow(QWidget):
     # ---- building the main page --------------------------------------
 
     @staticmethod
-    def _scrolling(widget):
+    def _scrolling(widget, name):
         area = QScrollArea(widgetResizable=True)
+        area.setAccessibleName(name)   # Tab stops on it, to scroll by keyboard
         area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         area.setWidget(widget)
         return area
@@ -321,7 +342,7 @@ class MainWindow(QWidget):
 
         self.banner = QFrame(objectName="banner")
         bl = QVBoxLayout(self.banner)
-        self.banner_text = QLabel(wordWrap=True)
+        self.banner_text = LiveText("Keyboard access", wordWrap=True)
         bl.addWidget(self.banner_text)
         self.banner_button = QPushButton("Set up keyboard access", objectName="primary")
         self.banner_button.clicked.connect(self.show_permission)
@@ -335,20 +356,20 @@ class MainWindow(QWidget):
         left.addWidget(self.power)
         left.addWidget(QLabel("Click it, double-tap Shift, or press a foot pedal or switch set to F18.",
                               objectName="hint", wordWrap=True))
-        self.status = QLabel(objectName="status", wordWrap=True)
+        self.status = LiveText("One-hand mode status", objectName="status", wordWrap=True)
         self.status.setMinimumHeight(56)
         left.addWidget(self.status)
 
         hands = QHBoxLayout()
         hands.addWidget(QLabel("I'm using my"))
-        self.hand_group = QButtonGroup(self)
+        # Not a button group: in one, Tab skips the hand that isn't chosen, as with radio buttons.
+        # set_hand keeps just one of them checked.
         self.hand_buttons = {}
         for hand in ("left", "right"):
             b = QPushButton(f"{hand.title()} hand", checkable=True)
             b.setAccessibleName(f"Use the {hand}-hand layout")
             b.setChecked(self.prefs.hand == hand)
             b.clicked.connect(lambda _=False, h=hand: self.set_hand(h))
-            self.hand_group.addButton(b)
             self.hand_buttons[hand] = b
             hands.addWidget(b)
         hands.addStretch()
@@ -382,6 +403,7 @@ class MainWindow(QWidget):
         pick.addWidget(QLabel("Your keys in", objectName="h2"))
         self.app_pick = QComboBox()
         self.app_pick.setAccessibleName("Show the key map for")
+        self.app_pick.setAccessibleDescription("App whose keys are shown")   # what VoiceOver reads as its label
         for app in self.layouts["apps"]:
             if app.get(self.backend.platform):
                 self.app_pick.addItem(app["name"], app["id"])
@@ -399,7 +421,7 @@ class MainWindow(QWidget):
                 grid.addWidget(card, r, c)
                 self.cards.append((r, c, card))
         right.addLayout(grid)
-        self.practice = QLabel(objectName="practice", wordWrap=True)
+        self.practice = LiveText("Key you just tried", objectName="practice", wordWrap=True)
         self.practice.setMinimumHeight(30)
         right.addWidget(self.practice)
         self.note = QLabel(objectName="hint", wordWrap=True)
