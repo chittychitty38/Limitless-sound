@@ -435,7 +435,7 @@ try {
   sendPrefs({ textScale: 2, highContrast: false, reduceMotion: false, language: 'es' });
   assert.ok(await applied({ textScale: 2, highContrast: false, reduceMotion: systemReduce, language: 'es' }), JSON.stringify(hub.states['prefs.applied']));
   assert.equal(await win.evaluate(() => document.documentElement.lang), 'es', 'screen readers read it in Spanish');
-  for (const [page, word] of [['transport', 'Transporte'], ['play', 'Acordes'], ['tone', 'Guardar aquí']]) {
+  for (const [page, word] of [['transport', 'Rebobinar'], ['play', 'Acordes'], ['tone', 'Guardar aquí']]) {
     await win.click(`[data-goto=${page}]`);
     assert.match(await win.textContent(`#${page}`), new RegExp(word));
     if (page !== 'tone') assert.deepEqual((await view()).clipped, [], `nothing clips in Spanish at double size (${page})`);

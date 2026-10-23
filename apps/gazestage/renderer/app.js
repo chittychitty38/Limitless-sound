@@ -1251,7 +1251,7 @@ function updateOnboardChecks(s) {
   $('obGuide')?.classList.toggle('ok', !!good);
 }
 
-async function onboardAction(ob, t) {
+async function onboardAction(ob, target) {
   const step = state.onboardStep, i = STEPS.indexOf(step);
   if (ob === 'skip') return finishOnboarding('transport');
   if (ob === 'back') return renderStep(STEPS[Math.max(0, i - 1)]);
@@ -1266,9 +1266,9 @@ async function onboardAction(ob, t) {
     return;
   }
   if (ob === 'nocam') { S.mode = 'mouse'; save(); return renderStep('select'); }
-  if (ob === 'mode') { S.mode = t.dataset.value; save(); filterX.reset(); filterY.reset(); if (S.mode !== 'mouse') startCamera(); return renderStep('pointer'); }
+  if (ob === 'mode') { S.mode = target.dataset.value; save(); filterX.reset(); filterY.reset(); if (S.mode !== 'mouse') startCamera(); return renderStep('pointer'); }
   if (ob === 'select') {
-    S.select = t.dataset.value; save(); refreshChips();
+    S.select = target.dataset.value; save(); refreshChips();
     if (S.select === 'sound') await startMic(); else stopMic();
     return renderStep('select');
   }
