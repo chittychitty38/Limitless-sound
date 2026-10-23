@@ -11,6 +11,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
+use crate::words::{t, tf};
+
 pub struct Overlay {
     app: AppHandle,
     child: Option<CommandChild>,
@@ -30,8 +32,8 @@ impl Overlay {
         if self.child.is_some() {
             return Ok(());
         }
-        let cmd = self.app.shell().sidecar("limitless-overlay").map_err(|e| format!("The screen filter helper is missing: {e}"))?;
-        let (mut rx, child) = cmd.spawn().map_err(|e| format!("The screen filter helper didn't start: {e}"))?;
+        let cmd = self.app.shell().sidecar("limitless-overlay").map_err(|e| tf("The screen filter helper is missing: {error}", &[("error", &e.to_string())]))?;
+        let (mut rx, child) = cmd.spawn().map_err(|e| tf("The screen filter helper didn't start: {error}", &[("error", &e.to_string())]))?;
         let app = self.app.clone();
         let generation = self.generation.clone();
         let mine = generation.fetch_add(1, Ordering::SeqCst) + 1;
@@ -44,7 +46,7 @@ impl Overlay {
                             // The window walks the person through allowing it.
                             let _ = app.emit("permission-needed", ());
                         } else if let Some(rest) = line.strip_prefix("error ") {
-                            let _ = app.emit("filter-error", format!("The screen filter reported a problem: {rest}"));
+                            let _ = app.emit("filter-error", tf("The screen filter reported a problem: {error}", &[("error", rest)]));
                         }
                     }
                     CommandEvent::Terminated(_) if generation.load(Ordering::SeqCst) == mine => {
@@ -62,10 +64,10 @@ impl Overlay {
     }
 
     fn send(&mut self, line: &str) -> Result<(), String> {
-        let child = self.child.as_mut().ok_or("The screen filter helper isn't running.")?;
+        let child = self.child.as_mut().ok_or_else(|| t("The screen filter helper isn't running."))?;
         if child.write(format!("{line}\n").as_bytes()).is_err() {
             self.child = None;
-            return Err("The screen filter helper stopped responding.".into());
+            return Err(t("The screen filter helper stopped responding."));
         }
         Ok(())
     }
@@ -114,7 +116,7 @@ impl super::ScreenFilter for Overlay {
             self.send("on")?;
             self.shown = true;
         }
-        Ok("Exact match to the tuner.".into())
+        Ok(t("Exact match to the tuner."))
     }
 }
 
@@ -125,11 +127,11 @@ pub async fn screen_permission(app: &AppHandle, request: bool) -> Result<bool, S
     let out = app
         .shell()
         .sidecar("limitless-overlay")
-        .map_err(|e| format!("The screen filter helper is missing: {e}"))?
+        .map_err(|e| tf("The screen filter helper is missing: {error}", &[("error", &e.to_string())]))?
         .args([flag])
         .output()
         .await
-        .map_err(|e| format!("Couldn't check Screen Recording permission: {e}"))?;
+        .map_err(|e| tf("Couldn't check Screen Recording permission: {error}", &[("error", &e.to_string())]))?;
     Ok(String::from_utf8_lossy(&out.stdout).trim() == "granted")
 }
 

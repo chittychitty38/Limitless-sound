@@ -21,8 +21,8 @@ Skipped otherwise. REAL_SPEECH_PER_WORD sets the clips a word (default 100).
 
 VOICE_LANGUAGE runs Voice in another of its languages ("es"), with VOSK_MODEL that language's
 model and COMMAND_WORDS_DIR its words (get_command_words.py --lang es). Then the stray words
-are ones that sound like a command and aren't ("grabación", "pagar"), and Zoom, which listens
-in English, is left out.
+are ones that sound like a command and aren't ("grabación", "pagar"), and Zoom is left out:
+test_zoom_language.py hears its Spanish words.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ from test_zoom_real_speech import _model  # noqa: E402
 
 WORDS_DIR = os.environ.get("COMMAND_WORDS_DIR")
 needs_words = pytest.mark.skipif(not (MODEL and WORDS_DIR), reason="set VOSK_MODEL and COMMAND_WORDS_DIR")
-needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom listens in English")
+needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom's Spanish words are heard in test_zoom_language.py")
 
 # What each language's run must reach (see the comments where they're checked).
 FLOORS = {

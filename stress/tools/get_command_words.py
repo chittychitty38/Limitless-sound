@@ -1,6 +1,6 @@
 """Fetch real people saying Limitless Voice's and Zoom's command words, for stress/test_command_words.py.
 
-    python stress/tools/get_command_words.py OUT_DIR [--lang es] [--per-word 500] [--words cut,paste,delete]
+    python stress/tools/get_command_words.py OUT_DIR [--lang es] [--zoom] [--per-word 500] [--words cut,paste,delete]
 
 Makes OUT_DIR/<word>/<speaker>_nohash_<take>.wav: 16 kHz mono 16-bit WAV, one second each, named
 the way Google Speech Commands names its clips, so the tests pick them the same way (everyone's
@@ -17,6 +17,8 @@ Its English has no "redo" or "metronome", and no word shorter than three letters
 --lang es fetches Voice's Spanish command words instead (WORDS below says which), and words that
 sound like them but aren't commands ("grabación", "pagar", "corte"), to check those stay quiet.
 --lang pt does the same for Brazilian Portuguese ("gravar", "pagar" and "apagar", "parte" and "pare").
+--zoom fetches Limitless Zoom's words in the language instead (ZOOM below), for
+stress/test_zoom_language.py: in English they're among Voice's.
 Who said each clip comes from MSWC's split lists (an anonymous id and a gender per clip).
 
 How it gets only these words: MSWC's English audio is one 35 GB .tar.gz of 6.6 million clips
@@ -90,6 +92,19 @@ WORDS = {
            "gravação grave tocando toque parado parada parou salvou corte cortado divisão união silêncio "
            "reprodução voltou pagar paga pagou isso nada aqui este "
            "parte sala salva muita arma copa troca aroma calar").split(),
+}
+
+# Limitless Zoom's words, where they aren't among Voice's. Spanish: the commands said alone, and
+# words tried as commands; MSWC has no "acercar", "alejar" or "lupa", so the same verbs with one
+# sound less ("acerca", "aleja") and "ajuste" stand in for them. Then words that sound like a
+# command and aren't ("cerca", "amplia", "aumento", "reducido") and ones said all the time.
+ZOOM = {
+    "es": ("ampliar reducir aumentar aumenta disminuir disminuye ajustar repite repetir despierta reduce "
+           "encajar acerca aleja ajuste "
+           "cerca lejos amplia ampliado ampliación aumento aumentó reducido reducción altas bajas alta baja "
+           "otra nuevo todo todos luna lucha lugar cercano alejado alejó alejandro acercarse justo pantalla "
+           "vista ventana onda mucho menos más dormir escuchar escucha mostrar muestra panel repitió "
+           "despertar").split(),
 }
 
 PROBE = 256 * 1024  # bytes read to find out where in the archive a spot is
@@ -721,12 +736,13 @@ def main():
     ap.add_argument("out", type=Path)
     ap.add_argument("--per-word", type=int, default=500, help="most clips to keep of a word (default 500)")
     ap.add_argument("--lang", default="en", help="MSWC language code (default en)")
+    ap.add_argument("--zoom", action="store_true", help="Limitless Zoom's words for the language instead of Voice's")
     ap.add_argument("--words", help="comma-separated words instead of Voice's words for the language")
     args = ap.parse_args()
     global LANG, AUDIO, SPLITS
     LANG = args.lang
     AUDIO, SPLITS = f"{MSWC}/audio/{LANG}.tar.gz", f"{MSWC}/splits/{LANG}.tar.gz"
-    words = args.words.split(",") if args.words else WORDS[LANG]
+    words = args.words.split(",") if args.words else (ZOOM if args.zoom else WORDS)[LANG]
     started = time.monotonic()
 
     print("metadata: what's in the archive, in order", flush=True)

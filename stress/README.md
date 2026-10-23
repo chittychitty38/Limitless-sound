@@ -11,10 +11,11 @@ memory that keeps climbing over a long session.
 | `test_onehand_stress.py` | One-Hand's key engine: tremor holding and bouncing on command keys, a million random key events, per-key speed for the macOS hook, fast Shift typing, a soak. |
 | `test_voice_stress.py` | Limitless Voice: one misheard utterance must not wreck a session, asleep means asleep, chatter rarely fires. With the real speech model: white, pink, hum and band noise for two minutes each, people talking, and spoken commands under music at three loudness levels. |
 | `test_voice_real_speech.py` | Limitless Voice hearing real people, not a synthetic voice: thousands of people saying single words, and an hour of people reading aloud. See [Real people](#real-people) below. |
-| `test_zoom_real_speech.py` | Limitless Zoom hearing the same recordings: do stray words or ordinary talk zoom the screen? |
+| `test_zoom_real_speech.py` | Limitless Zoom hearing the same recordings: do stray words or ordinary talk zoom the screen? In Spanish too: see [Zoom in Spanish](#zoom-in-spanish) below. |
+| `test_zoom_language.py` | Every word Zoom listens for in a language is one its speech model knows, and real people saying Zoom's Spanish command words. See [Zoom in Spanish](#zoom-in-spanish) below. |
 | `test_command_words.py` | Voice and Zoom hearing real people say their own command words ("record", "cut", "paste", "fit" ...), which Speech Commands doesn't have. See [Command words](#command-words) below. |
 | `test_voice_language.py` | Every word Voice listens for in a language is one its speech model knows. See [Spanish](#spanish) below. |
-| `test_zoom_noise.py` | Limitless Zoom's commands said with a band playing under them, at three loudness levels: still heard? Does the band zoom by itself? |
+| `test_zoom_noise.py` | Limitless Zoom's commands said with a band playing under them, at three loudness levels: still heard? Does the band zoom by itself? In English, and every Spanish phrase. |
 | `test_control_stress.py` | Limitless Control: switch contact bounce, a trigger held at the threshold with a tremor, unplugging mid-press, every input mashed at once, a soak. |
 | `test_zoom_stress.py` | Limitless Zoom: held switch and zoom keys, a lost key-up, a key storm, every action in every app. |
 | `gazestage_stress.mjs` | GazeStage in Electron with a fake camera: lost focus with a switch held, a switch flood, a dwell flood, five relaunches, a 2+ minute tracking soak with memory sampling. |
@@ -256,6 +257,73 @@ python stress/tools/get_fleurs.py /tmp/fleurs-es --lang es_419
 VOICE_LANGUAGE=es VOSK_MODEL=/path/to/vosk-model-small-es-0.42 COMMAND_WORDS_DIR=/tmp/command-words-es \
   TALK_DIR=/tmp/fleurs-es python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
   stress/test_command_words.py -v -s
+```
+
+### Zoom in Spanish
+
+Limitless Zoom listens in Spanish when Limitless Sound is in Spanish (`ZOOM_LANGUAGE=es` here).
+It gets the same checks as in English, from the same Spanish job:
+
+- **Command words:** MSWC's Spanish clips of the words Zoom's commands are said with alone
+  ("ampliar", "reducir", "aumentar", "repite", "despierta"...), through Zoom's own gate and
+  recognizer (`test_zoom_language.py`). MSWC has nobody saying "acercar", "alejar" or "lupa", so
+  "acerca", "aleja" and "ajuste" stand in for the first two and "ajustar", the same verbs with a
+  sound less; they should be heard as the command. Then 46 words that sound like a command and
+  aren't, or are said all the time: "cerca", "amplia", "reducido", "luna", "otra", "todo".
+- **Ordinary talk:** FLEURS's hour of Latin American Spanish read aloud, as Voice hears it
+  (`test_zoom_real_speech.py`).
+- **Every phrase over music:** each Spanish phrase, the ones of two and more words too, in
+  espeak-ng's Latin American voice, with the band from `test_zoom_noise.py` playing under it at
+  three loudness levels, and the band alone. Real people's clips only have single words.
+- **Vocabulary:** every word Zoom listens for is one the Spanish model knows.
+
+Each run also measures other ways of listening, and every confidence threshold, side by side.
+That's how Zoom's Spanish was chosen. What CI measured (ubuntu-latest, October 2026; runs
+39918506977, 39919500433 and 39919519719), next to English (the last run's English job):
+
+| | Spanish | English |
+|---|---|---|
+| Commands said alone, by real people (MSWC) | **89.9% to 91.0%** (189 clips, 7 words) | 91.7% (325 clips: fit, taller, shorter, again) |
+| The same verb with a sound less ("acerca" for "acercar") | 72% | |
+| Words that aren't commands: zoomed | 12% (46 words, sound-alikes on purpose) | 2.2% (Speech Commands' words) |
+| A command other than the one said | 0 | |
+| An hour of reading aloud: zoomed | **1, 2 and 1 times** (FLEURS) | 3.8 times (LibriSpeech) |
+| Every phrase said over a band, at 30, 15 and 6 dB | 44, 45 and 41 of 45 | all on Linux, 41 of 42 on a Mac |
+| The band alone, 2 minutes: zoomed | 0 | at most 1 |
+
+What it shows:
+
+- **The Spanish model writes talk down as commands.** Listening only for Zoom's phrases, as
+  English Zoom does, an hour of FLEURS zoomed 81 to 85 times at the same confidence: "zoom dos"
+  13 times, "lupa" 7 to 9, "acercar" 5. Nearly every one was heard on its own, with no "[unk]" around it, so the
+  sentence rules had nothing to go on; English's model writes such talk down as "[unk]". Zoom
+  now listens for the one- and two-letter words and the 300 words said most in Common Voice's
+  Spanish too (`apps/zoom/limitless_zoom/common_words.py`), so talk is written down as itself:
+  1 to 2 zooms in the hour, from 0.41 and 0.72 sure "disminuir" and "ajustar".
+- **The most said words, not the sound-alikes.** Listening for 1000 common words as well
+  zoomed 0 times in the hour, but heard 86% of the commands; adding every word that sounds like
+  a one-word command ("cerca", "reducido", 159 of them) also 0 times, but only 64% to 66% of the
+  commands. Words that close compete with the command itself: "reducir" came back as "seducir"
+  or "reducirse", "aumentar" as "comentar". `zoom_words_es.py` has those lists.
+- **A command needs 0.15 less confidence in Spanish.** With 325 more words to choose from, the
+  recognizer is less sure of the commands it hears right (1 in 20 under 0.64, against about 0.91
+  without them). At the default 0.55 it heard 88% of the commands; at 0.40, 90% to 91%, and the
+  hour of talk zoomed 1 to 2 times either way.
+- **Words that sound like a one-word command still fire it when said alone**: "amplia" Zoom In
+  65 times in 100, "reduce" and "reducido" Zoom Out about half the time, "disminuye" and
+  "repitió" most of the time. Inside a sentence they don't (the hour of talk), and they're not
+  what a musician says alone. English has the same ("bed" is heard as "fit").
+- **"aleja" is heard as "deja"** (from "deja de escuchar") 5 times in 11, so "alejar" may be
+  weaker than "acercar"; "reducir" (93%) does the same. Nobody in MSWC says "alejar" itself.
+
+Run it yourself, with the Spanish downloads above:
+
+```sh
+python stress/tools/get_command_words.py /tmp/zoom-words-es --lang es --zoom
+python stress/tools/make_speech.py /tmp/speech-es --zoom es     # needs espeak-ng
+ZOOM_LANGUAGE=es VOSK_MODEL=/path/to/vosk-model-small-es-0.42 ZOOM_WORDS_DIR=/tmp/zoom-words-es \
+  TALK_DIR=/tmp/fleurs-es TTS_WAV_DIR=/tmp/speech-es python -m pytest stress/test_zoom_language.py \
+  stress/test_zoom_real_speech.py stress/test_zoom_noise.py -v -s
 ```
 
 The recordings are not in this repository, and must not be committed. They are all under

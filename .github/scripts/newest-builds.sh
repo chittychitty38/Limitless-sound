@@ -26,6 +26,37 @@ api() {  # gh api, asked again after a network hiccup
   return 1
 }
 
+# The same build from the app's release, for when GitHub's artifact storage refuses a download
+# for a while ("HTTP 503: Egress is over the account limit": on 2026-10-23 it held Control's
+# builds back for over an hour). An app's release is made by the run that built it, from these
+# same files, at that run's commit. A build with no release (no new version) has no fallback.
+from_release() {  # <workflow> <run> <folder>
+  local prefix=${1%.yml}-v sha tag page files id name file
+  local wanted
+  case $platform in
+    mac-apple-silicon) wanted='(mac-apple-silicon|mac-arm64)\\.dmg$' ;;
+    mac-intel) wanted='(mac-intel|mac-x64)\\.dmg$' ;;
+    windows) wanted='\\.exe$' ;;
+    *) return 1 ;;
+  esac
+  sha=$(api "repos/$repo/actions/runs/$2" -q .head_sha) || return 1
+  for page in 1 2 3; do
+    tag=$(api "repos/$repo/releases?per_page=100&page=$page" -q "[.[] | select((.tag_name | startswith(\"$prefix\"))
+      and .target_commitish == \"$sha\") | .tag_name] | first // empty") || return 1
+    [ -n "$tag" ] && break
+  done
+  [ -n "$tag" ] || return 1
+  files=$(api "repos/$repo/releases/tags/$tag" -q ".assets[] | select(.name | test(\"$wanted\")) | \"\\(.id) \\(.name)\"") || return 1
+  [ -n "$files" ] || return 1
+  echo "  its build couldn't be downloaded; taking the same files from its release $tag"
+  mkdir -p "$3"
+  while read -r id name; do
+    file="$3/$name"
+    gh api -H "Accept: application/octet-stream" "repos/$repo/releases/assets/$id" > "$file" || return 1
+    echo "  $name: $(wc -c < "$file") bytes"
+  done <<<"$files"
+}
+
 mkdir -p "$out"
 for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazestage.yml; do
   found=""
@@ -55,5 +86,12 @@ for wf in shared.yml voice.yml one-hand.yml zoom.yml color.yml control.yml gazes
   fi
   read -r run name <<<"$found"
   echo "$wf: $name (run $run)"
-  [ "$list_only" = --list ] || gh run download "$run" -R "$repo" -n "$name" -D "$out/$wf"
+  [ "$list_only" = --list ] && continue
+  if ! gh run download "$run" -R "$repo" -n "$name" -D "$out/$wf"; then
+    rm -rf "${out:?}/$wf"
+    if ! from_release "$wf" "$run" "$out/$wf"; then
+      echo "::error::Couldn't download $name (run $run), and it has no release to take it from"
+      exit 1
+    fi
+  fi
 done

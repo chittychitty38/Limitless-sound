@@ -1,0 +1,62 @@
+# Blind: written by a separate session that never saw the helper's rules or the other test sets.
+# expect	context	who	text
+rg	-	US	I can't tell my red tracks from the green ones in Logic.
+rg	-	UK	The record button and the play button look identical to me.
+rg	-	dictation	red regions look brown to me same as the green ones
+rg	-	US	Red shows up as kind of an olive color on my screen.
+rg	-	typo	Green and red chanels look the same in Pro Tools.
+rg	-	UK	All the green regions look orange-ish and blend in with the red ones.
+rg	-	US	Everything red reads as yellow to me, so I can't spot which tracks are armed.
+rg	-	dictation	i cant tell red from green on the mixer
+rg	-	UK	Green looks sort of brownish, I keep mixing it up with red.
+rg	-	US	Is the red track or the green track the one on top? They look the same color.
+rg	-	typo	Red and gren buttons look exactly alike.
+protan	-	US	The record button looks almost black.
+protan	-	UK	Red tracks come out really dark, nearly black.
+protan	-	dictation	the red clip light just looks black to me
+protan	-	US	Red regions look super dark, practically black.
+by	-	US	Blue and green tracks look the same.
+by	-	UK	I can't separate the purple regions from the blue ones.
+by	-	dictation	teal and blue look identical
+by	-	US	Yellow looks grey to me.
+by	-	typo	Light blue and green are indistinguishable on my sceen.
+by	-	UK	The lilac channels and the blue channels are the same colour to me.
+by	-	US	Yellow comes across as pinkish.
+by	-	US	Turquoise looks just like green.
+solo-mute	-	US	Can't tell solo from mute.
+solo-mute	-	UK	The S and M buttons look the same colour.
+solo-mute	-	dictation	solo and mute buttons look identical
+solo-mute	-	typo	I keep mixing up the solo and mtue buttons.
+solo-mute	-	US	Which one is solo and which is mute? They look identical.
+meters	-	US	The level meters are all one color.
+meters	-	UK	I can't see when the VU meter hits the red.
+meters	-	UK	I can't tell when my meters are clipping.
+meters	-	US	The meters look green all the way up so I never know when I'm peaking into the red.
+meters	-	US	Can't see the meters going into the red zone.
+more	-	US	I don't see any difference.
+more	-	UK	Could you make the correction stronger?
+more	-	dictation	make it stronger please
+more	-	US	Not enough, crank it up.
+more	-	typo	Barely noticable, push it further.
+less	rg	US	Way too strong, tone it down.
+less	rg	UK	That's quite garish now, can you soften it?
+less	rg	dictation	too intense it hurts my eyes
+less	rg	US	Looks unnatural, dial it back a bit.
+less	rg	typo	Too much, make it sofer.
+less	rg	UK	Bit much, turn it down please.
+rg+	rg	US	Red and green still look the same.
+rg+	rg	UK	Slightly better, but I still can't tell red from green.
+rg+	rg	dictation	still cant tell them apart
+rg+	rg	US	Red and green tracks are still blending together.
+undo	rg	US	That's worse, undo it.
+undo	rg	UK	Put it back the way it was, please.
+undo	rg	dictation	go back it looks worse
+undo	rg	typo	Worse now, revret it.
+keep	rg	US	Perfect, leave it like that.
+keep	rg	UK	Brilliant, I can tell them apart now. Cheers.
+keep	rg	UK	That looks right, thanks.
+keep	rg	US	Much better, keep it.
+keep	rg	US	That's great, I can finally see the difference.
+keep	rg	UK	Spot on, don't change anything.
+ask	-	US	Hey there.
+ask	-	dictation	how does this thing work
