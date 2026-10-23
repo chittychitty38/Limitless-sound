@@ -15,6 +15,8 @@ file, languages/<code>.yaml, with:
                open recognizer (see engine.py)
   exact_destructive      true when Cut, Paste, Delete and the like run only on their exact
                words, never a near miss
+  exact        true when every command runs only on its exact words: in a language whose
+               short words are a letter apart ("sala" and "salva"), a near miss is another word
   commands     for each built-in pack, for each command (by its first English phrase),
                the phrases to say in this language
 
@@ -62,6 +64,7 @@ class Language:
         self.commands = data.get("commands") or {}
         self.free_text_needs_both = bool(data.get("free_text_needs_both"))
         self.exact_destructive = bool(data.get("exact_destructive"))
+        self.exact = bool(data.get("exact"))
         self._sounds = [(re.compile(rf"\b{re.escape(a)}\b"), w)
                         for w, aliases in self.sounds_like.items() for a in aliases]
 
@@ -140,7 +143,7 @@ class Language:
             spoken = {cmd.phrases[0]: [spec] if isinstance(spec, str) else spec}
         phrases = [p for ps in spoken.values() for p in ps]
         from .engine import Engine
-        fuzzy = cmd.fuzzy and not (self.exact_destructive and Engine._destroys(cmd, {}))
+        fuzzy = cmd.fuzzy and not self.exact and not (self.exact_destructive and Engine._destroys(cmd, {}))
         out = Command(phrases=phrases, action=cmd.action, pack=cmd.pack, reply=self.text(cmd.reply),
                       confirm=cmd.confirm, repeatable=cmd.repeatable, help=self.text(cmd.help),
                       fuzzy=fuzzy, instant=cmd.instant, english=cmd.phrases, language=self)

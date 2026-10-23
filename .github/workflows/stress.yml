@@ -375,8 +375,7 @@ jobs:
           key: ${{ steps.words.outputs.cache-primary-key }}
       - shell: bash
         run: |
-          VOSK_MODEL="$PWD/models/$MODEL" COMMAND_WORDS_DIR="$PWD/command-words-pt" python stress/tools/listen_diag.py
-          export VOCAB_LOOKUP='^ple[iy] ^plêi ^pléi ^miu ^mut ^lup ^lub ^mix ^miks ^tei[kq] ^xif ^chif ^shif ^teb ^tab ^quanti ^cuanti ^kuanti ^xaf ^chaf ^esli ^isli ^sli ^spot ^espot ^ispot ^rol$ ^rou$ ^baun ^(bê|cê|dê|pê|tê|vê|zê|quê|agá|cá|xis|esse|erre|eme|ele|jota|efe|ene|gê|ge|jê|be|ce|de|pe|te|ve|ze)$ ^d[aá]bli ^[íi]psilon ^seletor ^selecion ^delet ^desmut ^app ^aplicat ^esc$ ^alt$ ^option ^comman ^back ^end$ ^windows ^uindo ^cliq ^klik ^clic ^fade ^take ^mixa ^spotlai ^pley ^mute ^loop ^dá$ ^pro$ ^pra$ ^à$ ^shi ^chi[fp] ^escap ^ok ^okay ^tá$'
+          export VOCAB_LOOKUP='unk ^ple ^plê ^plé ^miu ^miú ^lup ^lúp ^lub ^mix ^miks ^mics ^tei ^téi ^xif ^chif ^shif ^tab ^teb ^quanti ^cuanti ^xaf ^chaf ^xâ ^sli ^esli ^isli ^spo ^espo ^ispo ^rol ^rou ^dabli ^dábli ^[íi]psilon ^(a|bê|be|cê|ce|dê|de|e|é|efe|éfe|ge|gê|jê|agá|aga|i|jota|cá|ka|ele|éle|eme|ême|ene|o|ó|pê|pe|quê|que|erre|esse|tê|te|u|vê|ve|xis|zê|ze|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z|b|c|d)$ ^efe ^éfe ^ene ^ga ^je ^seleç ^selet ^delet ^esc ^alt ^opç ^opt ^coman ^back ^bek ^end$ ^ende ^uin ^win ^cli ^fade ^feid ^take ^mixa ^dá$ ^pro$ ^pra$ ^à$ ^shi ^chi ^escap ^ok ^tá$ ^maiús ^control ^ente ^stop ^sto ^solo ^grid ^gri ^midi ^míd ^mission ^spot ^piano ^zoom ^zum ^clip ^mute ^loop ^play ^metr ^vertical ^transi ^mixer'
           VOICE_LANGUAGE=pt VOSK_MODEL="$PWD/models/$MODEL" TALK_DIR="$PWD/fleurs-pt" \
             COMMAND_WORDS_DIR="$PWD/command-words-pt" \
             python -m pytest stress/test_voice_language.py -v -s --durations=6 2>&1 \

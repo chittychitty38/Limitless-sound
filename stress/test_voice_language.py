@@ -7,8 +7,7 @@ model's way ("compás", not "compas"). Words it doesn't know are spelled as word
 language's sounds_like ("quantize" as "quant ties"); app names for "open ..." are left out. For
 each word it doesn't know, the nearest words it does are printed.
 
-Reads the vocabulary from the model's graph (graph/Gr.fst, or graph/words.txt), so it needs no
-recognizer. Needs VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
+Reads the vocabulary from the model's grammar graph (Gr.fst), so it needs no recognizer. Needs VOSK_MODEL; VOICE_LANGUAGE says which language that model is for (default en).
 VOCAB_LOOKUP prints the model's words that match some patterns, to choose a spelling it knows.
 """
 
@@ -35,14 +34,11 @@ MODEL = os.environ.get("VOSK_MODEL")
 
 
 def vocabulary(model):
-    """Every word the model knows: the output symbols of its grammar graph, an OpenFst file, or
-    for a model without one (the Portuguese), its graph's word list."""
-    graph = Path(model) / "graph"
-    if not (graph / "Gr.fst").is_file() and (graph / "words.txt").is_file():
-        lines = (graph / "words.txt").read_text(encoding="utf-8", errors="replace").splitlines()
-        return {line.split()[0] for line in lines if line.split()}
-    assert (graph / "Gr.fst").is_file(), f"no graph/Gr.fst or graph/words.txt; graph/ has {sorted(os.listdir(graph))}"
-    data = (graph / "Gr.fst").read_bytes()
+    """Every word the model knows: the output symbols of its grammar graph, an OpenFst file. Older
+    models (the Portuguese) keep it in the model's own folder rather than in graph/."""
+    path = next((p for p in (Path(model) / "graph" / "Gr.fst", Path(model) / "Gr.fst") if p.is_file()), None)
+    assert path, f"no Gr.fst in {model}: {sorted(os.listdir(model))}"
+    data = path.read_bytes()
     pos = 0
 
     def take(fmt):

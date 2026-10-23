@@ -519,9 +519,16 @@ class ChoosingTheLanguage(unittest.TestCase):
         self.assertIn("precisa baixar o modelo de voz (31 MB)", w.language_text.text())
         model = data_dir() / "models" / "vosk-model-small-pt-0.3"
         self.addCleanup(shutil.rmtree, model, True)
-        with mock.patch.object(app_module, "ensure_model",
-                               side_effect=lambda *a, **k: (model / "conf").mkdir(parents=True) or model):
+
+        def download(*a, **k):
+            # laid out as the real one: everything in one folder, no am/ or conf/
+            model.mkdir(parents=True)
+            (model / "final.mdl").write_bytes(b"")
+            return model
+
+        with mock.patch.object(app_module, "ensure_model", side_effect=download):
             w.language_download.click()
+        self.assertEqual(app_module.find_model("vosk-model-small-pt-0.3"), model)   # found next time too
         self.assertEqual((w.lang.code, w.engine.lang.code), ("pt", "pt"))
         self.assertEqual(w.listen_btn.text(), 'Ouvindo: diga "vai dormir" para pausar')
         self.assertEqual(self.applied(), ["en", "pt"])

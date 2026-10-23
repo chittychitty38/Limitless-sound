@@ -149,6 +149,10 @@ keys:
 free_text_needs_both: true
 # A near miss never cuts, pastes or deletes: "pagar" is one letter from "apagar".
 exact_destructive: true
+# And no command runs on a near miss at all: real people's "sala" (room) was Save, "parte" (part)
+# Play, "muita" Mute and "copa" Copy, each a letter from a command (stress/test_command_words.py),
+# and a reader's "para" (for) pressed Play (test_voice_real_speech.py).
+exact: true
 
 # Words the speech model doesn't know, spelled as words it does. The recognizer listens for
 # these spellings; normalize() turns them back.
