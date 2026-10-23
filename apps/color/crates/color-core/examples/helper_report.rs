@@ -2,8 +2,8 @@
 //! Spanish: the share of descriptions where it does what it should (tests/descriptions/*.tsv),
 //! by what it should do and by who is talking, and each miss on the seen sets.
 //! Run with: cargo run -p color-core --example helper_report
-//! The held-out sets' misses stay hidden, so the rules aren't written against them; add
-//! `--held-misses` to see them once a change is done.
+//! The held-out and blind sets' misses stay hidden, so the rules aren't written against them;
+//! add `--held-misses` to see them once a change is done.
 
 #[path = "../tests/descriptions/harness.rs"]
 mod harness;
@@ -39,7 +39,7 @@ fn main() {
         }
     }
     for (name, sc) in &scores {
-        if name.ends_with("held") && !held_misses {
+        if !name.ends_with("seen") && !held_misses {
             continue;
         }
         if !sc.misses.is_empty() {

@@ -20,8 +20,17 @@ pub struct Case {
     pub text: String,
 }
 
-/// The sets: English and Spanish, seen (the rules were written against them) and held out.
-pub const SETS: [(&str, Lang); 4] = [("en-seen", Lang::En), ("en-held", Lang::En), ("es-seen", Lang::Es), ("es-held", Lang::Es)];
+/// The sets, English and Spanish: seen (the rules were written against them), held out (written
+/// by the rules' author before the Spanish rules, never used to write them) and blind (written by
+/// a separate session that never saw the rules or the other sets).
+pub const SETS: [(&str, Lang); 6] = [
+    ("en-seen", Lang::En),
+    ("en-held", Lang::En),
+    ("en-blind", Lang::En),
+    ("es-seen", Lang::Es),
+    ("es-held", Lang::Es),
+    ("es-blind", Lang::Es),
+];
 
 pub fn load(name: &str) -> Vec<Case> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/descriptions").join(format!("{name}.tsv"));

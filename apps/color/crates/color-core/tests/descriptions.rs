@@ -8,7 +8,8 @@ mod harness;
 use color_core::lang::{self, Lang};
 
 /// The share each set must keep, a little under what it scored when the floors were set.
-const FLOORS: [(&str, f64); 4] = [("en-seen", 97.0), ("en-held", 95.0), ("es-seen", 97.0), ("es-held", 95.0)];
+const FLOORS: [(&str, f64); 6] =
+    [("en-seen", 97.0), ("en-held", 95.0), ("en-blind", 93.0), ("es-seen", 97.0), ("es-held", 95.0), ("es-blind", 95.0)];
 
 #[test]
 fn the_helper_understands_people_in_both_languages() {
@@ -30,7 +31,7 @@ fn the_helper_understands_people_in_both_languages() {
 fn spanish_answers_are_in_spanish() {
     // Every answer the helper gave a Spanish description is the Spanish of an English sentence.
     let spanish: std::collections::HashSet<&String> = lang::spanish().values().collect();
-    for name in ["es-seen", "es-held"] {
+    for name in ["es-seen", "es-held", "es-blind"] {
         for case in harness::load(name) {
             let (_, s) = harness::run(&case, Lang::Es);
             assert!(!s.reply.is_empty(), "{}", case.text);
