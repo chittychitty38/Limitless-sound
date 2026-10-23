@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::color::{hex_to_srgb, CvdType};
+use crate::lang::Lang;
 use crate::profile::{role, safe, Anchor, Profile, RANGES};
 
 /// One assistant turn: what it says, and what it changes.
@@ -22,6 +23,9 @@ pub struct Suggestion {
     /// Control id to the hex color it should show as.
     pub anchors: BTreeMap<String, String>,
     pub remove_anchors: Vec<String>,
+    /// What the offline helper made of the message ("rg", "less", "ask"...), for measuring it.
+    #[serde(skip)]
+    pub kind: &'static str,
 }
 
 impl Suggestion {
@@ -128,6 +132,10 @@ pub struct HelperState {
 /// Rule-based helper for when Claude isn't available. It understands the common
 /// ways people describe red-green and blue-yellow confusion and named controls.
 pub fn offline_reply(text: &str, p: &Profile, state: &mut HelperState) -> Suggestion {
+    offline_reply_in(text, p, state, Lang::En)
+}
+
+pub fn offline_reply_in(text: &str, p: &Profile, state: &mut HelperState, _lang: Lang) -> Suggestion {
     let s = text.to_lowercase();
     let has = |pat: &str| Regex::new(&format!(r"\b({pat})")).map(|r| r.is_match(&s)).unwrap_or(false);
     let red = has("red|record|clip");
@@ -218,6 +226,7 @@ pub fn offline_reply(text: &str, p: &Profile, state: &mut HelperState) -> Sugges
         r.question = "Which two things still look the same to you?".into();
         return r;
     }
+    r.kind = "ask";
     r.reply = "I'm not sure what to change yet. Try naming two things that look the same to you, for example \"the Record button and the Play button look the same\" or \"red looks brown\".".into();
     r
 }
