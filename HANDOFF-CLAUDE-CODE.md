@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-23, after the 0.2.5 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.6 release. Everything below is the state of the project then.
 
 ---
 
@@ -52,13 +52,13 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
 | Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.4, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.9 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.4 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.4 |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.1 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.5 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.5 |
 | Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.4 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.6 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.3 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.5** (the repo's Latest release) |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.7 |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.6** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
@@ -69,6 +69,19 @@ screens (Limitless Sound's page, Control's page, GazeStage, Color, the Mac insta
 AA in every look with a keyboard walk (`.github/scripts/apps-a11y.cjs`, `screens.yml`, #79), and
 the Qt apps have `tests/test_accessibility.py` (#75). Every app presses the same key for the
 same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85).
+
+**English and Spanish.** One shared language (`language`, "en" or "es") in Limitless Sound's
+settings, chosen in the first two questions or from the computer's language, and every app
+follows it live, in place, without moving the keyboard focus:
+- Voice understands and answers in Spanish (0.4.0, #90), and its windows are in Spanish (0.4.1,
+  #92). Its Spanish words, commands and replies are one file, `languages/es.yaml`; the windows ask
+  for theirs with `ui.text("…")` (`words.py`).
+- One-Hand and Zoom (`words.py` in each, #89), Control's page and GazeStage (a `strings-es` table
+  in the page, #91), Limitless Sound's page (#83) and the installers (#87) are in Spanish.
+- The website is in Spanish at `/es/` (`docs/es/index.html`, #93).
+- Every one has a test that fails on English with no Spanish, and the Spanish fits at double
+  text size wherever the English does.
+- Not yet in Spanish: Limitless Color, Zoom's voice commands, the guides on GitHub.
 
 Release links (permanent; they always point at the newest suite):
 - https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
@@ -205,7 +218,9 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   command words themselves ("cut", "record", "solo"; MLCommons' Multilingual Spoken Words, #77),
   and an hour of 40 people reading aloud (LibriSpeech). Nobody has spoken to them in a real room
   with a real DAW running.
-- Nobody who speaks Spanish has used the Spanish Voice or read the Spanish page (#83).
+- Nobody who speaks Spanish has used any of the Spanish: Voice was measured on recordings of
+  Spanish speakers (Common Voice, FLEURS), and every Spanish word was written without a native
+  speaker's read.
 - No DAW key has been pressed in a real DAW. The keys come from the vendors' guides, and every
   app agrees with every other (`stress/test_daw_keys_agree.py`).
 - The C++ client has only been tested against the hub, not inside a real plug-in host.
@@ -262,14 +277,25 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
      - It made Zoom worse (52 zooms an hour of talk), so Zoom keeps the small model.
 8. **By ear on a real Mac:** GazeStage's built-in instrument rests 10 s after the last sound
    and wakes on hover (#60); check that the first note after a rest isn't late.
-9. **Spanish** (#83, and Voice 0.4.0 on branch `voice/languages` if it hasn't merged yet):
-   - Ask a Spanish-speaking musician to read `apps/voice/limitless_voice/languages/es.yaml` (the
-     phrases and replies) and the Spanish words in `shared/hub/limitless_hub/web/index.html`
-     (the `strings-es` table), and to say the commands to Voice with Logic open.
-   - On the Mac: set Limitless Sound's language to Español and check that Voice offers its
-     Spanish model, and that the replies come in a Spanish voice (System Settings ›
-     Accessibility › Spoken Content › System voice › Manage Voices adds one).
-   - Zoom's voice commands are still English only.
+9. **Spanish, read by people who speak it.** Everything Spanish was written without a native
+   speaker. Ask a Spanish-speaking musician to use the suite in Spanish on the Mac with Logic
+   open, say Voice's commands, and read:
+   - Voice: `apps/voice/limitless_voice/languages/es.yaml` (commands, replies, window words).
+     Check "Decir en voz alta lo que pasa", "Ya lo hice, comprobar de nuevo", "Lo que se oyó",
+     "Repetir la configuración…", "Deja que tu voz pulse las teclas", "De acuerdo" for OK. Voice
+     says "aplicación" and “…”, the other apps "app" and «…»: pick one.
+   - GazeStage (`apps/gazestage/renderer/index.html`, `strings-es`): "Avanzar" / "Rebobinar",
+     "Pedal" for Hold notes, "Selección posando" for dwell, "mira para no parar", "silencio".
+     These were shortened to fit at double text size; a better word must fit too (the smoke
+     test checks).
+   - The website (`docs/es/index.html`): the headline "Software de música para todos los
+     cuerpos" (the "every body" pun), "Con franqueza: en qué punto estamos", "ratón" or "mouse",
+     "83.5 %" or "83,5 %", the level names Conectado / Adaptable / Manos libres / Codiseñado, and
+     the macOS buttons named for a Spanish Mac ("Abrir igualmente", «Chip» / «Procesador»).
+   - On the Mac: set Limitless Sound's language to Español, check Voice offers its Spanish model
+     (39 MB) and that replies come in a Spanish voice (System Settings › Accessibility › Spoken
+     Content › System voice › Manage Voices adds one), and that VoiceOver reads each window in
+     Spanish.
 10. **More DAWs for Voice.** Voice has Logic Pro, Pro Tools and Ableton Live 12 (#85). The
     research for FL Studio, REAPER and GarageBand, each shortcut with its official source or
     marked unconfirmed, is in `apps/voice/DAW-SHORTCUTS.md`. With the DAW on the Mac, confirm the
@@ -356,3 +382,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   and lose a background agent's uncommitted work: commit and push early.
 - Limitless Sound's page has every English word in Spanish too. `test_languages.py` fails when a
   new English word on the page has no Spanish entry: add one to the `strings-es` table.
+- Every app's Spanish has a test that fails on a word with no Spanish: add the Spanish next to
+  the English (`strings-es` in a page, `words.py` in One-Hand and Zoom, `languages/es.yaml`
+  `texts` in Voice). GazeStage's smoke test holds the Spanish to the English at double text size
+  on the computer's own fonts. Ubuntu CI has DejaVu Sans, wider than a Mac's: to see what CI
+  sees, run the smoke test with a fontconfig file that offers only DejaVu (`FONTCONFIG_FILE`).
+- GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
+  account limit"), after a day of many suite builds: each one downloads every app for three
+  computers. The suite build and an app's release job then fail at the download step with no
+  code at fault. Re-run the failed job later; don't change code for it.
