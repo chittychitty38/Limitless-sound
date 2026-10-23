@@ -1,6 +1,9 @@
 # Default keyboard shortcuts: Ableton Live 12, GarageBand 10, REAPER 7, FL Studio
 
-Research for Limitless Voice DAW command packs. Compiled 2026-10-23.
+Research for Limitless Voice DAW command packs. Compiled 2026-10-23. A second pass the same day
+shipped GarageBand, REAPER and FL Studio in Voice, Control, One-Hand and Zoom: see
+[What shipped](#what-shipped-garageband-reaper-and-fl-studio) for every key the apps press, its source,
+and what was left out and why. `stress/test_daw_keys_agree.py` holds the four apps to the same keys.
 
 ## How this was verified (read first)
 
@@ -21,6 +24,127 @@ Copies of the official pages that were read verbatim:
 - FL Studio (Image-Line manual HTML, "FL Studio 2026" edition): https://raw.githubusercontent.com/sadoway7/flaik/HEAD/memory/07_Manual/basics_shortcuts.htm, plus `menu_edit.htm`, `menu_view.htm`, `menu_options.htm`, `menu_file.htm`, `menu_tools.htm`, `playlist.htm`, `mixer.htm` and `toolbar_panels.htm` in the same folder
 
 Coverage: **Ableton** and **FL Studio** are well covered (read verbatim). **REAPER** is partly covered: the official Quick Start and the v7 What's New guide only reached me as excerpts, and the full v7 key list wasn't reachable. **GarageBand** is poorly covered: Apple's "Main window shortcuts" page never showed up in search, so most of its rows are UNCONFIRMED.
+
+The second pass met the same blocks (support.apple.com, help.apple.com, reaper.fm, dlz.reaper.fm,
+user.cockos.com, forum.cockos.com, image-line.com and a GarageBand help mirror were all refused),
+so its new GarageBand and REAPER entries are EX too: excerpts of the official pages read through a
+search tool. The FL Studio mirror above was read again, verbatim.
+
+---
+
+## What shipped: GarageBand, REAPER and FL Studio
+
+Only keys an official source gives as a default on that system. Apps: **V** Voice
+(`packs/garageband.yaml`, `reaper.yaml`, `fl_studio.yaml`), **C** Control (`profiles.py`), **O** One-Hand
+(`layouts.json`), **Z** Zoom (`keymaps.py`). Keys are written Mac first, then Windows.
+
+### GarageBand 10 (Mac only)
+
+| Action | Key | Apps | Source | Tag |
+|---|---|---|---|---|
+| Play / stop | Space | V C | [Control playback with the transport buttons](https://support.apple.com/en-bn/guide/garageband/gbnd1f470623/mac) | EX |
+| Record | R | V C O | [Record to an audio track](https://support.apple.com/en-by/guide/garageband/gbnd302d468d/mac), [Record software instruments](https://support.apple.com/en-gb/guide/garageband/gbnd40fcef0f/10.4.7/mac/11.5), [Record to multiple software instrument tracks](https://support.apple.com/guide/garageband/record-to-multiple-software-instrument-tracks-gbnd3fc4299c/10.4.7/mac/11.5) | EX (three pages agree) |
+| New track (opens the New Track dialog) | Option-Command-N | V C O | [Create tracks](https://support.apple.com/guide/garageband/create-tracks-gbnd22a07333/10.4.4/mac/11.0) | EX |
+| Show automation | A | V C O | [Show track automation curves](https://support.apple.com/en-mide/guide/garageband/gbnd939b92d8/10.4.7/mac/11.5) | EX |
+| Musical Typing | Command-K | V C O | [Play software instruments](https://support.apple.com/guide/garageband/play-software-instruments-gbndd5278cd1/10.4.4/mac/11.0) | EX |
+| Undo / redo | Command-Z / Shift-Command-Z | V (everyday commands) C O | [Undo and redo edits in GarageBand on Mac](https://support.apple.com/en-hk/guide/garageband/gbnd674b44b9/mac) | EX |
+| Save | Command-S | V (everyday commands) C O | [Mac keyboard shortcuts](https://support.apple.com/en-us/102650) ("Command-S: Save the current document"). macOS-wide; GarageBand's own page wasn't found. | EX |
+| Zoom in / out, taller / shorter | Command-→ / ←, ↓ / ↑ | Z only, **from before this pass** | none: these are Logic Pro's keys. Apple's [Scroll and zoom in the Tracks area](https://support.apple.com/en-ph/guide/garageband/gbndd75e5c48/mac) only describes the zoom slider. | **UNCONFIRMED** |
+
+Left out: cycle (C?), metronome (K is Apple's key on iPad and iPhone only), go to start (Return?),
+bar steps, previous/next track (arrows?), mute, solo, record arm, split (Command-T is iPad/iPhone
+only), join, quantize, delete, the Library, Smart Controls, editors and mixer. None is in an Apple
+page that could be read. Control's GarageBand profile puts plain arrow keys on the D-pad and Return
+("Enter / OK", for the New Track dialog) on LB, labelled as those keys, not as DAW commands.
+
+### REAPER 7 (Mac and Windows)
+
+Windows keys from Cockos' guides. The Mac keys follow the rule the REAPER User Guide gives (Ctrl is
+Command, Alt is Option, [UG5]) and, where listed, Cockos' own Mac summary
+([OSX08] = https://user.cockos.com/~glazfolk/ReaperKeyboardShortcutsOSX.pdf, REAPER 2.x, June 2008).
+
+| Action | Mac / Windows | Apps | Source | Tag |
+|---|---|---|---|---|
+| Play / stop | Space | V C | [QS] | EX |
+| Record | Cmd+R / Ctrl+R | V C O | [QS] "Record start/stop [Ctrl+R]"; [OSX08] Cmnd+R | EX; Mac OLD |
+| Loop (repeat) on/off | R | V C O | [QS] "Toggle loop playback [R]" | EX |
+| Go to start | W | V C O | [QS] "Go project start [W] or [Home]" | EX |
+| Go to end | End | V C O | [QS]; [UG459] "Go to end of project / End"; [SONAR] | EX |
+| Add marker | M | V C O | [QS] | EX |
+| New track | Cmd+T / Ctrl+T | V C O | [QS] Insert > Track [Ctrl+T]; [OSX08] Cmnd+T | EX; Mac OLD |
+| Previous / next track | Cmd+Opt+↑/↓ / Ctrl+Alt+↑/↓ | V C O | [QS], [UG5]; [OSX08] Option+Command+Up/Down | EX; Mac OLD |
+| Split items at the edit cursor | S | V C O | [QS] "Split Items [S]"; [U668] "S splits selected media items or, if no item is selected, all media items, at the current cursor position" | EX |
+| Undo | Cmd+Z / Ctrl+Z | V (everyday) C O | [UG5]; [SONAR]; [OSX08] | OLD (consistent 2008–2019) |
+| Redo | Cmd+Shift+Z / Ctrl+Shift+Z | V C O | [UG5]; [SONAR]; [OSX08] Shift+Cmnd+Z | OLD (consistent 2008–2019). Voice's REAPER pack replaces the everyday Windows redo (Ctrl+Y). |
+| Show mixer | Cmd+M / Ctrl+M | V C O | [QS] "Show/hide mixer ... [Ctrl+M]"; [W7] "if you close the mixer (Ctrl M)"; [OSX08] Cmnd M | EX; Mac OLD |
+| Zoom to project (fit) | Cmd+PageDown / Ctrl+PageDown | V C O Z | [QS] "Zoom to project"; [UG5] | EX |
+| Render (export) dialog | Cmd+Opt+R / Ctrl+Alt+R | V | [QS] File > Render | EX |
+| Select all | Cmd+A / Ctrl+A | V (everyday) | [SONAR] (depends on focus); [OSX08] | OLD |
+| Save | Cmd+S / Ctrl+S | V (everyday) C O | [QS] | EX |
+
+Extra sources for this table: [U668] REAPER Update Summary 6.68–6.72,
+https://dlz.reaper.fm/userguide/REAPER%20main%20changes%20668%20to%20672.pdf (EX); [UG459] User Guide
+v4.59, http://dl.reaper.fm/userguide/ReaperUserGuide459C.pdf (EX, OLD); [SONAR] 2017 SONAR to REAPER
+Quickstart, https://www.reaper.fm/guides/SONARtoREAPER_2017a.pdf (EX, OLD).
+
+Left out: metronome, mute, solo and record arm (no default key; [W7] suggests assigning one), zoom
+in/out (the Quick Start excerpt and the v5 User Guide give + and - opposite ways round; Zoom keeps
+using the screen magnifier for REAPER until it's checked), vertical zoom, go to bar (Ctrl+J opens a
+Jump To dialog whose reading of a bare number wasn't confirmed), glue, duplicate, quantize, delete,
+the MIDI editor, Media Explorer and automation. Rendering is in Voice only.
+
+### FL Studio (Mac and Windows; Image-Line manual, "FL Studio 2026" edition)
+
+Mac keys from the manual's own table: Ctrl is Command, Alt is Option; keys it doesn't list there
+(Home, Page Up/Down, F-keys) are the same on both, since the table lists only "where they differ".
+
+| Action | Mac / Windows | Apps | Source (all [FL] unless named) | Tag |
+|---|---|---|---|---|
+| Play / stop | Space | V C | "Start/Stop Playback" | OK |
+| Record mode on/off | R | V C O | "Switch On/Off recording"; [FL-tb] "Record (R) - Switches between record and play mode ... When the record button is armed, pressing Play starts the recording process" | OK |
+| Metronome | Cmd+M / Ctrl+M | V C O | "Toggle metronome"; [FL-menu] Options "Metronome (Ctrl+M)" | OK |
+| Go to start | Home | V C O | Playlist "Move playback marker to start" | OK |
+| Next / previous bar | Numpad * / Numpad / | V | "Next bar (Song mode)", "Previous bar (Song mode)" | OK |
+| Add time marker | Opt+T / Alt+T | V C O | Playlist "Add Time marker" | OK |
+| Previous / next channel | ↑ / ↓ | V C O | Channel Rack "Select Channel above/below" | OK |
+| Solo (Mixer track) | S | V C O | Mixer "Solo Current track" | OK |
+| Undo (one step back) | Cmd+Opt+Z / Ctrl+Alt+Z | V C O | "Undo step-by-step"; [FL-menu] Edit: "Ctrl+Alt/Opt+Z steps back through the history" | OK |
+| Mixer | F9 | V C O | "Show/hide Mixer"; [FL-menu] View | OK |
+| Piano roll | F7 | V C O | "Toggle Piano roll" | OK |
+| Playlist | F5 | V C O | "Toggle Playlist" | OK |
+| Channel Rack | F6 | V C O | "Toggle Step Sequencer"; [FL-menu] View "Channel rack (F6)" | OK |
+| Browser | Opt+F8 / Alt+F8 | V C O | "Show/hide Sample Browser"; [FL-menu] View | OK |
+| Zoom in / out | Page Up / Page Down | V C O Z | Playlist and Piano roll "Zoom in/Zoom out" | OK |
+| Zoom to fit (show all) | Shift+4 | V C O Z | Playlist and Piano roll "Horizontal Zoom, show all" | OK |
+| Export WAV (render options) | Cmd+R / Ctrl+R | V | "Export wave file"; [FL-tb] "Render as Audio File (Ctrl+R)" | OK |
+| Save | Cmd+S / Ctrl+S | V (everyday) C O | "Save file" | OK |
+
+Left out, on purpose:
+- **"record"**: R only switches record mode, and play then records. Voice offers "record mode"
+  instead, so the suite's take mode (which only hears "stop") doesn't start before the take does and
+  swallow the "play". The suite's Record does nothing in FL Studio in Control and One-Hand too.
+- **redo**: Ctrl/Cmd+Z is "Undo/Redo last edit": it redoes only after an undo, and otherwise undoes
+  the last edit. "Undo" presses Ctrl/Cmd+Alt/Opt+Z (step back) instead, so two undos never cancel
+  out, and Voice's "redo" presses nothing and says to press Command/Ctrl+Z.
+- **duplicate**: Ctrl/Cmd+B is "Duplicate selection to the right" in the Playlist and Piano roll but
+  "Toggle blend notes" (recording) in the transport list.
+- **delete**: Del in the Playlist is "Delete selected clip/pattern source data".
+- **split**: Insert is "Slice Clip at cursor position", and the manual doesn't say whether that's the
+  mouse or the playhead.
+- **quantize**: a different key per window (Playlist Shift+Q, Piano roll Ctrl/Cmd+Q).
+- **consolidate**: Ctrl/Cmd+Alt/Opt+C renders clips; held back with the other destructive keys.
+- loop, go to end, new track, track mute and record arm: no default key.
+- Zoom presets, the Mixer's track keys and pattern keys.
+
+### Finding the DAW in front
+
+| DAW | Mac bundle ID (Control, One-Hand, Zoom) | Windows program (Control, One-Hand, Zoom) | Voice (by name) | Sources |
+|---|---|---|---|---|
+| GarageBand 10 | `com.apple.garageband10` (GarageBand 6 and older were `com.apple.garageband`) | none (Mac only) | "GarageBand" | [Appaloosa Scout](https://scout.appaloosa.io/apps/macos/com.apple.garageband10) (Mac App Store listing, 10.4.14); [Does It ARM](https://doesitarm.com/app/garageband) (Info.plist); already used by Zoom since 0.1 |
+| REAPER 7 | `com.cockos.reaper` (Control also `com.cockos.reaper*`, for older REAPER64.app builds) | `reaper.exe` | "REAPER", "REAPER64" | [Does It ARM](https://doesitarm.com/app/reaper) (Info.plist CFBundleIdentifier, 6.38); [appcatalog](https://appcatalog.cloud/apps/reaper) (code requirement, team Y3T58622SG); the SWS extension's own `SnM/SnM.h` (`reaper.exe`, `REAPER64.app`, `REAPER.app`): https://github.com/reaper-oss/sws/blob/master/SnM/SnM.h |
+| FL Studio | `com.image-line.flstudio` (process `OsxFL`) | `FL64.exe`, `FL64 (scaled).exe` | "FL Studio …", "FL64", "OsxFL" | Image-Line knowledge base, "Why are there multiple FL launch files" (https://support.image-line.com/action/knowledgebase?ans=526, EX): FL64.exe on 64-bit Windows, FL64 (scaled).exe for plugin scaling; [FL-tb] "All FL Studio releases since 20.8.4 are 64-bit only" (OK); a macOS crash report on Image-Line's forum (https://forum.image-line.com/viewtopic.php?p=1374752, EX) and [appcatalog](https://appcatalog.cloud/apps/fl-studio) for the bundle ID and `OsxFL` |
+
+FL.exe (the 32-bit FL Studio, before 20.8.4) isn't matched.
 
 ---
 
@@ -134,6 +258,7 @@ All entries are EX (Apple search excerpts). Apple's "Main window shortcuts in Ga
 - **Musical Typing** (Command-K): turns letter keys into notes, with Z/X for octave and C/V for velocity (Apple page above). Whether it swallows single-letter shortcuts such as R and A while open is UNCONFIRMED.
 - Most of the pack cannot be confirmed from here. Before shipping, check it on a real Mac against Apple's "Main window shortcuts in GarageBand on Mac" page (linked from https://support.apple.com/en-au/guide/garageband/gbnd715f33a0/10.4.7/mac/11.5) or against GarageBand's own menus.
 - **Layout**: macOS app menu shortcuts are generally matched by character, but this is UNCONFIRMED for GarageBand.
+- **Zoom's GarageBand keys** (Command-arrows, from Limitless Zoom's first version) are Logic Pro's; no Apple GarageBand page gives them.
 
 ---
 
@@ -190,7 +315,8 @@ Sources:
 
 ### REAPER risks
 - **The keymap is fully user-editable**, and many users replace it. In particular, OSARA (the screen-reader extension) ships its own Windows and Mac keymaps (https://github.com/jcsteh/osara, `config/windows/reaper-kb.ini` and `config/mac/reaper-kb.ini`). A default-keymap pack will misfire on those setups.
-- **Mac/Windows**: the Mac column is derived, not documented. Before shipping, read the real list on the target machine via Help > Key bindings and mouse modifiers (Shift+F1 per the user guide, EX).
+- **Mac/Windows**: the Mac column is derived, not documented. Before shipping, read the real list on the target machine via Help > Key bindings and mouse modifiers (Shift+F1 per the user guide, EX). Second pass: Cockos' own 2008 Mac summary ([OSX08], under What shipped) gives Cmd+R, Cmd+T, Cmd+M, Cmd+Z, Shift+Cmd+Z, Cmd+A and Option+Cmd+Up/Down, matching the rule, but it is from REAPER 2.x.
+- **Cmd+M on a Mac** is Minimize in most apps (Window menu). [OSX08] gives it to REAPER's mixer; check that REAPER 7 on macOS still does.
 - **Context sections**: single letters (S, M, R, W) belong to the Main (arrange) section. The MIDI editor and Media Explorer have separate action sections, so the same key can do something else there.
 - **Keyboard layout**: UNCONFIRMED whether REAPER binds by character or by virtual key.
 
@@ -256,6 +382,10 @@ Mac column: from Image-Line's own equivalence table in [FL]. Ctrl→Cmd, Alt→O
 - **Numpad-only shortcuts** (bar jump, fast forward, marker jump) don't exist on most Mac and laptop keyboards. Whether synthetic keypad keycodes work is UNCONFIRMED.
 - **Easy-to-confuse keys**: Ctrl+D (deselect), Ctrl+N (save new version), Ctrl+Z (undo/redo toggle), and Del in the Playlist (deletes source data).
 - **Layout**: UNCONFIRMED. The toolbar page mentions "Standard keyboard layouts" only for the typing-to-piano note layout.
+- **Ctrl/Cmd+B** is "Toggle blend notes" in the transport list and "Duplicate selection to the right" in the Playlist and Piano roll (second pass), so it isn't offered.
+- **Ctrl/Cmd+M**: besides Import MIDI file in the Piano roll, a user on Image-Line's forum (not the manual) says it does something else with the Playlist focused: https://forum.image-line.com/viewtopic.php?t=173390.
+- **Record button options** ([FL-tb]): "Recording starts playback" makes R start playing too, and "Disarm on stop" switches record mode off at stop. Either changes what "record mode" then "play" does.
+- **F-keys on a Mac** (F5–F9 open FL Studio's windows) act as media keys unless the Mac is set to use standard function keys; whether synthetic F-key presses get past that is UNCONFIRMED (the same applies to Ableton's F9 and Pro Tools' F12).
 
 ---
 
@@ -264,3 +394,31 @@ Mac column: from Image-Line's own equivalence table in [FL]. Ctrl→Cmd, Alt→O
 - **GarageBand**: almost everything except Space, R, Option-Command-N, A, Command-K, the editor transpose keys, and the macOS-standard undo/redo/save. Cycle, metronome, go to start, split, join, Library, Smart Controls, editor, solo/mute and zoom are all UNCONFIRMED.
 - **REAPER**: the entire Mac column. Metronome, duplicate track, glue/duplicate/quantize/delete keys, MIDI editor and automation keys, horizontal zoom direction (sources conflict), next/previous marker, and bar nudge. Undo/redo were confirmed only in v5 docs.
 - **FL Studio**: Mac keys for Home and PgUp/PgDn. Insert-slice target (mouse vs playhead). Direction of the marker-jump keys. Zoom-to-selection key (the manual contradicts itself). Whether the 2024/21 editions differ from the 2026 manual.
+
+## Check on a real computer before telling musicians it works
+
+What shipped rests on excerpts (EX) and old guides (OLD) as much as on verbatim pages, so before
+announcing GarageBand, REAPER and FL Studio support, try each key in What shipped on the real app:
+
+- **GarageBand 10 (Mac)**: every shipped key, on GarageBand's own menus (Track > New Track,
+  Mix > Show Automation, Window > Show Musical Typing, Edit > Undo/Redo). Whether R still records and A
+  still shows automation with the Musical Typing window open. Zoom's Command-arrow keys. Then read
+  Apple's "Main window shortcuts" page (Help > GarageBand Help) and add the cycle, metronome, go to
+  start, track and zoom keys it gives.
+- **REAPER 7 (Mac and Windows)**: on a fresh install (Help > Key bindings and mouse modifiers, or
+  Actions > Show action list): Ctrl/Cmd+R, R, W, End, M, Ctrl/Cmd+T, Ctrl/Cmd+Alt/Opt+Up/Down, S,
+  Ctrl/Cmd+Shift+Z, Ctrl/Cmd+M (on a Mac, that it opens the mixer and doesn't minimize),
+  Ctrl/Cmd+Page Down and Ctrl/Cmd+Alt/Opt+R. Which way + and - zoom, so Zoom can use them. With OSARA
+  installed, which of these its key map changes.
+- **FL Studio 2024 or 21 (Mac and Windows)**: R then Space (record mode, then a take), Ctrl/Cmd+M (with the Playlist, Channel Rack
+  and Piano roll in front), Home, Numpad * and /, Alt/Opt+T, Up/Down in the Channel Rack, S in the
+  Mixer, Ctrl/Cmd+Alt/Opt+Z, F5–F9 and Alt/Opt+F8 (on a Mac with and without standard function keys),
+  Page Up/Down and Shift+4 in the Playlist and Piano roll, Ctrl/Cmd+R. That FL Studio 2024 and 21 match
+  the 2026 manual read here. On a Mac, the app's name in the menu bar (Voice matches "FL Studio…") and
+  its bundle ID (`com.image-line.flstudio`).
+- **Detection**: that each app switches when the DAW comes to the front: GarageBand
+  (`com.apple.garageband10`), REAPER (`com.cockos.reaper`, and an older REAPER64.app's bundle ID),
+  `reaper.exe`, FL Studio (`com.image-line.flstudio`), `FL64.exe` and `FL64 (scaled).exe`.
+- **Spanish**: "canales" (FL Studio's "mostrar los canales") is the one word Voice's Spanish
+  recognizer didn't already listen for, so it hasn't been checked against the Spanish model yet;
+  `stress/test_voice_language.py` with that model (CI's Spanish job) does.
