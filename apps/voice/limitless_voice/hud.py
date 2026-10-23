@@ -54,6 +54,7 @@ class Hud(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.setFocusPolicy(Qt.NoFocus)
+        self.text = lambda english: english   # the state's name in Voice's language (Language.text)
         self.setWindowTitle("Limitless Voice")   # a window it draws itself: named for screen readers
         self.setAccessibleName("What Limitless Voice heard")
 
@@ -124,7 +125,7 @@ class Hud(QWidget):
         size = self.dot.width()
         edge = "border: 2px solid white;" if self.high_contrast else ""
         self.dot.setStyleSheet(f"background: {colour}; border-radius: {size // 2}px; {edge}")
-        self.state_label.setText(label)
+        self.state_label.setText(self.text(label))
 
     def _colour_did(self):
         if self.high_contrast:

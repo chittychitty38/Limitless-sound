@@ -182,7 +182,7 @@ class MainWindowAndDialogs(Base):
         save_cancel = sorted(dialog.findChild(QDialogButtonBox).buttons(), key=lambda b: b.x())   # as shown here
         self.assert_tab_order(dialog, [dialog.speak, dialog.rate, dialog.start_listening, dialog.vocab,
                                        dialog.on_top, dialog.scale, dialog.contrast, dialog.hotkey,
-                                       dialog.model, *save_cancel])
+                                       dialog.language, dialog.model, *save_cancel])
         dialog.reject()
 
     def test_status_text_is_read_and_its_changes_posted(self):

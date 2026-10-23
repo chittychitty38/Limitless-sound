@@ -17,15 +17,15 @@ from .settings import data_dir
 DEFAULT_MODEL = "vosk-model-small-en-us-0.15"
 MODEL_URL = "https://alphacephei.com/vosk/models/{name}.zip"
 
-# Models users can choose in Settings. Size is the download. On real people's recordings the
-# larger English model heard no more of Voice's words than the small one (90.6% against 91.6%),
-# and kept a processor core about six times as busy (stress/test_voice_real_speech.py, October
-# 2026), so it isn't offered as more accurate.
-MODELS = {
-    "vosk-model-small-en-us-0.15": ("English (US), fast", "40 MB"),
-    "vosk-model-en-us-0.22-lgraph": ("English (US), large, slower", "128 MB"),
-    "vosk-model-small-en-in-0.4": ("English (India), fast", "36 MB"),
-}
+
+def _models():
+    from .language import available, load
+    return {name: (m["label"], m["size"]) for code, _ in available() for name, m in load(code).models.items()}
+
+
+# Models users can choose in Settings, for every language: name -> (label, download size).
+# Each language's file lists its own (languages/<code>.yaml).
+MODELS = _models()
 
 
 def _search_dirs():

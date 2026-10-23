@@ -17,6 +17,7 @@ win = sys.platform.startswith("win")
 
 datas = [
     ("limitless_voice/packs", "limitless_voice/packs"),
+    ("limitless_voice/languages", "limitless_voice/languages"),   # every language's words; models are downloaded
     ("limitless_voice/assets", "limitless_voice/assets"),
     (f"models/{MODEL}", f"models/{MODEL}"),
 ]

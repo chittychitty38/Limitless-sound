@@ -13,6 +13,7 @@ memory that keeps climbing over a long session.
 | `test_voice_real_speech.py` | Limitless Voice hearing real people, not a synthetic voice: thousands of people saying single words, and an hour of people reading aloud. See [Real people](#real-people) below. |
 | `test_zoom_real_speech.py` | Limitless Zoom hearing the same recordings: do stray words or ordinary talk zoom the screen? |
 | `test_command_words.py` | Voice and Zoom hearing real people say their own command words ("record", "cut", "paste", "fit" ...), which Speech Commands doesn't have. See [Command words](#command-words) below. |
+| `test_voice_language.py` | Every word Voice listens for in a language is one its speech model knows. See [Spanish](#spanish) below. |
 | `test_zoom_noise.py` | Limitless Zoom's commands said with a band playing under them, at three loudness levels: still heard? Does the band zoom by itself? |
 | `test_control_stress.py` | Limitless Control: switch contact bounce, a trigger held at the threshold with a tremor, unplugging mid-press, every input mashed at once, a soak. |
 | `test_zoom_stress.py` | Limitless Zoom: held switch and zoom keys, a lost key-up, a key storm, every action in every app. |
@@ -189,8 +190,73 @@ VOSK_MODEL=/path/to/vosk-model-small-en-us-0.15 SPEECH_COMMANDS_DIR=/tmp/real-sp
 
 `REAL_SPEECH_PER_WORD` changes the 100 clips a word. Each time the recognizer is built it warns
 about every command word the small model doesn't know; CI shows each warning once. The
-sounds-alike spellings in `grammar.py` cover most of them, but not the app names "ableton",
+sounds-alike spellings in `apps/voice/limitless_voice/languages/en.yaml` cover most of them, but not the app names "ableton",
 "bitwig", "cubase" and "protools", so "open cubase" can't be heard as a command.
+
+### Spanish
+
+Voice in Spanish (`VOICE_LANGUAGE=es`) gets the same two checks with Spanish recordings, in
+its own CI job:
+
+- **Command words:** MSWC's Spanish clips of Voice's Spanish command words, cut from sentences
+  people read for Common Voice, with Logic Pro in front, judged as above; number words, which
+  alone do nothing ("heard as itself"); and words that sound like a command and aren't
+  ("pagar" and "pegar", "corto" and "cortar", "guardia" and "guardar"). Voice listens for other
+  forms of its command words ("grabado", "unión"), so those count as words it listens for, not
+  stray words. MSWC has no clip of a word shorter than three letters ("sí", "no") and few of
+  some commands ("borrar" 7, "suprimir" 5).
+- **Ordinary talk:** an hour of [FLEURS](https://arxiv.org/abs/2205.12446) Latin American
+  Spanish (es_419): Wikipedia sentences read aloud by native speakers, the first hour of its
+  dev split. FLEURS doesn't say who read what, so the hour is cut into 40 stretches, each heard
+  as one person reading.
+- **Vocabulary:** every word Voice listens for is one the Spanish model knows
+  (`test_voice_language.py`, which also runs for English).
+
+What CI measured, Voice 0.4.0 in Spanish with Logic Pro in front (two runs), next to English the
+same day:
+
+| | Spanish | English |
+|---|---|---|
+| Command words right at once | **83.5% to 83.6%** (1,657 clips, 40 words) | 73.6% to 73.7% (1,505 clips, 17 words) |
+| At once or with a yes | **84.2%** | 82.3% |
+| Destructive key from a word not said | 0 | 0 |
+| Stray words that fired a command | 6.2% to 6.5% (sound-alikes: "pagar", "paga", "paso", "cola", "corto", "mezcla") | 0.4% to 0.9% ("taller", "shorter", "zoom") |
+| Words it listens for, heard as themselves | 81.9% (numbers, and other forms of command words) | 83% ("again") |
+| An hour of reading aloud: commands fired in Logic Pro / Pro Tools | 1.0 / 0, none destructive (FLEURS) | 0 / 3.8, none destructive (LibriSpeech) |
+| Acts after the word, median | 1.38 s; play, stop, record 0.57 s | 1.10 s; play, stop, record 0.58 s |
+
+What it shows:
+
+- **Spanish words one letter apart.** In the first runs, people's "corte" and "corto" came back
+  as "corta" from both recognizers and pressed Cut, and the imperatives "corta", "pega" and
+  "elimina" are a vowel from other forms of the same verbs. So Cut, Paste, Delete and Duplicate
+  are said alone only as infinitives ("cortar", "pegar", "eliminar", "borrar", "duplicar"), as
+  Spanish menus name them, and never run on a near miss.
+- **Other forms of a command word are listened for.** Before, "grabado" pressed Record 44
+  times in 100, "sola" Solo 82 in 100, "detenido" Stop 33 in 65 and "dividido" Split 51 in 68.
+  Voice now listens for such forms (and for "este" and "nada", said alone all the time), so
+  they're written down as themselves: 76 and 78 in 100, 60 in 65 and 51 in 68.
+- **A sentence can come back all in command words**, because Spanish's include "de", "la" and
+  "al": "abrir te garage de al ir al en ese punto" opened an app. In Spanish, "abre ..." and
+  "escribe ..." take their words from the open recognizer only.
+- **"pagar" is heard as "parar"** (Stop) 13 times in 36. Not destructive, and FLEURS's hour of
+  reading never did it.
+- **"dos" and "diez" alone** are heard as themselves about half the time ("los", "es"), the other
+  numbers 73% to 99%. In "compás dos" the command around them helps; that isn't measured here.
+- **Acting takes 0.3 s longer than in English**, because the Spanish model waits longer before
+  it ends an utterance. Play, stop and record go the moment they're heard, as in English.
+
+Run it yourself (about 650 MB is read, once: 440 MB of MSWC's 7.4 GB Spanish archive, its
+lists, and 90 MB of FLEURS's 2.3 GB):
+
+```sh
+pip install vosk==0.3.44 soundfile pytest psutil numpy pyyaml platformdirs
+python stress/tools/get_command_words.py /tmp/command-words-es --lang es
+python stress/tools/get_fleurs.py /tmp/fleurs-es --lang es_419
+VOICE_LANGUAGE=es VOSK_MODEL=/path/to/vosk-model-small-es-0.42 COMMAND_WORDS_DIR=/tmp/command-words-es \
+  TALK_DIR=/tmp/fleurs-es python -m pytest stress/test_voice_language.py stress/test_voice_real_speech.py \
+  stress/test_command_words.py -v -s
+```
 
 The recordings are not in this repository, and must not be committed. They are all under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/):
@@ -202,6 +268,13 @@ The recordings are not in this repository, and must not be committed. They are a
 - Multilingual Spoken Words Corpus: MLCommons,
   [mlcommons.org/datasets/multilingual-spoken-words](https://mlcommons.org/datasets/multilingual-spoken-words/);
   Mazumder et al., 2021, NeurIPS Datasets and Benchmarks. Made from Mozilla Common Voice (CC0).
+  The English and the Spanish clips.
+- FLEURS: Alexis Conneau, Min Ma, Simran Khanuja, Yu Zhang, Vera Axelrod, Siddharth Dalmia,
+  Jason Riesa, Clara Rivera and Ankur Bapna, "FLEURS: Few-shot Learning Evaluation of Universal
+  Representations of Speech", 2022. Google. The Latin American Spanish hour.
+
+The speech models aren't in this repository either. The English one is Apache 2.0, and so is
+the Spanish one, vosk-model-small-es-0.42 (Alpha Cephei, alphacephei.com/vosk/models).
 
 None of this replaces a person with a real mic, webcam, controller and DAW. That checklist is in
 [HANDOFF.md](../HANDOFF.md).
