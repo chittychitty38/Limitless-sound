@@ -199,11 +199,12 @@ class SettingsDialog(QDialog):
         words.show(self.language.setAccessibleDescription, ui.text("Language to listen and answer in"))
         same = load_language(self.suite_language).name
         add_item(self.language, ui.text("Same as Limitless Sound ({language})", language=same), "")
-        for code, name in available():
+        for code, _ in available():
             lang = load_language(code)
             here = any(find_model(m) for m in lang.models)
-            add_item(self.language, name if here else
-                     ui.text("{language} ({size} download)", language=name, size=lang.models[lang.model]["size"]), code)
+            add_item(self.language, lang.label if here else
+                     ui.text("{language} ({size} download)", language=lang.label, size=lang.models[lang.model]["size"]),
+                     code)
         self.language.setCurrentIndex(max(0, self.language.findData(settings.language)))
         add_row(form, ui.text("Language"), self.language)
         self.language_note = LiveText(ui.text("About the language"))
@@ -240,6 +241,7 @@ class SettingsDialog(QDialog):
         missing = not find_model(model_for(lang, self.settings.model))
         note = lang.text("{language} is downloaded once ({size}), then works without internet.",
                          language=lang.name, size=lang.models[lang.model]["size"]) if missing else ""
+        note = " ".join(t for t in (lang.preview, note) if t)   # a preview says so first
         self.language_note.setText(note)
         self.language_note.setVisible(bool(note))
 

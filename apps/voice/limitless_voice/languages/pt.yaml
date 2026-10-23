@@ -16,6 +16,13 @@
 code: pt
 name: Português
 english_name: Portuguese
+# A preview, and Settings says so. The only small Portuguese speech model under a permissive licence
+# hears real people's command words about 6 times in 10, where Spanish's hears 8 in 10: on the same
+# kind of recordings it hears nothing at all in a third of them (Spanish's: 4%), and on read
+# sentences it gets 27% of words wrong (Spanish's: 15%). See stress/README.md.
+preview:
+  label: Português (prévia)
+  note: 'Prévia: em português, o Limitless Voice entende cerca de 6 em cada 10 comandos ditos por pessoas reais, menos que em inglês e espanhol. Diga os comandos inteiros, como "tocar", "voltar" e "salvar".'
 
 # vosk-model-small-pt-0.3, Apache 2.0 (Alpha Cephei, alphacephei.com/vosk/models).
 # Downloaded once when Portuguese is chosen; the installers ship only English.
@@ -42,7 +49,7 @@ words:
   dictation_off: [parar ditado, parar o ditado, terminar ditado, terminar o ditado, encerrar ditado,
                   encerrar o ditado, modo comandos, modo comando, desativar ditado, desativar o ditado,
                   ditado desligado]
-  take_stop: [parar, pare, stop, parar gravação, parar a gravação, pare a gravação, parar reprodução,
+  take_stop: [parar, pare, para, stop, parar gravação, parar a gravação, pare a gravação, parar reprodução,
               parar a reprodução, pare a reprodução, parar o take]
   take_off: [sair do modo take, modo take desligado, todos os comandos]
   scratch: [apaga isso, apagar isso, risca isso]
@@ -477,9 +484,10 @@ commands:
   Logic Pro:
     play: &play
       play: ["tocar", "reproduzir"]
-      # Not "para": it's also "for", said all the time, the model heard real people's "para" only
-      # 29 times in 100, and a reader's "para" pressed Play 4 times an hour. "pare" is the stop sign.
-      stop: ["parar", "pare", "stop"]
+      # "para" too, how Brazilians say stop: real people's "parar" and "pare" came back as "para"
+      # 10 times in 63, and without it were missed. It's also "for", said all the time, but a
+      # sentence with it in isn't a command (sentence_words). "pare" is the stop sign.
+      stop: ["parar", "pare", "para", "stop"]
       start playback: ["iniciar [a] reprodução", "começar [a] reprodução"]
       stop playback: ["parar [a] reprodução", "pare [a] reprodução", "parar de tocar", "para de tocar"]
     record: &record ["gravar", "começar a gravar", "comece a gravar", "começa a gravar",

@@ -5,6 +5,8 @@ The command packs (packs/*.yaml) are written in English and hold every shortcut 
 file, languages/<code>.yaml, with:
 
   models       the speech models for it; the first is the one to use
+  preview      for a language whose speech model hears much less than the others: what Settings
+               says about it, in the language ("Prévia: ..."), and its name there ("label")
   voice        how to find a system voice for spoken replies
   words        Voice's own phrases: wake, sleep, yes, cancel, again, help, dictation...
   numbers      its number words (see numbers.py)
@@ -51,6 +53,9 @@ class Language:
         self.code = data["code"]
         self.name = data["name"]                    # in the language itself: "Español"
         self.english_name = data.get("english_name", self.name)
+        preview = data.get("preview") or {}
+        self.label = preview.get("label", self.name)   # its name in Settings: "Português (prévia)"
+        self.preview = preview.get("note", "")         # what Settings says about it
         self.models = dict(data["models"])           # name -> {label, size}
         self.model = next(iter(self.models))
         self.voice = data.get("voice") or {}

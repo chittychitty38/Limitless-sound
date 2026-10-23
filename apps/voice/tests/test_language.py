@@ -376,7 +376,7 @@ class PortugueseEngine(unittest.TestCase):
             ("Logic Pro", "salva", []),                  # "sala" came back as it
             ("Logic Pro", "toca", []),                   # said alone, a command is the infinitive
             ("Logic Pro", "volta", []),
-            ("Logic Pro", "para", []),                   # also "for"
+            ("Logic Pro", "para", ["space"]),            # how Brazilians say stop
             ("Logic Pro", "toca a partir daqui", []),
             ("Logic Pro", "silencia a faixa", ["m"]),
             ("Logic Pro", "muta", []),                   # and "muita" as this
@@ -405,8 +405,8 @@ class PortugueseEngine(unittest.TestCase):
         for heard, open_, keys in [("parar", "quando você liga para alguém que", []),
                                    ("solo", "polo químicas", []),
                                    ("dividir", "o que alguns casos", []),
-                                   ("parar", "e acampamento parar famílias com", []),   # three more words
-                                   ("parar", "parar o", ["space"]),
+                                   ("para", "e acampamento para famílias com", []),   # three more words
+                                   ("para", "para o", ["space"]),
                                    ("parar", "parar", ["space"]), ("parar", "", ["space"]),
                                    ("parar", "pare", ["space"]),            # one word: could be it
                                    ("tocar", "tocar agora", ["space"]),     # the command is in it
@@ -632,7 +632,12 @@ class ChoosingTheLanguage(unittest.TestCase):
         dialog = app_module.SettingsDialog(w, self.s, w.suite_language())
         items = [dialog.language.itemText(i) for i in range(dialog.language.count())]
         self.assertEqual(items, ["Same as Limitless Sound (English)", "English (40 MB download)",
-                                 "Español (39 MB download)", "Português (31 MB download)"])
+                                 "Español (39 MB download)", "Português (prévia) (31 MB download)"])
+        dialog.language.setCurrentIndex(dialog.language.findData("pt"))   # a preview says so first
+        self.assertTrue(dialog.language_note.text().startswith("Prévia: em português, o Limitless Voice entende "
+                                                               "cerca de 6 em cada 10 comandos"))
+        self.assertTrue(dialog.language_note.text().endswith("O português é baixado uma vez (31 MB) e depois "
+                                                             "funciona sem internet."))
         dialog.language.setCurrentIndex(dialog.language.findData("es"))
         self.assertEqual(dialog.model.itemData(0), "vosk-model-small-es-0.42")
         self.assertEqual(dialog.language_note.text(),
