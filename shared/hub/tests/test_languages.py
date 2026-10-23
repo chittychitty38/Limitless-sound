@@ -188,3 +188,17 @@ def test_the_hubs_own_words_have_spanish_too():
 def test_spanish_keeps_every_placeholder():
     for en, es in _spanish(_page()).items():
         assert sorted(re.findall(r"\{\w+\}", en)) == sorted(re.findall(r"\{\w+\}", es)), en
+
+
+def test_a_speaker_that_takes_only_the_text_still_speaks_english():
+    class TextOnly:
+        def __init__(self):
+            self.said = []
+
+        def say(self, text):
+            self.said.append(text)
+
+    b = Bus({"prefs": {"language": "en"}}, TOKEN, speaker=TextOnly(), launcher=FakeLauncher())
+    b.invoke("hub.status")
+    b.invoke("hub.say", {"text": "Hello"})
+    assert b.speaker.said[-1] == "Hello" and len(b.speaker.said) == 2

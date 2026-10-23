@@ -64,6 +64,11 @@ pkgbuild --root "$STAGE" --component-plist "$WORK/components.plist" --install-lo
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@ARCH@/$ARCH/g" "$HERE/installer/distribution.xml" > "$WORK/distribution.xml"
 productbuild --distribution "$WORK/distribution.xml" --resources "$HERE/installer/resources" \
   --package-path "$WORK" "$PKG"
+# Installer shows each page in the Mac's language: check both languages made it in.
+pkgutil --expand "$PKG" "$WORK/expanded"
+for page in en.lproj/welcome en.lproj/conclusion es.lproj/welcome es.lproj/conclusion; do
+  [ -f "$WORK/expanded/Resources/$page.html" ] || { echo "The installer is missing $page.html"; exit 1; }
+done
 echo "Built $PKG"
 
 # The same installer in a disk image, for the download links that point at the .dmg.

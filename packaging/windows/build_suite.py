@@ -54,7 +54,7 @@ def script(version: str, steps: list[tuple[Path, str, str]], out: Path) -> str:
     files = "\n".join(f'Source: "{exe}"; DestDir: "{{tmp}}"; DestName: "app{i}.exe"; Flags: deleteafterinstall'
                       for i, (exe, _, _) in enumerate(steps))
     runs = "\n".join(f'Filename: "{{tmp}}\\app{i}.exe"; Parameters: "{args}"; '
-                     f'StatusMsg: "Installing {name}..."; Flags: waituntilterminated'
+                     f'StatusMsg: "{{cm:Installing,{name}}}"; Flags: waituntilterminated'
                      for i, (_, name, args) in enumerate(steps))
     return f"""; Made by packaging/windows/build_suite.py. Don't edit: run that instead.
 [Setup]
@@ -74,17 +74,31 @@ SetupIconFile={ROOT / "shared" / "hub" / "packaging" / "icon.ico"}
 Compression=lzma2/fast
 SolidCompression=no
 WizardStyle=modern
+; English, or Spanish on a computer set to Spanish, without asking.
+ShowLanguageDialog=no
+
+[Languages]
+Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "es"; MessagesFile: "compiler:Languages\\Spanish.isl"
 
 [Messages]
-WelcomeLabel2=This installs all six Limitless Sound apps (Voice, One-Hand, Zoom, Color, Control and GazeStage) and Limitless Sound, which joins them, so any input can trigger any app.%n%nIt takes a minute or two and doesn't need an administrator. Each app is listed in Settings > Apps under its own name.
-FinishedLabelNoIcons=Limitless Sound is installed. It starts by itself when you sign in.%n%nThe first time you use an app, it asks for what it needs (the microphone or the camera) and says why.
+en.WelcomeLabel2=This installs all six Limitless Sound apps (Voice, One-Hand, Zoom, Color, Control and GazeStage) and Limitless Sound, which joins them, so any input can trigger any app.%n%nIt takes a minute or two and doesn't need an administrator. Each app is listed in Settings > Apps under its own name.
+en.FinishedLabelNoIcons=Limitless Sound is installed. It starts by itself when you sign in.%n%nThe first time you use an app, it asks for what it needs (the microphone or the camera) and says why.
+es.WelcomeLabel2=Esto instala las seis apps de Limitless Sound (Voice, One-Hand, Zoom, Color, Control y GazeStage) y Limitless Sound, que las une para que cualquier control pueda activar cualquier app.%n%nTarda un par de minutos y no necesita un administrador. Cada app aparece con su propio nombre en Configuración > Aplicaciones.
+es.FinishedLabelNoIcons=Limitless Sound está instalado. Se inicia solo cuando inicias sesión.%n%nLa primera vez que uses una app, te pedirá lo que necesita (el micrófono o la cámara) y te dirá por qué.
+
+[CustomMessages]
+en.Installing=Installing %1...
+es.Installing=Instalando %1...
+en.OpenNow=Open Limitless Sound now
+es.OpenNow=Abrir Limitless Sound ahora
 
 [Files]
 {files}
 
 [Run]
 {runs}
-Filename: "{{userpf}}\\Limitless Sound\\Limitless Sound.exe"; Description: "Open Limitless Sound now"; Flags: nowait postinstall skipifsilent
+Filename: "{{userpf}}\\Limitless Sound\\Limitless Sound.exe"; Description: "{{cm:OpenNow}}"; Flags: nowait postinstall skipifsilent
 """
 
 
