@@ -46,6 +46,10 @@ defaults:
 - Releases: attach installers to the release for your `<folder>-v*` tag
   (`softprops/action-gh-release@v2`, `permissions: contents: write`).
 - Run the app's tests and a smoke test of the built app before uploading.
+- Every web-based screen (Limitless Sound's page, Control's page, GazeStage's window, Color's
+  window, the Mac installer's pages) must meet WCAG 2.2 AA and work from the keyboard, in light
+  and dark, high contrast and the largest text. `.github/workflows/screens.yml` checks them on
+  ubuntu-latest with `.github/scripts/apps-a11y.cjs`; add a new screen or state there.
 
 ## Joining the suite
 

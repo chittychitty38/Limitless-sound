@@ -1,0 +1,64 @@
+# Every web-based screen in the suite must meet WCAG 2.2 AA and work from the keyboard: blind and
+# low-vision musicians use them with VoiceOver, and switch users see them through the focus.
+# Limitless Sound's page, Limitless Control's page and GazeStage's window run for real; Limitless
+# Color's window and the Mac installer's pages are opened as files (see the script).
+name: App screens
+
+on:
+  pull_request:
+    paths:
+      - "shared/hub/limitless_hub/**"
+      - "apps/control/limitless_control/**"
+      - "apps/control/pyproject.toml"
+      - "apps/gazestage/renderer/**"
+      - "apps/gazestage/*.js"
+      - "apps/gazestage/package*.json"
+      - "apps/color/app/ui/**"
+      - "apps/color/app/src-tauri/tauri.conf.json"
+      - "packaging/mac/installer/resources/**"
+      - ".github/scripts/apps-a11y.cjs"
+      - ".github/workflows/screens.yml"
+  push:
+    branches: [main]
+    paths:
+      - "shared/hub/limitless_hub/**"
+      - "apps/control/limitless_control/**"
+      - "apps/control/pyproject.toml"
+      - "apps/gazestage/renderer/**"
+      - "apps/gazestage/*.js"
+      - "apps/gazestage/package*.json"
+      - "apps/color/app/ui/**"
+      - "apps/color/app/src-tauri/tauri.conf.json"
+      - "packaging/mac/installer/resources/**"
+      - ".github/scripts/apps-a11y.cjs"
+      - ".github/workflows/screens.yml"
+  workflow_dispatch:
+
+# A newer push to the same pull request replaces the run still going for the older one.
+concurrency:
+  group: screens-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e apps/control
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gazestage/package-lock.json
+      - run: npm ci
+        working-directory: apps/gazestage
+      - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.3
+      - run: npx playwright install --with-deps chromium
+      - run: xvfb-run -a node .github/scripts/apps-a11y.cjs
+        env:
+          PYTHON: python
+          A11Y_LOGS: "1"
