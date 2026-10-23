@@ -2,7 +2,7 @@
 
 **Bennet:** open Claude Code in a folder on your Mac and paste this whole file in, or say
 "Read HANDOFF-CLAUDE-CODE.md in github.com/chittychitty38/Limitless-sound and pick up the project."
-Written 2026-10-22, after the 0.2.2 release. Everything below is the state of the project then.
+Written 2026-10-23, after the 0.2.9 release. Everything below is the state of the project then.
 
 ---
 
@@ -19,7 +19,7 @@ Start by doing this, in order:
    `gh repo clone chittychitty38/Limitless-sound LimitlessSound && cd LimitlessSound`
    (install `gh`, `python@3.12`, `node@22`, `rustup-init` with Homebrew first if missing).
 2. Ask Bennet, in one message, which Mac he is on (Apple silicon or Intel, macOS version),
-   which DAWs he has (Logic Pro, Pro Tools, Ableton) and which hardware is with him today
+   which DAWs he has (Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio) and which hardware is with him today
    (mic, webcam, Xbox Adaptive Controller, switches, foot pedal, Line 6 Helix).
 3. Show him the "Open items" list below and ask which one to do first. If he has no
    preference, start with the hands-on Mac test (item 1).
@@ -51,18 +51,60 @@ One repo, a monorepo: **https://github.com/chittychitty38/Limitless-sound** (pub
 
 | App | Folder | What it does | Stack | Released |
 |---|---|---|---|---|
-| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup and shared settings | Python stdlib only | 0.2.1, in the suite |
-| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.3.4 |
-| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.2 |
-| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.2 |
-| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.3 |
-| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.3 |
-| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports | gazestage-v0.3.5 |
-| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.2** (the repo's Latest release) |
+| Limitless Sound | `shared/hub` | Joins the apps into one suite (any input can trigger any app); the guided setup, shared settings and language | Python stdlib only | 0.2.5, in the suite |
+| Limitless Voice | `apps/voice` | Offline voice commands for Logic, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio and the computer | Python 3.12, PySide6, Vosk 0.3.44, PyInstaller | voice-v0.4.3 |
+| Limitless One-Hand | `apps/one-hand` | Keys under one hand become DAW commands; hold Space to mirror-type | Python, PySide6, Quartz event tap / Win hook | one-hand-v0.2.7 |
+| Limitless Zoom | `apps/zoom` | Zoom the DAW or screen by voice, one hand, dwell or a switch | Python, PySide6, pynput, Vosk | zoom-v0.1.9 |
+| Limitless Color | `apps/color` | Recolors the whole screen for colorblind musicians | Rust, Tauri 2, Swift ScreenCaptureKit + Metal overlay | color-v0.1.5 |
+| Limitless Control | `apps/control` | Xbox Adaptive Controller, switches, gamepads as DAW keys | Python, pygame-ce (SDL2), local web settings page | control-v0.2.8 |
+| GazeStage | `apps/gazestage` | Play instruments and run the transport with eyes, head, a sound or a switch | Electron 39, MediaPipe face landmarks in a worker, built-in instrument in a hidden page of its own, virtual MIDI ports, XY tone pad | gazestage-v0.4.4 |
+| **Suite** | `packaging/` | One download with everything: a standard Mac installer (`.pkg`) and a Windows installer (`.exe`) | `suite.yml` | **v0.2.9** (the repo's Latest release) |
 
 Every app meets **Limitless Access Standard level 2 (Adaptive)**: it follows the shared text
 size, high contrast and reduced motion live and reports `prefs.applied`. Every app keeps a log
 file (Limitless Sound's page › Activity › **Open the log folder**).
+
+Every screen works with a screen reader and the keyboard alone, and CI checks it: the web-based
+screens (Limitless Sound's page, Control's page, GazeStage, Color, the Mac installer) pass WCAG 2.2
+AA in every look with a keyboard walk (`.github/scripts/apps-a11y.cjs`, `screens.yml`, #79), and
+the Qt apps have `tests/test_accessibility.py` (#75). Every app presses the same key for the
+same thing in the same DAW (`stress/test_daw_keys_agree.py`, #85). Voice's setup guide and main
+window grow as wide as their words need and scroll up and down for the rest (`look.UpAndDown`,
+#103): before, at double text, the setup guide cut off parts of 24 lines.
+
+**English and Spanish.** One shared language (`language`, "en" or "es") in Limitless Sound's
+settings, chosen in the first two questions or from the computer's language, and every app
+follows it live, in place, without moving the keyboard focus:
+- Voice understands and answers in Spanish (0.4.0, #90), and its windows are in Spanish (0.4.1,
+  #92). Its Spanish words, commands and replies are one file, `languages/es.yaml`; the windows ask
+  for theirs with `ui.text("…")` (`words.py`).
+- One-Hand and Zoom (`words.py` in each, #89), Control's page and GazeStage (a `strings-es` table
+  in the page, #91), Limitless Sound's page (#83) and the installers (#87) are in Spanish.
+- Color is in Spanish, and its offline helper understands Spanish descriptions (0.1.5, #95): on a
+  blind set written by someone who never saw its rules, 98.3% of Spanish and 96.7% of English
+  descriptions (English was 61.7% before). `cargo run -p color-core --example helper_report`.
+- Zoom understands voice commands in Spanish (0.1.6, #97), measured on real people: 90-91% of
+  its command words heard, 1-2 mistaken zooms in an hour of Spanish read aloud (English: 3.8).
+  It also listens for 325 common Spanish words so talk isn't heard as a command.
+- The website is in Spanish at `/es/` (`docs/es/index.html`, #93).
+- Every one has a test that fails on English with no Spanish, and the Spanish fits at double
+  text size wherever the English does.
+- Not yet in Spanish: the guides on GitHub.
+
+**A Brazilian Portuguese preview, in Voice only** (0.4.3, #103). Limitless Sound's language list
+offers «Português (prévia: só o Limitless Voice)» (hub 0.2.5); the page and every other app stay
+in English for it. Every app shows English for a suite language it doesn't have: One-Hand and Zoom
+used to keep the last one, so Español → Português left them in Spanish (One-Hand 0.2.7, Zoom
+0.1.9, #106).
+- Voice's Portuguese is one file, `apps/voice/limitless_voice/languages/pt.yaml`, with Alpha
+  Cephei's `vosk-model-small-pt-0.3` (31 MB, Apache 2.0; their only other Portuguese model is
+  1.6 GB and GPL).
+- On real Brazilian speakers it gets 62% of command words right at once, against 83.5% in
+  Spanish. The speech model is the limit: it hears nothing in 33% of clips (Spanish's: 4%), and
+  gets 27.4% of read words wrong (Spanish's: 14.8%). Settings says so in Portuguese.
+- The same safety rules as Spanish: Cut, Paste and Delete only on the exact word, a command word
+  inside a sentence is talk. One command an hour of Portuguese read aloud, none destructive.
+- `stress.yml` measures it (MSWC pt and FLEURS pt_br) on every Voice change.
 
 Release links (permanent; they always point at the newest suite):
 - https://github.com/chittychitty38/Limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg
@@ -81,7 +123,10 @@ triggers like `/do/daw.record?t=<token>`). Discovery file `link.json` (port + to
 control, gaze, hub). Intents like `daw.play` go to whichever open app can press DAW keys.
 "Sidechain links" are event → action routes (e.g. while recording, Voice only hears stop/wake
 words). The first time the settings page opens it runs the **guided setup**: how do you like to
-play, how should things look; it opens the apps that fit and sets the shared settings.
+play, how should things look, which language; it opens the apps that fit and sets the shared
+settings. The shared `language` ("en" or "es", first set from the computer's own language) is
+followed by every app that has it; the page itself is in Spanish too, and the hub reads each
+app's replies with a voice for the language that app reports (#83).
 Spec: `shared/PROTOCOL.md`. Clients for Python, JavaScript, Rust and C++ (one header, for
 plug-in and hardware makers) in `shared/clients`; apps carry copies, which the hub's tests keep
 identical. Every app works alone without the hub.
@@ -130,13 +175,32 @@ item 3).
 
 Its runs on 0.1.0 to 0.2.1 found every bug fixed in 0.2.0 to 0.2.2: Zoom crashing on Apple
 silicon, Control taking 37 s to start, GazeStage leaving actions unanswered on a Mac without
-working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.2 passes it
-on all three computers with nothing left to improve**: every app ready in 1-13 s, at Access
-Standard level 2, every action answered, no timeouts (check P4), every suite check green, and
-**every app under 3% of the CPU sitting idle** (GazeStage 1.0% on both Macs, from 7.5%; Zoom 1.1%
-on Intel; the busiest is Control at 2.8% on Intel). Run 39838823103, on the website. An app over
-the limit names its busiest processes (#62). To run it again before the default branch is
-`main`, open a PR that touches `packaging/proof/`.
+working audio, Zoom's and GazeStage's idle CPU, and false crash logs on Windows. **0.2.9 passes it
+on all three computers** (run 39946732776, on the website):
+- Every app is ready in under 8 s, at Access Standard level 2, with every action answered and no
+  timeouts. The installer takes 10 s on Apple silicon, 15 s on Intel and 55 s on Windows.
+- Every suite check is green, S1 to S7:
+  - Limitless Sound's own page opens, with its Spanish words (S4, #86);
+  - the suite's language can be set to Español and back (S5, #88);
+  - One-Hand, Zoom, Control, GazeStage and Color each say they're showing Spanish within 3 s of
+    the suite switching, and English again after (S6, #96, #100). Voice is named but not held: it
+    reports the language it listens in, English until its Spanish model is downloaded.
+  - From Español, Português leaves every app but Voice in English within 3 s (S7, #107). Each
+    must show Spanish first, so an app that ignores the switch can't pass.
+- Every app is under 3% of the CPU sitting idle except Zoom on the Intel Mac: 3.2%, and 3.3% on
+  P3's second look 50 s later (open item 12). Everything else is 1.7% or less.
+- P3 watches an app over 3% once more, 30 s later, and judges that reading (#107): one 15 s
+  reading can't tell a spike from steady use (Zoom on Intel read 3.7% and 2.9% in two runs of
+  the same 0.2.9).
+- P5 (#104) compares each app's idle memory with the last published proof on the same kind of
+  computer and warns at 1.5x and 50 MB more. The 0.2.7 proof found Zoom 0.1.6 at twice its
+  memory (510 MB on Apple silicon) and 5.3% idle CPU on Intel: it loaded its speech model again
+  on each language switch. Zoom 0.1.8 (#101) fixed it: 184 / 250 / 250 MB in 0.2.9.
+
+An app over the limit names its busiest processes (#62). To run it again before the default
+branch is `main`, open a PR that touches `packaging/proof/`, then publish its results: point the
+`proof-results` branch at a commit with the tree of `proof-results-test` (`git commit-tree`), and
+copy its `latest.json` to `proof/latest.json` on `gh-pages`.
 
 ## Public website and branding
 
@@ -182,7 +246,16 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - Control has never seen a real Xbox Adaptive Controller.
 - One-Hand's Mac self-test passes even if the key hook can't start; check it really types.
 - GazeStage has never driven a real Pro Tools rig (HUI ports, rewind/ffwd/stop mapping).
-- Voice's accuracy has only been measured on synthetic speech clips.
+- Voice and Zoom are measured against recordings of real people, in CI (`stress/README.md`,
+  "Real people"): about 200 people saying single words (Speech Commands), people saying the DAW
+  command words themselves ("cut", "record", "solo"; MLCommons' Multilingual Spoken Words, #77),
+  and an hour of 40 people reading aloud (LibriSpeech). Nobody has spoken to them in a real room
+  with a real DAW running.
+- Nobody who speaks Spanish or Portuguese has used any of it: Voice was measured on recordings
+  of Spanish and Brazilian speakers (Common Voice, FLEURS, MSWC), and every word was written
+  without a native speaker's read.
+- No DAW key has been pressed in a real DAW. The keys come from the vendors' guides, and every
+  app agrees with every other (`stress/test_daw_keys_agree.py`).
 - The C++ client has only been tested against the hub, not inside a real plug-in host.
 - No musician with a disability has tried any of it yet.
 
@@ -192,11 +265,12 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    the guided setup, running the stress tests on the real Mac, and checking each app by hand,
    recording results in `HANDOFF-RESULTS.md`. Fix what fails, one PR per app, and release
    fixes by bumping versions.
-2. **GazeStage 0.4, PR #21** (branch `gazestage/xy-tone-pad`): the tone pad, an XY controller
-   from Bennet's Jason Becker / Line 6 Helix idea. Two CCs (default 16/17; Helix profile CC1/CC2
-   = EXP1/EXP2), sends to a USB Line 6 device if one is plugged in, else the "GazeStage Notes"
-   port. Hub actions `gaze.tone`, `gaze.xy.*`. **Untested with a real Helix**, and far behind
-   `main` now: merge `main` in, re-check, test with a Helix if Bennet has one, bump to 0.4.0.
+2. **The tone pad with a real Helix.** GazeStage 0.4.1 has the tone pad (#21, #67), the XY
+   controller from Bennet's Jason Becker / Line 6 Helix idea: two CCs (default 16/17; the Helix
+   profile sends CC1/CC2 = EXP1/EXP2) to a USB Line 6 device if one is plugged in, else to
+   "GazeStage Notes". Other apps move it with GazeStage's actions `xySet`, `xySnapA`–`D`,
+   `xyCenter`, `xyLeft`… (0.4.2, #70). **Untested with real Line 6
+   hardware**; `HANDOFF.md` has the steps. The CC1/2 mapping comes from Line 6's MIDI table.
 3. **Default branch → `main`.** The repo's default branch is still `zoom-view-control`. Ask
    Bennet to change it at **GitHub › the repo › Settings › General › Default branch** (or run
    `gh repo edit chittychitty38/Limitless-sound --default-branch main` with his OK). Until then
@@ -207,13 +281,91 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
    Voice's workflow already signs and notarizes when the `APPLE_*` secrets exist; the other
    apps and the suite `.pkg` need the same steps added.
 5. **Clean up stale branches** (many old `claude/*`, `suite/*` and app branches whose PRs are
-   merged, and the throwaway `diag/control-startup`, `diag/gazestage-idle` and `diag/zoom-idle`).
+   merged, and the throwaway `diag/control-startup`, `diag/control-idle`, `diag/gazestage-idle`
+   and `diag/zoom-idle`).
    Ask Bennet first; cloud sessions weren't allowed to delete them.
-6. **Control is the busiest app sitting idle** (0.2.2 proof: 2.8% on the Intel Mac, 1.3% on
-   Apple silicon, 0.1% on Windows), still under the 3% limit. If it creeps over, measure it the
-   way `diag/gazestage-idle` measured GazeStage before changing anything. GazeStage's built-in
-   instrument now rests 10 s after the last sound and wakes on hover (#60): check by ear on a
-   real Mac that the first note after a rest isn't late.
+6. **Voice: stray single words.** On real people's recordings (`stress/test_voice_real_speech.py`,
+   `stress/test_command_words.py`, each run prints these):
+   - Voice hears 91% of the words it listens for, and 73% of real people's DAW command words at
+     once, 82% at once or after "Say yes to cut, or cancel" (0.3.8).
+   - It never pressed Cut, Paste or Delete for a word that wasn't one.
+   - In an hour of people reading aloud it fired 0 commands with Logic in front and 3.8 with
+     Pro Tools, none destructive.
+   - Stray single words that aren't commands still fire a harmless one 17.8% of the time ("happy"
+     → Copy, "wow" → louder, "follow" → Solo, "bird" → Record). Requiring both listeners to agree
+     on every one-word command would cut that to 1.3% but takes command words from 73% to 47% right
+     ("undo" 85% → 6%), so it isn't done. A better command model (item 7) is the likelier fix.
+7. **A better speech model for Voice's commands: Bennet's call (licence).** Measured on real
+   people (branch `diag/vosk-model`, run 39886586088):
+   - The larger `vosk-model-en-us-0.22-lgraph` hears no more than the small model (90.6% against
+     91.6%) at about 6× the CPU. Voice 0.3.7 stopped calling it "more accurate" in Settings.
+   - `vosk-model-en-us-daanzu-20200905-lgraph`, used only as Voice's command recognizer (the
+     small model staying the open one), takes Voice from 91.6% to 94.7% of words right ("eight"
+     82% → 93%, "up" 85% → 96%), with no destructive presses. The same on a second run.
+     - Cost: about 2× the CPU while listening, 245 MB more memory, a 133 MB download.
+     - Its licence is **AGPL-3.0** (its own LICENSE.txt). Shipping it inside the installers needs
+       Bennet's decision, perhaps a lawyer's. Offering it as an optional download in Settings is
+       the other route.
+     - The code change: Voice's `Listener` holds two models (`_make_recognizers` in `audio.py`).
+     - It made Zoom worse (52 zooms an hour of talk), so Zoom keeps the small model.
+8. **By ear on a real Mac:** GazeStage's built-in instrument rests 10 s after the last sound
+   and wakes on hover (#60); check that the first note after a rest isn't late.
+9. **Spanish, read by people who speak it.** Everything Spanish was written without a native
+   speaker. Ask a Spanish-speaking musician to use the suite in Spanish on the Mac with Logic
+   open, say Voice's commands, and read:
+   - Voice: `apps/voice/limitless_voice/languages/es.yaml` (commands, replies, window words).
+     Check "Decir en voz alta lo que pasa", "Ya lo hice, comprobar de nuevo", "Lo que se oyó",
+     "Repetir la configuración…", "Deja que tu voz pulse las teclas", "De acuerdo" for OK. Voice
+     says "aplicación" and “…”, the other apps "app" and «…»: pick one.
+   - GazeStage (`apps/gazestage/renderer/index.html`, `strings-es`): "Avanzar" / "Rebobinar",
+     "Pedal" for Hold notes, "Selección posando" for dwell, "mira para no parar", "silencio".
+     These were shortened to fit at double text size; a better word must fit too (the smoke
+     test checks).
+   - The website (`docs/es/index.html`): the headline "Software de música para todos los
+     cuerpos" (the "every body" pun), "Con franqueza: en qué punto estamos", "ratón" or "mouse",
+     "83.5 %" or "83,5 %", the level names Conectado / Adaptable / Manos libres / Codiseñado, and
+     the macOS buttons named for a Spanish Mac ("Abrir igualmente", «Chip» / «Procesador»).
+   - Color (`apps/color/app/ui/index.html`, `strings-es`): "Afinador", "Ajústalo por mí",
+     "Silenciar", "Soltar"/"Fijar", "Medidor: saturación", the sample session's track names, and
+     the path "Ajustes del Sistema › Accesibilidad › Pantalla › Filtros de color".
+   - Zoom's voice commands (`apps/zoom/README.md`, the Español table): «acercar»/«ampliar»,
+     «alejar»/«reducir», «más altas»/«más bajas», «lupa», «ajustar», «repite». Nobody in the
+     recordings said «acercar», «alejar» or «lupa» alone, so try them on the Mac's mic.
+   - On the Mac: set Limitless Sound's language to Español, check Voice offers its Spanish model
+     (39 MB) and that replies come in a Spanish voice (System Settings › Accessibility › Spoken
+     Content › System voice › Manage Voices adds one), and that VoiceOver reads each window in
+     Spanish.
+   - Portuguese (Brazilian): `apps/voice/limitless_voice/languages/pt.yaml`, the preview note in
+     Settings, and the hub's «Português (prévia: só o Limitless Voice)». Several labels were
+     shortened to fit at double text («Abrir o Limitless Voice ao fazer login», «Agora não (sem
+     isso os comandos não funcionam)», `Ouvindo: "vai dormir" para pausar`); a better phrase
+     must fit too (`test_portuguese.py` holds it to the English). Is the preview worth keeping at
+     62%, or should it wait for a better free model?
+10. **Try the three new DAWs** (#99): Voice, Control, One-Hand and Zoom work in GarageBand 10,
+    REAPER 7 and FL Studio, besides Logic Pro, Pro Tools and Ableton Live 12. Every key came
+    from the maker's guide (Apple's, Cockos', Image-Line's), read through excerpts because the
+    cloud session couldn't open those sites; anything unconfirmed was left out.
+    `apps/voice/DAW-SHORTCUTS.md` starts with what shipped, each key's source, and ends with the
+    checklist for a real Mac or PC. The main ones:
+    - GarageBand: every shipped key, and Zoom's Command-arrow zoom keys (unconfirmed, kept).
+      Then read Help › Main window shortcuts and add the cycle, metronome and zoom keys it gives.
+    - REAPER: Cmd+M opens the mixer on a Mac (not Minimize); which way + and − zoom.
+    - FL Studio: "record mode" then "play"; F5–F9 on a Mac; Page Up/Down and Shift+4 to zoom.
+    - That each app notices each DAW in front (including `FL64 (scaled).exe`, older REAPER64.app).
+    On a real Live 12, also check the single-letter keys (S solo, C arm, O metronome) with Live's
+    Computer MIDI Keyboard off.
+11. **Press the corrected DAW keys once in the real DAWs** (#85): Logic's track mute and solo
+    (M, S), Pro Tools' record (F12, on a laptop too), next/previous track (Control-; and
+    Control-P) and go to end (Option-Return).
+12. **Zoom's idle CPU on the proof's Intel Mac** (a 2012 Mac mini) sits at the 3% line: 2.7% in
+    0.2.8, 2.9–3.7% in 0.2.9, steady across P3's second look. Apple silicon reads 0.3%, Windows
+    0.0%, and Voice 0.9% on the same Mac, though its silence gate is a copy of Zoom's (`SpeechGate`
+    in `apps/zoom/limitless_zoom/voice.py`). Measure Zoom's threads on a real Intel Mac before
+    changing anything (see the gotchas on idle CPU); its background download of the Spanish model
+    after the suite switches to Español was ruled out.
+13. **Voice's Settings at double text** is 972 px wide, in English too: its longest checkbox
+    ("Listen for command words only…") doesn't wrap. It fits screens 1280 px wide; a smaller one
+    would need the checkbox's explanation as a wrapped line under it.
 
 ## Gotchas learned the hard way
 
@@ -222,8 +374,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 - Vosk 0.3.45 has no Mac wheels; stay on 0.3.44.
 - GazeStage PR builds need `CSC_FOR_PULL_REQUEST=true` or electron-builder ships a broken Mac
   signature. MediaPipe assets come from `apps/gazestage/scripts/fetch-assets.mjs`.
-- Verified DAW keys: Logic mute/solo are M/S (Ctrl+M mutes regions); Pro Tools record is F12
-  (Cmd+Space is Spotlight).
+- DAW keys: every app must press the same key for the same thing, and
+  `stress/test_daw_keys_agree.py` checks it. When first compared, the apps disagreed six times and
+  one side was wrong each time (#85): Logic's track mute and solo are M and S (Control-M and
+  Control-S act on regions); Pro Tools records on F12 (Command+Space is Spotlight on a Mac).
 - On Apple silicon, reading the keyboard layout (TIS calls) off the main thread kills the app
   with a trap: use `mac_keys.py`, which hops to the main thread.
 - The free plan runs at most 5 macOS jobs at once, and each macOS minute bills 10x (free while
@@ -236,6 +390,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   launches at the end): wait on the installer's own process (`WaitForExit`) instead, and give
   Inno Setup `postinstall` entries `skipifsilent`.
 - `ps %cpu` on a Mac is a decaying average; measure idle CPU from CPU-time deltas instead.
+- Shared CI runners add time unpredictably (GazeStage's first face on the Intel Mac runner:
+  1.6 to 4.9 s for the same code over 13 builds). A timing check should judge what the code
+  asked for (Zoom's microphone retry test records the waits it requests) or the fastest of a
+  few tries (GazeStage's first face, #73), never one wall-clock reading against a tight line.
 - A soak measures its whole test process, test code included: the hub soak once "leaked" 200 MB
   because the test kept every app link it had closed (#50). Before blaming the app, check what
   the test itself holds on to (`tracemalloc` snapshots show it in a minute).
@@ -265,6 +423,14 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   all. List runs unfiltered and pick on your side (`.github/scripts/newest-builds.sh`, #51).
 - On Windows, Python's faulthandler also reports exceptions that were handled (COM's
   0x8001010d): the crash log drops a run's lines when the app closes normally (#53).
+- Never make an RtMidi (`@julusian/midi`) Output just to list ports: on a Mac each one sets up a
+  CoreMIDI client, which held up GazeStage's main process and slowed its start by a second on
+  an Intel Mac, every 4 s, and never gave the clients back (#67). Any open output lists them all.
+- A local settings page should wait for news (long polling), not ask every 150 ms: Control's
+  page did, which was most of Control's idle CPU on the proof's Intel Mac (#65).
+- The website must pass `.github/scripts/site-a11y.cjs` (axe-core, WCAG 2.2 AA, light and dark,
+  desktop and phone); the Website workflow runs it on every `docs/` change (#66). Hover states
+  aren't checked by it: keep white text on darker hovers, not lighter ones.
 - Windows: `Start-Process` on a file marked as downloaded asks first and is "canceled by the
   user" with nobody to click; start it with `UseShellExecute = $false`. Python writes files and
   pipes in the old code page there, so write UTF-8 explicitly.
@@ -272,3 +438,35 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
   AudioContext running: GazeStage sleeps its loop and rests its audio when nothing moves.
 - Cloud sessions couldn't download Actions logs or artifacts. On the Mac,
   `gh run view --log-failed` and `gh run download` just work.
+- Cloud sessions' network blocked alphacephei.com (Vosk models), huggingface.co and openslr.org,
+  so speech models were measured in CI, not in the session. A cloud container can also restart
+  and lose a background agent's uncommitted work: commit and push early.
+- Limitless Sound's page has every English word in Spanish too. `test_languages.py` fails when a
+  new English word on the page has no Spanish entry: add one to the `strings-es` table.
+- An app that can change its speech model (Voice, Zoom) must not load the same one again when
+  nothing it listens with changes: each load costs a second of CPU and ~150 MB that Python
+  keeps. Zoom 0.1.6 did it on every language switch and doubled its memory (#101). The proof's
+  P5 now warns when an app's idle memory grows 1.5x over the last published proof.
+- A test that times a child process times Python and Qt starting too (2.8 s on a busy Intel Mac
+  runner): time the call inside the child instead (Zoom's `test_remote_command`, #99).
+- Every app's Spanish has a test that fails on a word with no Spanish: add the Spanish next to
+  the English (`strings-es` in a page, `words.py` in One-Hand and Zoom, `languages/es.yaml`
+  `texts` in Voice). GazeStage's smoke test holds the Spanish to the English at double text size
+  on the computer's own fonts. Ubuntu CI has DejaVu Sans, wider than a Mac's: to see what CI
+  sees, run the smoke test with a fontconfig file that offers only DejaVu (`FONTCONFIG_FILE`).
+- A Qt window doesn't make room for wrapped lines by itself, and Voice's setup window had a fixed
+  620 x 520 minimum: at large text its pages squeezed their lines, and which label lost out
+  flipped with the font, so Portuguese failed on Windows' CI where the English beside it happened
+  to fit. Shortening words couldn't fix that. A window's contents go in `look.UpAndDown` (scrolls
+  up and down, asks for the width they need), and no fixed minimum size stops a window growing.
+  Compare a translation with English on the same machine, and check a few fonts locally
+  (DejaVu Sans, Carlito, Liberation Sans) at 1x to 2.3x text before pushing.
+- Before blaming a cause, find a measurement that could prove it wrong. Zoom's 3.7% idle in the
+  first 0.2.9 proof looked like its Spanish model downloading after S6; P3's second look read
+  3.2% then 3.3%, which ruled that out. A re-run of one proof job publishes the first attempt's
+  results again (artifacts share a name): push a commit for a fresh run instead.
+- GitHub's artifact storage can refuse downloads for a while ("HTTP 503: Egress is over the
+  account limit"), after a day of many suite builds: each one downloads every app for three
+  computers. On 2026-10-23 it refused Control's builds for over an hour. The suite build now takes
+  such an app from its release instead (`newest-builds.sh`, #94), the same files made by the same
+  run. An app's own release job can't, as it makes that release: re-run the failed job later.
