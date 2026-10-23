@@ -53,8 +53,7 @@ needs_english = pytest.mark.skipif(not LANG.is_english, reason="Zoom listens in 
 # What each language's run must reach (see the comments where they're checked).
 FLOORS = {
     "en": {"right": 0.69, "worst": 0.32, "with_yes": 0.78, "worst_with_yes": 0.62, "stray": 0.03, "after": 1.35},
-    # Not yet measured on CI: these only catch a collapse.
-    "es": {"right": 0.40, "worst": 0.05, "with_yes": 0.45, "worst_with_yes": 0.05, "stray": 0.30, "after": 1.6},
+    "es": {"right": 0.79, "worst": 0.30, "with_yes": 0.80, "worst_with_yes": 0.30, "stray": 0.10, "after": 1.6},
 }
 
 # Zoom's commands among the words, and what each should do. "zoom" alone should do nothing.
@@ -158,6 +157,13 @@ def test_real_people_saying_voice_commands():
     # median 1.11 to 1.12 s. Voice 0.3.8 asks instead of refusing when the open recognizer
     # disagrees: 73.0% right at once and 82.0% at once or with a yes; the weakest at once,
     # "delete", 37%, and with a yes, "mute", 71%; still no destructive key from a wrong word.
+    # Voice 0.4.0 in Spanish, two runs, 40 words with Logic Pro in front (MSWC has only 5 to 15
+    # clips of some): 83.5% to 83.6% right at once and 84.2% at once or with a yes; the weakest,
+    # "unir", 7 of its 15 clips (heard as nothing, or "mil"), so its floor is low; no destructive
+    # key from a word not said; stray words that sound like a command fired one 6.2% to 6.5% of
+    # the time ("pagar" heard as "parar" 8 times in 36); commands acted a median 1.38 s after the
+    # word ended, as the Spanish model ends an utterance later than the English one, and play,
+    # stop and record 0.57 s.
     floor = FLOORS[LANG.code]
     rate = {w: tally[w]["hits"] / tally[w]["tries"] for w in commands}
     assert hits / tries >= floor["right"], f"only {hits / tries:.1%} of the command words were right"

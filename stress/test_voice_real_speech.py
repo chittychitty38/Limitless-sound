@@ -405,8 +405,10 @@ def test_ordinary_talk_rarely_fires_commands():
         # Measured: Logic Pro 0 an hour, Pro Tools 3.8, none destructive (Voice 0.3.4: 1.9 to 4.7,
         # and 4.7 to 7.6).
         "en": {"Logic Pro": 3, "Pro Tools": 7},
-        # FLEURS es_419, the first hour of its dev split. Not yet measured on CI.
-        "es": {"Logic Pro": 30, "Pro Tools": 30},
+        # FLEURS es_419, the first hour of its dev split. Measured (Voice 0.4.0, two runs): Logic Pro
+        # 1.0 an hour (a reader's "aromáticas" heard as "automatización"), Pro Tools 0, none
+        # destructive.
+        "es": {"Logic Pro": 3, "Pro Tools": 3},
     }[LANG.code]
     too_many = []
     for app, most in ceiling.items():
