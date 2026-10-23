@@ -46,7 +46,7 @@ WORKERS = int(os.environ.get("REAL_SPEECH_WORKERS") or os.cpu_count() or 2)
 RATE = 16000
 
 MIN_CONF = 0.55                      # the app's default
-THRESHOLDS = (0.55, 0.7, 0.8, 0.9)   # what a higher one would do, measured here
+THRESHOLDS = (0.0, 0.4, 0.55, 0.7, 0.85)   # what another one would do, measured here
 
 
 def variants():
@@ -56,12 +56,16 @@ def variants():
     of a command they sound like."""
     if LANG.code != "es":
         return {}
-    from zoom_trial_words import NEAR, SHORT, TOP300, TOP1000
+    from zoom_trial_words import NEAR, SHORT, TOP300, TOP1000, TOP3000
+
+    def common(top):
+        return SHORT + [w for w in top if w not in NEAR]
     return {
-        "+ near": LANG.adding(others=NEAR + SHORT),
-        "+ near, 300 common": LANG.adding(others=NEAR + SHORT + TOP300),
-        "+ near, 1000 common": LANG.adding(others=NEAR + SHORT + TOP1000),
+        "+ 300 common": LANG.adding(others=SHORT + TOP300),
         "+ 1000 common": LANG.adding(others=SHORT + TOP1000),
+        "+ 300, not near": LANG.adding(others=common(TOP300)),
+        "+ 1000, not near": LANG.adding(others=common(TOP1000)),
+        "+ 3000, not near": LANG.adding(others=common(TOP3000)),
     }
 
 _mine = threading.local()
