@@ -311,8 +311,10 @@ Those machines have no screen, mic, camera, controller, DAW or privacy permissio
 8. **By ear on a real Mac:** GazeStage's built-in instrument rests 10 s after the last sound
    and wakes on hover (#60); check that the first note after a rest isn't late.
 9. **Spanish, read by people who speak it.** Everything Spanish was written without a native
-   speaker. Ask a Spanish-speaking musician to use the suite in Spanish on the Mac with Logic
-   open, say Voice's commands, and read:
+   speaker. Send a Spanish-speaking musician `translations/es.md` and a Brazilian one
+   `translations/pt.md`: each, in their language, walks through installing, choosing the language,
+   what to try and the words below, and links two report forms (`.github/ISSUE_TEMPLATE/`). Ask a
+   session to "apply the open translation and voice issues" when they come in. What to read:
    - Voice: `apps/voice/limitless_voice/languages/es.yaml` (commands, replies, window words).
      Check "Decir en voz alta lo que pasa", "Ya lo hice, comprobar de nuevo", "Lo que se oyó",
      "Repetir la configuración…", "Deja que tu voz pulse las teclas", "De acuerdo" for OK. Voice

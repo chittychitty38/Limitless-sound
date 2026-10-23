@@ -1,0 +1,61 @@
+name: "Voice didn't understand me · Voice no me entendió · O Voice não me entendeu"
+description: "A command said to Limitless Voice or Zoom did the wrong thing, or nothing. · Un comando hizo otra cosa, o nada. · Um comando fez outra coisa, ou nada."
+title: "[voice] "
+labels: ["voice"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We turn reports like this into tests, so it can't happen again unnoticed.
+        Convertimos avisos así en pruebas, para que no vuelva a pasar sin que lo veamos.
+        Transformamos avisos assim em testes, para que não volte a acontecer sem a gente ver.
+  - type: dropdown
+    id: language
+    attributes:
+      label: "Language you spoke · Idioma en que hablaste · Idioma em que você falou"
+      options:
+        - "English"
+        - "Español"
+        - "Português (Brasil)"
+    validations:
+      required: true
+  - type: dropdown
+    id: app
+    attributes:
+      label: "App"
+      options:
+        - "Limitless Voice"
+        - "Limitless Zoom"
+    validations:
+      required: true
+  - type: input
+    id: said
+    attributes:
+      label: "What you said, word for word · Lo que dijiste, palabra por palabra · O que você disse, palavra por palavra"
+    validations:
+      required: true
+  - type: input
+    id: heard
+    attributes:
+      label: "What it showed it heard · Lo que mostró que oyó · O que ele mostrou que ouviu"
+      description: "The line at the bottom of its window. · La línea de abajo de su ventana. · A linha na parte de baixo da janela."
+  - type: textarea
+    id: happened
+    attributes:
+      label: "What happened · Qué pasó · O que aconteceu"
+    validations:
+      required: true
+  - type: input
+    id: daw
+    attributes:
+      label: "DAW in front · DAW delante · DAW na frente"
+      placeholder: "Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio…"
+  - type: input
+    id: mic
+    attributes:
+      label: "Microphone · Micrófono · Microfone"
+      placeholder: "MacBook, AirPods, headset…"
+  - type: input
+    id: accent
+    attributes:
+      label: "Where your accent is from, if you like · De dónde es tu acento, si quieres · De onde é o seu sotaque, se quiser"

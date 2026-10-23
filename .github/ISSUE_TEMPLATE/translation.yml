@@ -1,0 +1,57 @@
+name: "Words to fix · Corregir palabras · Corrigir palavras"
+description: "Something in Spanish or Portuguese reads wrong. · Algo en español suena mal. · Algo em português soa errado."
+title: "[words] "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Everything in Spanish and Portuguese was written by someone who doesn't speak them natively, so your eyes are what makes it right.
+        Gracias. Todo el español lo escribió alguien que no lo habla de nacimiento: tu lectura es lo que lo hace bueno.
+        Obrigado. Todo o português foi escrito por alguém que não é falante nativo: a sua leitura é o que o torna certo.
+  - type: dropdown
+    id: language
+    attributes:
+      label: "Language · Idioma"
+      options:
+        - "Español"
+        - "Português (Brasil)"
+    validations:
+      required: true
+  - type: dropdown
+    id: app
+    attributes:
+      label: "Where · Dónde · Onde"
+      options:
+        - "Limitless Sound (its page and setup · su página · a página)"
+        - "Limitless Voice"
+        - "Limitless One-Hand"
+        - "Limitless Zoom"
+        - "Limitless Color"
+        - "Limitless Control"
+        - "GazeStage"
+        - "The installer · El instalador · O instalador"
+        - "The website · La web · O site"
+    validations:
+      required: true
+  - type: input
+    id: place
+    attributes:
+      label: "Which window, button or message · Qué ventana, botón o mensaje · Qual janela, botão ou mensagem"
+  - type: textarea
+    id: now
+    attributes:
+      label: "What it says now · Lo que dice ahora · O que diz agora"
+    validations:
+      required: true
+  - type: textarea
+    id: better
+    attributes:
+      label: "What it should say · Lo que debería decir · O que deveria dizer"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why, if you like · Por qué, si quieres · Por quê, se quiser"
+      description: "Too formal, from one country only, wrong word for a musician… · Demasiado formal, de un solo país, no es la palabra de un músico… · Formal demais, de um país só, não é a palavra de um músico…"
