@@ -16,7 +16,7 @@ installed, and your voice never leaves the machine.
 | **Windows** | Windows 10 or 11, 64-bit. |
 | **Microphone** | Any mic the computer already recognises: the built-in laptop mic, a USB mic, a headset, a webcam mic or an audio interface input. Any sample rate. A headset or a mic close to your mouth works best when speakers are playing. Bluetooth headsets work, but drop to phone-call quality, so expect more misses. |
 | **Computer** | Anything from roughly the last ten years. Recognition uses about 300 MB of memory and a small share of one CPU core. About 300 MB of disk space. |
-| **Language** | English (US) built in. Spanish, for Latin America and Spain, is a 39 MB download from Settings, once. A larger English model and an Indian English model can be downloaded from Settings too. |
+| **Language** | English (US) built in. Spanish, for Latin America and Spain (39 MB), and Brazilian Portuguese (31 MB, a preview) are downloads from Settings, once. A larger English model and an Indian English model can be downloaded from Settings too. |
 | **Apps** | Ready-made commands for Logic Pro (Mac), Pro Tools and Ableton Live 12 (Mac and Windows). Everything else works through the everyday commands (copy, undo, open apps, arrows...), "press ..." for any shortcut, and your own command files. |
 
 Not covered yet: Linux, Chromebooks, iPad.
@@ -90,15 +90,16 @@ If commands get missed, try Settings > Speech model > "more accurate".
 
 ## Languages
 
-Voice listens and answers in English or Spanish. Choose in Settings > Language:
+Voice listens and answers in English, Spanish or Brazilian Portuguese (a preview: see below).
+Choose in Settings > Language:
 
 - **Same as Limitless Sound** (the default): the language chosen for the whole suite on the
   Limitless Sound page. Without the hub, English, as always.
-- **English** or **Español**: that one, whatever the suite's is.
+- **English**, **Español** or **Português (prévia)**: that one, whatever the suite's is.
 
-Spanish is downloaded once (39 MB) the first time it's chosen, then works without internet.
-Until it's here (offline, say), Voice keeps listening in English, says so in its window, and
-offers the download again.
+Spanish (39 MB) and Portuguese (31 MB) are downloaded once, the first time they're chosen, then
+work without internet. Until one is here (offline, say), Voice keeps listening in English, says
+so in its window, and offers the download again.
 
 Its commands are the English ones, said the way Spanish-speaking musicians say them, with
 Latin America's and Spain's words both: "ir al compás treinta y dos", "graba", "dale play",
@@ -109,29 +110,57 @@ veces". Say "qué puedo decir" for the list, "a dormir" and "despierta", "sí" a
 said alone ("cortar", "pegar", "eliminar" or "borrar", "duplicar"), never "corta": a word that
 sounds like one of them must never throw work away.
 
-Replies are read by a Spanish voice when the computer has one. When it hasn't, Voice says where
-to add one: on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage
-Voices; on Windows, Settings > Time & language > Speech > Add voices. With the suite's one voice
-on, the hub reads them in Spanish. Other apps' actions ("screen colors on") are only heard in
-English for now, as the apps name them in English. Voice's windows (the main window, Settings,
-the setup guide, the menu bar menu and the floating display) change to the language chosen at
-once, even before its speech model is here; the commands they suggest saying are the ones Voice
-hears, so they stay English until then.
+In Portuguese, they're said the way Brazilian musicians say them: "ir para o compasso trinta e
+dois", "gravar", "tocar", "parar" or "para", "solo", "silenciar a faixa" or "mute", "loop",
+"desfazer", "nova faixa" or "nova trilha", "mostrar o mixer", "aperte comando maiúsculas
+novembro", "deslocar para a direita quatro vezes". Say "o que eu posso dizer" for the list, "vai
+dormir" and "acorda", "sim" and "cancelar", "começar ditado" and "parar ditado". A command said
+alone is the infinitive, as the menus name it ("tocar", "voltar", "recortar", "apagar"), never
+"toca" or "apaga": the speech model hears the short forms far less often, and a word that sounds
+like Cut, Paste or Delete must never throw work away. No command runs on a near miss ("sala"
+isn't "salvar"), and a command word inside a sentence is talk, not a command. The speech model
+knows no spelling of "play", "shift" or "tab", so those are "tocar", "maiúsculas" and
+"tabulação".
 
-How well it hears real people, measured in CI (Voice 0.4.0; `stress/README.md` has how):
+**Portuguese is a preview.** The only small Portuguese speech model under a licence Limitless
+Sound can ship, Alpha Cephei's vosk-model-small-pt-0.3 (Apache 2.0), hears real people's command
+words about 6 times in 10, where Spanish's hears 8 in 10. CI checked that it's the model, not the
+recordings: on the same kind of clips of the same words (numbers, "gravar" and "grabar", "parar",
+"salvar" and "guardar", "solo", "ajuda" and "ayuda"), the Spanish model heard nothing at all in 4%
+of them and the Portuguese one in 33%, however they were padded, and on sentences read aloud
+(FLEURS) they get 15% and 27% of the words wrong. So Settings lists it as "Português (prévia)" and
+says so, in Portuguese, when it's chosen: that commands work best said whole and slowly, and that
+the English commands stay one choice away, for musicians who already know the DAW terms in
+English. The only other Portuguese model Alpha Cephei lists (1.6 GB) is under the GPL, which
+Limitless Sound can't ship. What is the same as in English and Spanish: no Cut, Paste or Delete
+from a word nobody said, and about one command an hour of people reading aloud.
 
-| | English | Spanish |
-|---|---|---|
-| Command words said by real people, right at once (one word each, cut out of sentences) | 73% | 83% |
-| Right at once or after a "yes" | 82% | 84% |
-| Cut, Paste or Delete pressed for a word that wasn't said | never | never |
-| An hour of people reading aloud: commands fired in Logic Pro / Pro Tools | 0 / 3.8 | 1 / 0 |
-| How soon a command acts after the word ends | 1.1 s | 1.4 s |
-| Play, stop and record | 0.6 s | 0.6 s |
+Replies are read by a voice for the language when the computer has one (for Portuguese, a
+Brazilian one first). When it hasn't, Voice says where to add one: on a Mac, System Settings >
+Accessibility > Spoken Content > System voice > Manage Voices; on Windows, Settings > Time &
+language > Speech > Add voices. With the suite's one voice on, the hub reads them in the
+language. Other apps' actions ("screen colors on") are only heard in English for now, as the
+apps name them in English. Voice's windows (the main window, Settings, the setup guide, the menu
+bar menu and the floating display) change to the language chosen at once, even before its speech
+model is here; the commands they suggest saying are the ones Voice hears, so they stay English
+until then.
 
-The words aren't the same in the two languages, so this says each one does its job rather
-than that one is better. Spanish's speech model is Alpha Cephei's small Spanish model,
-under the Apache 2.0 licence, like the English one.
+How well it hears real people, measured in CI (Voice 0.4.0, and 0.4.2 for Portuguese;
+`stress/README.md` has how):
+
+| | English | Spanish | Portuguese (preview) |
+|---|---|---|---|
+| Command words said by real people, right at once (one word each, cut out of sentences) | 73% | 83% | 62% |
+| Right at once or after a "yes" | 82% | 84% | 63% |
+| Cut, Paste or Delete pressed for a word that wasn't said | never | never | never |
+| An hour of people reading aloud: commands fired in Logic Pro / Pro Tools | 0 / 3.8 | 1 / 0 | 1 / 1 |
+| How soon a command acts after the word ends | 1.1 s | 1.4 s | 1.5 s |
+| Play, stop and record | 0.6 s | 0.6 s | 0.7 s |
+
+The words aren't the same in the three languages, so this says each one does its job rather
+than that one is better, except where the same words were heard (the preview note above).
+Spanish's and Portuguese's speech models are Alpha Cephei's small ones, under the Apache 2.0
+licence, like the English one.
 
 ## Adding your own commands
 
@@ -220,7 +249,9 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 2. That file, copied from `languages/es.yaml`: the language's phrases for every command in the
    built-in packs (by each command's first English phrase), its own words, numbers table, key
    names, and every reply. `tests/test_language.py` fails until every command has phrases and
-   every reply a translation.
+   every reply a translation. If the model's short words are a letter apart, `exact` turns off
+   near misses, and `sentence_words` treats a command word inside a sentence as talk (both as
+   Portuguese does); a model that hears much less than the others makes the language a `preview`.
 3. `stress/test_voice_language.py` against the model: every word Voice listens for must be one
    it knows (it prints the nearest words it does know). Then real people: the Multilingual
    Spoken Words Corpus's clips of its command words (`stress/tools/get_command_words.py --lang`)
