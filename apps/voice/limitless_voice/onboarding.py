@@ -28,7 +28,7 @@ from . import words
 from .audio import list_input_devices
 from .look import LiveText, add_item, grow, label, sized
 from .settings import APP_NAME
-from .words import phrase, t
+from .words import phrase, ui
 
 # What to say (in the language Voice listens in), and what it does (in Voice's language)
 STARTER_COMMANDS = [
@@ -105,18 +105,18 @@ class SetupWizard(QDialog):
         self.window = window
         self.platform = window.platform
         self.settings = window.settings
-        words.show(self.setWindowTitle, t("Set up {app}", app=APP_NAME))
+        words.show(self.setWindowTitle, ui.text("Set up {app}", app=APP_NAME))
         self.setModal(True)
         self.setMinimumSize(620, 520)
         grow(self, window.look["textScale"])   # room for larger text
 
         self.stack = QStackedWidget()
-        self.back_btn = _button(t("Back"))
-        self.next_btn = _button(t("Continue"))
+        self.back_btn = _button(ui.text("Back"))
+        self.next_btn = _button(ui.text("Continue"))
         self.next_btn.setDefault(True)
         self.back_btn.clicked.connect(self.back)
         self.next_btn.clicked.connect(self.forward)
-        self.step_label = LiveText(t("Setup step"))
+        self.step_label = LiveText(ui.text("Setup step"))
 
         nav = QHBoxLayout()
         nav.addWidget(self.step_label)
@@ -151,9 +151,9 @@ class SetupWizard(QDialog):
         self.stack.setCurrentIndex(i)
         self.page.entered()
         last = i == len(self.pages) - 1
-        words.show(self.next_btn.setText, t("Start using {app}", app=APP_NAME) if last else t("Continue"))
+        words.show(self.next_btn.setText, ui.text("Start using {app}", app=APP_NAME) if last else ui.text("Continue"))
         self.back_btn.setEnabled(i > 0)
-        self.step_label.setText(t("Step {n} of {total}", n=i + 1, total=len(self.pages)))
+        self.step_label.setText(ui.text("Step {n} of {total}", n=i + 1, total=len(self.pages)))
         self._refresh()
         self.next_btn.setFocus()
         spoken = self.page.spoken()
@@ -187,7 +187,8 @@ class SetupWizard(QDialog):
     def advance_if_on(self, page):
         """Move on by itself once a permission is granted (after a beat to read the tick)."""
         if self.page is page:
-            QTimer.singleShot(900, lambda: self.page is page and self.forward())
+            # bound to the guide, so a guide closed before then doesn't move on
+            QTimer.singleShot(900, self, lambda: self.page is page and self.forward())
 
     # -- events from the main window ---------------------------------------
 
@@ -209,12 +210,12 @@ class SetupWizard(QDialog):
 
 class WelcomePage(Page):
     def spoken(self):
-        return t("Welcome to Limitless Voice. Setup takes about a minute. Press Continue.")
+        return ui.text("Welcome to Limitless Voice. Setup takes about a minute. Press Continue.")
 
     def __init__(self, wizard):
         super().__init__(wizard)
-        self.box.addWidget(_title(t("Welcome to Limitless Voice")))
-        self.box.addWidget(_body(t(
+        self.box.addWidget(_title(ui.text("Welcome to Limitless Voice")))
+        self.box.addWidget(_body(ui.text(
             "Run Logic Pro, Pro Tools and your whole computer with your voice.<br><br>"
             "Say <b>“{bar}”</b>, <b>“{solo}”</b> or <b>“{mixer}”</b>, and it happens in the app "
             "you're working in.<br><br>"
@@ -228,19 +229,19 @@ class WelcomePage(Page):
 
 class MicPermissionPage(Page):
     def spoken(self):
-        return t("First, Limitless Voice needs to hear you. Press Allow microphone.")
+        return ui.text("First, Limitless Voice needs to hear you. Press Allow microphone.")
 
     def __init__(self, wizard):
         super().__init__(wizard)
-        self.box.addWidget(_title(t("Let Limitless Voice hear you")))
-        self.box.addWidget(_body(t(
+        self.box.addWidget(_title(ui.text("Let Limitless Voice hear you")))
+        self.box.addWidget(_body(ui.text(
             "Your computer will ask whether Limitless Voice may use the microphone. "
             "Choose <b>Allow</b>.<br><br>Audio is turned into words on this computer and then thrown away.")))
-        self.button = _button(t("Allow microphone"))
+        self.button = _button(ui.text("Allow microphone"))
         self.button.setMinimumHeight(48)
         self.button.clicked.connect(self.ask)
         self.box.addWidget(self.button)
-        self.status = _status(t("Microphone permission"))
+        self.status = _status(ui.text("Microphone permission"))
         self.box.addWidget(self.status)
         self.box.addStretch(1)
         self._announced = None
@@ -259,15 +260,15 @@ class MicPermissionPage(Page):
     def refresh(self):
         state = self.wizard.platform.mic_permission()
         if state == "granted":
-            text = t("✓ Microphone allowed")
+            text = ui.text("✓ Microphone allowed")
             self.button.hide()
             self.wizard.window.start_listener()
             if self._announced != state:
                 self.wizard.advance_if_on(self)
         elif state == "denied":
-            text = t("The microphone is turned off for Limitless Voice. Press the button to open "
-                     "Microphone settings, turn on Limitless Voice, and come back.")
-            words.show(self.button.setText, t("Open Microphone settings"))
+            text = ui.text("The microphone is turned off for Limitless Voice. Press the button to open "
+                           "Microphone settings, turn on Limitless Voice, and come back.")
+            words.show(self.button.setText, ui.text("Open Microphone settings"))
             self.button.show()
         else:
             text = ""
@@ -283,26 +284,26 @@ class MicPermissionPage(Page):
 
 class ControlPermissionPage(Page):
     def spoken(self):
-        return t("Next, allow Limitless Voice to control the computer. Press the button, "
-                 "turn on Limitless Voice in the list, then come back.")
+        return ui.text("Next, allow Limitless Voice to control the computer. Press the button, "
+                       "turn on Limitless Voice in the list, then come back.")
 
     def __init__(self, wizard):
         super().__init__(wizard)
-        self.box.addWidget(_title(t("Let your voice press the keys")))
-        self.box.addWidget(_body(t(
+        self.box.addWidget(_title(ui.text("Let your voice press the keys")))
+        self.box.addWidget(_body(ui.text(
             "To play, record and edit for you, Limitless Voice presses keys in Logic and "
             "Pro Tools, the same way you would.<br><br>"
             "macOS needs your OK for that:<br>"
             "1. Press <b>Open Accessibility settings</b>.<br>"
             "2. Turn on the switch next to <b>Limitless Voice</b> (you may need your password).<br>"
             "3. Come back here. This page notices by itself.")))
-        self.button = _button(t("Open Accessibility settings"))
+        self.button = _button(ui.text("Open Accessibility settings"))
         self.button.setMinimumHeight(48)
         self.button.clicked.connect(self.ask)
         self.box.addWidget(self.button)
-        self.status = _status(t("Permission to press keys"))
+        self.status = _status(ui.text("Permission to press keys"))
         self.box.addWidget(self.status)
-        self.skip = _button(t("Skip for now (commands won't work until this is on)"))
+        self.skip = _button(ui.text("Skip for now (commands won't work until this is on)"))
         self.skip.setFlat(True)
         self.skip.clicked.connect(self.wizard.forward)
         self.box.addWidget(self.skip)
@@ -322,13 +323,13 @@ class ControlPermissionPage(Page):
         if ok != self._was:
             self._was = ok
             if ok:
-                self.status.setText(t("✓ Allowed. Limitless Voice can press keys for you."))
+                self.status.setText(ui.text("✓ Allowed. Limitless Voice can press keys for you."))
                 self.button.hide()
                 self.skip.hide()
-                self.wizard.window.speaker.say(t("Allowed"))
+                self.wizard.window.speaker.say(ui.text("Allowed"))
                 self.wizard.advance_if_on(self)
             else:
-                self.status.setText(t("Waiting for the switch to be turned on…"))
+                self.status.setText(ui.text("Waiting for the switch to be turned on…"))
 
     def ready(self):
         return self.wizard.platform.control_permission()
@@ -336,21 +337,21 @@ class ControlPermissionPage(Page):
 
 class MicCheckPage(Page):
     def spoken(self):
-        return t("Let's check the microphone. Say: {phrase}.", phrase=phrase("what can I say"))
+        return ui.text("Let's check the microphone. Say: {phrase}.", phrase=phrase("what can I say"))
 
     def __init__(self, wizard):
         super().__init__(wizard)
-        self.box.addWidget(_title(t("Check your microphone")))
-        self.box.addWidget(_body(t(
+        self.box.addWidget(_title(ui.text("Check your microphone")))
+        self.box.addWidget(_body(ui.text(
             "Pick the microphone you'll use, then say <b>“{phrase}”</b>.<br>"
             "The bar should move when you talk. A headset or a mic close to your mouth works "
             "best when speakers are playing.", phrase=phrase("what can I say"))))
         row = QHBoxLayout()
-        lbl = label(t("&Microphone"))
+        lbl = label(ui.text("&Microphone"))
         self.mics = QComboBox()
-        words.show(self.mics.setAccessibleName, t("Microphone"))
+        words.show(self.mics.setAccessibleName, ui.text("Microphone"))
         # what VoiceOver reads as its label
-        words.show(self.mics.setAccessibleDescription, t("Microphone to listen with"))
+        words.show(self.mics.setAccessibleDescription, ui.text("Microphone to listen with"))
         lbl.setBuddy(self.mics)
         row.addWidget(lbl)
         row.addWidget(self.mics, 1)
@@ -359,9 +360,9 @@ class MicCheckPage(Page):
         self.level.setRange(0, 100)
         self.level.setTextVisible(False)
         self.level.setFixedHeight(26)
-        words.show(self.level.setAccessibleName, t("Microphone level"))
+        words.show(self.level.setAccessibleName, ui.text("Microphone level"))
         self.box.addWidget(self.level)
-        self.result = _status(t("What was heard"), t("Listening…"))
+        self.result = _status(ui.text("What was heard"), ui.text("Listening…"))
         self.box.addWidget(self.result)
         self.box.addStretch(1)
         self.got_it = False
@@ -372,11 +373,11 @@ class MicCheckPage(Page):
         w.start_listener()
         self.mics.blockSignals(True)
         self.mics.clear()
-        add_item(self.mics, t("System default microphone"), "")
+        add_item(self.mics, ui.text("System default microphone"), "")
         try:
             for d in list_input_devices():
                 # a microphone's name is its own, in any language
-                add_item(self.mics, t("{name} (default)", name=d.name) if d.is_default else d.name, d.name)
+                add_item(self.mics, ui.text("{name} (default)", name=d.name) if d.is_default else d.name, d.name)
         except Exception:
             pass
         self.mics.setCurrentIndex(max(0, self.mics.findData(self.wizard.settings.mic_name)))
@@ -384,7 +385,7 @@ class MicCheckPage(Page):
 
     def _mic_changed(self):
         self.wizard.window.choose_mic(self.mics.currentData() or "")
-        self.result.setText(t("Listening…"))
+        self.result.setText(ui.text("Listening…"))
 
     def heard(self, heard, alternative):
         said = (alternative or heard or "").replace("[unk]", "").strip()
@@ -392,35 +393,35 @@ class MicCheckPage(Page):
             return
         asked = phrase("what can I say")
         if _plain(asked) in _plain(heard + " " + alternative):
-            self.result.setText(t("✓ Heard “{text}”. Your microphone works.", text=said))
-            self.wizard.window.speaker.say(t("Got it. Your microphone works."))
+            self.result.setText(ui.text("✓ Heard “{text}”. Your microphone works.", text=said))
+            self.wizard.window.speaker.say(ui.text("Got it. Your microphone works."))
         else:
-            self.result.setText(t("Heard “{text}”. Try once more: “{phrase}”.", text=said, phrase=asked))
+            self.result.setText(ui.text("Heard “{text}”. Try once more: “{phrase}”.", text=said, phrase=asked))
         self.got_it = True
 
 
 class PreferencesPage(Page):
     def spoken(self):
-        return t("Choose how Limitless Voice tells you what it did.")
+        return ui.text("Choose how Limitless Voice tells you what it did.")
 
     def __init__(self, wizard):
         super().__init__(wizard)
         s = wizard.settings
-        self.box.addWidget(_title(t("How should it answer you?")))
+        self.box.addWidget(_title(ui.text("How should it answer you?")))
         self.speak = QCheckBox()
-        words.show(self.speak.setText, t("Say what happened out loud (“Recording”, “Bar 32”)"))
+        words.show(self.speak.setText, ui.text("Say what happened out loud (“Recording”, “Bar 32”)"))
         self.speak.setChecked(s.speak_feedback)
         self.hud = QCheckBox()
-        words.show(self.hud.setText, t("Show what I said at the bottom of the screen"))
+        words.show(self.hud.setText, ui.text("Show what I said at the bottom of the screen"))
         self.hud.setChecked(s.show_hud)
         self.big = QCheckBox()
-        words.show(self.big.setText, t("Larger text"))
+        words.show(self.big.setText, ui.text("Larger text"))
         self.big.setChecked(s.text_scale > 1.0)
         self.contrast = QCheckBox()
-        words.show(self.contrast.setText, t("High contrast colours"))
+        words.show(self.contrast.setText, ui.text("High contrast colours"))
         self.contrast.setChecked(s.high_contrast)
         self.start = QCheckBox()
-        words.show(self.start.setText, t("Start Limitless Voice when I log in"))
+        words.show(self.start.setText, ui.text("Start Limitless Voice when I log in"))
         self.start.setChecked(s.extra.get("login_item", False))
         for cb in (self.speak, self.hud, self.big, self.contrast, self.start):
             cb.setMinimumHeight(36)
@@ -441,21 +442,21 @@ class PreferencesPage(Page):
 
 class ReadyPage(Page):
     def spoken(self):
-        return t("You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. "
-                 "Say {help} any time for the full list.",
-                 play=phrase("play"), bar=phrase("go to bar thirty two"),
-                 mixer=phrase("show the mixer"), help=phrase("what can I say"))
+        return ui.text("You're all set. Click into Logic or Pro Tools and try: {play}, {bar}, or {mixer}. "
+                       "Say {help} any time for the full list.",
+                       play=phrase("play"), bar=phrase("go to bar thirty two"),
+                       mixer=phrase("show the mixer"), help=phrase("what can I say"))
 
     def __init__(self, wizard):
         super().__init__(wizard)
-        self.box.addWidget(_title(t("You're all set")))
-        self.box.addWidget(_body(t(
+        self.box.addWidget(_title(ui.text("You're all set")))
+        self.box.addWidget(_body(ui.text(
             "Click into Logic Pro or Pro Tools and try one of these. Limitless Voice keeps "
             "working from the menu bar when this window is closed.")))
         grid = QVBoxLayout()
         for say, what in STARTER_COMMANDS:
-            row = label(t("<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>",
-                          say=phrase(say), what=t(what)))
+            row = label(ui.text("<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>",
+                                say=phrase(say), what=ui.text(what)))
             row.setTextFormat(Qt.RichText)
             row.setWordWrap(True)
             grid.addWidget(sized(row, 1.15))

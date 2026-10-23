@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 
 from ..keys import for_platform, parse_chord
-from ..words import t
+from ..words import ui
 
 
 @dataclass(frozen=True)
@@ -88,12 +88,12 @@ class Platform:
         return False
 
     def open_app(self, name):
-        raise NotSupported(t("opening apps isn't supported here"))   # shown as "That didn't work: ..."
+        raise NotSupported(ui.text("opening apps isn't supported here"))   # shown as "That didn't work: ..."
 
     # -- misc ----------------------------------------------------------
 
     def applescript(self, script):
-        raise NotSupported(t("AppleScript only works on a Mac"))
+        raise NotSupported(ui.text("AppleScript only works on a Mac"))
 
     def shell(self, cmd):
         subprocess.run(cmd, shell=True, check=True)
@@ -132,15 +132,15 @@ class Platform:
         problems = []
         if self.mic_permission() == "denied":
             problems.append((
-                t("Allow Limitless Voice to use the microphone"),
-                t("Open Microphone settings, turn on Limitless Voice, then come back."),
+                ui.text("Allow Limitless Voice to use the microphone"),
+                ui.text("Open Microphone settings, turn on Limitless Voice, then come back."),
                 self.mic_settings_link(),
             ))
         if not self.control_permission():
             problems.append((
-                t("Allow Limitless Voice to control the computer"),
-                t("Open Accessibility settings, turn on Limitless Voice, then come back. "
-                  "This is what lets spoken commands press keys in Logic and Pro Tools."),
+                ui.text("Allow Limitless Voice to control the computer"),
+                ui.text("Open Accessibility settings, turn on Limitless Voice, then come back. "
+                        "This is what lets spoken commands press keys in Logic and Pro Tools."),
                 self.control_settings_link(),
             ))
         return problems

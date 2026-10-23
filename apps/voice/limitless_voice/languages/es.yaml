@@ -259,6 +259,11 @@ texts:
   Opens Export Audio/Video: Abre Exportar audio/vídeo
   # Voice's windows (words.py): the main window, the menu bar menu, Settings, the setup guide
   # and the floating display. Words with "&" before a letter are reached with Alt and that letter.
+  # How words are put together, the same in Spanish:
+  "{app}: {state}": "{app}: {state}"
+  "<b>{title}</b><br>{how}": "<b>{title}</b><br>{how}"
+  "{phrases}   ({note})": "{phrases}   ({note})"
+  "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>": "<b>“{say}”</b> &nbsp; <span style='color:gray'>{what}</span>"
   'Say something, like "{phrase}".': 'Di algo, por ejemplo "{phrase}".'
   Last thing heard: Lo último que se oyó
   What happened: Lo que pasó

@@ -3,7 +3,8 @@
 The words come from where Voice's spoken replies come from: languages/<code>.yaml, `texts`, by
 their English. So a language is still one file, words that are both shown and said are
 translated once, and English needs nothing: it's written in the code. Text with no translation
-in a language stays English.
+in a language stays English. The windows ask for their words the way the rest of Voice asks a
+language for its replies, ui.text("Settings"), so tests/test_language.py finds them all too.
 
 The language is the one chosen in Settings › Language, else Limitless Sound's (language.wanted).
 The windows change to it at once, even while its speech model is still to be downloaded. The
@@ -50,11 +51,18 @@ class Text(str):
     values = {}
 
 
-def t(text, /, **values):
-    """The text in the windows' language, with each {name} filled in from values."""
-    said = Text(_language.text(text, **values))
-    said.english, said.values = text, values
-    return said
+class Shown:
+    """The language Voice's windows are in, asked for words like any language: ui.text("Settings")
+    is "Ajustes" when they're in Spanish."""
+
+    def text(self, english, /, **values):
+        """The words in the windows' language, with each {name} filled in from values."""
+        said = Text(_language.text(english, **values))
+        said.english, said.values = english, values
+        return said
+
+
+ui = Shown()
 
 
 class Phrase(Text):
@@ -70,12 +78,12 @@ def phrase(english):
 
 
 def again(text):
-    """The same words in the language in use now. Text that didn't come from t() or phrase() stays
-    as it is: a device's name, what was heard, a reply."""
+    """The same words in the language in use now. Text that didn't come from ui.text() or
+    phrase() stays as it is: a device's name, what was heard, a reply."""
     if isinstance(text, Phrase):
         return phrase(text.english)
     if isinstance(text, Text):
-        return t(text.english, **{k: again(v) for k, v in text.values.items()})
+        return ui.text(text.english, **{k: again(v) for k, v in text.values.items()})
     return text
 
 

@@ -20,7 +20,7 @@ import threading
 from collections import deque
 from dataclasses import dataclass
 
-from .words import t
+from .words import ui
 
 
 @dataclass
@@ -228,9 +228,9 @@ class Listener:
                 if failures >= 2 and self.device is not None:
                     # the chosen mic is gone; carry on with the system default
                     self.device = None
-                    self.on_error(t("Lost that microphone ({error}). Switched to the default one.", error=e))
+                    self.on_error(ui.text("Lost that microphone ({error}). Switched to the default one.", error=e))
                 else:
-                    self.on_error(t("Microphone problem: {error}. Retrying…", error=e))
+                    self.on_error(ui.text("Microphone problem: {error}. Retrying…", error=e))
                 self._stop.wait(min(2 ** failures, 10))
 
     def _listen_once(self, sd):

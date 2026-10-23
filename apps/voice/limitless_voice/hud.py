@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QVBox
 from . import words
 from .look import LiveText, sized
 from .settings import APP_NAME
-from .words import t
+from .words import ui
 
 # state -> (dot colour, label); the label is shown in Voice's language
 STATES = {
@@ -58,14 +58,14 @@ class Hud(QWidget):
         self.setAttribute(Qt.WA_MacAlwaysShowToolWindow)
         self.setFocusPolicy(Qt.NoFocus)
         self.setWindowTitle(APP_NAME)   # a window it draws itself: named for screen readers
-        words.show(self.setAccessibleName, t("What {app} heard", app=APP_NAME))
+        words.show(self.setAccessibleName, ui.text("What {app} heard", app=APP_NAME))
 
         self.dot = QLabel()
         # sized even at the normal size: labels with a style sheet of their own keep their
         # first font unless it's set again when the text size changes
-        self.state_label = sized(LiveText(t("Listening state")), 1.0)
-        self.heard = sized(LiveText(t("Heard")), 1.5, bold=True)
-        self.did = sized(LiveText(t("What happened")), 1.0)
+        self.state_label = sized(LiveText(ui.text("Listening state")), 1.0)
+        self.heard = sized(LiveText(ui.text("Heard")), 1.5, bold=True)
+        self.did = sized(LiveText(ui.text("What happened")), 1.0)
         for lbl in (self.state_label, self.heard, self.did):
             lbl.setStyleSheet("color: white; background: transparent;")
         self.heard.setWordWrap(True)
@@ -127,7 +127,7 @@ class Hud(QWidget):
         size = self.dot.width()
         edge = "border: 2px solid white;" if self.high_contrast else ""
         self.dot.setStyleSheet(f"background: {colour}; border-radius: {size // 2}px; {edge}")
-        self.state_label.setText(t(label))
+        self.state_label.setText(ui.text(label))
 
     def _colour_did(self):
         if self.high_contrast:

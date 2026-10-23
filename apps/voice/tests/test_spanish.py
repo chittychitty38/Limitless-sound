@@ -27,7 +27,7 @@ from limitless_voice.hud import STATES
 from limitless_voice.language import ENGLISH, available, load
 from limitless_voice.platforms.dryrun import DryRunPlatform
 from limitless_voice.settings import data_dir
-from limitless_voice.words import t
+from limitless_voice.words import ui
 
 ES = load("es")
 PACKAGE = Path(words.__file__).parent
@@ -52,13 +52,12 @@ def tree(path):
     return ast.parse(path.read_text(encoding="utf-8"))
 
 
-def literals(name, paths=CODE):
-    """Every call to name("…") (a function, or a method of that name): where, the words, and the
+def literals(called, paths=CODE):
+    """Every call written called("…"), like ui.text("…") or phrase("…"): where, the words, and the
     {names} it fills in (None if it can't tell)."""
     for path in paths:
         for node in ast.walk(tree(path)):
-            called = getattr(node, "func", None)
-            if isinstance(node, ast.Call) and name in (getattr(called, "id", None), getattr(called, "attr", None)) \
+            if isinstance(node, ast.Call) and ast.unparse(node.func) == called \
                     and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str):
                 names = None if any(k.arg is None for k in node.keywords) else {k.arg for k in node.keywords}
                 yield f"{path.relative_to(PACKAGE)}:{node.lineno}", node.args[0].value, names
@@ -83,7 +82,7 @@ class Languages(unittest.TestCase):
 
 class Words(Languages):
     def test_every_word_in_the_windows_has_spanish(self):
-        found = list(literals("t"))
+        found = list(literals("ui.text"))
         self.assertGreater(len(found), 120)
         missing = [f"{where} {en!r}" for where, en, _ in found if has_words(en) and en not in ES.texts]
         self.assertEqual(missing, [], "no Spanish for these")
@@ -92,7 +91,7 @@ class Words(Languages):
         self.assertEqual(unfilled, [], "placeholders not filled in")
 
     def test_spanish_keeps_every_placeholder_tag_and_access_key(self):
-        for _, en, _ in literals("t"):
+        for _, en, _ in literals("ui.text"):
             es = ES.texts.get(en)
             if es is None:
                 continue
@@ -100,7 +99,7 @@ class Words(Languages):
             self.assertEqual(sorted(TAG.findall(en)), sorted(TAG.findall(es)), en)
             self.assertEqual(len(re.findall(r"&\w", en)), len(re.findall(r"&\w", es)), en)   # Alt+M, Alt+H
 
-    def test_words_not_written_as_t_have_spanish(self):
+    def test_words_from_elsewhere_have_spanish(self):
         # the setup guide's list says what each command does, and Settings names the speech models
         used = {what for _, what in onboarding.STARTER_COMMANDS}
         used |= {m["label"] for code, _ in available() for m in load(code).models.values()}
@@ -128,7 +127,7 @@ class Words(Languages):
         r = Engine(p, packs, own_names=["Limitless Voice"], language=lang).handle(said.lower(), said.lower())
         return r.handled, r.kind, [e[1] for e in p.log if e[0] in ("press", "type", "open")]
 
-    def test_no_english_reaches_the_screen_without_t(self):
+    def test_no_english_reaches_the_screen_without_ui_text(self):
         shown_by = {"setText", "setAccessibleName", "setAccessibleDescription", "setToolTip", "setWindowTitle",
                     "setPlaceholderText", "setItemText", "showMessage", "addAction", "addItem", "addItems",
                     "insertItem", "addRow", "addButton", "LiveText", "QLabel", "QPushButton", "QCheckBox", "QAction",
@@ -137,7 +136,7 @@ class Words(Languages):
                     "show_message", "warning", "question", "information", "NotSupported", "RuntimeError"}
 
         def raw(node):
-            """Words written straight into an argument, not through t()."""
+            """Words written straight into an argument, not through ui.text()."""
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 return [node.value]
             if isinstance(node, ast.JoinedStr):
@@ -160,23 +159,23 @@ class Words(Languages):
                         for text in raw(arg):
                             if has_words(re.sub("|".join(NAMES), "", text)):
                                 found.append(f"{path.name}:{node.lineno} {text[:70]!r}")
-        self.assertEqual(found, [], "words shown without t()")
+        self.assertEqual(found, [], "words shown without ui.text()")
 
     def test_t_fills_in_and_says_it_again_in_another_language(self):
-        said = t("Using {microphone}", microphone=t("System default microphone"))
+        said = ui.text("Using {microphone}", microphone=ui.text("System default microphone"))
         self.assertEqual(said, "Using System default microphone")
-        self.assertEqual(t("{name} (default)", name="Apple Virtual Sound Device"),
+        self.assertEqual(ui.text("{name} (default)", name="Apple Virtual Sound Device"),
                          "Apple Virtual Sound Device (default)")
         self.assertTrue(words.use("es"))
         self.assertFalse(words.use("es"))
         self.assertEqual(words.again(said), "Usando Micrófono predeterminado del sistema")
-        self.assertEqual(t("{name} (default)", name="Apple Virtual Sound Device"),
+        self.assertEqual(ui.text("{name} (default)", name="Apple Virtual Sound Device"),
                          "Apple Virtual Sound Device (predeterminado)")   # a device's name is its own
-        self.assertEqual(t("Not in the table"), "Not in the table")      # no Spanish: it stays English
+        self.assertEqual(ui.text("Not in the table"), "Not in the table")      # no Spanish: it stays English
         self.assertEqual(words.again("plain words"), "plain words")
 
     def test_what_to_say_is_in_the_language_listened_in(self):
-        hint = t('Say something, like "{phrase}".', phrase=words.phrase("what can I say"))
+        hint = ui.text('Say something, like "{phrase}".', phrase=words.phrase("what can I say"))
         words.use("es")   # the windows in Spanish, still listening in English: its model isn't here yet
         self.assertEqual(words.again(hint), 'Di algo, por ejemplo "what can I say".')
         words.listen_in(ES)   # and now it is
@@ -226,7 +225,7 @@ class Windows(Languages):
         the floating display, What you can say, Settings, and the setup guide on every page."""
         undo = "deshacer" if w.lang.code == "es" else "undo"   # Pro Tools is in front
         w.on_heard(undo, undo)
-        w.on_mic_error(t("Microphone problem: {error}. Retrying…", error="-9996"))
+        w.on_mic_error(ui.text("Microphone problem: {error}. Retrying…", error="-9996"))
         w.hud.show_message(undo, w.did_label.text())
         CommandsDialog(w, w.engine)
         settings = SettingsDialog(w, w.settings)

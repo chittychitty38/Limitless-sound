@@ -2,7 +2,7 @@
 
 from .base import AppRef, NotSupported, Platform
 from ..keys import for_platform, parse_chord
-from ..words import t
+from ..words import ui
 
 
 class DryRunPlatform:
@@ -40,7 +40,7 @@ class DryRunPlatform:
 
     def applescript(self, script):
         if self.os_name != "mac":
-            raise NotSupported(t("AppleScript only works on a Mac"))
+            raise NotSupported(ui.text("AppleScript only works on a Mac"))
         self._record("applescript", script)
 
     def shell(self, cmd):

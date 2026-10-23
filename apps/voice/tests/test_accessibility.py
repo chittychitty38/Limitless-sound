@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractSlid
 from test_setup import SPANISH_MODEL, make  # noqa: E402  (the main window with a dry-run computer, no mic)
 from limitless_voice.app import CommandsDialog, SettingsDialog  # noqa: E402
 from limitless_voice.onboarding import MicCheckPage, PreferencesPage  # noqa: E402
-from limitless_voice.words import t, use as use_language  # noqa: E402
+from limitless_voice.words import ui, use as use_language  # noqa: E402
 
 app = QApplication.instance() or QApplication([])
 CONTROLS = (QAbstractButton, QComboBox, QAbstractSlider, QAbstractSpinBox, QLineEdit, QAbstractItemView)
@@ -133,7 +133,8 @@ class Base(unittest.TestCase):
         if self.language:
             self.addCleanup(shutil.rmtree, SPANISH_MODEL, True)
             self.addCleanup(use_language, "en")   # the next test's words start in English
-        self.assertEqual((self.w.lang.code, t("Settings")), ("es", "Ajustes") if self.language else ("en", "Settings"))
+        self.assertEqual((self.w.lang.code, ui.text("Settings")),
+                         ("es", "Ajustes") if self.language else ("en", "Settings"))
         self.w._check_permissions()
         self.posted = []
         real = QAccessible.updateAccessibility
@@ -184,10 +185,10 @@ class MainWindowAndDialogs(Base):
     def test_tab_goes_through_each_window_in_order(self):
         w = self.w
         self.assert_tab_order(w, [w.listen_btn, w.permission_open, w.permission_check, w.mic_combo,
-                                  button(w, t("Refresh")), w.history, button(w, t("What can I say?")),
-                                  button(w, t("Settings")), button(w, t("My commands folder"))])
+                                  button(w, ui.text("Refresh")), w.history, button(w, ui.text("What can I say?")),
+                                  button(w, ui.text("Settings")), button(w, ui.text("My commands folder"))])
         dialog = CommandsDialog(w, w.engine)
-        self.assert_tab_order(dialog, [dialog.search, dialog.list, button(dialog, t("Close"))])
+        self.assert_tab_order(dialog, [dialog.search, dialog.list, button(dialog, ui.text("Close"))])
         dialog.reject()
         dialog = SettingsDialog(w, w.settings)
         dialog.show()
@@ -201,25 +202,25 @@ class MainWindowAndDialogs(Base):
         w = self.w
         solo = self.SOLO[self.language]
         w.on_heard(solo, solo)
-        self.assert_read(w.heard_label, t("Heard: “{text}”", text=solo))
+        self.assert_read(w.heard_label, ui.text("Heard: “{text}”", text=solo))
         self.assert_read(w.did_label, w.did_label.text())
         w.hud.show_message(solo, "Solo track")   # the display, when the window is behind
         self.assert_read(w.hud.heard, f"“{solo}”")
         self.assert_read(w.hud.did, "✓ Solo track")
         w.engine.awake = False
         w._update_state()
-        self.assert_read(w.hud.state_label, t("Asleep"))
+        self.assert_read(w.hud.state_label, ui.text("Asleep"))
         w._track_focus()
-        self.assert_read(w.target_label, t("Sending commands to: {app}", app="Pro Tools"))
+        self.assert_read(w.target_label, ui.text("Sending commands to: {app}", app="Pro Tools"))
         w.on_mic_error("Couldn't open the microphone")
         self.assert_read(w.mic_error, "Couldn't open the microphone")
-        self.assertEqual(said(w.permission_text, QAccessible.Description), t("Permission needed"))
-        self.assertIn(t("Allow Limitless Voice to control the computer"), said(w.permission_text))
+        self.assertEqual(said(w.permission_text, QAccessible.Description), ui.text("Permission needed"))
+        self.assertIn(ui.text("Allow Limitless Voice to control the computer"), said(w.permission_text))
 
     def test_the_floating_display_is_named(self):
         hud = self.w.hud
         self.assertEqual(hud.windowTitle(), "Limitless Voice")
-        self.assertEqual(said(hud), t("What {app} heard", app="Limitless Voice"))
+        self.assertEqual(said(hud), ui.text("What {app} heard", app="Limitless Voice"))
         self.assertTrue(in_words(said(hud)))
 
 
@@ -260,16 +261,16 @@ class SetupGuide(Base):
     def test_status_text_is_read_and_its_changes_posted(self):
         wiz = self.wiz
         page = self.go(1)
-        self.assert_read(wiz.step_label, t("Step {n} of {total}", n=2, total=6))
+        self.assert_read(wiz.step_label, ui.text("Step {n} of {total}", n=2, total=6))
         page.button.click()   # the dry run allows the microphone at once
         wiz._refresh()
-        self.assert_read(page.status, t("✓ Microphone allowed"))
+        self.assert_read(page.status, ui.text("✓ Microphone allowed"))
         page = self.go(2)
-        self.assert_read(page.status, t("Waiting for the switch to be turned on…"))
+        self.assert_read(page.status, ui.text("Waiting for the switch to be turned on…"))
         page = self.go(3)
         asked = self.HELP[self.language]
         self.w.on_heard(asked, asked)
-        self.assert_read(page.result, t("✓ Heard “{text}”. Your microphone works.", text=asked))
+        self.assert_read(page.result, ui.text("✓ Heard “{text}”. Your microphone works.", text=asked))
 
 
 class MainWindowAndDialogsInSpanish(MainWindowAndDialogs):
