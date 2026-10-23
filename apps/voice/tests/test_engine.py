@@ -261,6 +261,30 @@ class Destructive(unittest.TestCase):
                 e.handle(phrase)
                 self.assertLessEqual(len(pressed(p)), 3, f"{app} {os_name}: {phrase} -> {pressed(p)}")
 
+    def test_a_stray_word_never_cuts_pastes_or_deletes(self):
+        # Real people's "cat" came back from the command recognizer as "cut" 64 times in 100.
+        # A one-word Cut, Paste or Delete needs the open recognizer to have heard that word too.
+        for app, said, heard_open in [("Logic Pro", "cut", "cat"), ("Logic Pro", "paste", "based"),
+                                      ("Logic Pro", "delete", "the leap"), ("Pro Tools", "delete", "believe")]:
+            e, p = engine(app)
+            r = e.handle(said, heard_open)
+            self.assertFalse(r.handled, f"{said} / {heard_open}")
+            self.assertEqual(pressed(p), [], f"{said} / {heard_open}")
+        for app, said, keys in [("Logic Pro", "cut", ["cmd+x"]), ("Logic Pro", "paste", ["cmd+v"]),
+                                ("Logic Pro", "delete", ["delete"])]:
+            e, p = engine(app)
+            self.assertTrue(e.handle(said, said).handled, said)              # both heard it
+            self.assertEqual(pressed(p), keys)
+            e, p = engine(app)
+            self.assertTrue(e.handle(said).handled, said)                    # typed, or from another app
+            self.assertEqual(pressed(p), keys)
+        e, p = engine("Logic Pro")
+        self.assertTrue(e.handle("cut that", "cat that").handled)          # two words: as before
+        self.assertEqual(pressed(p), ["cmd+x"])
+        e, p = engine("Logic Pro")
+        self.assertTrue(e.handle("copy", "happy").handled)                 # harmless: as before
+        self.assertEqual(pressed(p), ["cmd+c"])
+
     def test_harmless_commands_still_repeat(self):
         e, p = engine("Pro Tools")
         e.handle("nudge right twenty times")

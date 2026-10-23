@@ -13,7 +13,7 @@ import difflib
 import re
 from dataclasses import dataclass, field
 
-from .actions import run_action
+from .actions import _fill, run_action
 from .grammar import undo_sounds_like
 from .numbers import normalize_numbers
 
@@ -208,12 +208,12 @@ class Engine:
             return self._reply(raw, "OK")
 
         commands = self.commands_for(self.current_app_name())
-        found = None
+        found, said = None, text
         for t in texts:
             body, times = split_repeat(t)
             found = self._match(body, commands)
             if found:
-                raw = t
+                raw = said = t
                 break
         if not found and self.suite is not None:
             for t in texts:
@@ -232,6 +232,15 @@ class Engine:
                               "then say it again.")
             return Result(raw, False, f"Didn't catch a command in \"{text}\"")
         cmd, params = found
+        # A stray word must never throw work away. The command recognizer can only answer with
+        # command words, so real people's "cat" came back as "cut" 64 times in 100 (stress/
+        # test_voice_real_speech.py). One word that would press Cut, Paste or Delete counts only
+        # if the open recognizer heard that word too.
+        if (alternative is not None and len(said.split()) == 1 and self._destroys(cmd, params)
+                and said not in normalize(alternative).split()):
+            heard_open = normalize(alternative)
+            return Result(raw, False, f"Didn't catch a command in \"{heard_open}\"" if heard_open
+                          else "Didn't catch that")
         if cmd.repeatable is False:
             times = 1
         elif not isinstance(cmd.repeatable, bool) and isinstance(cmd.repeatable, int):
@@ -244,6 +253,18 @@ class Engine:
         return self._run(raw, cmd, params, times)
 
     # -- helpers -------------------------------------------------------
+
+    @staticmethod
+    def _destroys(cmd, params):
+        """Whether running the command presses a key that throws work away (Delete, Cut, Paste)."""
+        def chords(spec):
+            if isinstance(spec, dict):
+                if "steps" in spec:
+                    for step in spec["steps"]:
+                        yield from chords(step)
+                elif "keys" in spec:
+                    yield from spec["keys"] if isinstance(spec["keys"], list) else [spec["keys"]]
+        return any(str(c).replace(" ", "").lower() in DESTRUCTIVE_KEYS for c in chords(_fill(cmd.action, params)))
 
     def _match(self, text, commands):
         for cmd in commands:
