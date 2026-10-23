@@ -195,6 +195,40 @@ def test_wildcard_app_patterns():
     assert find_profile(config, None)["name"] == "Everyday"
 
 
+def test_garageband_reaper_and_fl_studio_are_found():
+    config = profiles.default_config()
+    for app_id, name in [("com.apple.garageband10", "GarageBand"), ("com.cockos.reaper", "REAPER"),
+                         ("com.cockos.reaper64", "REAPER"), ("reaper.exe", "REAPER"),
+                         ("com.image-line.flstudio", "FL Studio"), ("fl64.exe", "FL Studio"),
+                         ("fl64 (scaled).exe", "FL Studio"), ("com.apple.garageband", "Everyday")]:
+        assert find_profile(config, app_id)["name"] == name, app_id
+
+
+def test_settings_from_before_get_the_new_daws(tmp_path):
+    # Saved by an older version: Logic, Pro Tools, Ableton and Everyday, one of them changed.
+    old = profiles.default_config()
+    old["profiles"] = [p for p in old["profiles"] if p["name"] not in ("GarageBand", "REAPER", "FL Studio")]
+    old["profiles"][0]["layers"][0]["a"] = {"tap": {"keys": "k"}}
+    path = tmp_path / "settings.json"
+    profiles.save(old, path)
+    config = profiles.load(path)
+    assert [p["name"] for p in config["profiles"]] == ["Logic Pro", "Pro Tools", "Ableton Live", "GarageBand",
+                                                      "REAPER", "FL Studio", "Everyday"]
+    assert config["profiles"][0]["layers"][0]["a"] == {"tap": {"keys": "k"}}   # theirs, kept
+    assert validate(config) == []
+    assert find_profile(config, "reaper.exe")["name"] == "REAPER"
+
+
+def test_fl_studio_has_no_record_or_redo():
+    # R only switches record mode (play then records), and Ctrl/Cmd+Z undoes and redoes in turn:
+    # neither may answer the suite's "record" or "redo", and undo steps back through the history.
+    fl = profiles.CATALOG["FL Studio"]
+    assert "record" not in fl and "redo" not in fl
+    assert fl["record_mode"]["keys"] == "r" and fl["undo"]["keys"] == "mod+alt+z"
+    # REAPER's redo is Ctrl+Shift+Z on Windows too, not Ctrl+Y.
+    assert profiles.CATALOG["REAPER"]["redo"]["keys"] == "mod+shift+z"
+
+
 def test_speech_off(out):
     e = make_engine(out)
     e.config["speak"] = False
@@ -236,7 +270,8 @@ def test_describe():
 def test_default_config_is_valid():
     config = profiles.default_config()
     assert validate(config) == []
-    assert [p["name"] for p in config["profiles"]] == ["Logic Pro", "Pro Tools", "Ableton Live", "Everyday"]
+    assert [p["name"] for p in config["profiles"]] == ["Logic Pro", "Pro Tools", "Ableton Live", "GarageBand",
+                                                      "REAPER", "FL Studio", "Everyday"]
     # Record never sits on a tap of a big button.
     for p in config["profiles"]:
         for inp in ("a", "b"):

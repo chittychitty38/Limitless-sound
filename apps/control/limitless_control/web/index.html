@@ -136,7 +136,7 @@
       </div></li>
       <li id="step-go"><span class="tick" aria-hidden="true"></span><div>
         <h3>Open your music app</h3>
-        <p>Open Logic Pro, Pro Tools or Ableton Live. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.</p>
+        <p>Open Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER or FL Studio. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.</p>
         <p data-html>Big <strong>A</strong> plays and stops. <strong>Hold</strong> the big <strong>B</strong> to record. Hold <strong>Menu</strong> to turn the controller off and on.</p>
         <label class="check"><input type="checkbox" id="setup-login" checked> Start Limitless Control when I log in</label>
       </div></li>
@@ -238,7 +238,7 @@
 "Press the big <strong>A<\/strong> button, or any switch.": "Pulsa el botón grande <strong>A<\/strong> o cualquier pulsador.",
 "Nothing pressed yet.": "Aún no has pulsado nada.",
 "Open your music app": "Abre tu app de música",
-"Open Logic Pro, Pro Tools or Ableton Live. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.": "Abre Logic Pro, Pro Tools o Ableton Live. Limitless Control lo detecta, cambia a los botones adecuados para esa app y te lo dice en voz alta.",
+"Open Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER or FL Studio. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.": "Abre Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER o FL Studio. Limitless Control lo detecta, cambia a los botones adecuados para esa app y te lo dice en voz alta.",
 "Big <strong>A<\/strong> plays and stops. <strong>Hold<\/strong> the big <strong>B<\/strong> to record. Hold <strong>Menu<\/strong> to turn the controller off and on.": "La <strong>A<\/strong> grande reproduce y detiene. <strong>Mantén pulsada<\/strong> la <strong>B<\/strong> grande para grabar. Mantén pulsado <strong>Menú<\/strong> para apagar y encender el controlador.",
 "Start Limitless Control when I log in": "Iniciar Limitless Control al iniciar sesión",
 "Done. I'm ready to play": "Hecho. Ya puedo tocar",
@@ -418,6 +418,22 @@
 "Left": "Izquierda",
 "Right": "Derecha",
 "Track on/off (mute)": "Pista: activar/desactivar (silenciar)",
+"New track (opens a dialog)": "Pista nueva (abre un cuadro)",
+"Show automation": "Mostrar automatización",
+"Show Musical Typing": "Mostrar escritura musical",
+"New track": "Pista nueva",
+"Split items at the edit cursor": "Dividir los ítems en el cursor de edición",
+"Zoom to project": "Zoom al proyecto",
+"Add marker": "Añadir marcador",
+"Record mode on/off": "Modo de grabación: activar/desactivar",
+"Go to start (Playlist)": "Ir al inicio (Playlist)",
+"Undo (steps back)": "Deshacer (paso a paso)",
+"Previous channel": "Canal anterior",
+"Next channel": "Canal siguiente",
+"Solo mixer track": "Solo de la pista del mezclador",
+"Show playlist": "Mostrar la Playlist",
+"Show channel rack": "Mostrar el Channel Rack",
+"Show browser": "Mostrar el navegador",
 "Enter / OK": "Intro / Aceptar",
 "Escape / cancel": "Escape / cancelar",
 "Space": "Espacio",
@@ -453,7 +469,7 @@ const SLIDERS = [
   ["repeatIntervalSeconds", "Time between repeats", 0.03, 1, 0.01, "Smaller is faster."],
 ];
 const EVERYWHERE = "__global__";
-const DAWS = ["Logic Pro", "Pro Tools", "Ableton Live"];
+const DAWS = ["Logic Pro", "Pro Tools", "Ableton Live", "GarageBand", "REAPER", "FL Studio"];
 // Layout of the Xbox Adaptive Controller: big A and B pads on the right, d-pad on the left.
 const PAD = [
   { input: "lb", rect: [60, 4, 84, 30], name: "LB" },

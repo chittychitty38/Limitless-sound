@@ -59,8 +59,8 @@ def _block(script, start):
 
 
 # Names, controller buttons and the DAWs read the same in every language.
-SAME_EVERYWHERE = {"Limitless Control", "Logic Pro", "Pro Tools", "Ableton Live", "Xbox",
-                   "A", "B", "X", "Y", "LB", "RB", "LT", "RT", "LS", "RS"}
+SAME_EVERYWHERE = {"Limitless Control", "Logic Pro", "Pro Tools", "Ableton Live", "GarageBand", "REAPER",
+                   "FL Studio", "Xbox", "A", "B", "X", "Y", "LB", "RB", "LT", "RT", "LS", "RS"}
 
 
 def _needs_spanish(words, es):
