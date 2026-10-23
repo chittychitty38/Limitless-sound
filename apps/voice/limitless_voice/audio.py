@@ -17,6 +17,7 @@ import json
 import math
 import queue
 import threading
+from collections import deque
 from dataclasses import dataclass
 
 
@@ -73,6 +74,59 @@ def level_of(pcm):
 INSTANT_AFTER = 0.3
 
 
+# Silence isn't decoded. Both recognizers decoding every 100 ms of a quiet room kept about 6% of
+# a core busy, all the time Voice was listening (measured on CI runners, October 2026; more on an
+# older laptop). This is Limitless Zoom's gate (apps/zoom/limitless_zoom/voice.py): a block counts
+# as sound when it's louder than SOUND, or clearly louder than the quietest the microphone has
+# been lately (its noise floor), and never when it's quieter than SILENT. A loud room or music
+# always counts, so commands over music are heard exactly as before.
+SOUND = 330           # peak level (16-bit) that always counts as sound: -40 dB from full scale
+SILENT = 16           # peak level that never does: -66 dB (digital silence, a muted input)
+ABOVE_FLOOR = 2.0     # twice the noise floor (+6 dB) counts as sound
+FLOOR_RISE = 1.01     # the noise floor follows a room getting louder by about 1 dB a second
+PRE_ROLL = 1.0        # seconds from before the first sound that go to the recognizers too, so the
+                      # start of a word is never cut off and they hear the room just before
+HANG_ON = 1.5         # seconds after the last sound that still go to them: the quiet that ends an
+                      # utterance (the open recognizer waits up to a second for it)
+
+
+def peak(pcm):
+    """The loudest sample of a block of 16-bit audio (every fourth one is plenty)."""
+    samples = array.array("h")
+    samples.frombytes(pcm)
+    return max(map(abs, samples[::4]), default=0)
+
+
+class SpeechGate:
+    """Decides which blocks of microphone audio the recognizers hear: nothing while it's quiet;
+    when a sound starts, the second before it, then everything until a second and a half after
+    the last sound."""
+
+    def __init__(self, block_seconds=0.1):
+        self.before = deque(maxlen=max(1, round(PRE_ROLL / block_seconds)))
+        self.hang_on = max(1, round(HANG_ON / block_seconds))
+        self.floor = float(SOUND)
+        self.left = 0   # blocks still to pass on after the last sound; 0 means it's quiet
+
+    def is_sound(self, loudest):
+        sound = loudest >= SILENT and (loudest >= SOUND or loudest >= self.floor * ABOVE_FLOOR)
+        self.floor = min(float(loudest), max(self.floor * FLOOR_RISE, self.floor + 1))
+        return sound
+
+    def push(self, block, loudest):
+        """The blocks for the recognizers now (oldest first), and True when a sound just ended."""
+        if self.is_sound(loudest):
+            blocks = [*self.before, block]
+            self.before.clear()
+            self.left = self.hang_on
+            return blocks, False
+        if self.left:
+            self.left -= 1
+            return [block], self.left == 0
+        self.before.append(block)
+        return [], False
+
+
 def build_grammar(phrases):
     """The command recognizer's phrase list. [unk] soaks up everything else."""
     return sorted(p for p in phrases if p and p.isascii()) + ["[unk]"]
@@ -110,6 +164,7 @@ class Listener:
         self._steady = ("", 0.0)   # the command recognizer's words so far, and for how long
         self._early = False        # this utterance's command has been reported already
         self._rate = 16000
+        self._gate = SpeechGate()
 
     # -- lifecycle -------------------------------------------------------
 
@@ -148,6 +203,7 @@ class Listener:
         import vosk
         model = self.load_model()
         self._rate = rate
+        self._gate = SpeechGate()
         recs = {"open": vosk.KaldiRecognizer(model, rate)}
         if self.use_command_vocabulary:
             grammar = json.dumps(build_grammar(self.phrases))
@@ -210,8 +266,29 @@ class Listener:
                     for rec in recs.values():
                         rec.Reset()
                     self._forget()
+                    self._gate = SpeechGate()
                     was_paused = False
-                self._feed(recs, data)
+                self.hear(recs, data)
+
+    def hear(self, recs, data):
+        """One block from the microphone, through the silence gate to the recognizers."""
+        blocks, ended = self._gate.push(data, peak(data))
+        for block in blocks:
+            self._feed(recs, block)
+        if ended:
+            self._finish(recs)
+
+    def _finish(self, recs):
+        """The sound has stopped: read out anything the recognizers still hold. They nearly
+        always end the utterance by themselves in the quiet after it. If they hold nothing,
+        they're left be: finishing starts them afresh, and they'd forget what they've learned
+        about this microphone and room."""
+        held = json.loads(recs["open"].PartialResult()).get("partial", "")
+        if "commands" in recs:
+            held += " " + " ".join(self._cmd_parts)
+            held += " " + json.loads(recs["commands"].PartialResult()).get("partial", "")
+        if held.replace("[unk]", "").strip():
+            self._end(recs, json.loads(recs["open"].FinalResult()).get("text", ""))
 
     def _forget(self):
         self._cmd_parts = []
@@ -236,9 +313,11 @@ class Listener:
                 self._steady = (words, held)
                 if held >= INSTANT_AFTER - 1e-6:
                     self._check_instant(recs, words)
-        if not recs["open"].AcceptWaveform(data):
-            return
-        open_text = json.loads(recs["open"].Result()).get("text", "")
+        if recs["open"].AcceptWaveform(data):
+            self._end(recs, json.loads(recs["open"].Result()).get("text", ""))
+
+    def _end(self, recs, open_text):
+        """The open recognizer has ended an utterance: report it with the command recognizer's."""
         cmd_text = ""
         if "commands" in recs:
             self._cmd_parts.append(json.loads(recs["commands"].FinalResult()).get("text", ""))
