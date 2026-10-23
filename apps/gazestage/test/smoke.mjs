@@ -397,7 +397,9 @@ try {
   step('shared settings: text size, contrast and motion are applied and reported');
   const until = async (cond, ms = 3000) => { const end = Date.now() + ms; while (!cond() && Date.now() < end) await new Promise((r) => setTimeout(r, 25)); return cond(); };
   const sendPrefs = (prefs) => hub.sock.write(JSON.stringify({ op: 'prefs', prefs }) + '\n');
-  const applied = (want, ms) => until(() => JSON.stringify(hub.states['prefs.applied']) === JSON.stringify(want), ms);
+  // The language GazeStage shows without one from the suite: the computer's (English or Spanish).
+  const computer = await win.evaluate(() => navigator.languages.map((l) => l.split('-')[0]).find((l) => l === 'en' || l === 'es') || 'en');
+  const applied = (want, ms) => until(() => JSON.stringify(hub.states['prefs.applied']) === JSON.stringify({ language: computer, ...want }, ['textScale', 'highContrast', 'reduceMotion', 'language']), ms);
   const view = () => win.evaluate(() => {
     const r = document.documentElement, clipped = [];
     for (const t of document.querySelectorAll('.target'))
@@ -406,7 +408,7 @@ try {
       transition: getComputedStyle(document.querySelector('.target')).transitionDuration, clipped };
   });
   const systemReduce = await win.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
-  assert.deepEqual(hub.states['prefs.applied'], { textScale: 1, highContrast: false, reduceMotion: systemReduce }, 'reported after the welcome');
+  assert.deepEqual(hub.states['prefs.applied'], { textScale: 1, highContrast: false, reduceMotion: systemReduce, language: computer }, 'reported after the welcome');
   const sentAt = Date.now();
   sendPrefs({ speak: true, oneVoice: true, textScale: 1.5, highContrast: true, reduceMotion: true, dwellMs: 1500, scanMs: 2000 });
   assert.ok(await applied({ textScale: 1.5, highContrast: true, reduceMotion: true }), JSON.stringify(hub.states['prefs.applied']));
@@ -428,6 +430,40 @@ try {
   await own('sSize', 'normal'); await own('sContrast', false);
   assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: systemReduce }));
   assert.deepEqual(await view(), { contrast: 'normal', motion: systemReduce ? 'reduce' : 'normal', text: '17px', transition: systemReduce ? '0s' : '0.12s, 0.12s, 0.12s', clipped: [] });
+
+  step('shared settings: the suite\'s language reaches the window, the menu and the answers to other apps');
+  // Which buttons clip at double size depends on the computer's fonts, so Spanish is held to
+  // English on this computer: it may clip only what English already clips.
+  const clippedKeys = () => win.evaluate(() => [...document.querySelectorAll('.target')]
+    .filter((t) => t.offsetParent && (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1))
+    .map((t) => t.dataset.hui || t.dataset.goto || t.id || t.className));
+  sendPrefs({ textScale: 2, highContrast: false, reduceMotion: false });
+  assert.ok(await applied({ textScale: 2, highContrast: false, reduceMotion: systemReduce }));
+  const english = {};
+  for (const page of ['transport', 'play']) {
+    await win.click(`[data-goto=${page}]`);
+    english[page] = await clippedKeys();
+  }
+  sendPrefs({ textScale: 2, highContrast: false, reduceMotion: false, language: 'es' });
+  assert.ok(await applied({ textScale: 2, highContrast: false, reduceMotion: systemReduce, language: 'es' }), JSON.stringify(hub.states['prefs.applied']));
+  assert.equal(await win.evaluate(() => document.documentElement.lang), 'es', 'screen readers read it in Spanish');
+  for (const [page, word] of [['transport', 'Rebobinar'], ['play', 'Acordes'], ['tone', 'Guardar aquí']]) {
+    await win.click(`[data-goto=${page}]`);
+    assert.match(await win.textContent(`#${page}`), new RegExp(word));
+    if (page !== 'tone') {
+      const more = (await clippedKeys()).filter((k) => !english[page].includes(k));
+      assert.deepEqual(more, [], `Spanish clips nothing English doesn't at double size (${page})`);
+    }
+  }
+  const menu = () => app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
+  const menuSays = async (word) => { for (let i = 0; i < 60 && !(await menu()).includes(word); i++) await sleep(50); return (await menu()).includes(word); };
+  assert.ok(await menuSays('Ver'), `the menu in Spanish: ${await menu()}`);
+  assert.equal((await hubInvoke(8, 'fly'))?.message, 'GazeStage no tiene la acción «fly».');
+  sendPrefs({ textScale: 1, highContrast: false, reduceMotion: false, language: 'en' });
+  assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: systemReduce, language: 'en' }));
+  assert.match(await win.textContent('[data-goto=transport]'), /Transport$/);
+  assert.ok(await menuSays('View'), `the menu in English: ${await menu()}`);
+  await win.click('[data-goto=play]');
 
   step('shared settings: reduced motion draws dwell in steps and still waits the full dwell');
   sendPrefs({ reduceMotion: true });
@@ -457,11 +493,12 @@ try {
 
   step('shared settings: let go when Limitless Sound goes away, and report again when it is back');
   delete hub.states['prefs.applied'];
-  sendPrefs({ textScale: 1.5, highContrast: true });
+  sendPrefs({ textScale: 1.5, highContrast: true, language: computer === 'es' ? 'en' : 'es' });
   await until(() => hub.states['prefs.applied']?.highContrast);
   delete hub.states['prefs.applied'];
   hub.sock.destroy();
   await win.waitForFunction(() => document.documentElement.dataset.contrast === 'normal', null, { timeout: 3000 });
+  assert.equal(await win.evaluate(() => document.documentElement.lang), computer, 'back in the computer\'s language');
   assert.equal((await view()).text, '17px');
   assert.ok(await applied({ textScale: 1, highContrast: false, reduceMotion: systemReduce }, 8000), 'reported again after reconnecting');
 

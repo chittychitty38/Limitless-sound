@@ -113,8 +113,10 @@ Replies are read by a Spanish voice when the computer has one. When it hasn't, V
 to add one: on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage
 Voices; on Windows, Settings > Time & language > Speech > Add voices. With the suite's one voice
 on, the hub reads them in Spanish. Other apps' actions ("screen colors on") are only heard in
-English for now, as the apps name them in English. The window's buttons, Settings and the setup
-guide are in English.
+English for now, as the apps name them in English. Voice's windows (the main window, Settings,
+the setup guide, the menu bar menu and the floating display) change to the language chosen at
+once, even before its speech model is here; the commands they suggest saying are the ones Voice
+hears, so they stay English until then.
 
 How well it hears real people, measured in CI (Voice 0.4.0; `stress/README.md` has how):
 
@@ -202,6 +204,7 @@ Locally: `pyinstaller limitless_voice.spec` (needs the model in `models/`).
 | `onboarding.py` | The first-launch setup guide |
 | `hud.py` | The floating card showing what was heard, and the state icons |
 | `look.py` | Text size, high contrast and reduced motion for every window, from Voice's settings and the suite's |
+| `words.py` | The windows' words in Voice's language, from the language's `texts`, changing in place when it changes |
 | `audio.py` | Microphone (any device, any rate, survives unplugging) and recognition. Each utterance goes to two recognizers: one limited to command phrases (accurate on poor mics) and one open (for dictation and free text) |
 | `engine.py` | Sleep/wake, dictation, confirm, repeat, picks the command for the app in front |
 | `grammar.py` | Loads command files, matches phrases, builds the recognizer's phrase list |

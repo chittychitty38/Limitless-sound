@@ -6,6 +6,8 @@ ipcRenderer.on('synth:port', (e) => window.postMessage('gazestage:synth-port', '
 contextBridge.exposeInMainWorld('gazestage', {
   platform: process.platform,
   setAlwaysOnTop: (on) => ipcRenderer.send('window:on-top', on),
+  // The language the page shows, for the menu and the answers to other apps.
+  setLanguage: (lang) => ipcRenderer.send('language', lang),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   onCommand: (cb) => ipcRenderer.on('command', (_e, cmd) => cb(cmd)),
   // Asked by the main process, so the page keeps answering other apps while it's on screen.

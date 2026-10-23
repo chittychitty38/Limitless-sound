@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  displayInUse, shownProgress,
+  displayInUse, shownProgress, languageInUse,
   OneEuro, leastSquares, fitCalibration, calibrationGrade, headToScreen,
   buildPads, chordName, noteName, huiSwitch, HuiParser, HUI, OnsetDetector, XY_PROFILES, toCC, xyMessages, XYMotion,
 } from '../renderer/lib.js';
@@ -51,6 +51,16 @@ test('display uses the more accessible of GazeStage\'s own and the shared settin
   assert.equal(displayInUse({ ...own, size: 'large' }, { textScale: 2 }).textScale, 2);
   assert.equal(displayInUse(own, { textScale: 9 }).textScale, 2);
   assert.deepEqual(displayInUse(own, { textScale: 'big', highContrast: 0 }), off);
+});
+
+test('the language is the suite\'s while it is connected, else the computer\'s', () => {
+  assert.equal(languageInUse({ language: 'es' }, ['en-US']), 'es');
+  assert.equal(languageInUse({ language: 'en' }, ['es-MX']), 'en', 'the suite\'s choice wins over the computer\'s');
+  assert.equal(languageInUse({ language: 'fr' }, ['es-ES']), 'en', 'one GazeStage doesn\'t have yet: English');
+  assert.equal(languageInUse(null, ['fr-FR', 'es-419', 'en-US']), 'es', 'no hub: the computer\'s first one GazeStage has');
+  assert.equal(languageInUse({ textScale: 1.5 }, ['es_ES']), 'es', 'a hub that names none: the computer\'s');
+  assert.equal(languageInUse(null, ['de-DE']), 'en');
+  assert.equal(languageInUse(null, []), 'en');
 });
 
 test('reduced motion draws dwell progress in quarter steps', () => {

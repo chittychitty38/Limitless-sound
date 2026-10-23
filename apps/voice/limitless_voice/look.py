@@ -11,20 +11,38 @@ LiveText is for words that change on screen, so a screen reader follows them too
 from PySide6.QtGui import QAccessible, QAccessibleValueChangeEvent, QFont
 from PySide6.QtWidgets import QApplication, QLabel
 
+from . import words
+
 TEXT_SIZE = "textSize"   # widget property: its text size, as a multiple of the normal size
+
+
+def label(text):
+    """A label whose words follow Voice's language."""
+    lbl = QLabel()
+    words.show(lbl.setText, text)
+    return lbl
+
+
+def add_item(combo, text, data=None):
+    """An item in a pop-up menu, its words following Voice's language."""
+    combo.addItem(text, data)
+    words.keep(combo.setItemText, text, combo.count() - 1)
 
 
 class LiveText(QLabel):
     """Words that change on screen: what was heard, what happened, a permission still needed.
     A screen reader reads the words themselves (on a Mac VoiceOver reads a label's name as its
     words, so these never get a fixed name), `about` says what they are, and each change is
-    posted so a screen reader on the label reads the new words."""
+    posted so a screen reader on the label reads the new words. Its words, and what they are,
+    follow Voice's language."""
 
     def __init__(self, about, text=""):
         super().__init__(text)
-        self.setAccessibleDescription(about)
+        words.keep(self.setText, text)
+        words.show(self.setAccessibleDescription, about)
 
     def setText(self, text):
+        words.keep(self.setText, text)   # said again in the next language Voice is set to
         super().setText(text)
         # Qt posts the name change itself; VoiceOver follows a label's words as its value.
         iface = QAccessible.queryAccessibleInterface(self)
