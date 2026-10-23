@@ -74,11 +74,13 @@ def language():
 
 
 def follow(value):
-    """Use the language the hub sent. True when that changes the language. If the hub goes
-    away, the last one it sent stays: the window doesn't change language under the musician."""
+    """Use the language the hub sent, or English for one this app doesn't have (Português is
+    a preview only in Limitless Voice). True when that changes the language. If the hub sends
+    none, or goes away, the last one stays: the window doesn't change language under the musician."""
     global _suite
     before = language()
-    _suite = tag(value) or _suite
+    if isinstance(value, str) and value.strip():
+        _suite = tag(value) or DEFAULT
     return language() != before
 
 

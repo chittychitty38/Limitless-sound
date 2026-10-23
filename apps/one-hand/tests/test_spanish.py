@@ -110,6 +110,9 @@ def test_the_language_is_the_suites_else_the_computers(monkeypatch):
     assert words.follow("en") and words.language() == "en"   # the hub's, once it says
     assert not words.follow("en") and not words.follow("klingon") and not words.follow(None)
     assert words.language() == "en"
+    # A language One-Hand doesn't have is English, not the last one: from Spanish too.
+    assert words.follow("es") and words.follow("pt-BR") and words.language() == "en"
+    assert words.follow("es") and not words.follow(None) and not words.follow("") and words.language() == "es"
 
 
 # ---- the windows -------------------------------------------------------------------------

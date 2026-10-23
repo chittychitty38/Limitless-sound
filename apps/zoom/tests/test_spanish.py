@@ -133,6 +133,9 @@ def test_the_language_is_the_suites_else_the_computers(monkeypatch):
     assert words.language() == "es"
     assert words.follow("en") and words.language() == "en"
     assert not words.follow(None) and words.language() == "en"   # a hub that sends none keeps the last
+    # A language Zoom doesn't have is English, not the last one: from Spanish too.
+    assert words.follow("es") and words.follow("pt-BR") and words.language() == "en"
+    assert words.follow("es") and not words.follow(None) and not words.follow("") and words.language() == "es"
 
 
 # ---- the windows -------------------------------------------------------------------------
