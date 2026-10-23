@@ -33,9 +33,11 @@ class FakeLauncher:
 class FakeSpeaker:
     def __init__(self):
         self.said = []
+        self.langs = []
 
-    def say(self, text):
+    def say(self, text, lang="en"):
         self.said.append(text)
+        self.langs.append(lang)
 
 
 class Clock:

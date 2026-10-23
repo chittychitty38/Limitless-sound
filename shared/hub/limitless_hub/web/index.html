@@ -112,6 +112,11 @@
     <fieldset>
       <legend>2. How should things look and sound?</legend>
       <div class="field">
+        <label for="setup-language">Language · <span lang="es">Idioma</span></label>
+        <select id="setup-language" aria-describedby="language-about"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option></select>
+        <p class="muted" id="language-about">Limitless Voice listens and answers in this language. Apps that don't have it yet stay in English.</p>
+      </div>
+      <div class="field">
         <label for="setup-size">Text size in every app</label>
         <select id="setup-size">
           <option value="1">Normal</option><option value="1.25">Large</option>
@@ -185,6 +190,12 @@
   <section role="tabpanel" id="p-settings" aria-labelledby="t-settings" hidden>
     <h2>For every app</h2>
     <p class="muted">Set these once. Every Limitless Sound app that supports a setting follows it.</p>
+    <div class="field">
+      <label for="pref-language">Language · <span lang="es">Idioma</span></label>
+      <select id="pref-language" aria-describedby="pref-language-about language-voice"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option></select>
+      <p class="muted" id="pref-language-about">Limitless Voice listens and answers in this language. Apps that don't have it yet stay in English.</p>
+      <p class="muted" id="language-voice" hidden></p>
+    </div>
     <div class="check"><input type="checkbox" id="pref-speak"><label for="pref-speak">Spoken feedback</label></div>
     <div class="check"><input type="checkbox" id="pref-oneVoice"><label for="pref-oneVoice">One voice: apps take turns speaking and never repeat each other</label></div>
     <div class="check"><input type="checkbox" id="pref-highContrast"><label for="pref-highContrast">High contrast</label></div>
@@ -422,7 +433,7 @@ $("addLink").addEventListener("click", async () => {
   await saveRoutes("Link added"); renderLinks();
 });
 
-const PREFS = ["speak", "oneVoice", "highContrast", "reduceMotion", "textScale", "dwellMs", "scanMs"];
+const PREFS = ["language", "speak", "oneVoice", "highContrast", "reduceMotion", "textScale", "dwellMs", "scanMs"];
 function renderPrefs() {
   const p = state.prefs;
   for (const k of PREFS) {
@@ -430,6 +441,12 @@ function renderPrefs() {
     if (document.activeElement === e) continue;
     if (e.type === "checkbox") e.checked = !!p[k]; else e.value = String(p[k]);
   }
+  // Replies in a language the computer has no voice for are read in the default voice.
+  const name = (state.languages || {})[p.language] || p.language;
+  $("language-voice").hidden = state.languageVoice !== false;
+  $("language-voice").textContent = state.languageVoice === false
+    ? `This computer has no voice for ${name} yet, so spoken replies use its usual voice. To add one on a Mac: System Settings › Accessibility › Spoken Content › System voice › Manage Voices. On Windows: Settings › Time & language › Speech › Add voices.`
+    : "";
   if (!setupShown) showLook(p);
 }
 function showLook(p) {
@@ -441,9 +458,9 @@ function showLook(p) {
 }
 for (const k of PREFS) {
   $("pref-" + k).addEventListener("change", async (e) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : Number(e.target.value);
+    const v = e.target.type === "checkbox" ? e.target.checked : k === "language" ? e.target.value : Number(e.target.value);
     const r = await api("/api/prefs", { prefs: { [k]: v } });
-    if (r.prefs) { state.prefs = r.prefs; renderPrefs(); say("Saved for every app"); }
+    if (r.prefs) { state.prefs = r.prefs; state.languageVoice = r.languageVoice; renderPrefs(); say("Saved for every app"); }
   });
 }
 function renderOrder() {
@@ -490,6 +507,7 @@ function renderSetup() {
       el("input", { type: "checkbox", id, value: c.id, checked: state.setupInputs.includes(c.id) }),
       el("span", {}, el("b", {}, c.label), el("small", {}, c.about))));
   }
+  $("setup-language").value = state.prefs.language || "en";
   $("setup-size").value = String(state.prefs.textScale || 1);
   if (!$("setup-size").value) $("setup-size").value = "1";
   $("setup-contrast").checked = !!state.prefs.highContrast;
@@ -497,7 +515,7 @@ function renderSetup() {
   $("setup-speak").checked = !!state.prefs.speak;
 }
 function setupLook() {
-  return { textScale: Number($("setup-size").value), highContrast: $("setup-contrast").checked,
+  return { language: $("setup-language").value, textScale: Number($("setup-size").value), highContrast: $("setup-contrast").checked,
            reduceMotion: $("setup-motion").checked, speak: $("setup-speak").checked };
 }
 // See the choice at once: the page itself takes the size and contrast picked.
