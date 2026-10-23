@@ -23,9 +23,8 @@ from conftest import need
 need("zoom")
 
 from limitless_zoom.actions import VOICE_PHRASES  # noqa: E402
-from limitless_zoom.voice import Hearing, grammar, match_phrase  # noqa: E402
+from limitless_zoom.voice import FILLERS, Hearing, grammar, match_phrase  # noqa: E402
 from test_voice_stress import _noise, _pcm, _wav  # noqa: E402
-from test_zoom_real_speech import _runs_on  # noqa: E402
 
 MODEL = os.environ.get("VOSK_MODEL")
 TTS = os.environ.get("TTS_WAV_DIR")
@@ -62,7 +61,7 @@ def _hear(samples):
 
 def _before(text, words):
     """What Zoom 0.1.2 did with a result: any number of unknown words around a command."""
-    text = " ".join(w for w in text.split() if w != "[unk]")
+    text = " ".join(w for w in text.split() if w not in ("[unk]", *FILLERS))
     action = VOICE_PHRASES.get(text)
     words = [w for w in (words or []) if w.get("word") != "[unk]"]
     if action and words and sum(w.get("conf", 1.0) for w in words) / len(words) < MIN_CONF:
@@ -95,10 +94,8 @@ def test_commands_get_through_music(snr_db):
         voiced = speech[2 * RATE: -3 * RATE]
         gain = np.sqrt((voiced ** 2).mean() / ((band ** 2).mean() * 10 ** (snr_db / 10)))
         heard = _hear(speech + band * gain)
-        now = lambda r: match_phrase(r["text"], r.get("result"), MIN_CONF)  # noqa: E731
-        for rule, judge in (("now", now), ("before", lambda r: _before(r["text"], r.get("result"))),
-                            ("0.2", lambda r: None if _runs_on(r, 0.2) else now(r)),
-                            ("0.3", lambda r: None if _runs_on(r, 0.3) else now(r))):
+        for rule, judge in (("now", lambda r: match_phrase(r["text"], r.get("result"), MIN_CONF)),
+                            ("before", lambda r: _before(r["text"], r.get("result")))):
             acts = [judge(r) for r in heard]
             right[rule] += item["expect"] in acts
             if rule == "now":
@@ -107,8 +104,7 @@ def test_commands_get_through_music(snr_db):
                     missed.append((item["say"], [r["text"] for r in heard]))
     n = len(clips)
     print(f"\nBand at {snr_db} dB below the voice: {right['now']}/{n} commands heard ({right['now'] / n:.0%}); "
-          f"with any number of unknown words around a command allowed, {right['before']}/{n}; if a command less "
-          f"than 0.2 s from other words didn't count, {right['0.2']}/{n}, 0.3 s {right['0.3']}/{n}. "
+          f"as Zoom 0.1.2 judged them (any unknown words around a command allowed), {right['before']}/{n}. "
           f"Wrong action {len(wrong)} times: {wrong[:6]}. Missed: {missed[:12]}")
     # Measured on CI: every command at all three levels on Linux (espeak-ng, 14 clips), and 41 of 42
     # on a Mac (three of its voices), where "magnify" was once heard as "magnifier". The floor

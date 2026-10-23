@@ -56,7 +56,7 @@ class KeyLogic:
 
         if self.capture is not None and is_down:
             cb, self.capture = self.capture, None
-            cb(name)
+            cb(None if name == "esc" else name)   # Escape cancels, so the keyboard alone can back out
             return True
 
         if name == self.switch_key and not has_mods:

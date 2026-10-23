@@ -113,6 +113,26 @@ def test_match_phrase_confidence():
     assert match_phrase("[unk] [unk] again [unk]", [], 0.5) is None
     assert match_phrase("[unk] wake up [unk] [unk]", [], 0.5) is None
     assert match_phrase("zoom [unk] [unk] in", [], 0.5) is None
+
+
+def w(word, start, end, conf=1.0):
+    return {"word": word, "start": start, "end": end, "conf": conf}
+
+
+def test_a_command_running_on_from_other_words_is_not_one():
+    # "...had to see again": "again" straight after another word
+    assert match_phrase("[unk] again", [w("[unk]", 0.0, 0.40), w("again", 0.42, 0.80)], 0.5) is None
+    assert match_phrase("zoom in [unk]", [w("zoom", 0, .3), w("in", .3, .5), w("[unk]", .52, .9)], 0.5) is None
+    # a breath or a click before it, with a pause: still a command
+    assert match_phrase("[unk] again", [w("[unk]", 0.0, 0.20), w("again", 0.60, 0.95)], 0.5) == "again"
+    assert match_phrase("fit", [w("fit", 0.1, 0.4)], 0.5) == "fit"
+
+
+def test_please_and_um_around_a_command_are_fine():
+    assert match_phrase("zoom in please", [w("zoom", 0, .3), w("in", .3, .5), w("please", .52, .9)], 0.5) == "in"
+    assert match_phrase("uh fit", [w("uh", 0, .2), w("fit", .22, .5)], 0.5) == "fit"
+    assert match_phrase("please", [w("please", 0, .4)], 0.5) is None
+    assert "please" in json.loads(grammar())
     assert match_phrase("", [], 0.5) is None
 
 

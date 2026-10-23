@@ -4,12 +4,32 @@ Each comes from Limitless Voice's own settings and, with the Limitless Sound
 hub running, from the suite's shared settings. The more accessible of the two
 wins: the larger text, and high contrast or reduced motion if either asks for it.
 Without the hub, only Voice's own settings count.
+
+LiveText is for words that change on screen, so a screen reader follows them too.
 """
 
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QAccessible, QAccessibleValueChangeEvent, QFont
+from PySide6.QtWidgets import QApplication, QLabel
 
 TEXT_SIZE = "textSize"   # widget property: its text size, as a multiple of the normal size
+
+
+class LiveText(QLabel):
+    """Words that change on screen: what was heard, what happened, a permission still needed.
+    A screen reader reads the words themselves (on a Mac VoiceOver reads a label's name as its
+    words, so these never get a fixed name), `about` says what they are, and each change is
+    posted so a screen reader on the label reads the new words."""
+
+    def __init__(self, about, text=""):
+        super().__init__(text)
+        self.setAccessibleDescription(about)
+
+    def setText(self, text):
+        super().setText(text)
+        # Qt posts the name change itself; VoiceOver follows a label's words as its value.
+        iface = QAccessible.queryAccessibleInterface(self)
+        QAccessible.updateAccessibility(
+            QAccessibleValueChangeEvent(self, iface.text(QAccessible.Name) if iface else text))
 
 
 def in_use(settings, prefs):
