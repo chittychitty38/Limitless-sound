@@ -1,6 +1,6 @@
 // GazeStage app: pointer, targeting, selection, pages, guided setup and settings.
 import {
-  displayInUse, shownProgress, TEXT_SCALE,
+  displayInUse, shownProgress, languageInUse, TEXT_SCALE,
   OneEuro, fitCalibration, calibrationGrade, dot, headToScreen, buildPads, SCALES, NOTE_NAMES, HUI, OnsetDetector,
   XY_PROFILES, xyMessages, XYMotion, toCC,
 } from './lib.js';
@@ -12,6 +12,42 @@ import { MidiRouter } from './midi.js';
 const $ = (id) => document.getElementById(id);
 const bridge = window.gazestage || null;
 if (bridge?.platform === 'darwin') document.body.classList.add('mac');
+
+// ---------- language ----------
+// GazeStage's words in the suite's language while Limitless Sound runs, else in the computer's
+// (languageInUse in lib.js). The Spanish is in index.html (strings-es), English text → Spanish.
+const STRINGS = { es: JSON.parse($('strings-es').textContent) };
+let lang = 'en';
+function t(text, vars = {}) {
+  let out = (STRINGS[lang] || {})[text] || text;
+  for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(v);
+  return out;
+}
+// The page's own words, kept in English so they can be put back. A sentence with bold words in
+// it is one entry (data-html), so it can follow the other language's word order.
+const fixedText = [], fixedAttrs = [], fixedHtml = [];
+{
+  for (const e of document.querySelectorAll('[data-html]')) fixedHtml.push([e, e.innerHTML.trim()]);
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode())
+    if (n.nodeValue.trim() && !n.parentElement.closest('script, [data-html]')) fixedText.push([n, n.nodeValue]);
+  for (const name of ['aria-label', 'title'])
+    for (const e of document.querySelectorAll(`[${name}]`)) fixedAttrs.push([e, name, e.getAttribute(name)]);
+}
+const computerLanguages = () => (navigator.languages?.length ? navigator.languages : [navigator.language]);
+function setLanguage(next) {
+  next = STRINGS[next] ? next : 'en';
+  if (next === lang) return false;
+  lang = next;
+  document.documentElement.lang = lang;   // screen readers read the page in it
+  for (const [n, en] of fixedText) n.nodeValue = en.replace(en.trim(), t(en.trim()));
+  for (const [e, name, en] of fixedAttrs) e.setAttribute(name, t(en));
+  for (const [e, en] of fixedHtml) e.innerHTML = t(en);
+  bridge?.setLanguage?.(lang);   // the menu, and the answers to other apps (main.js)
+  return true;
+}
+setLanguage(languageInUse(null, computerLanguages()));
+bridge?.setLanguage?.(lang);
 
 // ---------- settings ----------
 const DEFAULTS = {
@@ -66,7 +102,14 @@ function applyDisplay() {
   r.dataset.size = display.textScale > TEXT_SCALE.xlarge ? 'huge' : S.size;   // huge: the shared size, past Extra large
   $('preview').classList.toggle('hidden', !S.preview || !state.cameraOn);
   bridge?.setAlwaysOnTop(S.onTop);
+  if (setLanguage(languageInUse(shared, computerLanguages()))) relabel();
   reportDisplay();
+}
+// Everything the script draws, again in a new language.
+function relabel() {
+  fillOptions(); syncSettingsForm(); refreshCalInfo(); refreshChips(); renderInstrument(); renderLeds();
+  lastDrawn = ''; renderTone(); renderMidiSettings(); renderToneSettings();
+  if (state.onboardStep) renderStep(state.onboardStep);
 }
 systemMotion.addEventListener('change', applyDisplay);
 
@@ -83,25 +126,25 @@ function chip(id, level, html) {
   put(dot, '_level', level || '', (v) => { dot.className = 'dot ' + v; });
   put(text, '_html', html, (v) => { text.innerHTML = v; });
 }
-const SELECT_NAMES = { dwell: 'Dwell', switch: 'Switch', sound: 'Sound', blink: 'Blink' };
 function refreshChips() {
   const cam = {
-    off: [S.mode === 'mouse' ? 'ok' : '', S.mode === 'mouse' ? 'Pointer <b>mouse</b>' : 'Camera <b>off</b>'],
-    loading: ['warn', 'Camera <b>starting…</b>'],
-    tracking: ['ok', 'Camera <b>tracking</b>'],
-    noface: ['warn', 'Camera <b>no face</b>'],
-    error: ['bad', 'Camera <b>unavailable</b>'],
+    off: [S.mode === 'mouse' ? 'ok' : '', S.mode === 'mouse' ? t('Pointer <b>mouse</b>') : t('Camera <b>off</b>')],
+    loading: ['warn', t('Camera <b>starting…</b>')],
+    tracking: ['ok', t('Camera <b>tracking</b>')],
+    noface: ['warn', t('Camera <b>no face</b>')],
+    error: ['bad', t('Camera <b>unavailable</b>')],
   }[state.cameraState];
   chip('chipCamera', cam[0], cam[1]);
-  chip('chipSelect', 'ok', `Select <b>${SELECT_NAMES[S.select]}</b>`);
-  if (midi.mode === 'native') chip('chipMidi', 'ok', 'MIDI <b>GazeStage ports</b>');
-  else if (midi.mode === 'web') chip('chipMidi', midi.canSendHui || midi.notesTarget ? 'ok' : 'warn', `MIDI <b>${midi.canSendHui || midi.notesTarget ? 'connected' : 'choose ports'}</b>`);
-  else chip('chipMidi', 'bad', 'MIDI <b>off</b>');
-  chip('chipPT', midi.proToolsConnected ? 'ok' : '', `Pro Tools <b>${midi.proToolsConnected ? 'linked' : 'not linked'}</b>`);
+  chip('chipSelect', 'ok', { dwell: t('Select <b>Dwell</b>'), switch: t('Select <b>Switch</b>'), sound: t('Select <b>Sound</b>'), blink: t('Select <b>Blink</b>') }[S.select]);
+  const ports = midi.canSendHui || midi.notesTarget;
+  if (midi.mode === 'native') chip('chipMidi', 'ok', t('MIDI <b>GazeStage ports</b>'));
+  else if (midi.mode === 'web') chip('chipMidi', ports ? 'ok' : 'warn', ports ? t('MIDI <b>connected</b>') : t('MIDI <b>choose ports</b>'));
+  else chip('chipMidi', 'bad', t('MIDI <b>off</b>'));
+  chip('chipPT', midi.proToolsConnected ? 'ok' : '', midi.proToolsConnected ? t('Pro Tools <b>linked</b>') : t('Pro Tools <b>not linked</b>'));
   const hint = $('transportHint');
-  put(hint, '_html', midi.proToolsConnected ? 'Connected to Pro Tools.'
-    : midi.mode === 'native' ? 'Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>. <button class="linkish" data-cmd="settings">How to connect</button>'
-    : 'Not linked yet. <button class="linkish" data-cmd="settings">Choose the Pro Tools ports in Settings</button>', (v) => { hint.innerHTML = v; });
+  put(hint, '_html', midi.proToolsConnected ? t('Connected to Pro Tools.')
+    : midi.mode === 'native' ? `${t('Not linked yet. In Pro Tools, add a HUI controller using <b>GazeStage HUI</b>.')} <button class="linkish" data-cmd="settings">${t('How to connect')}</button>`
+    : `${t('Not linked yet.')} <button class="linkish" data-cmd="settings">${t('Choose the Pro Tools ports in Settings')}</button>`, (v) => { hint.innerHTML = v; });
 }
 setInterval(refreshChips, 1000);
 
@@ -131,7 +174,7 @@ async function startCamera() {
 async function fillCameras() {
   const sel = $('sCamera'); const cams = await Tracker.cameras();
   sel.length = 1;
-  cams.forEach((c, i) => sel.add(new Option(c.label || 'Camera ' + (i + 1), c.deviceId)));
+  cams.forEach((c, i) => sel.add(new Option(c.label || t('Camera {n}', { n: i + 1 }), c.deviceId)));
   sel.value = cams.some(c => c.deviceId === S.camera) ? S.camera : '';
 }
 
@@ -184,25 +227,25 @@ function setNeutral(samples) {
 }
 
 async function recenter() {
-  if (S.mode === 'mouse') { toast('Recenter is for head and eye pointing.'); return; }
+  if (S.mode === 'mouse') { toast(t('Recenter is for head and eye pointing.')); return; }
   if (!state.cameraOn && !(await startCamera())) return;
   const box = $('calib'), dotEl = $('calibDot'), msg = $('calibMsg');
   state.calibrating = true; box.classList.add('show');
-  msg.innerHTML = 'Look at the dot and keep still<small>Recentering…</small>';
+  msg.innerHTML = `${t('Look at the dot and keep still')}<small>${t('Recentering…')}</small>`;
   Object.assign(dotEl.style, { display: 'block', left: '50%', top: '50%' });
   await wait(700);
   const got = [];
   const end = performance.now() + 700;
   while (performance.now() < end) { if (state.sample?.face) got.push(state.sample); await wait(33); }
   dotEl.style.display = 'none'; box.classList.remove('show'); state.calibrating = false;
-  if (got.length < 6) { toast("I couldn't see your face. Try again facing the camera."); return; }
-  setNeutral(got); toast('Pointer recentered');
+  if (got.length < 6) { toast(t("I couldn't see your face. Try again facing the camera.")); return; }
+  setNeutral(got); toast(t('Pointer recentered'));
 }
 
 // ---------- calibration ----------
 const CAL_POINTS = [[.08, .1], [.5, .1], [.92, .1], [.92, .5], [.5, .5], [.08, .5], [.08, .9], [.5, .9], [.92, .9]];
 async function calibrate() {
-  if (S.mode === 'mouse') { toast('Calibration is for head and eye pointing.'); return; }
+  if (S.mode === 'mouse') { toast(t('Calibration is for head and eye pointing.')); return; }
   if (!state.cameraOn && !(await startCamera())) return;
   closeSettings();
   const box = $('calib'), dotEl = $('calibDot'), msg = $('calibMsg');
@@ -210,9 +253,8 @@ async function calibrate() {
   let cancelled = false;
   const onKey = (e) => { if (e.key === 'Escape') cancelled = true; };
   addEventListener('keydown', onKey);
-  msg.innerHTML = S.mode === 'eyes'
-    ? 'Keep your head still and follow the red dot with your eyes.<small>Nine dots, about 15 seconds. Press Esc to stop.</small>'
-    : 'Point your nose at the red dot as it moves.<small>Nine dots, about 15 seconds. Press Esc to stop.</small>';
+  msg.innerHTML = (S.mode === 'eyes' ? t('Keep your head still and follow the red dot with your eyes.') : t('Point your nose at the red dot as it moves.'))
+    + `<small>${t('Nine dots, about 15 seconds. Press Esc to stop.')}</small>`;
   await wait(2600);
   msg.innerHTML = '';
   const samples = []; let seen = 0, total = 0;
@@ -237,9 +279,11 @@ async function calibrate() {
     S.cal = { ...S.cal, [S.mode]: result }; save();
     state.offset = { x: 0, y: 0 }; filterX.reset(); filterY.reset();
     const grade = calibrationGrade(result.error);
-    msg.innerHTML = `Calibration is ${grade}.<small>Average error is about ${(result.error * 100).toFixed(1)}% of the screen.${grade === 'poor' || grade === 'fair' ? ' Better light and sitting still will help. You can run it again any time.' : ''}</small>`;
+    msg.innerHTML = `${t('Calibration is {grade}.', { grade: gradeName(grade) })}<small>${t('Average error is about {error}% of the screen.', { error: (result.error * 100).toFixed(1) })}`
+      + `${grade === 'poor' || grade === 'fair' ? ' ' + t('Better light and sitting still will help. You can run it again any time.') : ''}</small>`;
   } else {
-    msg.innerHTML = cancelled ? 'Calibration stopped.' : "Calibration didn't work: I lost sight of your face.<small>Face the camera with light in front of you, then try again.</small>";
+    msg.innerHTML = cancelled ? t('Calibration stopped.')
+      : `${t("Calibration didn't work: I lost sight of your face.")}<small>${t('Face the camera with light in front of you, then try again.')}</small>`;
   }
   await wait(2400);
   box.classList.remove('show'); state.calibrating = false;
@@ -248,9 +292,10 @@ async function calibrate() {
 function refreshCalInfo() {
   const c = S.cal[S.mode];
   $('calInfo').textContent = S.mode === 'mouse' ? '' : c
-    ? `Calibrated for ${S.mode === 'eyes' ? 'eyes' : 'head'}: ${calibrationGrade(c.error)} (about ${(c.error * 100).toFixed(1)}% average error).`
-    : S.mode === 'eyes' ? 'Eye pointing needs calibration. Choose Calibrate.' : 'Not calibrated. Head pointing works without it; calibrating fits it to you.';
+    ? t('Calibrated for {part}: {grade} (about {error}% average error).', { part: S.mode === 'eyes' ? t('eyes') : t('head'), grade: gradeName(calibrationGrade(c.error)), error: (c.error * 100).toFixed(1) })
+    : S.mode === 'eyes' ? t('Eye pointing needs calibration. Choose Calibrate.') : t('Not calibrated. Head pointing works without it; calibrating fits it to you.');
 }
+const gradeName = (grade) => ({ great: t('great'), good: t('good'), fair: t('fair'), poor: t('poor') })[grade] || grade;
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ---------- microphone switch ----------
@@ -293,7 +338,7 @@ async function startMic() {
     };
     tick(); return true;
   } catch {
-    toast('Microphone access is off. Allow it in System Settings › Privacy & Security › Microphone.', 5000);
+    toast(t('Microphone access is off. Allow it in System Settings › Privacy & Security › Microphone.'), 5000);
     return false;
   }
 }
@@ -433,8 +478,8 @@ function showFaceBanner(show) {
   if (show && !b.classList.contains('show')) {
     const s = state.sample;
     $('faceBannerText').textContent = s && s.brightness < 0.18
-      ? "I can't see your face: it's too dark. Turn on a light in front of you."
-      : "I can't see your face. Move back into view of the camera.";
+      ? t("I can't see your face: it's too dark. Turn on a light in front of you.")
+      : t("I can't see your face. Move back into view of the camera.");
   }
   b.classList.toggle('show', !!show);
 }
@@ -444,7 +489,7 @@ let switchDown = false;
 const IGNORE_KEYS = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Escape']);
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || IGNORE_KEYS.has(e.key)) return;
-  if (state.onboardStep === 'select' && S.select === 'switch') { markTest(`Got it: “${e.key === ' ' ? 'Space' : e.key}”`); }
+  if (state.onboardStep === 'select' && S.select === 'switch') { markTest(t('Got it: “{key}”', { key: e.key === ' ' ? t('Space') : e.key })); }
   if (S.select !== 'switch' || state.settingsOpen || e.target.closest?.('select, input')) return;
   e.preventDefault();
   if (e.repeat || switchDown) return;
@@ -468,11 +513,11 @@ addEventListener('blur', releaseMomentary);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseMomentary(); });
 
 function onSwitch(kind) {
-  if (state.onboardStep === 'select' && kind === 'sound' && S.select === 'sound') markTest('Heard it!');
+  if (state.onboardStep === 'select' && kind === 'sound' && S.select === 'sound') markTest(t('Heard it!'));
   if (S.select !== kind || !state.current || state.calibrating || state.settingsOpen) return;
-  const t = state.current;
-  if (kind === 'sound' && state.fired && isPad(t) && !S.hold) release(t);   // retrigger on each sound
-  press(t, 'gaze'); state.fired = true;
+  const target = state.current;
+  if (kind === 'sound' && state.fired && isPad(target) && !S.hold) release(target);   // retrigger on each sound
+  press(target, 'gaze'); state.fired = true;
 }
 
 // Mouse, touch and keyboard always work too (for helpers and for testing).
@@ -574,7 +619,7 @@ function release(t) {
 // ---------- Limitless Sound ----------
 // Other suite apps (Voice, the controller, a Stream Deck) can drive GazeStage, and when
 // Pro Tools isn't linked, GazeStage's transport asks whichever suite app can do it.
-const SUITE_TRANSPORT = { play: 'Playing', stop: 'Stopped', record: 'Recording' };
+const SUITE_TRANSPORT = { play: () => t('Playing'), stop: () => t('Stopped'), record: () => t('Recording') };
 const SUITE_DO = {
   pads: () => showPage('play'), transport: () => showPage('transport'),
   octaveUp: () => action('octup'), octaveDown: () => action('octdown'), scale: () => action('scale'),
@@ -584,37 +629,37 @@ const SUITE_DO = {
     // x and y are 0..1, or 0..127 like a MIDI value. A missing axis stays where it is.
     const v = (n, cur) => (n == null || n === '' || !Number.isFinite(+n) ? cur : +n > 1 ? +n / 127 : +n);
     placeXY(v(a.x, motion.x), v(a.y, motion.y), a.glide != null && Number.isFinite(+a.glide) ? +a.glide : undefined);
-    return `${S.xyNameX} ${toCC(motion.glide?.x ?? motion.x)}, ${S.xyNameY} ${toCC(motion.glide?.y ?? motion.y)}`;
+    return `${xyName('X')} ${toCC(motion.glide?.x ?? motion.x)}, ${xyName('Y')} ${toCC(motion.glide?.y ?? motion.y)}`;
   },
   'xySnapA': () => snapXY('A'), 'xySnapB': () => snapXY('B'), 'xySnapC': () => snapXY('C'), 'xySnapD': () => snapXY('D'),
   'xyCenter': () => action('xyCenter'),
   'xyLeft': () => nudgeXY(NUDGE.left, 0.1), 'xyRight': () => nudgeXY(NUDGE.right, 0.1),
   'xyUp': () => nudgeXY(NUDGE.up, 0.1), 'xyDown': () => nudgeXY(NUDGE.down, 0.1),
-  'xyFollow': () => { action('xyFollow'); return S.xyFollow ? 'Follow on' : 'Follow off'; },
+  'xyFollow': () => { action('xyFollow'); return S.xyFollow ? t('Follow on') : t('Follow off'); },
 };
 let suiteOn = false;
 
 function suiteInvoke(name, args = {}) {
   if (SUITE_TRANSPORT[name]) {
     const port = HUI.PORT[name];
-    if (!midi.transport(port, true)) return { ok: false, message: 'GazeStage isn’t linked to Pro Tools.' };
+    if (!midi.transport(port, true)) return { ok: false, message: t('GazeStage isn’t linked to Pro Tools.') };
     setTimeout(() => midi.transport(port, false), 90);
     // The flash and click come after the answer has gone back.
-    const t = document.querySelector(`[data-hui="${name}"]`);
-    if (t) setTimeout(() => feedback(t));
-    return { ok: true, message: SUITE_TRANSPORT[name] };
+    const target = document.querySelector(`[data-hui="${name}"]`);
+    if (target) setTimeout(() => feedback(target));
+    return { ok: true, message: SUITE_TRANSPORT[name]() };
   }
   const run = SUITE_DO[name];
-  if (!run) return { ok: false, message: `GazeStage has no action “${name}”.` };
+  if (!run) return { ok: false, message: t('GazeStage has no action “{name}”.', { name }) };
   const said = run(args && typeof args === 'object' ? args : {});
   return { ok: true, message: typeof said === 'string' ? said : '' };
 }
 
 async function askSuite(hui) {
-  const notLinked = 'Not connected to Pro Tools yet. See Settings › Pro Tools and MIDI.';
+  const notLinked = t('Not connected to Pro Tools yet. See Settings › Pro Tools and MIDI.');
   if (!SUITE_TRANSPORT[hui] || !suiteOn) return toast(notLinked, 4000);
   const r = await bridge.suite.invoke(`daw.${hui}`);
-  toast(r.ok ? (r.message || SUITE_TRANSPORT[hui]) : notLinked, r.ok ? 1800 : 4000);
+  toast(r.ok ? (r.message || SUITE_TRANSPORT[hui]()) : notLinked, r.ok ? 1800 : 4000);
 }
 
 bridge?.suite?.onInvoke(({ id, action: name, args }) => {
@@ -628,10 +673,10 @@ bridge?.suite?.status().then((s) => { suiteOn = !!s?.connected; if (s?.prefs) us
 // The musician's shared settings, from the hub's welcome and every change after it.
 function useShared(prefs) { shared = prefs || {}; reported = ''; applyDisplay(); }
 bridge?.suite?.onPrefs(useShared);
-// Once they're on screen, tell the hub what's in use: only the settings GazeStage honors.
+// Once they're on screen, tell the hub what's in use: only the settings GazeStage honors, and its language.
 function reportDisplay() {
   if (!shared) return;
-  const applied = { textScale: Math.round(display.textScale * 100) / 100, highContrast: display.highContrast, reduceMotion: display.reduceMotion };
+  const applied = { textScale: Math.round(display.textScale * 100) / 100, highContrast: display.highContrast, reduceMotion: display.reduceMotion, language: lang };
   if (JSON.stringify(applied) === reported) return;
   reported = JSON.stringify(applied); bridge.suite.applied(applied);
 }
@@ -646,7 +691,7 @@ function action(a) {
     case 'chords': S.chords = !S.chords; break;
     case 'hold': S.hold = !S.hold; if (!S.hold) allNotesOff(); break;
     case 'sound': { const k = Object.keys(SYNTH_PRESETS); S.preset = k[(k.indexOf(S.preset) + 1) % k.length]; synth.setPreset(S.preset); break; }
-    case 'panic': allNotesOff(); toast('All notes off'); return;
+    case 'panic': allNotesOff(); toast(t('All notes off')); return;
     case 'xyStore': state.xyStore = !state.xyStore; clearTimeout(state.xyStoreTimer);
       if (state.xyStore) state.xyStoreTimer = setTimeout(() => { state.xyStore = false; renderTone(); }, 12000);
       return renderTone();
@@ -662,7 +707,7 @@ function action(a) {
 function setPaused(p) {
   state.paused = p; $('pauseOverlay').classList.toggle('show', p);
   if (p) { allNotesOff(); listen(false); if (state.heldHui) release(state.heldHui.t); state.nudging = null; motion.chase = null; }
-  toast(p ? 'Paused. Look at Resume to continue.' : 'Resumed');
+  toast(p ? t('Paused. Look at Resume to continue.') : t('Resumed'));
 }
 
 function showPage(id) {
@@ -687,18 +732,20 @@ function renderInstrument() {
       const i = (rows - 1 - r) * cols + c; const p = pads[i]; if (!p) continue;
       const b = document.createElement('button');
       b.className = 'target' + (p.isRoot ? ' root' : ''); b.dataset.pad = i;
-      b.setAttribute('aria-label', `Play ${p.label}`);
-      b.innerHTML = `${p.label}<small>${p.sub || '&nbsp;'}</small><span class="progress"></span>`;
+      b.setAttribute('aria-label', t('Play {note}', { note: padLabel(p) }));
+      b.innerHTML = `${padLabel(p)}<small>${p.sub === 'root' ? t('root') : p.sub || '&nbsp;'}</small><span class="progress"></span>`;
       grid.appendChild(b);
     }
   $('octLabel').textContent = NOTE_NAMES[+S.key] + S.octave;
-  $('scaleLabel').textContent = `${NOTE_NAMES[+S.key]} ${S.scale}`;
-  $('chordsLabel').textContent = S.chords ? 'on' : 'off';
-  $('holdLabel').textContent = S.hold ? 'on' : 'off';
-  $('soundLabel').textContent = S.builtIn ? SYNTH_PRESETS[S.preset] : 'MIDI only';
+  $('scaleLabel').textContent = `${NOTE_NAMES[+S.key]} ${t(S.scale)}`;
+  $('chordsLabel').textContent = S.chords ? t('on') : t('off');
+  $('holdLabel').textContent = S.hold ? t('on') : t('off');
+  $('soundLabel').textContent = S.builtIn ? t(SYNTH_PRESETS[S.preset]) : t('MIDI only');
   document.querySelector('[data-action=chords]').setAttribute('aria-pressed', S.chords);
   document.querySelector('[data-action=hold]').setAttribute('aria-pressed', S.hold);
 }
+// A pad's name: a note, or a chord (lib.js names one it has no symbol for "<note> chord").
+const padLabel = (p) => (p.label.endsWith(' chord') ? t('{note} chord', { note: p.label.slice(0, -6) }) : p.label);
 function addProgressBars(root = document) {
   root.querySelectorAll('.target').forEach(t => { if (!t.querySelector(':scope > .progress')) t.insertAdjacentHTML('beforeend', '<span class="progress"></span>'); });
 }
@@ -720,7 +767,9 @@ const xyCC = () => {
   const p = XY_PROFILES[S.xyProfile] || XY_PROFILES.learn;
   return S.xyProfile === 'custom' ? [+S.xyCcX & 127, +S.xyCcY & 127] : [p.x, p.y];
 };
-const glideText = (ms) => (+ms === 0 ? 'instant' : `${(+ms / 1000).toFixed(+ms < 1000 ? 2 : 0).replace(/0$/, '')} s`);
+const glideText = (ms) => (+ms === 0 ? t('instant') : `${(+ms / 1000).toFixed(+ms < 1000 ? 2 : 0).replace(/0$/, '')} s`);
+// The axis names: the musician's own, or GazeStage's in its language.
+const xyName = (axis) => { const v = S['xyName' + axis]; return v === DEFAULTS['xyName' + axis] ? t(v) : v; };
 
 // The pad position (0..1, y up) under the pointer, or null when the pointer is off the pad.
 function xyAt(t, px = state.px, py = state.py) {
@@ -771,13 +820,13 @@ function snapXY(k) {
   if (state.xyStore) {
     S.xySnaps = { ...S.xySnaps, [k]: [motion.x, motion.y] }; save();
     state.xyStore = false; clearTimeout(state.xyStoreTimer);
-    renderTone(); toast(`Saved this tone to ${k}`);
-    return `Saved to ${k}`;
+    renderTone(); toast(t('Saved this tone to {letter}', { letter: k }));
+    return t('Saved to {letter}', { letter: k });
   }
   const p = S.xySnaps[k]; if (!p) return;
   placeXY(p[0], p[1]);
   const b = document.querySelector(`[data-snap="${k}"]`); if (b && state.page === 'tone') feedback(b);
-  return `Tone ${k}`;
+  return t('Tone {letter}', { letter: k });
 }
 // Mouse, touch or a helper: press and drag on the pad.
 function dragXY(t, e) {
@@ -847,7 +896,7 @@ function toneDraw() {
   if (key === lastDrawn) return;
   lastDrawn = key;
   const puck = $('xyPuck'); puck.style.left = x * 100 + '%'; puck.style.top = (1 - y) * 100 + '%';
-  const text = `${S.xyNameX} ${cx} · ${S.xyNameY} ${cy}`;
+  const text = `${xyName('X')} ${cx} · ${xyName('Y')} ${cy}`;
   $('xyReadout').textContent = text; $('xy').setAttribute('aria-valuetext', text);
   for (const b of document.querySelectorAll('[data-snap]')) {
     const p = S.xySnaps[b.dataset.snap];
@@ -859,11 +908,11 @@ function toneDraw() {
 // (a Helix plugged in), and redrawing the same page each time kept the window busy.
 let toneShown = '';
 function renderTone() {
-  const shows = JSON.stringify([S.xyNameX, S.xyNameY, S.xySnaps, state.xyStore, S.xyFollow, S.select, S.xyGlide,
+  const shows = JSON.stringify([lang, S.xyNameX, S.xyNameY, S.xySnaps, state.xyStore, S.xyFollow, S.select, S.xyGlide,
     !!state.listen, xyCC(), S.xyChannel, S.xyProfile, midi.toneName, midi.toneMissing]);
   if (shows === toneShown) return;
   toneShown = shows;
-  $('xyNameX').textContent = S.xyNameX; $('xyNameY').textContent = S.xyNameY;
+  $('xyNameX').textContent = xyName('X'); $('xyNameY').textContent = xyName('Y');
   for (const m of document.querySelectorAll('.snapmark')) {
     const p = S.xySnaps[m.dataset.mark];
     m.style.display = p ? '' : 'none';
@@ -871,20 +920,20 @@ function renderTone() {
   }
   const store = document.querySelector('[data-action=xyStore]');
   store.setAttribute('aria-pressed', state.xyStore);
-  $('xyStoreLabel').textContent = state.xyStore ? 'now pick A, B, C or D' : 'then pick A–D';
+  $('xyStoreLabel').textContent = state.xyStore ? t('now pick A, B, C or D') : t('then pick A–D');
   document.querySelectorAll('[data-snap]').forEach(b => b.classList.toggle('armed', state.xyStore));
   document.querySelector('[data-action=xyFollow]').setAttribute('aria-pressed', S.xyFollow);
   $('xyFollowLabel').textContent = S.xyFollow
-    ? (S.select === 'switch' ? 'on: hold the switch to steer' : 'on: the point follows you')
-    : 'off: look and hold to place';
+    ? (S.select === 'switch' ? t('on: hold the switch to steer') : t('on: the point follows you'))
+    : t('off: look and hold to place');
   $('xyGlideLabel').textContent = glideText(S.xyGlide);
   document.querySelector('[data-action=xyListen]').setAttribute('aria-pressed', !!state.listen);
   const [ccX, ccY] = xyCC();
-  const to = midi.toneName ? `<b>${esc(midi.toneName)}</b>` : 'nothing yet (choose an output in Settings)';
-  $('xyHint').innerHTML = `${esc(S.xyNameX)} sends CC ${ccX} and ${esc(S.xyNameY)} sends CC ${ccY} on channel ${S.xyChannel}, to ${to}. `
-    + (midi.toneMissing ? `<b>${esc(midi.toneMissing)}</b> isn't connected. ` : '')
-    + (S.xyProfile === 'helix' ? 'On the Helix, assign the controls you want to EXP 1 and EXP 2. ' : 'Use MIDI learn on the controls you want, with Settings › Tone pad › Teach. ')
-    + '<button class="linkish" data-cmd="settings">Tone pad settings</button>';
+  const to = midi.toneName ? `<b>${esc(midi.toneName)}</b>` : t('nothing yet (choose an output in Settings)');
+  $('xyHint').innerHTML = t('{x} sends CC {ccX} and {y} sends CC {ccY} on channel {channel}, to {to}.', { x: esc(xyName('X')), ccX, y: esc(xyName('Y')), ccY, channel: S.xyChannel, to }) + ' '
+    + (midi.toneMissing ? t("{name} isn't connected.", { name: `<b>${esc(midi.toneMissing)}</b>` }) + ' ' : '')
+    + (S.xyProfile === 'helix' ? t('On the Helix, assign the controls you want to EXP 1 and EXP 2.') : t('Use MIDI learn on the controls you want, with Settings › Tone pad › Teach.'))
+    + ` <button class="linkish" data-cmd="settings">${t('Tone pad settings')}</button>`;
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -909,7 +958,7 @@ async function refreshToneOut() {
   const before = midi.toneName;
   await midi.resolveTone(S.xyOut);
   if (S.xyOut === 'auto' && midi.toneName !== before && midi.toneName !== midi.nativePorts?.notes && midi.toneName && midi.toneName !== toneFound) {
-    toneFound = midi.toneName; toast(`Found ${midi.toneName}. The tone pad sends to it.`, 4000);
+    toneFound = midi.toneName; toast(t('Found {name}. The tone pad sends to it.', { name: midi.toneName }), 4000);
   }
   renderTone();
   if (state.settingsOpen) renderToneSettings();
@@ -918,29 +967,35 @@ setInterval(refreshToneOut, 4000);
 
 async function renderToneSettings() {
   const sel = $('sToneOut'), list = await midi.toneOutputs();
-  const notes = midi.mode === 'native' ? 'GazeStage Notes (Pro Tools tracks and plugins)' : 'The instrument output';
+  const notes = midi.mode === 'native' ? t('GazeStage Notes (Pro Tools tracks and plugins)') : t('The instrument output');
   sel.innerHTML = '';
-  sel.add(new Option('Automatic', 'auto'));
+  sel.add(new Option(t('Automatic'), 'auto'));
   sel.add(new Option(notes, 'notes'));
   list.forEach(p => sel.add(new Option(p.name, p.id)));
-  if (![...sel.options].some(o => o.value === S.xyOut)) sel.add(new Option(`${S.xyOut} (not connected)`, S.xyOut));
+  if (![...sel.options].some(o => o.value === S.xyOut)) sel.add(new Option(t('{name} (not connected)', { name: S.xyOut }), S.xyOut));
   sel.value = S.xyOut;
-  $('sToneOutHelp').textContent = (S.xyOut === 'auto' ? 'Automatic sends to a Line 6 Helix, HX or POD Go when one is plugged in over USB, and otherwise to GazeStage Notes. ' : '')
-    + (midi.toneName ? `Sending to ${midi.toneName} now.` : 'Nothing to send to yet.');
+  $('sToneOutHelp').textContent = (S.xyOut === 'auto' ? t('Automatic sends to a Line 6 Helix, HX or POD Go when one is plugged in over USB, and otherwise to GazeStage Notes.') + ' ' : '')
+    + (midi.toneName ? t('Sending to {name} now.', { name: midi.toneName }) : t('Nothing to send to yet.'));
   $('xyCustomRow').style.display = S.xyProfile === 'custom' ? '' : 'none';
 }
-for (const [k, v] of Object.entries(XY_PROFILES)) $('sXyProfile').add(new Option(v.x != null ? `${v.name} (CC ${v.x} and ${v.y})` : v.name, k));
 for (let c = 1; c <= 16; c++) $('sXyChannel').add(new Option(String(c), c));
-$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; toneGo(); wake(); toast(`Sending only ${S.xyNameX} (CC ${xyCC()[0]})`); };
-$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; toneGo(); wake(); toast(`Sending only ${S.xyNameY} (CC ${xyCC()[1]})`); };
+$('xyTeachX').onclick = () => { state.teaching = { axis: 'x', t0: performance.now() }; toneGo(); wake(); toast(t('Sending only {name} (CC {cc})', { name: xyName('X'), cc: xyCC()[0] })); };
+$('xyTeachY').onclick = () => { state.teaching = { axis: 'y', t0: performance.now() }; toneGo(); wake(); toast(t('Sending only {name} (CC {cc})', { name: xyName('Y'), cc: xyCC()[1] })); };
 
 // ---------- Pro Tools LEDs ----------
+const leds = { play: false, record: false };
 midi.addEventListener('led', (e) => {
   const { zone, port, on } = e.detail;
   if (zone !== HUI.TRANSPORT_ZONE) return;
-  if (port === HUI.PORT.play) { $('tPlay').classList.toggle('lit', on); $('tPlayState').textContent = on ? 'playing' : 'Pro Tools play'; }
-  if (port === HUI.PORT.record) { $('tRec').classList.toggle('lit', on); $('tRecState').textContent = on ? 'record armed' : 'record arm the transport'; }
+  if (port === HUI.PORT.play) leds.play = on;
+  else if (port === HUI.PORT.record) leds.record = on;
+  else return;
+  renderLeds();
 });
+function renderLeds() {
+  $('tPlay').classList.toggle('lit', leds.play); $('tPlayState').textContent = leds.play ? t('playing') : t('Pro Tools play');
+  $('tRec').classList.toggle('lit', leds.record); $('tRecState').textContent = leds.record ? t('record armed') : t('record arm the transport');
+}
 midi.addEventListener('change', () => { refreshChips(); renderMidiSettings(); refreshToneOut(); });
 
 // ---------- what the keyboard can reach ----------
@@ -985,20 +1040,27 @@ const FORM = {
   sToneOut: 'xyOut', sXyProfile: 'xyProfile', sXyCcX: 'xyCcX', sXyCcY: 'xyCcY', sXyChannel: 'xyChannel',
   sXyNameX: 'xyNameX', sXyNameY: 'xyNameY', sXyShape: 'xyShape',
 };
-for (const [k, v] of Object.entries(SYNTH_PRESETS)) $('sPreset').add(new Option(v, k));
 NOTE_NAMES.forEach((n, i) => $('sKey').add(new Option(n, i)));
-Object.keys(SCALES).forEach(n => $('sScale').add(new Option(n, n)));
+// The pick lists with names in GazeStage's language, filled again when it changes.
+function fillOptions() {
+  const fill = (id, items) => { const sel = $(id), was = sel.value; sel.length = 0; for (const [value, text] of items) sel.add(new Option(text, value)); sel.value = was; };
+  fill('sXyProfile', Object.entries(XY_PROFILES).map(([k, v]) => [k, v.x != null ? t('{name} (CC {x} and {y})', { name: t(v.name), x: v.x, y: v.y }) : t(v.name)]));
+  fill('sPreset', Object.entries(SYNTH_PRESETS).map(([k, v]) => [k, t(v)]));
+  fill('sScale', Object.keys(SCALES).map((n) => [n, t(n)]));
+}
+fillOptions();
 function syncSettingsForm() {
   for (const [id, key] of Object.entries(FORM)) {
     const el = $(id); if (el.type === 'checkbox') el.checked = !!S[key]; else el.value = S[key];
   }
+  $('sXyNameX').value = xyName('X'); $('sXyNameY').value = xyName('Y');
   $('sDwellOut').textContent = (S.dwell / 1000).toFixed(2) + ' s';
-  $('sPadDwellOut').textContent = +S.padDwell === 0 ? 'instant' : (S.padDwell / 1000).toFixed(2) + ' s';
+  $('sPadDwellOut').textContent = +S.padDwell === 0 ? t('instant') : (S.padDwell / 1000).toFixed(2) + ' s';
   $('sBlinkOut').textContent = (S.blink / 1000).toFixed(2) + ' s';
   $('sModeHelp').textContent = {
-    head: 'Turn your head to move. Works right away; Recenter if it drifts.',
-    eyes: 'Look where you want to go. Needs calibration and a steady head.',
-    mouse: 'Use a mouse, trackpad, joystick, head mouse or the macOS Head Pointer, with dwell or a switch to select.',
+    head: t('Turn your head to move. Works right away; Recenter if it drifts.'),
+    eyes: t('Look where you want to go. Needs calibration and a steady head.'),
+    mouse: t('Use a mouse, trackpad, joystick, head mouse or the macOS Head Pointer, with dwell or a switch to select.'),
   }[S.mode];
 }
 for (const [id, key] of Object.entries(FORM)) {
@@ -1006,7 +1068,7 @@ for (const [id, key] of Object.entries(FORM)) {
   const handler = () => {
     let v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
     if (el.type === 'number') v = clamp(Math.round(+v) || 0, +el.min, +el.max);
-    if (el.type === 'text') v = v.trim() || DEFAULTS[key];
+    if (el.type === 'text') v = v.trim() === t(DEFAULTS[key]) ? DEFAULTS[key] : v.trim() || DEFAULTS[key];   // a name as shown is GazeStage's own
     S[key] = v; save(); onSettingChanged(key);
     syncSettingsForm();
   };
@@ -1030,11 +1092,11 @@ async function onSettingChanged(key) {
   }
   applyDisplay(); refreshChips();
 }
-$('clearCal').onclick = () => { S.cal = { ...S.cal, [S.mode]: undefined }; delete S.cal[S.mode]; save(); state.offset = { x: 0, y: 0 }; refreshCalInfo(); toast('Calibration cleared'); };
+$('clearCal').onclick = () => { S.cal = { ...S.cal, [S.mode]: undefined }; delete S.cal[S.mode]; save(); state.offset = { x: 0, y: 0 }; refreshCalInfo(); toast(t('Calibration cleared')); };
 $('resetAll').onclick = async () => {
   // Asked by the main process: a confirm() here would stop this page answering other apps until someone answers it.
-  const question = 'Reset every GazeStage setting, including calibration?';
-  if (!(bridge ? await bridge.confirm(question, 'Reset') : confirm(question))) return;
+  const question = t('Reset every GazeStage setting, including calibration?');
+  if (!(bridge ? await bridge.confirm(question, t('Reset')) : confirm(question))) return;
   try { localStorage.removeItem(KEY); } catch {}
   location.reload();
 };
@@ -1051,12 +1113,12 @@ function renderMidiSettings() {
     sel.value = list.some(p => p.id === midi.sel[kind]) ? midi.sel[kind] : '';
     sel.onchange = () => midi.choose(kind, sel.value);
   };
-  fill('sOutHui', 'huiOut', 'Not connected'); fill('sInHui', 'huiIn', 'Not connected'); fill('sOutNotes', 'notes', 'Not connected');
+  fill('sOutHui', 'huiOut', t('Not connected')); fill('sInHui', 'huiIn', t('Not connected')); fill('sOutNotes', 'notes', t('Not connected'));
   const win = bridge?.platform === 'win32' || /Windows/.test(navigator.userAgent);
   $('midiWebSteps').innerHTML = (win
-    ? ['Open <b>MIDI Settings</b> (Windows 11) or install the free <b>loopMIDI</b>.', 'Create three ports: <code>To Pro Tools</code>, <code>From Pro Tools</code> and <code>GazeStage Notes</code>.']
-    : ['Open <b>Audio MIDI Setup</b>, choose Window › Show MIDI Studio, and turn on the <b>IAC Driver</b>.', 'Add three ports: <code>To Pro Tools</code>, <code>From Pro Tools</code> and <code>GazeStage Notes</code>.'])
-    .concat(['GazeStage picks them up by name. In Pro Tools, add a <b>HUI</b> receiving from <code>To Pro Tools</code> and sending to <code>From Pro Tools</code>.'])
+    ? [t('Open <b>MIDI Settings</b> (Windows 11) or install the free <b>loopMIDI</b>.'), t('Create three ports: <code>To Pro Tools</code>, <code>From Pro Tools</code> and <code>GazeStage Notes</code>.')]
+    : [t('Open <b>Audio MIDI Setup</b>, choose Window › Show MIDI Studio, and turn on the <b>IAC Driver</b>.'), t('Add three ports: <code>To Pro Tools</code>, <code>From Pro Tools</code> and <code>GazeStage Notes</code>.')])
+    .concat([t('GazeStage picks them up by name. In Pro Tools, add a <b>HUI</b> receiving from <code>To Pro Tools</code> and sending to <code>From Pro Tools</code>.')])
     .map(s => `<li>${s}</li>`).join('');
 }
 
@@ -1072,7 +1134,7 @@ function command(cmd) {
     case 'page:tone': return showPage('tone');
     case 'panic': return allNotesOff();
     case 'onboarding': closeSettings(); return startOnboarding();
-    case 'toggle-on-top': S.onTop = !S.onTop; save(); applyDisplay(); return toast(S.onTop ? 'GazeStage stays on top' : 'GazeStage no longer stays on top');
+    case 'toggle-on-top': S.onTop = !S.onTop; save(); applyDisplay(); return toast(S.onTop ? t('GazeStage stays on top') : t('GazeStage no longer stays on top'));
     case 'toggle-preview': S.preview = !S.preview; save(); return applyDisplay();
   }
 }
@@ -1094,66 +1156,73 @@ function choice(ob, value, title, sub, chosen, badge) {
   return `<button class="target${chosen ? ' chosen' : ''}" data-ob="${ob}" data-value="${value}" role="radio" aria-checked="${chosen}">${title}${badge ? ` <span class="badge">${badge}</span>` : ''}<small>${sub}</small></button>`;
 }
 function actions(back, nextLabel, nextOb = 'next', extra = '') {
-  return `<div class="actions">${back ? '<button class="target" data-ob="back">Back</button>' : '<span></span>'}${extra}<button class="target primary" data-ob="${nextOb}">${nextLabel}</button></div>`;
+  return `<div class="actions">${back ? `<button class="target" data-ob="back">${t('Back')}</button>` : '<span></span>'}${extra}<button class="target primary" data-ob="${nextOb}">${nextLabel}</button></div>`;
 }
 
 function renderStep(step) {
+  const again = state.onboardStep === step;   // the same step again, say in a new language
   state.onboardStep = step;
   const card = $('onboardCard');
   let html = stepper(step);
   if (step === 'welcome') {
-    html += `<h1>Welcome to GazeStage</h1>
-      <p class="lead">Play music and run Pro Tools with your head, your eyes, a sound or a switch. This takes about two minutes. Everything stays on this computer: nothing is recorded or sent anywhere.</p>
-      <div class="note">A helper can click through these steps with a mouse. Once the camera is on, you can also select everything here by looking at it and holding still.</div>
-      <div class="actions"><button class="target" data-ob="skip">Skip setup</button><button class="target primary" data-ob="next">Get started</button></div>`;
+    html += `<h1>${t('Welcome to GazeStage')}</h1>
+      <p class="lead">${t('Play music and run Pro Tools with your head, your eyes, a sound or a switch. This takes about two minutes. Everything stays on this computer: nothing is recorded or sent anywhere.')}</p>
+      <div class="note">${t('A helper can click through these steps with a mouse. Once the camera is on, you can also select everything here by looking at it and holding still.')}</div>
+      <div class="actions"><button class="target" data-ob="skip">${t('Skip setup')}</button><button class="target primary" data-ob="next">${t('Get started')}</button></div>`;
   } else if (step === 'camera') {
-    html += `<h2>Turn on the camera</h2>
-      <p class="lead">GazeStage follows your head and eyes with the camera. Sit about an arm's length from the screen with your face in the oval.</p>
+    html += `<h2>${t('Turn on the camera')}</h2>
+      <p class="lead">${t("GazeStage follows your head and eyes with the camera. Sit about an arm's length from the screen with your face in the oval.")}</p>
       <div class="camstage"><div class="bigcam"><video data-mirror playsinline muted></video><div class="guide" id="obGuide"></div></div>
       <ul class="checks">
-        <li id="ckFace"><span class="dot"></span><span>Face found<small>Look toward the screen.</small></span></li>
-        <li id="ckLight"><span class="dot"></span><span>Enough light<small>Light in front of you works best, not a bright window behind.</small></span></li>
-        <li id="ckCentre"><span class="dot"></span><span>Centred<small>Keep your face in the middle of the picture.</small></span></li>
-        <li id="ckDist"><span class="dot"></span><span>Good distance<small>About an arm's length away.</small></span></li>
+        <li id="ckFace"><span class="dot"></span><span>${t('Face found')}<small>${t('Look toward the screen.')}</small></span></li>
+        <li id="ckLight"><span class="dot"></span><span>${t('Enough light')}<small>${t('Light in front of you works best, not a bright window behind.')}</small></span></li>
+        <li id="ckCentre"><span class="dot"></span><span>${t('Centred')}<small>${t('Keep your face in the middle of the picture.')}</small></span></li>
+        <li id="ckDist"><span class="dot"></span><span>${t('Good distance')}<small>${t("About an arm's length away.")}</small></span></li>
       </ul></div>
       <p id="camMsg" class="lead" style="margin:0 0 12px"></p>
-      ${actions(true, state.cameraOn ? 'Continue' : 'Turn on camera', state.cameraOn ? 'next' : 'camera', '<button class="target" data-ob="nocam">Use a mouse instead</button>')}`;
+      ${actions(true, state.cameraOn ? t('Continue') : t('Turn on camera'), state.cameraOn ? 'next' : 'camera', `<button class="target" data-ob="nocam">${t('Use a mouse instead')}</button>`)}`;
   } else if (step === 'pointer') {
-    html += `<h2>How do you want to point?</h2><p class="lead">You can change this any time in Settings.</p>
+    html += `<h2>${t('How do you want to point?')}</h2><p class="lead">${t('You can change this any time in Settings.')}</p>
       <div class="choices">
-        ${choice('mode', 'head', 'My head', 'Turn your head a little to move. Steady and works right away.', S.mode === 'head', 'Recommended')}
-        ${choice('mode', 'eyes', 'My eyes', 'Look where you want to go. Needs a short calibration and a still head.', S.mode === 'eyes')}
-        ${choice('mode', 'mouse', 'Mouse or another pointer', 'Mouse, trackpad, joystick, head mouse or the macOS Head Pointer.', S.mode === 'mouse')}
+        ${choice('mode', 'head', t('My head'), t('Turn your head a little to move. Steady and works right away.'), S.mode === 'head', t('Recommended'))}
+        ${choice('mode', 'eyes', t('My eyes'), t('Look where you want to go. Needs a short calibration and a still head.'), S.mode === 'eyes')}
+        ${choice('mode', 'mouse', t('Mouse or another pointer'), t('Mouse, trackpad, joystick, head mouse or the macOS Head Pointer.'), S.mode === 'mouse')}
       </div>
-      <div class="row" style="max-width:520px"><label for="obRange">Head movement needed</label><select id="obRange"><option value="10">Small</option><option value="16">Medium</option><option value="24">Large</option></select></div>
-      ${actions(true, 'Continue')}`;
+      <div class="row" style="max-width:520px"><label for="obRange">${t('Head movement needed')}</label><select id="obRange"><option value="10">${t('Small')}</option><option value="16">${t('Medium')}</option><option value="24">${t('Large')}</option></select></div>
+      ${actions(true, t('Continue'))}`;
   } else if (step === 'select') {
-    html += `<h2>How do you want to select?</h2><p class="lead">Point at something, then select it one of these ways.</p>
+    html += `<h2>${t('How do you want to select?')}</h2><p class="lead">${t('Point at something, then select it one of these ways.')}</p>
       <div class="choices">
-        ${choice('select', 'dwell', 'Look and hold', 'Keep pointing at it for a moment. Nothing else needed.', S.select === 'dwell', 'Recommended')}
-        ${choice('select', 'switch', 'Switch or key', 'Any key, adaptive switch, foot pedal or Xbox Adaptive Controller button.', S.select === 'switch')}
-        ${choice('select', 'sound', 'A short sound', 'A pop, click or “ta” into the microphone. Great for rhythm.', S.select === 'sound')}
-        ${choice('select', 'blink', 'A long blink', 'Close both eyes a little longer than a normal blink.', S.select === 'blink')}
+        ${choice('select', 'dwell', t('Look and hold'), t('Keep pointing at it for a moment. Nothing else needed.'), S.select === 'dwell', t('Recommended'))}
+        ${choice('select', 'switch', t('Switch or key'), t('Any key, adaptive switch, foot pedal or Xbox Adaptive Controller button.'), S.select === 'switch')}
+        ${choice('select', 'sound', t('A short sound'), t('A pop, click or “ta” into the microphone. Great for rhythm.'), S.select === 'sound')}
+        ${choice('select', 'blink', t('A long blink'), t('Close both eyes a little longer than a normal blink.'), S.select === 'blink')}
       </div>
       <div class="note" id="obTest">${selectTestText()}</div>
-      ${actions(true, 'Continue')}`;
+      ${actions(true, t('Continue'))}`;
   } else if (step === 'practice') {
-    state.practiceDone = new Set();
-    html += `<h2>Try it</h2><p class="lead">Select each of the three targets. ${S.select === 'dwell' ? 'Point at one and hold still until the ring fills.' : S.select === 'switch' ? 'Point at one and press your switch.' : S.select === 'sound' ? 'Point at one and make your sound.' : 'Point at one and close your eyes for a moment.'}</p>
-      <div class="practice"><button class="target" data-practice="1">One</button><button class="target" data-practice="2">Two</button><button class="target" data-practice="3">Three</button></div>
+    if (!again) state.practiceDone = new Set();
+    const how = { dwell: t('Point at one and hold still until the ring fills.'), switch: t('Point at one and press your switch.'),
+      sound: t('Point at one and make your sound.'), blink: t('Point at one and close your eyes for a moment.') }[S.select];
+    html += `<h2>${t('Try it')}</h2><p class="lead">${t('Select each of the three targets.')} ${how}</p>
+      <div class="practice"><button class="target" data-practice="1">${t('One')}</button><button class="target" data-practice="2">${t('Two')}</button><button class="target" data-practice="3">${t('Three')}</button></div>
       <p id="practiceMsg" class="lead" style="margin:0 0 12px"></p>
-      ${actions(true, 'Continue', 'next', S.mode !== 'mouse' ? `<button class="target" data-ob="recenter">Recenter</button><button class="target" data-ob="calibrate">Calibrate${S.mode === 'eyes' ? '' : ' (optional)'}</button>` : '')}`;
+      ${actions(true, t('Continue'), 'next', S.mode !== 'mouse' ? `<button class="target" data-ob="recenter">${t('Recenter')}</button><button class="target" data-ob="calibrate">${S.mode === 'eyes' ? t('Calibrate') : t('Calibrate (optional)')}</button>` : '')}`;
   } else if (step === 'done') {
     const native = midi.mode === 'native';
-    html += `<h2>You're ready</h2>
-      <p class="lead">Play the built-in instrument straight away. To control Pro Tools, connect it once:</p>
+    html += `<h2>${t("You're ready")}</h2>
+      <p class="lead">${t('Play the built-in instrument straight away. To control Pro Tools, connect it once:')}</p>
       <div class="note">${native
-        ? '<ol class="steps" style="color:inherit"><li>In Pro Tools choose <b>Setup › Peripherals › MIDI Controllers</b>.</li><li>Add a <b>HUI</b> with Receive From and Send To set to <code>GazeStage HUI</code>.</li><li>For instruments, set an instrument track\'s input to <code>GazeStage Notes</code>.</li></ol>'
-        : 'Open Settings › Pro Tools and MIDI to choose your loopback ports.'}</div>
-      <div class="actions"><button class="target" data-ob="finish-transport">Go to Transport</button><button class="target primary" data-ob="finish-play">Start playing</button></div>`;
+        ? `<ol class="steps" style="color:inherit"><li>${t('In Pro Tools choose <b>Setup › Peripherals › MIDI Controllers</b>.')}</li><li>${t('Add a <b>HUI</b> with Receive From and Send To set to <code>GazeStage HUI</code>.')}</li><li>${t("For instruments, set an instrument track's input to <code>GazeStage Notes</code>.")}</li></ol>`
+        : t('Open Settings › Pro Tools and MIDI to choose your loopback ports.')}</div>
+      <div class="actions"><button class="target" data-ob="finish-transport">${t('Go to Transport')}</button><button class="target primary" data-ob="finish-play">${t('Start playing')}</button></div>`;
   }
   card.innerHTML = html;
   addProgressBars(card);
+  if (step === 'practice' && again && state.practiceDone.size) {
+    for (const n of state.practiceDone) card.querySelector(`[data-practice="${n}"]`)?.classList.add('done');
+    renderPracticeState();
+  }
   if (step === 'camera') { for (const v of card.querySelectorAll('video[data-mirror]')) { v.srcObject = tracker.stream || null; v.play?.().catch(() => {}); } }
   if (step === 'pointer') { const r = $('obRange'); r.value = S.range; r.onchange = () => { S.range = r.value; save(); }; }
   if (step === 'select' && S.select === 'sound') startMic();
@@ -1161,16 +1230,16 @@ function renderStep(step) {
 
 function selectTestText() {
   return {
-    dwell: 'Tip: you can change how long to hold in Settings.',
-    switch: 'Press your switch or any key now to test it.',
-    sound: 'Make a short pop or click sound now to test it. <meter id="obMicMeter" min="0" max="1" value="0" style="width:160px;vertical-align:middle"></meter>',
-    blink: 'Close both eyes a little longer than a normal blink to test it.',
+    dwell: t('Tip: you can change how long to hold in Settings.'),
+    switch: t('Press your switch or any key now to test it.'),
+    sound: `${t('Make a short pop or click sound now to test it.')} <meter id="obMicMeter" min="0" max="1" value="0" style="width:160px;vertical-align:middle"></meter>`,
+    blink: t('Close both eyes a little longer than a normal blink to test it.'),
   }[S.select];
 }
 function markTest(text) { const el = $('obTest'); if (el) el.innerHTML = `<b style="color:var(--ok)">✓ ${text}</b>`; }
 function renderPracticeState() {
   const m = $('practiceMsg'); if (!m) return;
-  m.innerHTML = state.practiceDone.size >= 3 ? '<b style="color:var(--ok)">✓ Nicely done.</b>' : `${state.practiceDone.size} of 3`;
+  m.innerHTML = state.practiceDone.size >= 3 ? `<b style="color:var(--ok)">${t('✓ Nicely done.')}</b>` : t('{done} of 3', { done: state.practiceDone.size });
 }
 
 function updateOnboardChecks(s) {
@@ -1182,24 +1251,24 @@ function updateOnboardChecks(s) {
   $('obGuide')?.classList.toggle('ok', !!good);
 }
 
-async function onboardAction(ob, t) {
+async function onboardAction(ob, target) {
   const step = state.onboardStep, i = STEPS.indexOf(step);
   if (ob === 'skip') return finishOnboarding('transport');
   if (ob === 'back') return renderStep(STEPS[Math.max(0, i - 1)]);
   if (ob === 'camera') {
-    $('camMsg').textContent = 'Starting the camera…';
+    $('camMsg').textContent = t('Starting the camera…');
     const ok = await startCamera();
     if (ok) return renderStep('camera');
     $('camMsg').innerHTML = state.cameraError === 'denied'
-      ? 'Camera access is off for GazeStage. <button class="linkish" id="obOpenCam">Open System Settings</button>, turn on GazeStage under Camera, then reopen the app.'
-      : `The camera couldn't start (${state.cameraError}). Check it isn't in use by another app.`;
+      ? t('Camera access is off for GazeStage. {open}, turn on GazeStage under Camera, then reopen the app.', { open: `<button class="linkish" id="obOpenCam">${t('Open System Settings')}</button>` })
+      : t("The camera couldn't start ({error}). Check it isn't in use by another app.", { error: state.cameraError });
     $('obOpenCam')?.addEventListener('click', () => bridge?.media.openSettings('camera'));
     return;
   }
   if (ob === 'nocam') { S.mode = 'mouse'; save(); return renderStep('select'); }
-  if (ob === 'mode') { S.mode = t.dataset.value; save(); filterX.reset(); filterY.reset(); if (S.mode !== 'mouse') startCamera(); return renderStep('pointer'); }
+  if (ob === 'mode') { S.mode = target.dataset.value; save(); filterX.reset(); filterY.reset(); if (S.mode !== 'mouse') startCamera(); return renderStep('pointer'); }
   if (ob === 'select') {
-    S.select = t.dataset.value; save(); refreshChips();
+    S.select = target.dataset.value; save(); refreshChips();
     if (S.select === 'sound') await startMic(); else stopMic();
     return renderStep('select');
   }
@@ -1220,7 +1289,6 @@ async function onboardAction(ob, t) {
 
 // ---------- start ----------
 applyDisplay(); syncSettingsForm(); renderInstrument(); renderTone(); addProgressBars(); refreshChips(); refreshCalInfo();
-$('aboutLine').textContent = 'GazeStage 0.4 · Limitless Sound · runs entirely on this computer.';
 synth.setVolume(+S.volume);
 if (S.xyShape) synth.shape(S.xyX, S.xyY);
 midi.init();
@@ -1230,7 +1298,7 @@ wake();
   if (S.mode !== 'mouse') {
     const st = bridge ? await bridge.media.status() : { camera: 'granted' };
     if (st.camera === 'granted' || st.camera === 'not-determined') await startCamera();
-    else toast('Camera access is off. Turn it on in System Settings › Privacy & Security › Camera.', 6000);
+    else toast(t('Camera access is off. Turn it on in System Settings › Privacy & Security › Camera.'), 6000);
   }
   if (S.select === 'sound') startMic();
 })();

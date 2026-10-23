@@ -10,6 +10,9 @@
 <meta property="og:description" content="Free music software for musicians with disabilities. Music is for every body.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://chittychitty38.github.io/Limitless-sound/apple-touch-icon.png">
+<link rel="alternate" hreflang="en" href="https://chittychitty38.github.io/Limitless-sound/">
+<link rel="alternate" hreflang="es" href="https://chittychitty38.github.io/Limitless-sound/es/">
+<link rel="alternate" hreflang="x-default" href="https://chittychitty38.github.io/Limitless-sound/">
 <link rel="icon" type="image/png" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -76,6 +79,18 @@ nav a:hover { color: var(--lavender); }
 nav .pill { border: 2px solid var(--cream); border-radius: 999px; padding: 8px 16px; }
 nav .pill:hover { border-color: var(--lavender); }
 @media (max-width: 720px) { nav li.hide-sm { display: none; } }
+/* The page in the other language: in the header on wide screens, at the top of the page below 900 px,
+   so the header stays one row in English and Spanish */
+.lang-sm { display: none; }
+.lang-sm a { display: inline-block; padding: 10px 0; color: var(--cream); text-decoration: none; font-family: var(--mono); font-size: .85rem; letter-spacing: .14em; text-transform: uppercase; }
+.lang-sm a:hover { color: var(--lavender); }
+@media (max-width: 900px) {
+  nav li.lang-wide { display: none; }
+  nav ul { column-gap: 16px; }
+  header.top .wrap { column-gap: 12px; }
+  .hero { padding-top: 22px; }
+  .lang-sm { display: block; text-align: right; margin: 0 0 18px; }
+}
 
 /* Buttons */
 .btns { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -101,7 +116,7 @@ h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .lede { font-size: clamp(1.2rem, 2.3vw, 1.45rem); color: var(--muted); max-width: 38ch; margin: 0 0 36px; }
 .lede strong { color: var(--cream); }
 
-.download { margin-top: 8px; max-width: 760px; }
+.download { margin-top: 8px; max-width: 800px; }   /* room for the three buttons in one row, in Spanish too */
 .fine { font-size: .98rem; color: var(--muted); margin: 18px 0 0; max-width: 60ch; }
 
 .flex { margin-top: 64px; padding: 14px 0 26px; }
@@ -116,6 +131,7 @@ h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .honest .wrap { padding-top: 24px; padding-bottom: 24px; display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: start; }
 .honest .label { color: var(--lavender); padding-top: 3px; }
 .honest p { margin: 0; }
+.honest p:not(:last-child) { margin-bottom: 14px; }
 @media (max-width: 640px) { .honest .wrap { grid-template-columns: 1fr; } }
 
 section { padding: 88px 0; }
@@ -128,7 +144,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .inputs li { border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-family: var(--mono); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--cream); }
 
 /* Apps */
-.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
 .app { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
 .app:hover { border-color: #4a4766; }
 .app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 18px; display: flex; justify-content: space-between; }
@@ -176,6 +192,7 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .levels li { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-weight: 700; font-size: .98rem; line-height: 1.25; }
 .levels b { display: block; font-family: var(--mono); font-weight: 400; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 360px) { .levels { grid-template-columns: 1fr; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .proofruns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 760px) { .proofruns { grid-template-columns: 1fr; } }
@@ -219,6 +236,7 @@ footer p { margin: 0; }
         <li class="hide-sm"><a href="#install">Install</a></li>
         <li class="hide-sm"><a href="#proof">Proof</a></li>
         <li class="hide-sm"><a href="#vision">The plan</a></li>
+        <li class="lang-wide"><a href="es/" hreflang="es" lang="es">Español</a></li>
         <li><a class="pill" href="#download">Download</a></li>
       </ul>
     </nav>
@@ -229,6 +247,7 @@ footer p { margin: 0; }
   <div class="hero" id="top">
     <img class="hero-mark" src="logo.png" alt="" aria-hidden="true">
     <div class="wrap">
+      <p class="lang-sm"><a href="es/" hreflang="es" lang="es">Español</a></p>
       <p class="meta label"><span class="live" aria-hidden="true"></span> Free software &middot; Mac &amp; Windows &middot; Works offline</p>
       <h1>Music software for <span class="accent">every</span> body.</h1>
       <p class="lede">Six free apps that let musicians with disabilities play, record and mix in Logic Pro, Pro Tools and Ableton Live with <strong>their voice, one hand, their eyes, a single switch or an adaptive controller.</strong> From the Limitless Sound Foundation. <strong>Free to every musician.</strong></p>
@@ -245,7 +264,7 @@ footer p { margin: 0; }
             <span>Windows<small>Windows 10 and 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version 0.1.0. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
+        <p class="fine">The whole suite in one download: all six apps plus the hub that joins them, version <span data-suite>0.2.5</span>. Not sure which Mac you have? Apple menu &rsaquo; About This Mac: &ldquo;Chip&rdquo; means Apple Silicon, &ldquo;Processor&rdquo; means Intel. Each app can also be downloaded on its own, from <a href="#apps">the apps</a> below.</p>
       </div>
 
       <div class="flex" aria-hidden="true">
@@ -279,9 +298,9 @@ footer p { margin: 0; }
           <p class="num" aria-hidden="true"><span>01</span><span>Voice</span></p>
           <h3>Limitless Voice</h3>
           <p class="tag">Run the DAW by speaking</p>
-          <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools, Ableton Live or anywhere on the computer. Fully offline: your voice never leaves the machine.</p>
+          <p>Say &ldquo;go to bar thirty two&rdquo;, &ldquo;solo track&rdquo; or &ldquo;show the mixer&rdquo; and it happens in Logic Pro, Pro Tools, Ableton Live or anywhere on the computer. In English or Spanish. Fully offline: your voice never leaves the machine.</p>
           <p class="for">For musicians who can&rsquo;t use, or can&rsquo;t always use, a mouse and keyboard.</p>
-          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.3.9">Download<span class="ver">0.3.9</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
+          <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.1">Download<span class="ver">0.4.1</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>02</span><span>One hand</span></p>
@@ -289,7 +308,7 @@ footer p { margin: 0; }
           <p class="tag">The whole studio under one hand</p>
           <p>Switch on one-hand mode and the keys under your hand become the commands you use most: play, record, undo, split, mute, solo, zoom, save. Switch it off and the keyboard is normal again.</p>
           <p class="for">For musicians with the use of one hand, left or right.</p>
-          <div class="links"><a data-app="one-hand" href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.4">Download<span class="ver">0.2.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme">How it works</a></div>
+          <div class="links"><a data-app="one-hand" href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.5">Download<span class="ver">0.2.5</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>03</span><span>Vision</span></p>
@@ -297,7 +316,7 @@ footer p { margin: 0; }
           <p class="tag">See the session at any size</p>
           <p>Zoom the DAW or the whole screen by voice, a one-hand key layer, resting your pointer on big buttons, or a single switch. Every action is shown in large text and said out loud.</p>
           <p class="for">For low-vision musicians, and anyone who can&rsquo;t pinch, scroll or hold modifier keys.</p>
-          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.4">Download<span class="ver">0.1.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
+          <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.5">Download<span class="ver">0.1.5</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
@@ -313,7 +332,7 @@ footer p { margin: 0; }
           <p class="tag">Switches become key commands</p>
           <p>Every button and switch jack on an Xbox Adaptive Controller, or any gamepad, becomes a DAW command. It follows the app in front, filters tremor and double hits, and puts Record on a hold so it never starts by accident.</p>
           <p class="for">For musicians who play with switches, buttons, feet or limited movement.</p>
-          <div class="links"><a data-app="control" href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.6">Download<span class="ver">0.2.6</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme">How it works</a></div>
+          <div class="links"><a data-app="control" href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.7">Download<span class="ver">0.2.7</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme">How it works</a></div>
         </li>
         <li class="app">
           <p class="num" aria-hidden="true"><span>06</span><span>Eyes</span></p>
@@ -321,7 +340,7 @@ footer p { margin: 0; }
           <p class="tag">Play with your eyes or head</p>
           <p>Play instruments and run the transport by looking, turning your head, making a short sound or pressing a switch. A tone pad shapes your sound the same way, and can work a Line 6 Helix's expression pedals. Uses the built-in camera or any webcam. Video never leaves the computer and nothing is recorded.</p>
           <p class="for">For musicians who move mostly or only with their eyes and head.</p>
-          <div class="links"><a data-app="gazestage" href="https://github.com/chittychitty38/limitless-sound/releases/tag/gazestage-v0.4.3">Download<span class="ver">0.4.3</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/gazestage#readme">How it works</a></div>
+          <div class="links"><a data-app="gazestage" href="https://github.com/chittychitty38/limitless-sound/releases/tag/gazestage-v0.4.4">Download<span class="ver">0.4.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/gazestage#readme">How it works</a></div>
         </li>
       </ul>
 
@@ -442,14 +461,16 @@ footer p { margin: 0; }
   </div>
 </footer>
 <script>
-// Each Download button goes to that app's newest release, looked up when the page opens.
-// The link written above is kept when GitHub can't be reached.
+// Each Download button goes to that app's newest release, looked up when the page opens, and the
+// suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
 (async () => {
   const links = [...document.querySelectorAll('a[data-app]')];
   try {
     const res = await fetch('https://api.github.com/repos/chittychitty38/limitless-sound/releases?per_page=100');
     if (!res.ok) return;
     const releases = (await res.json()).filter((r) => !r.draft && !r.prerelease);
+    const suite = releases.find((x) => /^v\d/.test(x.tag_name));
+    if (suite) for (const s of document.querySelectorAll('[data-suite]')) s.textContent = suite.tag_name.slice(1);
     for (const a of links) {
       const r = releases.find((x) => x.tag_name.startsWith(a.dataset.app + '-v'));
       if (!r) continue;

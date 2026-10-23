@@ -76,7 +76,9 @@
   .errors { color: var(--off); font-weight: 600; }
   .ok { color: var(--on); font-weight: 700; }
   .steps { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: step; }
-  .steps li { display: grid; grid-template-columns: calc(44px * var(--scale)) 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  /* A word too long for a phone at the largest text ("emparejamiento") breaks rather than spilling out. */
+  .steps li { display: grid; grid-template-columns: calc(44px * var(--scale)) minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);
+              overflow-wrap: break-word; hyphens: auto; }
   .steps li:last-child { border-bottom: 0; }
   .steps h3 { margin: 0 0 4px; font-size: 1.1rem; }
   .tick { counter-increment: step; width: calc(36px * var(--scale)); height: calc(36px * var(--scale)); border-radius: 50%; border: 2px solid var(--line);
@@ -122,20 +124,20 @@
       </div></li>
       <li id="step-ax"><span class="tick" aria-hidden="true"></span><div>
         <h3>Let Limitless Control press keys for you</h3>
-        <p>Your Mac asks you to allow this once. Choose the button, then switch on <strong>Limitless Control</strong> in the list that opens. You may need your Mac password.</p>
+        <p data-html>Your Mac asks you to allow this once. Choose the button, then switch on <strong>Limitless Control</strong> in the list that opens. You may need your Mac password.</p>
         <p><button id="ax-allow" class="primary">Allow key commands</button></p>
         <p id="step-ax-status" class="muted">Not allowed yet.</p>
         <p id="ax-restart-help" hidden>Already switched on and this still says not allowed? <button id="ax-restart">Restart Limitless Control</button></p>
       </div></li>
       <li id="step-try"><span class="tick" aria-hidden="true"></span><div>
         <h3>Try a button</h3>
-        <p>Press the big <strong>A</strong> button, or any switch.</p>
+        <p data-html>Press the big <strong>A</strong> button, or any switch.</p>
         <p id="step-try-status" class="muted">Nothing pressed yet.</p>
       </div></li>
       <li id="step-go"><span class="tick" aria-hidden="true"></span><div>
         <h3>Open your music app</h3>
         <p>Open Logic Pro, Pro Tools or Ableton Live. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.</p>
-        <p>Big <strong>A</strong> plays and stops. <strong>Hold</strong> the big <strong>B</strong> to record. Hold <strong>Menu</strong> to turn the controller off and on.</p>
+        <p data-html>Big <strong>A</strong> plays and stops. <strong>Hold</strong> the big <strong>B</strong> to record. Hold <strong>Menu</strong> to turn the controller off and on.</p>
         <label class="check"><input type="checkbox" id="setup-login" checked> Start Limitless Control when I log in</label>
       </div></li>
     </ol>
@@ -216,6 +218,222 @@
   </section>
 </main>
 
+<!-- The page in Spanish: English text → Spanish, the same words as the rest of the suite. The
+     action and profile names come from the app (profiles.py) and are put in Spanish here, by their
+     English names. Text with no entry stays in English. -->
+<script type="application/json" id="strings-es">
+{
+"Play and record with an Xbox Adaptive Controller, switches or any gamepad.": "Toca y graba con un Xbox Adaptive Controller, pulsadores o cualquier gamepad.",
+"Welcome. Let's get you playing.": "Te damos la bienvenida. Vamos a tocar.",
+"Connect your controller": "Conecta tu controlador",
+"Plug the Xbox Adaptive Controller in with a USB-C cable. Or pair it: hold its small pair button until the Xbox light flashes fast, then choose it in your computer's Bluetooth settings.": "Conecta el Xbox Adaptive Controller con un cable USB-C. O emparéjalo: mantén pulsado su pequeño botón de emparejamiento hasta que la luz de Xbox parpadee rápido, y luego elígelo en los ajustes de Bluetooth de tu equipo.",
+"Waiting for a controller…": "Esperando un controlador…",
+"Let Limitless Control press keys for you": "Deja que Limitless Control pulse teclas por ti",
+"Your Mac asks you to allow this once. Choose the button, then switch on <strong>Limitless Control<\/strong> in the list that opens. You may need your Mac password.": "Tu Mac te pide permiso una sola vez. Elige el botón y activa <strong>Limitless Control<\/strong> en la lista que se abre. Puede que necesites la contraseña de tu Mac.",
+"Allow key commands": "Permitir comandos de teclado",
+"Not allowed yet.": "Aún no está permitido.",
+"Already switched on and this still says not allowed?": "¿Ya está activado y aquí sigue sin estar permitido?",
+"Restart Limitless Control": "Reiniciar Limitless Control",
+"Try a button": "Prueba un botón",
+"Press the big <strong>A<\/strong> button, or any switch.": "Pulsa el botón grande <strong>A<\/strong> o cualquier pulsador.",
+"Nothing pressed yet.": "Aún no has pulsado nada.",
+"Open your music app": "Abre tu app de música",
+"Open Logic Pro, Pro Tools or Ableton Live. Limitless Control notices and switches to the right buttons for that app, and tells you out loud.": "Abre Logic Pro, Pro Tools o Ableton Live. Limitless Control lo detecta, cambia a los botones adecuados para esa app y te lo dice en voz alta.",
+"Big <strong>A<\/strong> plays and stops. <strong>Hold<\/strong> the big <strong>B<\/strong> to record. Hold <strong>Menu<\/strong> to turn the controller off and on.": "La <strong>A<\/strong> grande reproduce y detiene. <strong>Mantén pulsada<\/strong> la <strong>B<\/strong> grande para grabar. Mantén pulsado <strong>Menú<\/strong> para apagar y encender el controlador.",
+"Start Limitless Control when I log in": "Iniciar Limitless Control al iniciar sesión",
+"Done. I'm ready to play": "Hecho. Ya puedo tocar",
+"Status": "Estado",
+"Controller is on": "Controlador encendido",
+"Controller is off": "Controlador apagado",
+"Controller": "Controlador",
+"Looking…": "Buscando…",
+"Using profile": "Perfil en uso",
+"Layer": "Capa",
+"Last switch pressed": "Último pulsador",
+"None yet": "Ninguno todavía",
+"One step left on Mac:": "Falta un paso en el Mac:",
+"allow Limitless Control in Accessibility settings so it can send key commands to Logic and Pro Tools. Then quit and reopen Limitless Control.": "permite Limitless Control en los ajustes de Accesibilidad para que pueda enviar comandos de teclado a Logic y Pro Tools. Luego cierra Limitless Control y vuelve a abrirlo.",
+"Open Accessibility settings": "Abrir los ajustes de Accesibilidad",
+"Limitless Control is not running. Open it again to change settings.": "Limitless Control no se está ejecutando. Vuelve a abrirlo para cambiar los ajustes.",
+"Your controller": "Tu controlador",
+"Each button shows what it does in": "Cada botón muestra lo que hace en",
+"this app": "esta app",
+". Buttons light up as you press them. Select a button to change it.": ". Los botones se iluminan al pulsarlos. Selecciona un botón para cambiarlo.",
+"Controller buttons": "Botones del controlador",
+"What each switch does": "Qué hace cada pulsador",
+"Press any switch on your controller and its row lights up. Choose what it does when tapped, and optionally something different when held.": "Pulsa cualquier pulsador del controlador y su fila se ilumina. Elige qué hace al pulsarlo y, si quieres, algo distinto al mantenerlo pulsado.",
+"App": "App",
+"Layer 1": "Capa 1",
+"Layer 2": "Capa 2",
+"Jump to the switch I press": "Ir al pulsador que pulse",
+"Switch settings": "Ajustes de los pulsadores",
+"Switch": "Pulsador",
+"Tap": "Pulsar",
+"Hold": "Mantener",
+"Repeat while held": "Repetir al mantener",
+"Timing and feedback": "Tiempos y respuesta",
+"Start from": "Partir de",
+"Pick the closest, then fine-tune with the sliders.": "Elige el más parecido y ajústalo con los controles deslizantes.",
+"Speak each action out loud": "Decir cada acción en voz alta",
+"Layer 2 lasts for one action only (like Sticky Keys)": "La capa 2 dura una sola acción (como las teclas persistentes)",
+"More": "Más",
+"Show the welcome steps again": "Ver de nuevo los pasos de bienvenida",
+"Reset everything to defaults": "Restablecer todo a los valores predeterminados",
+"Quit Limitless Control": "Salir de Limitless Control",
+"Settings are saved automatically to": "Los ajustes se guardan automáticamente en",
+"Activity log": "Registro de actividad",
+"A (big left button)": "A (botón grande izquierdo)",
+"B (big right button)": "B (botón grande derecho)",
+"Left bumper (LB)": "Botón superior izquierdo (LB)",
+"Right bumper (RB)": "Botón superior derecho (RB)",
+"Left trigger (LT)": "Gatillo izquierdo (LT)",
+"Right trigger (RT)": "Gatillo derecho (RT)",
+"View button": "Botón Vista",
+"Menu button": "Botón Menú",
+"Xbox button": "Botón Xbox",
+"Left stick click (LS)": "Clic del stick izquierdo (LS)",
+"Right stick click (RS)": "Clic del stick derecho (RS)",
+"D-pad up": "Cruceta arriba",
+"D-pad down": "Cruceta abajo",
+"D-pad left": "Cruceta izquierda",
+"D-pad right": "Cruceta derecha",
+"Left stick up": "Stick izquierdo arriba",
+"Left stick down": "Stick izquierdo abajo",
+"Left stick left": "Stick izquierdo a la izquierda",
+"Left stick right": "Stick izquierdo a la derecha",
+"Right stick up": "Stick derecho arriba",
+"Right stick down": "Stick derecho abajo",
+"Right stick left": "Stick derecho a la izquierda",
+"Right stick right": "Stick derecho a la derecha",
+"View": "Vista",
+"Menu": "Menú",
+"Ignore presses shorter than": "Ignorar pulsaciones de menos de",
+"Filters tremor and accidental bumps.": "Filtra los temblores y los golpes sin querer.",
+"Wait before the same switch can fire again": "Espera antes de que el mismo pulsador vuelva a actuar",
+"Stops one press counting twice.": "Evita que una pulsación cuente dos veces.",
+"Hold time for the hold action": "Tiempo para la acción de mantener",
+"How long to hold before the hold action fires.": "Cuánto mantener pulsado antes de que actúe la acción de mantener.",
+"Start repeating after": "Empezar a repetir tras",
+"For zoom, scrolling and track up/down.": "Para el zoom, el desplazamiento y subir o bajar de pista.",
+"Time between repeats": "Tiempo entre repeticiones",
+"Smaller is faster.": "Menos es más rápido.",
+"How far to push triggers and sticks": "Cuánto empujar gatillos y sticks",
+"Lower is more sensitive.": "Menos es más sensible.",
+"Nothing": "Nada",
+"Other Limitless Sound apps": "Otras apps de Limitless Sound",
+"your DAW": "tu DAW",
+"closed app": "app cerrada",
+"Custom key command…": "Combinación de teclas propia…",
+"These switches work the same in every app and take priority over app settings.": "Estos pulsadores funcionan igual en todas las apps y tienen prioridad sobre los ajustes de cada app.",
+"Layer 2 is what each switch does after you press the switch set to “{command}”.": "La capa 2 es lo que hace cada pulsador después de pulsar el que tiene «{command}».",
+"Tap: {action}": "Pulsar: {action}",
+"Hold: {action}": "Mantener: {action}",
+"Set for every app.": "Ajustado para todas las apps.",
+"Change": "Cambiar",
+"Change {input} for every app": "Cambiar {input} para todas las apps",
+"{input} tap": "{input}, pulsar",
+"{input} hold": "{input}, mantener",
+"e.g. mod+shift+z": "p. ej. mod+shift+z",
+"{input} tap custom keys": "{input}, pulsar, teclas propias",
+"{input} hold custom keys": "{input}, mantener, teclas propias",
+"Repeat": "Repetir",
+"{input} repeats while held": "{input}: repetir al mantener",
+"every app": "todas las apps",
+" (layer 2)": " (capa 2)",
+"tap: {action}": "pulsar: {action}",
+"hold: {action}": "mantener: {action}",
+"nothing yet": "nada todavía",
+"{input}, {actions}. Change it.": "{input}, {actions}. Cambiarlo.",
+"Connected: {names}": "Conectado: {names}",
+"Allowed. Key commands will reach your apps.": "Permitido. Los comandos de teclado llegarán a tus apps.",
+"You pressed {input}: {action}.": "Has pulsado {input}: {action}.",
+"My own settings": "Mis propios ajustes",
+"Every app (always on)": "Todas las apps (siempre activo)",
+"Not saved: {problems}": "No se guardó: {problems}",
+"Saved": "Guardado",
+"None connected. Plug in by USB or pair over Bluetooth.": "Ninguno conectado. Conéctalo por USB o emparéjalo por Bluetooth.",
+"none": "ninguno",
+"Pressed {input}": "Pulsado: {input}",
+"Controller on": "Controlador encendido",
+"Controller off": "Controlador apagado",
+"Restarting Limitless Control…": "Reiniciando Limitless Control…",
+"A new settings page opens in a moment. You can close this one.": "En un momento se abre una nueva página de ajustes. Puedes cerrar esta.",
+"Setup complete. Enjoy playing.": "Todo listo. Disfruta tocando.",
+"Will start when you log in": "Se iniciará al iniciar sesión",
+"Will not start at login": "No se iniciará al iniciar sesión",
+"Could not change that setting": "No se pudo cambiar ese ajuste",
+"Timing set for {preset}": "Tiempos ajustados para {preset}",
+"Reset every switch and timing setting to the defaults?": "¿Restablecer todos los pulsadores y tiempos a los valores predeterminados?",
+"Reset to defaults": "Restablecido a los valores predeterminados",
+"Quit Limitless Control? Your switches will stop working until you open it again.": "¿Salir de Limitless Control? Tus pulsadores dejarán de funcionar hasta que vuelvas a abrirlo.",
+"Limitless Control has quit.": "Limitless Control se ha cerrado.",
+"Open it again from your Applications or Start menu.": "Vuelve a abrirlo desde Aplicaciones o el menú Inicio.",
+"Open this page from the Limitless Control app.": "Abre esta página desde la app Limitless Control.",
+"Everyday": "Uso diario",
+"Play / stop": "Reproducir / detener",
+"Record": "Grabar",
+"Go to start": "Ir al inicio",
+"Go to end": "Ir al final",
+"Undo": "Deshacer",
+"Redo": "Rehacer",
+"Cycle on/off": "Ciclo: activar/desactivar",
+"Rewind": "Rebobinar",
+"Forward": "Avanzar",
+"Previous track": "Pista anterior",
+"Next track": "Pista siguiente",
+"Mute track": "Silenciar pista",
+"Solo track": "Solo de pista",
+"Record-arm track": "Armar pista",
+"Zoom out": "Alejar",
+"Zoom in": "Acercar",
+"Zoom out vertically": "Alejar en vertical",
+"Zoom in vertically": "Acercar en vertical",
+"Zoom to fit": "Zoom para ajustar",
+"Metronome on/off": "Metrónomo: activar/desactivar",
+"Show mixer": "Mostrar mezclador",
+"Show editor": "Mostrar editor",
+"Show inspector": "Mostrar inspector",
+"Show piano roll": "Mostrar piano roll",
+"Show library": "Mostrar biblioteca",
+"Show smart controls": "Mostrar controles inteligentes",
+"Save": "Guardar",
+"Previous region": "Región anterior",
+"Next region": "Región siguiente",
+"Record-arm selected tracks": "Armar las pistas seleccionadas",
+"Loop playback on/off": "Reproducción en bucle: activar/desactivar",
+"Rewind (keypad 1)": "Rebobinar (teclado numérico 1)",
+"Fast forward (keypad 2)": "Avance rápido (teclado numérico 2)",
+"Mute selected tracks": "Silenciar las pistas seleccionadas",
+"Solo selected tracks": "Solo de las pistas seleccionadas",
+"Click on/off (keypad 7)": "Clic: activar/desactivar (teclado numérico 7)",
+"Switch Mix / Edit window": "Cambiar entre las ventanas Mix y Edit",
+"Separate clip": "Separar clip",
+"Left arrow": "Flecha izquierda",
+"Right arrow": "Flecha derecha",
+"Arrangement record": "Grabar en Arrangement",
+"Loop selection": "Bucle de la selección",
+"Switch Session / Arrangement": "Cambiar entre Session y Arrangement",
+"Up": "Arriba",
+"Down": "Abajo",
+"Left": "Izquierda",
+"Right": "Derecha",
+"Track on/off (mute)": "Pista: activar/desactivar (silenciar)",
+"Enter / OK": "Intro / Aceptar",
+"Escape / cancel": "Escape / cancelar",
+"Space": "Espacio",
+"Switch app": "Cambiar de app",
+"Up arrow": "Flecha arriba",
+"Down arrow": "Flecha abajo",
+"Next item (Tab)": "Siguiente elemento (Tab)",
+"Previous item (Shift Tab)": "Elemento anterior (Mayús Tab)",
+"Layer 2 for the next switch": "Capa 2 para el siguiente pulsador",
+"Controller on / off": "Controlador: encender/apagar",
+"Say profile and layer": "Decir perfil y capa",
+"Steady hands": "Manos firmes",
+"Some tremor or shaking": "Algo de temblor",
+"Strong tremor, or presses that bounce": "Mucho temblor, o pulsaciones que rebotan"
+}
+</script>
 <script>
 "use strict";
 const INPUT_LABELS = {
@@ -284,6 +502,45 @@ async function api(path, body) {
   return data;
 }
 
+// ---------- language: the suite's while Limitless Sound runs, else the computer's
+const STRINGS = { es: JSON.parse($("strings-es").textContent) };
+let lang = "en";
+function t(text, vars = {}) {
+  let out = (STRINGS[lang] || {})[text] || text;
+  for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(v);
+  return out;
+}
+const inputLabel = (name) => t(INPUT_LABELS[name] || name);
+// The page's own words, kept in English so they can be put back. A sentence with bold words in
+// it is one entry, so it can follow the other language's word order.
+const fixedText = [], fixedLabels = [], fixedHtml = [];
+{
+  for (const e of document.querySelectorAll("[data-html]")) fixedHtml.push([e, e.innerHTML.trim()]);
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode())
+    if (n.nodeValue.trim() && !n.parentElement.closest("script, [data-html]")) fixedText.push([n, n.nodeValue]);
+  for (const e of document.querySelectorAll("[aria-label]")) fixedLabels.push([e, e.getAttribute("aria-label")]);
+}
+// The first of the computer's languages that the page has.
+function systemLanguage() {
+  for (const l of navigator.languages?.length ? navigator.languages : [navigator.language]) {
+    const tag = String(l || "").split("-")[0].toLowerCase();
+    if (tag === "en" || STRINGS[tag]) return tag;
+  }
+  return "en";
+}
+function setLanguage(next) {
+  next = STRINGS[next] ? next : "en";
+  if (next === lang) return false;
+  lang = next;
+  document.documentElement.lang = lang;
+  for (const [n, en] of fixedText) n.nodeValue = en.replace(en.trim(), t(en.trim()));
+  for (const [e, en] of fixedLabels) e.setAttribute("aria-label", t(en));
+  for (const [e, en] of fixedHtml) e.innerHTML = t(en);
+  return true;
+}
+setLanguage(systemLanguage());
+
 // Text size, high contrast and reduced motion: Limitless Sound's shared settings (the app sends
 // them with its state) or this browser's own, whichever is more accessible.
 const browserContrast = matchMedia("(prefers-contrast: more)");
@@ -325,26 +582,26 @@ function currentBindings() {
 
 function actionOptions(select, profileName, current) {
   const add = (parent, value, text) => { const o = document.createElement("option"); o.value = value; o.textContent = text; parent.appendChild(o); return o; };
-  add(select, "", "Nothing");
+  add(select, "", t("Nothing"));
   const catalog = S.catalog[profileName] || {};
   if (Object.keys(catalog).length) {
-    const g = document.createElement("optgroup"); g.label = profileName === "Everyday" ? "Everyday" : profileName;
-    for (const [id, a] of Object.entries(catalog)) add(g, "id:" + id, `${a.label} (${describeKeys(a.keys)})`);
+    const g = document.createElement("optgroup"); g.label = t(profileName);
+    for (const [id, a] of Object.entries(catalog)) add(g, "id:" + id, `${t(a.label)} (${describeKeys(a.keys)})`);
     select.appendChild(g);
   }
-  const g2 = document.createElement("optgroup"); g2.label = "Controller";
-  for (const [id, a] of Object.entries(S.commands)) add(g2, "id:" + id, a.label);
+  const g2 = document.createElement("optgroup"); g2.label = t("Controller");
+  for (const [id, a] of Object.entries(S.commands)) add(g2, "id:" + id, t(a.label));
   select.appendChild(g2);
-  // Actions of the other Limitless Sound apps (Voice, Zoom, Color, One-Hand, GazeStage...).
+  // Actions of the other Limitless Sound apps (Voice, Zoom, Color, One-Hand, GazeStage...), named by those apps.
   const suite = (S.suite || []).slice();
   if (current && current.command === "suite" && !suite.some(a => a.id === current.suite))
-    suite.push({ id: current.suite, label: current.label || current.suite, tool: "closed app" });
+    suite.push({ id: current.suite, label: current.label || current.suite, tool: t("closed app") });
   if (suite.length) {
-    const g3 = document.createElement("optgroup"); g3.label = "Other Limitless Sound apps";
-    for (const a of suite) add(g3, "suite:" + a.id, `${a.label} (${a.tool === "daw" ? "your DAW" : a.tool})`);
+    const g3 = document.createElement("optgroup"); g3.label = t("Other Limitless Sound apps");
+    for (const a of suite) add(g3, "suite:" + a.id, `${a.label} (${a.tool === "daw" ? t("your DAW") : a.tool})`);
     select.appendChild(g3);
   }
-  add(select, "custom", "Custom key command…");
+  add(select, "custom", t("Custom key command…"));
 
   let value = "";
   if (current) {
@@ -377,22 +634,22 @@ function renderRows() {
   const tbody = $("rows"); tbody.textContent = "";
   $("layer-pick").hidden = profileName === EVERYWHERE;
   $("layer-help").textContent = profileName === EVERYWHERE
-    ? "These switches work the same in every app and take priority over app settings."
-    : (currentLayer() === 1 ? "Layer 2 is what each switch does after you press the switch set to “Layer 2 for the next switch”." : "");
+    ? t("These switches work the same in every app and take priority over app settings.")
+    : (currentLayer() === 1 ? t("Layer 2 is what each switch does after you press the switch set to “{command}”.", { command: t("Layer 2 for the next switch") }) : "");
 
   for (const input of S.inputs) {
     const b = bindings[input] || {};
     const tr = document.createElement("tr"); tr.id = "row-" + input;
-    const th = document.createElement("th"); th.scope = "row"; th.textContent = INPUT_LABELS[input] || input; tr.appendChild(th);
+    const th = document.createElement("th"); th.scope = "row"; th.textContent = inputLabel(input); tr.appendChild(th);
     const globalBinding = profileName !== EVERYWHERE && (S.config.global || {})[input];
     if (globalBinding) {
       // Set in "Every app", which wins over app settings: say so instead of showing "Nothing".
       const td = document.createElement("td"); td.colSpan = 3;
-      const parts = [labelOf(globalBinding.tap, "Everyday") && "Tap: " + labelOf(globalBinding.tap, "Everyday"),
-                     labelOf(globalBinding.hold, "Everyday") && "Hold: " + labelOf(globalBinding.hold, "Everyday")].filter(Boolean);
-      td.append(document.createTextNode(parts.join(". ") + ". Set for every app. "));
-      const btn = document.createElement("button"); btn.textContent = "Change";
-      btn.setAttribute("aria-label", `Change ${INPUT_LABELS[input]} for every app`);
+      const tap = labelOf(globalBinding.tap, "Everyday"), hold = labelOf(globalBinding.hold, "Everyday");
+      const parts = [tap && t("Tap: {action}", { action: tap }), hold && t("Hold: {action}", { action: hold })].filter(Boolean);
+      td.append(document.createTextNode(parts.join(". ") + ". " + t("Set for every app.") + " "));
+      const btn = document.createElement("button"); btn.textContent = t("Change");
+      btn.setAttribute("aria-label", t("Change {input} for every app", { input: inputLabel(input) }));
       btn.addEventListener("click", () => {
         $("profile-pick").value = EVERYWHERE; renderRows(); renderPad();
         const row = $("row-" + input); if (row) { row.scrollIntoView({ block: "center" }); row.querySelector("select").focus(); }
@@ -401,12 +658,14 @@ function renderRows() {
       continue;
     }
     for (const kind of ["tap", "hold"]) {
-      const td = document.createElement("td"); td.dataset.label = kind === "tap" ? "Tap" : "Hold";
+      const tap = kind === "tap", name = { input: inputLabel(input) };
+      const td = document.createElement("td"); td.dataset.label = tap ? t("Tap") : t("Hold");
       const sel = document.createElement("select");
-      sel.setAttribute("aria-label", `${INPUT_LABELS[input]} ${kind}`);
+      sel.setAttribute("aria-label", tap ? t("{input} tap", name) : t("{input} hold", name));
       actionOptions(sel, catalogName, b[kind]);
       const custom = document.createElement("input"); custom.type = "text"; custom.className = "custom";
-      custom.placeholder = "e.g. mod+shift+z"; custom.setAttribute("aria-label", `${INPUT_LABELS[input]} ${kind} custom keys`);
+      custom.placeholder = t("e.g. mod+shift+z");
+      custom.setAttribute("aria-label", tap ? t("{input} tap custom keys", name) : t("{input} hold custom keys", name));
       const k = b[kind] && b[kind].keys;
       custom.value = typeof k === "string" ? k : (k ? (k[S.platform] || "") : "");
       custom.hidden = sel.value !== "custom";
@@ -422,16 +681,16 @@ function renderRows() {
       custom.addEventListener("change", update);
       td.append(sel, custom); tr.appendChild(td);
     }
-    const td = document.createElement("td"); td.dataset.label = "Repeat";
+    const td = document.createElement("td"); td.dataset.label = t("Repeat");
     const lab = document.createElement("label"); lab.className = "check";
     const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!b.repeats;
-    cb.setAttribute("aria-label", `${INPUT_LABELS[input]} repeats while held`);
+    cb.setAttribute("aria-label", t("{input} repeats while held", { input: inputLabel(input) }));
     cb.addEventListener("change", () => {
       const target = bindings[input] || (bindings[input] = {});
       if (cb.checked) target.repeats = true; else delete target.repeats;
       scheduleSave();
     });
-    lab.append(cb, document.createTextNode(" Repeat")); td.appendChild(lab); tr.appendChild(td);
+    lab.append(cb, document.createTextNode(" " + t("Repeat"))); td.appendChild(lab); tr.appendChild(td);
     tbody.appendChild(tr);
   }
 }
@@ -440,9 +699,9 @@ function labelOf(action, catalogName) {
   if (!action) return "";
   if (action.command === "suite") return action.label || action.suite;
   const id = action.id || action.command;
-  if (id && S.commands[id]) return S.commands[id].label;
+  if (id && S.commands[id]) return t(S.commands[id].label);
   const cat = S.catalog[catalogName] || {};
-  if (id && cat[id]) return cat[id].label;
+  if (id && cat[id]) return t(cat[id].label);
   return describeKeys(action.keys);
 }
 
@@ -459,8 +718,8 @@ function renderPad() {
   const pad = $("pad"); pad.textContent = "";
   const profileName = currentProfileName();
   const catalogName = profileName === EVERYWHERE ? "Everyday" : profileName;
-  $("pad-profile").textContent = profileName === EVERYWHERE ? "every app" : profileName +
-    (currentLayer() === 1 ? " (layer 2)" : "");
+  $("pad-profile").textContent = profileName === EVERYWHERE ? t("every app") : t(profileName) +
+    (currentLayer() === 1 ? t(" (layer 2)") : "");
   const glob = S.config.global || {};
   const own = currentBindings();
   svg("rect", { class: "body", x: 20, y: 30, width: 600, height: 262, rx: 56 }, pad);
@@ -468,10 +727,10 @@ function renderPad() {
     const binding = glob[b.input] || own[b.input] || {};
     const tap = labelOf(binding.tap, catalogName);
     const hold = labelOf(binding.hold, catalogName);
-    const spoken = [tap && `tap: ${tap}`, hold && `hold: ${hold}`].filter(Boolean).join(", ") || "nothing yet";
+    const spoken = [tap && t("tap: {action}", { action: tap }), hold && t("hold: {action}", { action: hold })].filter(Boolean).join(", ") || t("nothing yet");
     const g = svg("g", { class: "btn" + (b.big ? " big" : "") + (b.small ? " small" : ""), "data-input": b.input, role: "button", tabindex: 0,
-                         "aria-label": `${INPUT_LABELS[b.input]}, ${spoken}. Change it.` }, pad);
-    svg("title", {}, g).textContent = `${INPUT_LABELS[b.input]}: ${spoken}`;
+                         "aria-label": t("{input}, {actions}. Change it.", { input: inputLabel(b.input), actions: spoken }) }, pad);
+    svg("title", {}, g).textContent = `${inputLabel(b.input)}: ${spoken}`;
     let cx, cy;
     if (b.circle) {
       [cx, cy] = b.circle;
@@ -483,9 +742,9 @@ function renderPad() {
     if (b.big) {
       svg("text", { x: cx, y: cy - 24 }, g).textContent = b.name;
       svg("text", { x: cx, y: cy + 6, class: "act" }, g).textContent = shorten(tap || "–", 16);
-      if (hold) svg("text", { x: cx, y: cy + 28, class: "act" }, g).textContent = shorten("Hold: " + hold, 18);
+      if (hold) svg("text", { x: cx, y: cy + 28, class: "act" }, g).textContent = shorten(t("Hold: {action}", { action: hold }), 18);
     } else {
-      svg("text", { x: cx, y: cy }, g).textContent = b.name;
+      svg("text", { x: cx, y: cy }, g).textContent = t(b.name);
     }
     const go = () => {
       const row = $("row-" + b.input);
@@ -505,12 +764,12 @@ function renderSetup(st) {
   const mark = (id, done) => $(id).classList.toggle("done", !!done);
   mark("step-pad", st.controllers.length);
   $("step-pad-status").textContent = st.controllers.length
-    ? "Connected: " + st.controllers.join(", ") : "Waiting for a controller…";
+    ? t("Connected: {names}", { names: st.controllers.join(", ") }) : t("Waiting for a controller…");
   $("step-pad-status").className = st.controllers.length ? "ok" : "muted";
 
   $("step-ax").hidden = st.platform !== "mac";
   mark("step-ax", st.accessibility);
-  $("step-ax-status").textContent = st.accessibility ? "Allowed. Key commands will reach your apps." : "Not allowed yet.";
+  $("step-ax-status").textContent = st.accessibility ? t("Allowed. Key commands will reach your apps.") : t("Not allowed yet.");
   $("step-ax-status").className = st.accessibility ? "ok" : "muted";
   $("ax-allow").hidden = st.accessibility;
   $("ax-restart-help").hidden = st.accessibility || !axAskedAt || Date.now() - axAskedAt < 8000;
@@ -518,7 +777,7 @@ function renderSetup(st) {
   if (st.lastAction && st.lastAction.label) triedSomething = true;
   mark("step-try", triedSomething);
   if (triedSomething && st.lastAction && st.lastAction.input) {
-    $("step-try-status").textContent = `You pressed ${INPUT_LABELS[st.lastAction.input] || st.lastAction.input}: ${st.lastAction.label}.`;
+    $("step-try-status").textContent = t("You pressed {input}: {action}.", { input: inputLabel(st.lastAction.input), action: t(st.lastAction.label) });
     $("step-try-status").className = "ok";
   }
   mark("step-go", DAWS.includes(st.profile));
@@ -536,29 +795,29 @@ function presetMatching() {
 function renderPresets() {
   const sel = $("preset"); sel.textContent = "";
   for (const [id, p] of Object.entries(S.timingPresets || {})) {
-    const o = document.createElement("option"); o.value = id; o.textContent = p.label; sel.appendChild(o);
+    const o = document.createElement("option"); o.value = id; o.textContent = t(p.label); sel.appendChild(o);
   }
-  const o = document.createElement("option"); o.value = "custom"; o.textContent = "My own settings"; o.disabled = true; sel.appendChild(o);
+  const o = document.createElement("option"); o.value = "custom"; o.textContent = t("My own settings"); o.disabled = true; sel.appendChild(o);
   sel.value = presetMatching();
 }
 
 function renderTiming() {
   renderPresets();
   const box = $("sliders"); box.textContent = "";
-  const t = S.config.timing || (S.config.timing = {});
+  const timing = S.config.timing || (S.config.timing = {});
   const all = [...SLIDERS, ["analogThreshold", "How far to push triggers and sticks", 0.2, 0.95, 0.05, "Lower is more sensitive."]];
   for (const [key, label, min, max, step, help] of all) {
-    const holder = key === "analogThreshold" ? S.config : t;
+    const holder = key === "analogThreshold" ? S.config : timing;
     const id = "s-" + key;
     const div = document.createElement("div"); div.className = "slider";
-    const lab = document.createElement("label"); lab.htmlFor = id; lab.textContent = label;
+    const lab = document.createElement("label"); lab.htmlFor = id; lab.textContent = t(label);
     const out = document.createElement("output"); out.htmlFor = id;
     const inp = document.createElement("input"); inp.type = "range"; inp.id = id; inp.min = min; inp.max = max; inp.step = step;
     inp.value = holder[key] ?? min;
     const fmt = () => key === "analogThreshold" ? Math.round(inp.value * 100) + "%" : Number(inp.value).toFixed(2) + " s";
     out.textContent = fmt(); inp.setAttribute("aria-valuetext", fmt());
     inp.addEventListener("input", () => { holder[key] = Number(inp.value); out.textContent = fmt(); inp.setAttribute("aria-valuetext", fmt()); $("preset").value = presetMatching(); scheduleSave(); });
-    const p = document.createElement("p"); p.className = "muted"; p.textContent = help;
+    const p = document.createElement("p"); p.className = "muted"; p.textContent = t(help);
     div.append(lab, out, inp, p); box.appendChild(div);
   }
   $("speak").checked = S.config.speak !== false;
@@ -568,9 +827,9 @@ function renderTiming() {
 function renderProfiles(keep) {
   const pick = $("profile-pick"); pick.textContent = "";
   for (const p of S.config.profiles) {
-    const o = document.createElement("option"); o.value = p.name; o.textContent = p.name; pick.appendChild(o);
+    const o = document.createElement("option"); o.value = p.name; o.textContent = t(p.name); pick.appendChild(o);
   }
-  const o = document.createElement("option"); o.value = EVERYWHERE; o.textContent = "Every app (always on)"; pick.appendChild(o);
+  const o = document.createElement("option"); o.value = EVERYWHERE; o.textContent = t("Every app (always on)"); pick.appendChild(o);
   if (keep && [...pick.options].some(x => x.value === keep)) pick.value = keep;
 }
 
@@ -580,9 +839,9 @@ function scheduleSave() {
   saveTimer = setTimeout(async () => {
     try {
       const r = await api("/api/settings", { config: S.config });
-      $("errors").textContent = r.ok ? "" : "Not saved: " + r.problems.join("; ");
-      if (r.ok) say("Saved");
-    } catch (e) { $("errors").textContent = "Not saved: " + e.message; }
+      $("errors").textContent = r.ok ? "" : t("Not saved: {problems}", { problems: r.problems.join("; ") });
+      if (r.ok) say(t("Saved"));
+    } catch (e) { $("errors").textContent = t("Not saved: {problems}", { problems: e.message }); }
   }, 400);
 }
 
@@ -604,11 +863,18 @@ async function poll() {
     version = st.version;
     $("conn-lost").hidden = true;
     applyLook(st.look);
+    // The suite's language (st.language) while Limitless Sound runs, else the computer's.
+    const relabel = setLanguage(st.language || systemLanguage());
+    if (relabel && S) {
+      const focusId = document.activeElement?.id;
+      renderProfiles(currentProfileName()); renderRows(); renderPad(); renderTiming();
+      if (focusId && $(focusId)) $(focusId).focus();
+    }
     const power = $("power");
     power.setAttribute("aria-pressed", String(st.enabled));
-    power.textContent = st.enabled ? "Controller is on" : "Controller is off";
-    $("pads").textContent = st.controllers.length ? st.controllers.join(", ") : "None connected. Plug in by USB or pair over Bluetooth.";
-    $("profile").textContent = (st.profile || "none") + (st.app ? ` (${st.app})` : "");
+    power.textContent = st.enabled ? t("Controller is on") : t("Controller is off");
+    $("pads").textContent = st.controllers.length ? st.controllers.join(", ") : t("None connected. Plug in by USB or pair over Bluetooth.");
+    $("profile").textContent = (st.profile ? t(st.profile) : t("none")) + (st.app ? ` (${st.app})` : "");
     $("layer").textContent = st.layer;
     $("ax-warn").hidden = st.accessibility || !st.setupDone;
     $("log").textContent = st.log.join("\n");
@@ -616,14 +882,15 @@ async function poll() {
     renderSetup(st);
     document.querySelectorAll("#pad .btn").forEach(g => g.classList.toggle("down", st.held.includes(g.dataset.input)));
     const la = st.lastAction;
-    if (la && la.label && la.at !== lastActionAt) {
+    if (la && la.label && (la.at !== lastActionAt || relabel)) {
       lastActionAt = la.at;
-      $("now").textContent = `${INPUT_LABELS[la.input] || la.input}: ${la.label}`;
+      $("now").textContent = `${inputLabel(la.input)}: ${t(la.label)}`;
     }
     const li = st.lastInput;
+    if (li && li.name && relabel) $("last").textContent = inputLabel(li.name);
     if (li && li.name && li.at !== lastSeenInput) {
       lastSeenInput = li.at;
-      const label = INPUT_LABELS[li.name] || li.name;
+      const label = inputLabel(li.name);
       $("last").textContent = label;
       document.querySelectorAll("tr.hit").forEach(r => r.classList.remove("hit"));
       const row = $("row-" + li.name);
@@ -631,7 +898,7 @@ async function poll() {
         row.classList.add("hit");
         if ($("follow").checked && !row.contains(document.activeElement)) {
           row.scrollIntoView({ block: "center", behavior: scrollMotion() });
-          say("Pressed " + label);
+          say(t("Pressed {input}", { input: label }));
         }
       }
     }
@@ -645,14 +912,14 @@ async function poll() {
 $("power").addEventListener("click", async () => {
   const on = $("power").getAttribute("aria-pressed") !== "true";
   await api("/api/enabled", { enabled: on });
-  say(on ? "Controller on" : "Controller off");
+  say(on ? t("Controller on") : t("Controller off"));
 });
 $("profile-pick").addEventListener("change", () => { renderRows(); renderPad(); });
 document.querySelectorAll("input[name=layer]").forEach(r => r.addEventListener("change", () => { renderRows(); renderPad(); }));
 $("ax-allow").addEventListener("click", () => { axAskedAt = Date.now(); api("/api/open-accessibility", {}); });
 $("ax-restart").addEventListener("click", async () => {
   await api("/api/restart", {});
-  document.body.innerHTML = "<main><h1>Restarting Limitless Control…</h1><p>A new settings page opens in a moment. You can close this one.</p></main>";
+  document.body.innerHTML = `<main><h1>${t("Restarting Limitless Control…")}</h1><p>${t("A new settings page opens in a moment. You can close this one.")}</p></main>`;
 });
 $("setup-done").addEventListener("click", async () => {
   try { await api("/api/login", { enabled: $("setup-login").checked }); } catch (e) {}
@@ -660,7 +927,7 @@ $("setup-done").addEventListener("click", async () => {
   S.config.setupDone = true;
   setupShown = false;
   $("setup").hidden = true;
-  say("Setup complete. Enjoy playing.");
+  say(t("Setup complete. Enjoy playing."));
   $("power").focus();
 });
 $("show-setup").addEventListener("click", () => {
@@ -669,7 +936,7 @@ $("show-setup").addEventListener("click", () => {
 });
 $("login").addEventListener("change", async () => {
   const r = await api("/api/login", { enabled: $("login").checked }).catch(e => ({ ok: false }));
-  say(r.ok ? ($("login").checked ? "Will start when you log in" : "Will not start at login") : "Could not change that setting");
+  say(r.ok ? ($("login").checked ? t("Will start when you log in") : t("Will not start at login")) : t("Could not change that setting"));
 });
 $("preset").addEventListener("change", () => {
   const p = S.timingPresets[$("preset").value];
@@ -678,27 +945,27 @@ $("preset").addEventListener("change", () => {
   S.config.analogThreshold = p.analogThreshold;
   renderTiming();
   scheduleSave();
-  say("Timing set for " + p.label.toLowerCase());
+  say(t("Timing set for {preset}", { preset: t(p.label).toLowerCase() }));
 });
 $("speak").addEventListener("change", () => { S.config.speak = $("speak").checked; scheduleSave(); });
 $("sticky").addEventListener("change", () => { S.config.layerMode = $("sticky").checked ? "oneShot" : "toggle"; scheduleSave(); });
 $("ax-open").addEventListener("click", () => api("/api/open-accessibility", {}));
 $("reset").addEventListener("click", async () => {
-  if (!confirm("Reset every switch and timing setting to the defaults?")) return;
+  if (!confirm(t("Reset every switch and timing setting to the defaults?"))) return;
   await api("/api/reset", {});
   await loadSettings(currentProfileName());
-  say("Reset to defaults");
+  say(t("Reset to defaults"));
 });
 $("quit").addEventListener("click", async () => {
-  if (!confirm("Quit Limitless Control? Your switches will stop working until you open it again.")) return;
+  if (!confirm(t("Quit Limitless Control? Your switches will stop working until you open it again."))) return;
   await api("/api/quit", {});
-  document.body.innerHTML = "<main><h1>Limitless Control has quit.</h1><p>Open it again from your Applications or Start menu.</p></main>";
+  document.body.innerHTML = `<main><h1>${t("Limitless Control has quit.")}</h1><p>${t("Open it again from your Applications or Start menu.")}</p></main>`;
 });
 
 applyLook();
 if (!token) {
   $("conn-lost").hidden = false;
-  $("conn-lost").textContent = "Open this page from the Limitless Control app.";
+  $("conn-lost").textContent = t("Open this page from the Limitless Control app.");
 } else {
   loadSettings().then(poll).catch(e => { $("conn-lost").hidden = false; $("conn-lost").textContent = e.message; });
 }

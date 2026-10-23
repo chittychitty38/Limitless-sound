@@ -3,6 +3,7 @@
 import subprocess
 
 from .base import AppRef, Platform
+from ..words import ui
 
 ACCESSIBILITY_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
 MICROPHONE_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
@@ -32,12 +33,12 @@ class MacPlatform(Platform):
     def open_app(self, name):
         r = subprocess.run(["open", "-a", name], capture_output=True, text=True)
         if r.returncode != 0:
-            raise RuntimeError(f"Couldn't find an app called {name}")
+            raise RuntimeError(ui.text("Couldn't find an app called {name}", name=name))   # shown in the window
 
     def applescript(self, script):
         r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
         if r.returncode != 0:
-            raise RuntimeError(r.stderr.strip() or "AppleScript failed")
+            raise RuntimeError(r.stderr.strip() or ui.text("AppleScript failed"))
         return r.stdout.strip()
 
     # -- permissions -----------------------------------------------------

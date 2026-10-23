@@ -1,12 +1,13 @@
-# The website must meet WCAG 2.2 AA: it's the front door for musicians with disabilities.
+# The website, in English and Spanish, must meet WCAG 2.2 AA: it's the front door for musicians
+# with disabilities.
 name: Website
 
 on:
   pull_request:
-    paths: ["docs/**", ".github/scripts/site-a11y.cjs", ".github/workflows/site.yml"]
+    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml"]
   push:
     branches: [main]
-    paths: ["docs/**", ".github/scripts/site-a11y.cjs", ".github/workflows/site.yml"]
+    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml"]
 
 jobs:
   accessibility:

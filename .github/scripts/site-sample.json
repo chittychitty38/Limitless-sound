@@ -1,0 +1,45 @@
+{
+  "_": "What site-a11y.cjs answers for GitHub's releases API and for proof/latest.json, so the pages are checked with their newest-release links and last night's proof filled in: one app passed, one failed, and one computer that couldn't finish. The releases are newer than the pages' written fallbacks, and a draft must be skipped.",
+  "releases": [
+    { "tag_name": "voice-v9.0.0", "draft": true, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/voice-v9.0.0" },
+    { "tag_name": "v0.2.6", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/v0.2.6" },
+    { "tag_name": "voice-v0.4.0", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/voice-v0.4.0" },
+    { "tag_name": "one-hand-v0.2.5", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/one-hand-v0.2.5" },
+    { "tag_name": "zoom-v0.1.5", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/zoom-v0.1.5" },
+    { "tag_name": "v0.2.5", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/v0.2.5" },
+    { "tag_name": "voice-v0.3.9", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/voice-v0.3.9" },
+    { "tag_name": "color-v0.1.4", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/color-v0.1.4" },
+    { "tag_name": "control-v0.2.6", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/control-v0.2.6" },
+    { "tag_name": "gazestage-v0.4.3", "draft": false, "prerelease": false, "html_url": "https://github.com/chittychitty38/Limitless-sound/releases/tag/gazestage-v0.4.3" }
+  ],
+  "proof": {
+    "run": "https://github.com/chittychitty38/Limitless-sound/actions/runs/1",
+    "runs": [
+      {
+        "arch": "mac-apple-silicon",
+        "when": "2026-10-23T05:11:56Z",
+        "suiteVersion": "v0.2.6",
+        "installSeconds": 11.0,
+        "computer": { "os": "macOS 15.7.9" },
+        "apps": [
+          {
+            "name": "Limitless Voice", "version": "0.4.0", "level": "adaptive", "joinedSeconds": 2.3, "actionsTried": 23,
+            "screenshot": "mac-apple-silicon/shots/voice.jpg", "idle": { "cpuPercent": 0.2 },
+            "checks": [{ "level": "connected", "id": "C4", "ok": true, "check": "Answers every action within 3 seconds (23 tried)", "detail": "" }],
+            "proof": [
+              { "id": "P1", "ok": true, "check": "Ready within 15 seconds of opening", "detail": "2.3 s" },
+              { "id": "P3", "ok": true, "warn": true, "check": "Uses under 3% CPU sitting idle", "detail": "0.2%" }
+            ]
+          },
+          {
+            "name": "Limitless Zoom", "version": "0.1.5", "level": null, "joinedSeconds": 1.9, "actionsTried": 22,
+            "screenshot": "mac-apple-silicon/shots/zoom.jpg", "idle": { "cpuPercent": 0.4 },
+            "checks": [{ "level": "connected", "id": "C4", "ok": false, "check": "Answers every action within 3 seconds (22 tried)", "detail": "no answer: zoom.fit" }],
+            "proof": [{ "id": "P1", "ok": true, "check": "Ready within 15 seconds of opening", "detail": "1.9 s" }]
+          }
+        ]
+      },
+      { "arch": "windows", "error": "The installer did not finish within 10 minutes." }
+    ]
+  }
+}
