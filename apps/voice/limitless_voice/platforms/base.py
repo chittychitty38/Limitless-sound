@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 
 from ..keys import for_platform, parse_chord
+from ..words import t
 
 
 @dataclass(frozen=True)
@@ -126,19 +127,20 @@ class Platform:
         return None
 
     def permission_problems(self):
-        """Things the user must allow before we can work, as (title, how-to, settings link)."""
+        """Things the user must allow before we can work, as (title, how-to, settings link),
+        in the language Voice shows (words.t)."""
         problems = []
         if self.mic_permission() == "denied":
             problems.append((
-                "Allow Limitless Voice to use the microphone",
-                "Open Microphone settings, turn on Limitless Voice, then come back.",
+                t("Allow Limitless Voice to use the microphone"),
+                t("Open Microphone settings, turn on Limitless Voice, then come back."),
                 self.mic_settings_link(),
             ))
         if not self.control_permission():
             problems.append((
-                "Allow Limitless Voice to control the computer",
-                "Open Accessibility settings, turn on Limitless Voice, then come back. "
-                "This is what lets spoken commands press keys in Logic and Pro Tools.",
+                t("Allow Limitless Voice to control the computer"),
+                t("Open Accessibility settings, turn on Limitless Voice, then come back. "
+                  "This is what lets spoken commands press keys in Logic and Pro Tools."),
                 self.control_settings_link(),
             ))
         return problems

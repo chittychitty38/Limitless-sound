@@ -16,16 +16,16 @@ from PySide6.QtCore import QObject, Qt, QTimer, Signal, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
-    QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMainWindow,
+    QFormLayout, QFrame, QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QProgressBar, QProgressDialog, QPushButton, QSlider, QSystemTrayIcon,
     QMenu, QVBoxLayout, QWidget,
 )
 
-from . import __version__, applog, mac_keys
+from . import __version__, applog, mac_keys, words
 from .audio import Listener, list_input_devices
 from .engine import Engine
 from .grammar import DEFAULT_PACK_DIR, load_packs
-from .look import LiveText, grow, in_use, resize_text, sized
+from .look import LiveText, add_item, grow, in_use, label, resize_text, sized
 from .model import DEFAULT_MODEL, MODELS, download_model, find_model
 from .language import ENGLISH, available, load as load_language, model_for, model_language, wanted
 from .platforms import current_os, get_platform
@@ -33,6 +33,7 @@ from .settings import APP_NAME, Settings, user_packs_dir
 from .hud import Hud, state_icon
 from .suite import Suite
 from .voice_out import Speaker
+from .words import phrase, t
 
 OWN_NAMES = (APP_NAME, "LimitlessVoice", "Limitless Voice.exe", "python", "python3", "Python")
 
@@ -74,84 +75,100 @@ def announce(widget, text):
         pass
 
 
+def add_row(form, text, field):
+    """A row of a form with its label, the label's words following Voice's language."""
+    form.addRow(text, field)
+    words.keep(form.labelForField(field).setText, text)
+
+
 class Bridge(QObject):
     """Carries events from the mic thread to the window thread."""
     heard = Signal(str, str)
     level = Signal(float)
-    error = Signal(str)
+    error = Signal(object)  # words.Text, so a problem shown is shown again in another language
     call = Signal(object)   # calls from the Limitless Sound link
 
 
 class CommandsDialog(QDialog):
+    """Every command, in the language Voice listens in; its own words in Voice's language."""
+
     def __init__(self, parent, engine):
         super().__init__(parent)
         lang = engine.lang
-        self.setWindowTitle(lang.text("What you can say"))
+        words.show(self.setWindowTitle, t("What you can say"))
         self.engine = engine
         layout = QVBoxLayout(self)
         app = engine.current_app_name()
-        title = QLabel(lang.text("Commands for {app}. Words in [brackets] are optional; {number} means say a number.",
-                                 app=app or lang.text("any app")))
+        title = label(t("Commands for {app}. Words in [brackets] are optional; {number} means say a number.",
+                        app=app or t("any app"), number="{number}"))
         title.setWordWrap(True)
         layout.addWidget(title)
         self.search = QLineEdit()
-        self.search.setPlaceholderText(lang.text("Search commands"))
-        self.search.setAccessibleName(lang.text("Search commands"))
+        words.show(self.search.setPlaceholderText, t("Search commands"))
+        words.show(self.search.setAccessibleName, t("Search commands"))
         layout.addWidget(self.search)
         self.list = QListWidget()
-        self.list.setAccessibleName(lang.text("Commands"))
+        words.show(self.list.setAccessibleName, t("Commands"))
         layout.addWidget(self.list, 1)
         self.rows = []
         for c in engine.commands_for(app):
             phrases = " / ".join(c.phrases).replace(":number}", "}").replace(":text}", "}").replace(":keys}", "}")
             self.rows.append(f"{phrases}   ({c.pack})" + (f": {c.help}" if c.help else ""))
-        always = lang.text("always")
         self.rows += [
-            f"{lang.first('sleep')} / {lang.first('wake')}   ({always})",
-            f"{lang.first('dictation_on')} / {lang.first('dictation_off')}   ({always})",
-            f"{lang.first('again')}   ({lang.text('repeats the last command')})",
-            lang.text("... N times   (e.g. nudge right 4 times)"),
+            t("{phrases}   ({note})", phrases=f"{lang.first('sleep')} / {lang.first('wake')}", note=t("always")),
+            t("{phrases}   ({note})", phrases=f"{lang.first('dictation_on')} / {lang.first('dictation_off')}",
+              note=t("always")),
+            t("{phrases}   ({note})", phrases=lang.first("again"), note=t("repeats the last command")),
+            lang.text("... N times   (e.g. nudge right 4 times)"),   # what to say: in the language listened in
         ]
-        self.list.addItems(self.rows)
+        self._filter("")
         self.search.textChanged.connect(self._filter)
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        words.show(buttons.button(QDialogButtonBox.Close).setText, t("Close"))
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
         self.resize(640, 560)
 
     def _filter(self, text):
         self.list.clear()
-        self.list.addItems([r for r in self.rows if text.lower() in r.lower()])
+        for row in map(words.again, self.rows):
+            if text.lower() in row.lower():
+                words.show(QListWidgetItem(self.list).setText, row)
 
 
 class SettingsDialog(QDialog):
     def __init__(self, parent, settings, suite_language=None):
         """suite_language: Limitless Sound's language, for "Same as Limitless Sound"."""
         super().__init__(parent)
-        self.setWindowTitle("Settings")
+        words.show(self.setWindowTitle, t("Settings"))
         self.settings = settings
         self.suite_language = suite_language or wanted("", None, settings.extra.get("suite_language", ""))
         form = QFormLayout(self)
 
-        self.speak = QCheckBox("Say what happened out loud")
+        self.speak = QCheckBox()
+        words.show(self.speak.setText, t("Say what happened out loud"))
         self.speak.setChecked(settings.speak_feedback)
         form.addRow(self.speak)
 
         self.rate = QSlider(Qt.Horizontal)
         self.rate.setRange(120, 300)
         self.rate.setValue(settings.voice_rate)
-        self.rate.setAccessibleName("Speaking speed")
-        form.addRow("Speaking speed", self.rate)
+        words.show(self.rate.setAccessibleName, t("Speaking speed"))
+        add_row(form, t("Speaking speed"), self.rate)
 
-        self.start_listening = QCheckBox("Start listening when the app opens")
+        self.start_listening = QCheckBox()
+        words.show(self.start_listening.setText, t("Start listening when the app opens"))
         self.start_listening.setChecked(settings.start_listening)
         form.addRow(self.start_listening)
 
-        self.vocab = QCheckBox("Listen for command words only (more accurate; turn off if commands are missed)")
+        self.vocab = QCheckBox()
+        words.show(self.vocab.setText,
+                   t("Listen for command words only (more accurate; turn off if commands are missed)"))
         self.vocab.setChecked(settings.command_vocabulary)
         form.addRow(self.vocab)
 
-        self.on_top = QCheckBox("Keep this window on top of other apps")
+        self.on_top = QCheckBox()
+        words.show(self.on_top.setText, t("Keep this window on top of other apps"))
         self.on_top.setChecked(settings.keep_on_top)
         form.addRow(self.on_top)
 
@@ -159,43 +176,50 @@ class SettingsDialog(QDialog):
         self.scale.setRange(0.8, 3.0)
         self.scale.setSingleStep(0.1)
         self.scale.setValue(settings.text_scale)
-        self.scale.setAccessibleName("Text size")
-        form.addRow("Text size", self.scale)
+        words.show(self.scale.setAccessibleName, t("Text size"))
+        add_row(form, t("Text size"), self.scale)
 
-        self.contrast = QCheckBox("High contrast colours")
+        self.contrast = QCheckBox()
+        words.show(self.contrast.setText, t("High contrast colours"))
         self.contrast.setChecked(settings.high_contrast)
         form.addRow(self.contrast)
 
+        # Shortcuts are written the way the keyboard library reads them, <ctrl> and all, in any language
         self.hotkey = QLineEdit(settings.hotkey)
-        self.hotkey.setPlaceholderText("e.g. <ctrl>+<alt>+l, or <f13>")
-        self.hotkey.setAccessibleName("Keyboard shortcut to turn listening on and off")
-        form.addRow("Listen on/off shortcut", self.hotkey)
+        words.show(self.hotkey.setPlaceholderText, t("e.g. {example}, or {other}", example="<ctrl>+<alt>+l",
+                                                     other="<f13>"))
+        words.show(self.hotkey.setAccessibleName, t("Keyboard shortcut to turn listening on and off"))
+        add_row(form, t("Listen on/off shortcut"), self.hotkey)
 
         # Each language's name in itself, so someone who reads only that language finds it. Any
         # but English is downloaded once, the first time it's chosen.
         self.language = QComboBox()
-        self.language.setAccessibleName("Language")
-        self.language.setAccessibleDescription("Language to listen and answer in")
+        words.show(self.language.setAccessibleName, t("Language"))
+        words.show(self.language.setAccessibleDescription, t("Language to listen and answer in"))
         same = load_language(self.suite_language).name
-        self.language.addItem(f"Same as Limitless Sound ({same})", "")
+        add_item(self.language, t("Same as Limitless Sound ({language})", language=same), "")
         for code, name in available():
             lang = load_language(code)
             here = any(find_model(m) for m in lang.models)
-            self.language.addItem(name if here else f"{name} ({lang.models[lang.model]['size']} download)", code)
+            add_item(self.language, name if here else
+                     t("{language} ({size} download)", language=name, size=lang.models[lang.model]["size"]), code)
         self.language.setCurrentIndex(max(0, self.language.findData(settings.language)))
-        form.addRow("Language", self.language)
-        self.language_note = LiveText("About the language")
+        add_row(form, t("Language"), self.language)
+        self.language_note = LiveText(t("About the language"))
         self.language_note.setWordWrap(True)
         form.addRow(self.language_note)
 
         self.model = QComboBox()
-        self.model.setAccessibleName("Speech model")
-        self.model.setAccessibleDescription("Speech model for listening")   # what VoiceOver reads as its label
-        form.addRow("Speech model", self.model)
+        words.show(self.model.setAccessibleName, t("Speech model"))
+        # what VoiceOver reads as its label
+        words.show(self.model.setAccessibleDescription, t("Speech model for listening"))
+        add_row(form, t("Speech model"), self.model)
         self._language_chosen()
         self.language.currentIndexChanged.connect(self._language_chosen)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        words.show(buttons.button(QDialogButtonBox.Save).setText, t("Save"))
+        words.show(buttons.button(QDialogButtonBox.Cancel).setText, t("Cancel"))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         form.addRow(buttons)
@@ -208,8 +232,9 @@ class SettingsDialog(QDialog):
         lang = self.chosen_language()
         self.model.clear()
         for name, m in lang.models.items():
-            have = " (installed)" if find_model(name) else f" ({m['size']} download)"
-            self.model.addItem(m["label"] + have, name)
+            # the models' labels are in English in the language files, and in the table like any words
+            add_item(self.model, t("{model} (installed)", model=t(m["label"])) if find_model(name) else
+                     t("{model} ({size} download)", model=t(m["label"]), size=m["size"]), name)
         self.model.setCurrentIndex(max(0, self.model.findData(model_for(lang, self.settings.model))))
         missing = not find_model(model_for(lang, self.settings.model))
         note = lang.text("{language} is downloaded once ({size}), then works without internet.",
@@ -239,7 +264,10 @@ class MainWindow(QMainWindow):
         self.platform = platform
         self.listener = None
         self.bridge = Bridge()
-        # the language of the speech model it starts with; apply_language() moves to the one wanted
+        # The windows are in the language wanted from the start; it's listened in once its speech
+        # model is here. self.lang is the language listened in (and replies are spoken in): the
+        # speech model's it starts with, until apply_language() moves to the one wanted.
+        words.use(wanted(settings.language, None, settings.extra.get("suite_language", "")))
         self.lang = load_language(model_language(Path(str(model_path)).name) or "en")
         self.speaker = Speaker(settings.speak_feedback, settings.voice_rate, on_busy=self._speaking,
                                on_no_voice=lambda lang: self.bridge.call.emit(lambda: self._no_voice(lang)))
@@ -259,7 +287,6 @@ class MainWindow(QMainWindow):
 
         self._quitting = False
         self.hud = Hud()
-        self.hud.text = self.lang.text
         self._build_ui()
         self.apply_settings()
 
@@ -331,7 +358,7 @@ class MainWindow(QMainWindow):
         try:
             self.platform.set_login_item(enabled)
         except Exception as e:
-            self._show_did(f"Couldn't change the login setting: {e}")
+            self._show_did(t("Couldn't change the login setting: {error}", error=e))
 
     # -- layout --------------------------------------------------------
 
@@ -351,12 +378,14 @@ class MainWindow(QMainWindow):
         self.permission_box = QFrame()
         self.permission_box.setFrameShape(QFrame.StyledPanel)
         pbox = QVBoxLayout(self.permission_box)
-        self.permission_text = LiveText("Permission needed")
+        self.permission_text = LiveText(t("Permission needed"))
         self.permission_text.setWordWrap(True)
         pbox.addWidget(self.permission_text)
         prow = QHBoxLayout()
-        self.permission_open = QPushButton("Open settings")
-        self.permission_check = QPushButton("I've done it, check again")
+        self.permission_open = QPushButton()
+        words.show(self.permission_open.setText, t("Open settings"))
+        self.permission_check = QPushButton()
+        words.show(self.permission_check.setText, t("I've done it, check again"))
         self.permission_check.clicked.connect(self._check_permissions)
         prow.addWidget(self.permission_open)
         prow.addWidget(self.permission_check)
@@ -368,35 +397,37 @@ class MainWindow(QMainWindow):
         self.language_box = QFrame()
         self.language_box.setFrameShape(QFrame.StyledPanel)
         lbox = QVBoxLayout(self.language_box)
-        self.language_text = LiveText("Language")
+        self.language_text = LiveText(t("Language"))
         self.language_text.setWordWrap(True)
         lbox.addWidget(self.language_text)
-        self.language_download = QPushButton("Download")
+        self.language_download = QPushButton()   # its words are the language's, in _language_note
         self.language_download.clicked.connect(lambda: self.apply_language(download=True))
         lbox.addWidget(self.language_download)
         self.language_box.hide()
         layout.addWidget(self.language_box)
 
         # A screen reader reads their words, and what each one is (see LiveText)
-        self.heard_label = sized(LiveText("Last thing heard", "Say something, like \"what can I say\"."), 1.25)
+        self.heard_label = sized(LiveText(t("Last thing heard"), self._say_something()), 1.25)
         self.heard_label.setWordWrap(True)
-        self.did_label = LiveText("What happened")
+        self.did_label = LiveText(t("What happened"))
         self.did_label.setWordWrap(True)
-        self.target_label = LiveText("App receiving commands")
+        self.target_label = LiveText(t("App receiving commands"))
         for lbl in (self.heard_label, self.did_label, self.target_label):
             lbl.setTextInteractionFlags(Qt.TextSelectableByKeyboard | Qt.TextSelectableByMouse)
             layout.addWidget(lbl)
 
         mic_row = QHBoxLayout()
-        mic_label = QLabel("&Microphone")
+        mic_label = label(t("&Microphone"))
         self.mic_combo = QComboBox()
-        self.mic_combo.setAccessibleName("Microphone")
-        self.mic_combo.setAccessibleDescription("Microphone to listen with")   # what VoiceOver reads as its label
+        words.show(self.mic_combo.setAccessibleName, t("Microphone"))
+        # what VoiceOver reads as its label
+        words.show(self.mic_combo.setAccessibleDescription, t("Microphone to listen with"))
         mic_label.setBuddy(self.mic_combo)
         mic_row.addWidget(mic_label)
         mic_row.addWidget(self.mic_combo, 1)
-        refresh = QPushButton("Refresh")
-        refresh.setAccessibleName("Refresh microphone list")
+        refresh = QPushButton()
+        words.show(refresh.setText, t("Refresh"))
+        words.show(refresh.setAccessibleName, t("Refresh microphone list"))
         refresh.clicked.connect(self._fill_mics)
         mic_row.addWidget(refresh)
         layout.addLayout(mic_row)
@@ -405,26 +436,27 @@ class MainWindow(QMainWindow):
         self.level.setRange(0, 100)
         self.level.setTextVisible(False)
         self.level.setFixedHeight(22)
-        self.level.setAccessibleName("Microphone level")
+        words.show(self.level.setAccessibleName, t("Microphone level"))
         layout.addWidget(self.level)
 
-        self.mic_error = LiveText("Microphone problem")
+        self.mic_error = LiveText(t("Microphone problem"))
         self.mic_error.setWordWrap(True)
         self.mic_error.hide()
         layout.addWidget(self.mic_error)
 
-        history_label = QLabel("&History")
+        history_label = label(t("&History"))
         self.history = QListWidget()
-        self.history.setAccessibleName("History of commands")
+        words.show(self.history.setAccessibleName, t("History of commands"))
         history_label.setBuddy(self.history)
         layout.addWidget(history_label)
         layout.addWidget(self.history, 1)
 
         buttons = QHBoxLayout()
-        for text, slot in (("What can I say?", self.show_commands),
-                           ("Settings", self.show_settings),
-                           ("My commands folder", self.open_user_packs)):
-            b = QPushButton(text)
+        for text, slot in ((t("What can I say?"), self.show_commands),
+                           (t("Settings"), self.show_settings),
+                           (t("My commands folder"), self.open_user_packs)):
+            b = QPushButton()
+            words.show(b.setText, text)
             b.clicked.connect(slot)
             buttons.addWidget(b)
         layout.addLayout(buttons)
@@ -440,27 +472,26 @@ class MainWindow(QMainWindow):
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
         self.tray = QSystemTrayIcon(state_icon("awake"), self)
-        menu = QMenu()
-        self.tray_status = QAction("Listening", self)
+        self.tray_menu = menu = QMenu()
+        self.tray_status = QAction(self)   # its words say how it's listening, in _update_state
         self.tray_status.setEnabled(False)
         menu.addAction(self.tray_status)
-        self.tray_toggle = QAction("Listen", self)
+        self.tray_toggle = QAction(self)   # and this one's what it does now
         self.tray_toggle.triggered.connect(self.toggle_listening)
         menu.addAction(self.tray_toggle)
         menu.addSeparator()
-        show = QAction("Show Limitless Voice", self)
-        show.triggered.connect(self.bring_forward)
-        menu.addAction(show)
-        cmds = QAction("What can I say?", self)
-        cmds.triggered.connect(self.show_commands)
-        menu.addAction(cmds)
-        setup = QAction("Run setup again…", self)
-        setup.triggered.connect(self.show_setup)
-        menu.addAction(setup)
-        menu.addSeparator()
-        quit_ = QAction("Quit Limitless Voice", self)
-        quit_.triggered.connect(self.quit_app)
-        menu.addAction(quit_)
+        for text, slot in ((t("Show {app}", app=APP_NAME), self.bring_forward),
+                           (t("What can I say?"), self.show_commands),
+                           (t("Run setup again…"), self.show_setup),
+                           (None, None),
+                           (t("Quit {app}", app=APP_NAME), self.quit_app)):
+            if text is None:
+                menu.addSeparator()
+                continue
+            action = QAction(self)
+            words.show(action.setText, text)
+            action.triggered.connect(slot)
+            menu.addAction(action)
         self.tray.setContextMenu(menu)
         self.tray.setToolTip(APP_NAME)
         self.tray.activated.connect(
@@ -526,7 +557,7 @@ class MainWindow(QMainWindow):
                 {self.settings.hotkey: lambda: QTimer.singleShot(0, self.toggle_listening)})
             self.hotkey_listener.start()
         except Exception as e:
-            self._show_did(f"Couldn't use that shortcut: {e}")
+            self._show_did(t("Couldn't use that shortcut: {error}", error=e))
 
     def show_settings(self):
         old_model = self.settings.model
@@ -560,15 +591,18 @@ class MainWindow(QMainWindow):
         self.apply_language()
 
     def apply_language(self, download=False):
-        """Listen and answer in the language wanted: the one chosen in Settings, else Limitless
-        Sound's. Any but English is downloaded once. Until it's here Voice keeps listening in the
-        language it has, says so, and offers the download; download=True asks for it now."""
+        """Show, listen and answer in the language wanted: the one chosen in Settings, else
+        Limitless Sound's. The windows change to it at once. Any but English is downloaded once:
+        until it's here Voice keeps listening in the language it has, says so, and offers the
+        download; download=True asks for it now."""
         code = self.suite.prefs.get("language")
         if code and code != self.settings.extra.get("suite_language"):
             # remembered, so Voice starts in it next time, before the hub is running
             self.settings.extra["suite_language"] = code
             self.settings.save()
         want = load_language(wanted(self.settings.language, self.suite_language()))
+        if words.use(want.code):
+            self.retranslate()
         if want.code == self.lang.code:
             if self._language_problem == "model":
                 self._language_note("")
@@ -591,7 +625,6 @@ class MainWindow(QMainWindow):
         self.lang = lang
         self.engine.set_language(lang, lang.translate(self.packs))
         self.speaker.set_language(lang)
-        self.hud.text = lang.text
         self.suite.language = lang.code
         self.suite.report_look()   # so the hub reads Voice's replies with a voice for it
         self._language_note("")
@@ -604,6 +637,8 @@ class MainWindow(QMainWindow):
             self.listener.start()
         self._update_state()
         self._track_focus()
+        if not self._heard_anything:
+            self.heard_label.setText(self._say_something())   # a command to try, in this language
         self._feedback(lang.text("Listening in {language}", language=lang.name))
         self._show_did(lang.text("Listening in {language}", language=lang.name))
 
@@ -645,12 +680,13 @@ class MainWindow(QMainWindow):
     def _fill_mics(self):
         self.mic_combo.blockSignals(True)
         self.mic_combo.clear()
-        self.mic_combo.addItem("System default microphone", "")
+        add_item(self.mic_combo, t("System default microphone"), "")
         try:
             for d in list_input_devices():
-                self.mic_combo.addItem(d.name + (" (default)" if d.is_default else ""), d.name)
+                # a microphone's name is its own, in any language
+                add_item(self.mic_combo, t("{name} (default)", name=d.name) if d.is_default else d.name, d.name)
         except Exception as e:
-            self.on_mic_error(f"Couldn't list microphones: {e}")
+            self.on_mic_error(t("Couldn't list microphones: {error}", error=e))
         idx = self.mic_combo.findData(self.settings.mic_name)
         self.mic_combo.setCurrentIndex(max(0, idx))
         self.mic_combo.blockSignals(False)
@@ -671,7 +707,7 @@ class MainWindow(QMainWindow):
         self.settings.mic_name = name
         self.settings.save()
         self.listener.set_device(self._device_index(name))
-        self._show_did(f"Using {self.mic_combo.currentText()}")
+        self._show_did(t("Using {microphone}", microphone=name or t("System default microphone")))
 
     def on_mic_error(self, msg):
         self.mic_error.setText(msg)
@@ -697,18 +733,18 @@ class MainWindow(QMainWindow):
         self._update_state()
 
     def _update_state(self):
-        lang = self.lang
+        lang = self.lang   # the words to say are the ones listened for
         if self.engine.dictating:
-            text = lang.text('Dictating: say "{stop}" to go back to commands', stop=lang.first("dictation_off"))
+            text = t('Dictating: say "{stop}" to go back to commands', stop=lang.first("dictation_off"))
         elif self.engine.awake:
-            text = lang.text('Listening: say "{sleep}" to pause', sleep=lang.first("sleep"))
+            text = t('Listening: say "{sleep}" to pause', sleep=lang.first("sleep"))
         else:
-            text = lang.text('Asleep: say "{wake}" or press here to start', wake=lang.first("wake"))
+            text = t('Asleep: say "{wake}" or press here to start', wake=lang.first("wake"))
         if self.engine.take and self.engine.awake:
-            text = lang.text('Take mode: only "{stop}" works until the take ends', stop=lang.first("take_stop"))
+            text = t('Take mode: only "{stop}" works until the take ends', stop=lang.first("take_stop"))
         self.suite.report_state()
-        self.listen_btn.setText(text)
-        self.listen_btn.setAccessibleName(text)
+        words.show(self.listen_btn.setText, text)
+        words.show(self.listen_btn.setAccessibleName, text)
         self.listen_btn.setChecked(self.engine.awake)
         state = self.suite.listening()
         if state != getattr(self, "_shown_state", None):
@@ -717,10 +753,10 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(state_icon(state))
             if self.tray:
                 self.tray.setIcon(state_icon(state))
-                self.tray.setToolTip(f"{APP_NAME}: {text}")
-                self.tray_status.setText(text)
+                words.show(self.tray.setToolTip, t("{app}: {state}", app=APP_NAME, state=text))
+                words.show(self.tray_status.setText, text)
         if self.tray:
-            self.tray_toggle.setText(lang.text("Go to sleep" if self.engine.awake else "Wake up"))
+            words.show(self.tray_toggle.setText, t("Go to sleep") if self.engine.awake else t("Wake up"))
 
     def on_heard(self, heard, alternative):
         if self.wizard is not None:
@@ -731,7 +767,7 @@ class MainWindow(QMainWindow):
             result = self.engine.handle(heard, alternative)
         except Exception as e:
             result = None
-            self._show_did(f"{self.lang.text("That didn't work")}: {e}")
+            self._show_did(t("That didn't work: {error}", error=e))
             self.speaker.say(self.lang.text("That didn't work"))
         self._update_state()
         if result is None or result.message in ("asleep", "take"):
@@ -741,7 +777,8 @@ class MainWindow(QMainWindow):
             shown = alternative or heard   # the plain-English transcript reads better
         else:
             shown = result.heard or heard
-        self.heard_label.setText(self.lang.text("Heard: “{text}”", text=shown.replace("[unk]", "").strip()))
+        self._heard_anything = True
+        self.heard_label.setText(t("Heard: “{text}”", text=shown.replace("[unk]", "").strip()))
         if result.message:
             first_line = result.message.splitlines()[0]
             self._show_did(("✓ " if result.handled else "? ") + first_line)
@@ -784,8 +821,18 @@ class MainWindow(QMainWindow):
         except Exception:
             return
         name = self.engine.target.name if self.engine.target else None
-        self.target_label.setText(self.lang.text("Sending commands to: {app}", app=name) if name else
-                                  self.lang.text("Click into the app you want to control (Logic, Pro Tools…)"))
+        self.target_label.setText(t("Sending commands to: {app}", app=name) if name else
+                                  t("Click into the app you want to control (Logic, Pro Tools…)"))
+
+    _heard_anything = False   # nothing yet: the heard label suggests something to say
+
+    def _say_something(self):
+        return t('Say something, like "{phrase}".', phrase=phrase(self.lang, "what can I say"))
+
+    def retranslate(self):
+        """Voice's language changed: every word in its windows, the menu bar menu and the floating
+        display changes in place, so the keyboard focus and what a screen reader is on stay put."""
+        words.show_again()
 
     # -- dialogs -------------------------------------------------------
 
@@ -803,14 +850,14 @@ class MainWindow(QMainWindow):
             if self._last_problem is not None:
                 self._last_problem = None
                 self.permission_box.hide()
-                self._show_did("\u2713 All set")
+                self._show_did(t("\u2713 All set"))
             self.permission_box.hide()
             return
         title, how, link = problems[0]
-        if title == self._last_problem:
+        if getattr(title, "english", title) == self._last_problem:   # in whichever language it's shown
             return
-        self._last_problem = title
-        self.permission_text.setText(f"<b>{title}</b><br>{how}")
+        self._last_problem = getattr(title, "english", title)
+        self.permission_text.setText(t("<b>{title}</b><br>{how}", title=title, how=how))
         try:
             self.permission_open.clicked.disconnect()
         except (RuntimeError, TypeError):
@@ -828,8 +875,7 @@ class MainWindow(QMainWindow):
             if not self.settings.extra.get("told_menu_bar"):
                 self.settings.extra["told_menu_bar"] = True
                 self.settings.save()
-                self.tray.showMessage(APP_NAME,
-                                      self.lang.text("Still listening. Open it again from the menu bar icon."))
+                self.tray.showMessage(APP_NAME, t("Still listening. Open it again from the menu bar icon."))
                 self.speaker.say(self.lang.text("Still listening from the menu bar"))
             return
         self.shutdown()
@@ -877,17 +923,25 @@ def ensure_user_packs_dir():
 
 def ensure_model(parent, name="", lang=ENGLISH, ask=True):
     """Return the model folder, downloading it (with a progress window) if needed. lang is the
-    language it talks in: the model's. ask=False when the person has just asked for it."""
+    language it talks in: the model's. ask=False when the person has just asked for it.
+    Its buttons are named in that language too: Qt's own Yes, No and OK are English."""
     name = name or DEFAULT_MODEL
     path = find_model(name)
     if path:
         return path
-    label, size = MODELS.get(name, (name, "?"))
-    if ask and QMessageBox.question(
-            parent, lang.text("Download speech model"),
-            lang.text("Limitless Voice needs the {label} speech model ({size}). It's downloaded once and then "
-                      "works without internet. Download it now?", label=label, size=size)) != QMessageBox.Yes:
-        return None
+    model_label, size = MODELS.get(name, (name, "?"))
+    if ask:
+        box = QMessageBox(QMessageBox.Question, lang.text("Download speech model"),
+                          lang.text("Limitless Voice needs the {label} speech model ({size}). It's downloaded once "
+                                    "and then works without internet. Download it now?",
+                                    label=model_label, size=size), parent=parent)
+        yes = box.addButton(lang.text("Download {language} ({size})", language=lang.name, size=size),
+                            QMessageBox.AcceptRole)
+        box.addButton(lang.text("Cancel"), QMessageBox.RejectRole)
+        box.setDefaultButton(yes)
+        box.exec()
+        if box.clickedButton() is not yes:
+            return None
     dlg = QProgressDialog(lang.text("Downloading speech model…"), lang.text("Cancel"), 0, 100, parent)
     dlg.setWindowModality(Qt.WindowModal)
     dlg.setMinimumDuration(0)
@@ -909,9 +963,12 @@ def ensure_model(parent, name="", lang=ENGLISH, ask=True):
         threading.Event().wait(0.05)
     dlg.close()
     if state["error"]:
-        QMessageBox.warning(parent, lang.text("Download failed"),
-                            lang.text("Couldn't download the model: {error}\n"
-                                      "Check the internet connection and try again.", error=state["error"]))
+        box = QMessageBox(QMessageBox.Warning, lang.text("Download failed"),
+                          lang.text("Couldn't download the model: {error}\n"
+                                    "Check the internet connection and try again.", error=state["error"]),
+                          parent=parent)
+        box.addButton(lang.text("OK"), QMessageBox.AcceptRole)
+        box.exec()
         return None
     return state["path"]
 

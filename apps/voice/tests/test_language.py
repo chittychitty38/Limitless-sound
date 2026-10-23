@@ -125,7 +125,7 @@ class SpanishFile(unittest.TestCase):
                         found.update(strings(node.args[1]))
         from limitless_voice.hud import STATES
         found.update(label for _, label in STATES.values())
-        self.assertGreater(len(found), 60)
+        self.assertGreater(len(found), 40)   # the windows' own words are words.t()'s: test_spanish.py
         self.assertEqual(sorted(t for t in found if t not in ES.texts), [])
 
 
