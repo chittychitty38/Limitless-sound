@@ -284,8 +284,9 @@ class Windows(Languages):
         self.assertEqual(w.hud.state_label.text(), "Escuchando")
         settings = w.findChild(SettingsDialog)
         self.assertEqual(settings.windowTitle(), "Ajustes")
-        self.assertEqual([settings.language.itemText(i) for i in range(settings.language.count())],
-                         ["Igual que Limitless Sound (English)", "English (descarga de 40 MB)", "Español"])
+        languages = [settings.language.itemText(i) for i in range(settings.language.count())]
+        self.assertEqual(languages[:3], ["Igual que Limitless Sound (English)", "English (descarga de 40 MB)",
+                                         "Español"])   # then any other language Voice has
         self.assertEqual(settings.model.itemText(0), "Español, rápido (instalado)")
         self.assertEqual(sorted(b.text() for b in settings.findChildren(QPushButton)), ["Cancelar", "Guardar"])
         commands = w.findChild(CommandsDialog)

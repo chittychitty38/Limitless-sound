@@ -336,6 +336,7 @@ texts:
   English (US), large, slower: Inglés (EE. UU.), grande, más lento
   English (India), fast: Inglés (India), rápido
   Spanish, fast: Español, rápido
+  Portuguese, fast: Portugués, rápido   # Brazilian Portuguese's, on its way (voice/portuguese)
   # the setup guide
   "Set up {app}": "Configurar {app}"
   Setup step: Paso de la configuración
