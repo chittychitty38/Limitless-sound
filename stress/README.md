@@ -279,22 +279,22 @@ It gets the same checks as in English, from the same Spanish job:
 
 Each run also measures other ways of listening, and every confidence threshold, side by side.
 That's how Zoom's Spanish was chosen. What CI measured (ubuntu-latest, October 2026; runs
-39918506977 and 39919500433), next to English:
+39918506977, 39919500433 and 39919519719), next to English (the last run's English job):
 
-| | Spanish | English (Zoom 0.1.4) |
+| | Spanish | English |
 |---|---|---|
-| Commands said alone, by real people (MSWC) | **90% to 91%** (189 clips, 7 words) | 91% to 92% (fit, taller, shorter, again) |
+| Commands said alone, by real people (MSWC) | **89.9% to 91.0%** (189 clips, 7 words) | 91.7% (325 clips: fit, taller, shorter, again) |
 | The same verb with a sound less ("acerca" for "acercar") | 72% | |
 | Words that aren't commands: zoomed | 12% (46 words, sound-alikes on purpose) | 2.2% (Speech Commands' words) |
 | A command other than the one said | 0 | |
-| An hour of reading aloud: zoomed | **1 to 2 times** (FLEURS) | 3.8 times (LibriSpeech) |
+| An hour of reading aloud: zoomed | **1, 2 and 1 times** (FLEURS) | 3.8 times (LibriSpeech) |
 | Every phrase said over a band, at 30, 15 and 6 dB | 44, 45 and 41 of 45 | all on Linux, 41 of 42 on a Mac |
 | The band alone, 2 minutes: zoomed | 0 | at most 1 |
 
 What it shows:
 
 - **The Spanish model writes talk down as commands.** Listening only for Zoom's phrases, as
-  English Zoom does, an hour of FLEURS zoomed 81 to 84 times at the same confidence: "zoom dos"
+  English Zoom does, an hour of FLEURS zoomed 81 to 85 times at the same confidence: "zoom dos"
   13 times, "lupa" 7 to 9, "acercar" 5. Nearly every one was heard on its own, with no "[unk]" around it, so the
   sentence rules had nothing to go on; English's model writes such talk down as "[unk]". Zoom
   now listens for the one- and two-letter words and the 300 words said most in Common Voice's

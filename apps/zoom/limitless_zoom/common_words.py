@@ -3,7 +3,7 @@ down. Said alone they do nothing; said around a command, the command isn't one.
 
 Spanish needs them. With only Zoom's phrases to choose from, the Spanish speech model writes
 down a stretch of talk as the command it sounds most like, with no "[unk]" around it: an hour
-of people reading aloud (FLEURS) zoomed 81 to 84 times. With these 325 words to choose from too,
+of people reading aloud (FLEURS) zoomed 81 to 85 times. With these 325 words to choose from too,
 it zoomed once or twice, and 90% of the commands real people said were still heard
 (stress/README.md, "Zoom in Spanish").
 English doesn't need them: its model writes such talk down as "[unk]".

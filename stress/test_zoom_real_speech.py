@@ -191,9 +191,9 @@ def test_ordinary_talk_rarely_zooms():
         # LibriSpeech. Measured on CI: 3.8 an hour, all of them "shorter" or "fit" heard on its own
         # (Zoom 0.1.2: 16.1 to 17.9, nearly all a command word inside a sentence; 0.1.3: 13.2).
         "en": 7,
-        # FLEURS es_419, the first hour of its dev split. Measured on CI: 1.0 and 2.0 an hour, a
-        # 0.72 sure "ajustar" and a 0.41 sure "disminuir" (runs 39918506977 and 39919500433).
-        # Listening only for Zoom's phrases, as in English: 81 to 84 an hour.
+        # FLEURS es_419, the first hour of its dev split. Measured on CI: 1.0, 2.0 and 1.0 an hour,
+        # a 0.72 sure "ajustar" and once a 0.41 sure "disminuir" (runs 39918506977, 39919500433 and
+        # 39919519719). Listening only for Zoom's phrases, as in English: 81 to 85 an hour.
         "es": 4,
     }[LANG.code]
     assert len(fired) / hours <= ceiling, f"Zoom acted {len(fired) / hours:.1f} times an hour of talk"
