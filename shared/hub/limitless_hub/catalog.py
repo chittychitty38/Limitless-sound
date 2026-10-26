@@ -1,4 +1,4 @@
-"""The six Limitless Sound tools: names, where they get installed, and what they can do.
+"""The Limitless Sound tools: names, where they get installed, and what they can do.
 
 Each tool sends its own list of actions when it connects, and that live list wins.
 The lists here let the settings page show every tool's actions while the tool is
@@ -97,6 +97,23 @@ TOOLS: dict[str, dict] = {
             _a("preset4", "Zoom preset 4"), _a("preset5", "Zoom preset 5"),
             _a("again", "Zoom again"), _a("panel", "Show or hide the zoom panel"),
             _a("keys", "Zoom keys on or off"), _a("keysOn", "Zoom keys on"), _a("keysOff", "Zoom keys off"),
+        ],
+    },
+    "keys": {
+        "name": "Limitless Keys",
+        "about": "Your own shortcuts for every DAW, and a second undo just for plugin changes.",
+        "mac_app": "Limitless Keys.app", "mac_exe": "Limitless Keys",
+        "cli": {"*": ["--do", "{action}"]},
+        "actions": [
+            _a("pluginUndo", "Undo the last plugin change", phrases=["undo plugin", "plugin undo"]),
+            _a("pluginRedo", "Redo the last plugin change", phrases=["redo plugin", "plugin redo"]),
+            _a("pluginBefore", "Hear before the last plugin change"),
+            _a("pluginAfter", "Back to after the last plugin change"),
+            _a("undoFront", "Undo in the plugin window in front"),
+            _a("pluginHistory", "Show the plugin change history"),
+            _a("cheatSheet", "Show my shortcuts for this app"),
+            _a("press", "Do one of my shortcuts", args={"shortcut": "text"}),
+            _a("pause", "Pause Limitless Keys"), _a("resume", "Resume Limitless Keys"),
         ],
     },
     "color": {

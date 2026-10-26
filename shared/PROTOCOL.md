@@ -32,7 +32,7 @@ The first message must be `hello`, within 5 seconds.
 
 | op | Fields | Meaning |
 |---|---|---|
-| `hello` | `token`, `tool`, `name`, `version`, `actions`, `subscribe` | Join. `tool` is a short lowercase id (`voice`, `onehand`, `zoom`, `color`, `control`, `gaze`, or a new one). `subscribe` is a list of event patterns, default `["*"]`. A second `hello` for the same tool replaces the first connection. |
+| `hello` | `token`, `tool`, `name`, `version`, `actions`, `subscribe` | Join. `tool` is a short lowercase id (`voice`, `onehand`, `zoom`, `keys`, `color`, `control`, `gaze`, or a new one). `subscribe` is a list of event patterns, default `["*"]`. A second `hello` for the same tool replaces the first connection. |
 | `actions` | `actions` | Replace this app's action list. |
 | `invoke` | `action`, `args`, `id`, `depth` | Ask the suite to do something: `zoom.in`, `daw.record`, `hub.say`. The answer comes back as `result` with the same `id`. |
 | `did` | `action`, `intent`?, `value`?, `depth` | "I just did this", whatever input caused it. Becomes the events `<tool>.<action>` and, if the action has an intent, `<intent>`. |
@@ -85,6 +85,8 @@ with a command line can still answer (Limitless Zoom via `--do`).
 | `voice.listening` | `"awake"`, `"asleep"`, `"take"` | Limitless Voice |
 | `onehand.mode` | `true` / `false` | Limitless One-Hand |
 | `zoom.keys` | `true` / `false` | Limitless Zoom |
+| `keys.paused` | `true` / `false` | Limitless Keys |
+| `keys.pluginUndo`, `keys.pluginRedo` | what was undone | Limitless Keys, after a plugin undo or redo |
 | `color.filter` | `true` / `false` | Limitless Color |
 | `control.enabled`, `control.layer` | bool, number | Limitless Control |
 | `gaze.tracking` | bool | GazeStage |

@@ -1,0 +1,34 @@
+LIMITLESS KEYS: HOW TO OPEN IT
+
+1. Drag "Limitless Keys" onto the Applications folder in this window.
+
+2. Open Applications and double-click Limitless Keys.
+   This early version isn't signed by Apple yet, so macOS may say it
+   "cannot be opened" or "can't check it for malicious software".
+   If it does:
+     - Click Done (or OK).
+     - Open System Settings > Privacy & Security.
+     - Scroll down and click "Open Anyway" next to Limitless Keys.
+     - Click Open Anyway again and enter your Mac password.
+   You only have to do this once.
+
+3. The setup window walks you through the rest. Click each "Allow…" button:
+     - Accessibility: lets your shortcuts press keys, menus and plugin Undo buttons.
+     - Input Monitoring: lets Limitless Keys notice your shortcuts in every app.
+   Each line turns into a green tick as soon as it's allowed.
+
+4. Logic Pro: in Edit > Undo History, turn Plug-in off next to
+   "Include Parameter Changes From", so Command-Z leaves plugin changes alone.
+   (Setup has a button that opens it for you.)
+
+5. Pro Tools and other DAWs: click "Install the Limitless Undo plugin" in Setup,
+   restart the DAW, insert Limitless Undo on a track and choose your plugin in it.
+
+6. Try it: move a plugin knob, then press Option-Command-Z.
+     Option-Command-Z          undo the last plugin change, in any plugin
+     Option-Shift-Command-Z    redo it
+     hold Control-Option-Command-Z   hear the sound before your last plugin change
+     Command-Z                 your DAW's own undo, for everything else
+
+The keyboard icon in the menu bar has everything else: My shortcuts (make your own
+for any app), Plugin changes, Pause, Open at login, and Setup.

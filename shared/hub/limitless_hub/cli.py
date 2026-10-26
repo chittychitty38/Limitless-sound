@@ -61,7 +61,7 @@ def do(action: str, args: dict) -> int:
         # No hub: still reach tools that have their own command line.
         tool, _, act = action.partition(".")
         if tool not in catalog.TOOLS:
-            print("Limitless Sound isn't running, so only zoom.* and voice.do work without it.")
+            print("Limitless Sound isn't running, so only zoom.*, keys.* and voice.do work without it.")
             return 1
         settings = paths.read_json(paths.settings_file()) or {}
         ok, msg = Launcher(settings).run_cli(tool, act, args)

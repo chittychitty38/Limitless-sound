@@ -10,6 +10,7 @@ webcam, keyboard, switch or controller they already have.
 | **Limitless Voice** | [`apps/voice`](apps/voice) | Voice commands for the DAW and the whole computer, fully offline. |
 | **Limitless One-Hand** | [`apps/one-hand`](apps/one-hand) | Turns the keys under one hand into the DAW commands you use most. |
 | **Limitless Zoom** | [`apps/zoom`](apps/zoom) | Zoom the DAW or the screen by voice, one hand, dwell or a single switch. |
+| **Limitless Keys** | [`apps/keys`](apps/keys) | Your own shortcuts for every DAW, and a second undo just for plugin changes (⌥⌘Z). |
 | **Limitless Color** | [`apps/color`](apps/color) | Recolors the whole screen for colorblind musicians. |
 | **Limitless Control** | [`apps/control`](apps/control) | Xbox Adaptive Controller, switches and gamepads as DAW key commands. |
 | **GazeStage** | [`apps/gazestage`](apps/gazestage) | Play instruments and run the transport with your eyes, head, a sound or a switch. |
@@ -21,7 +22,7 @@ The apps feed each other the way a sidechain feeds a compressor. The small **Lim
 hub** runs in the background and gives every app one shared action bus:
 
 - **Any input triggers any app.** A controller button can zoom, a glance in GazeStage can
-  switch the screen colors on, a spoken phrase can turn on one-hand mode.
+  switch the screen colors on, a spoken phrase can turn on one-hand mode or undo a plugin change.
 - **Shared DAW intents.** Any app can ask for `daw.record`, `daw.undo`, `daw.zoomIn`...
   and whichever open app knows the keys for the DAW in front presses them. GazeStage, which
   can't press keys itself, gets the whole keyboard through the others.
