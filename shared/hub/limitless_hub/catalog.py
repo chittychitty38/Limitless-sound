@@ -99,10 +99,10 @@ TOOLS: dict[str, dict] = {
             _a("keys", "Zoom keys on or off"), _a("keysOn", "Zoom keys on"), _a("keysOff", "Zoom keys off"),
         ],
     },
-    "keys": {
-        "name": "Limitless Keys",
+    "uncommando": {
+        "name": "Uncommando",
         "about": "Your own shortcuts for every DAW, and a second undo just for plugin changes.",
-        "mac_app": "Limitless Keys.app", "mac_exe": "Limitless Keys",
+        "mac_app": "Uncommando.app", "mac_exe": "Uncommando",
         "cli": {"*": ["--do", "{action}"]},
         "actions": [
             _a("pluginUndo", "Undo the last plugin change", phrases=["undo plugin", "plugin undo"]),
@@ -113,7 +113,7 @@ TOOLS: dict[str, dict] = {
             _a("pluginHistory", "Show the plugin change history"),
             _a("cheatSheet", "Show my shortcuts for this app"),
             _a("press", "Do one of my shortcuts", args={"shortcut": "text"}),
-            _a("pause", "Pause Limitless Keys"), _a("resume", "Resume Limitless Keys"),
+            _a("pause", "Pause Uncommando"), _a("resume", "Resume Uncommando"),
         ],
     },
     "color": {

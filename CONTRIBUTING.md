@@ -7,7 +7,7 @@
 | Limitless Voice | `apps/voice/` | `.github/workflows/voice.yml` | `voice-v0.2.0` |
 | Limitless One-Hand | `apps/one-hand/` | `.github/workflows/one-hand.yml` | `one-hand-v0.1.0` |
 | Limitless Zoom | `apps/zoom/` | `.github/workflows/zoom.yml` | `zoom-v0.1.0` |
-| Limitless Keys | `apps/keys/` | `.github/workflows/keys.yml` | `keys-v0.1.0` |
+| Uncommando | `apps/uncommando/` | `.github/workflows/uncommando.yml` | `uncommando-v0.1.0` |
 | Limitless Color | `apps/color/` | `.github/workflows/color.yml` | `color-v0.1.0` |
 | Limitless Control | `apps/control/` | `.github/workflows/control.yml` | `control-v0.1.0` |
 | GazeStage | `apps/gazestage/` | `.github/workflows/gazestage.yml` | `gazestage-v0.2.0` |
