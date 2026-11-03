@@ -4,10 +4,10 @@ name: Website
 
 on:
   pull_request:
-    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml"]
+    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml", "netlify.toml", ".github/scripts/netlify-build.mjs"]
   push:
     branches: [main]
-    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml"]
+    paths: ["docs/**", ".github/scripts/site-*", ".github/workflows/site.yml", "netlify.toml", ".github/scripts/netlify-build.mjs"]
 
 jobs:
   accessibility:
@@ -24,3 +24,13 @@ jobs:
       # whole 10 minutes (#118).
       - run: npx playwright install chromium
       - run: node .github/scripts/site-a11y.cjs
+      # The site as Netlify builds it (netlify.toml): it must build, and find every app's release.
+      - name: Build the website as Netlify does
+        env:
+          URL: https://example.netlify.app
+        run: |
+          node .github/scripts/netlify-build.mjs
+          node -e 'const r = require("./_site/releases.json"); const n = Object.keys(r.apps).length;
+            if (!r.suite || n !== 6) { console.error("releases.json:", JSON.stringify(r)); process.exit(1); }'
+          grep -q 'rel="canonical" href="https://example.netlify.app/"' _site/index.html
+          grep -q 'Sitemap: https://example.netlify.app/sitemap.xml' _site/robots.txt

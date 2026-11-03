@@ -1,0 +1,31 @@
+# Rebuilds the website on Netlify once a build on main finishes, so a release published after the
+# push is on the page too: each app's Download link and version, and the suite's (the Netlify build
+# reads them, .github/scripts/netlify-build.mjs). Also after a proof run, for its badge.
+# Needs the NETLIFY_BUILD_HOOK secret (Netlify: Site configuration > Build & deploy > Build hooks >
+# Add build hook, branch main); without it this does nothing. GitHub runs workflow_run only from
+# the default branch's copy of this file.
+name: Website refresh
+
+on:
+  workflow_run:
+    workflows: ["Limitless Sound Suite", "Hub and clients", "Limitless Voice", "Limitless One-Hand", "Limitless Zoom",
+                "Limitless Color", "Limitless Control", "GazeStage", "Proof on real computers"]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  rebuild:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ask Netlify to rebuild the website
+        env:
+          HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+          AFTER: ${{ github.event.workflow_run.name }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "No NETLIFY_BUILD_HOOK secret, so nothing to do"; exit 0; fi
+          curl -fsS --retry 3 -X POST -d '{}' "$HOOK" > /dev/null
+          echo "Netlify is rebuilding the website after $AFTER"

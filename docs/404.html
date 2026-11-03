@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found · Limitless Sound</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#13121f">
+<link rel="icon" type="image/png" href="/favicon-64.png">
+<style>
+@font-face { font-family: "Bricolage"; src: url("/fonts/BricolageGrotesque-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Next"; src: url("/fonts/AtkinsonHyperlegibleNext.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+/* The site's brand: night navy, cream, crimson, lavender, dark in both modes */
+:root { color-scheme: dark; --night: #13121f; --line: #34324a; --cream: #f3eee4; --muted: #bdb8ca; --crimson: #d2334c; --crimson-hover: #b92b42; --red: #ef4f5f; --lavender: #b4b0fa; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background:
+  radial-gradient(800px 480px at 85% 0%, rgba(180,176,250,.13), transparent 60%),
+  radial-gradient(700px 480px at 0% 100%, rgba(210,51,76,.14), transparent 60%), var(--night);
+  color: var(--cream); font: 1.15rem/1.6 "Atkinson Next", system-ui, sans-serif; }
+main { width: 100%; max-width: 760px; padding: 56px 20px; }
+.label { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 12px; margin: 0; }
+.label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+h1 { font-family: "Bricolage", system-ui, sans-serif; font-weight: 800; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1; letter-spacing: -.04em; margin: 22px 0 18px; overflow-wrap: anywhere; }
+h1 span { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; color: var(--lavender); letter-spacing: 0; }
+p { margin: 0 0 14px; color: var(--muted); max-width: 52ch; }
+.es { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 0; }
+a { color: var(--lavender); text-underline-offset: 3px; }
+.btn { display: inline-flex; align-items: center; min-height: 52px; padding: 13px 24px; border-radius: 999px; font-family: "Bricolage", system-ui, sans-serif; font-weight: 800; text-decoration: none; }
+.btn.primary { background: var(--crimson); color: #fff; }
+.btn.primary:hover { background: var(--crimson-hover); }
+.btn.ghost { border: 2px solid var(--cream); color: var(--cream); }
+.btn.ghost:hover { border-color: var(--lavender); color: var(--lavender); }
+:focus-visible { outline: 3px solid var(--lavender); outline-offset: 3px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="label">404</p>
+  <h1>This page isn&rsquo;t <span>here.</span></h1>
+  <p>The link may be old, or mistyped. Everything about Limitless Sound, the free music software for every body, is on the home page.</p>
+  <div class="btns">
+    <a class="btn primary" href="/">Go to the home page</a>
+    <a class="btn ghost" href="/#download">Download</a>
+  </div>
+  <div class="es" lang="es">
+    <p>Esta página no existe. Puede que el enlace sea antiguo o tenga un error. <a href="/es/" hreflang="es">Ir a la página en español</a>.</p>
+  </div>
+</main>
+<script>
+// On GitHub Pages the site lives one folder down.
+if (location.hostname.endsWith("github.io"))
+  for (const a of document.querySelectorAll('a[href^="/"]')) a.setAttribute("href", "/Limitless-sound" + a.getAttribute("href"));
+</script>
+</body>
+</html>

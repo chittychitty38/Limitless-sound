@@ -224,12 +224,17 @@ copy its `latest.json` and `badge.svg` to `proof/` on `gh-pages`.
 
 ## Public website and branding
 
-- Live: **https://chittychitty38.github.io/Limitless-sound/** (capital L; always share that one).
-- Source: `docs/index.html` on `main`. GitHub Pages serves the `gh-pages` branch, a flat copy of
-  `docs/`. After changing `docs/`, copy it to `gh-pages` and push, or ask Bennet to switch Pages
-  to "main /docs" in repo settings so it updates by itself.
-- Each app's Download link finds that app's newest release by itself (GitHub's API, in the page);
-  the version written in the page is only the fallback.
+- **Netlify**, once Bennet connects it (Netlify › Add new site › Import an existing project ›
+  GitHub › Limitless-sound, branch `main`): `netlify.toml` and `.github/scripts/netlify-build.mjs`
+  build `docs/` on every push to `main`, with a preview for every pull request, plus
+  `releases.json`, short download links (`/apple-silicon`, `/intel-mac`, `/windows`), the live
+  proof from `proof-results`, security headers, a 404 page and a sitemap (`docs/README.md`).
+  An optional `NETLIFY_BUILD_HOOK` secret lets `site-refresh.yml` rebuild it after each release.
+- GitHub Pages still serves a copy: **https://chittychitty38.github.io/Limitless-sound/**
+  (capital L), the `gh-pages` branch, copied from `docs/` by hand.
+- Source: `docs/index.html` and `docs/es/index.html` on `main`, with `docs/site.js` shared.
+- Each app's Download link finds that app's newest release by itself (`releases.json` on Netlify,
+  GitHub's API elsewhere); the version written in the page is only the fallback.
 - In Spanish at `/es/` (`docs/es/index.html`), linked both ways. Copy `docs/es/` to `gh-pages`
   too. The site check fails if its styles drift from the English page's or English is left on it.
 - Branding (Bennet: "lock it in"): night navy `#13121f`, cream `#f3eee4`, crimson pill buttons

@@ -24,7 +24,7 @@ const pages = [
   { lang: 'es', path: 'es/', other: '', otherLang: 'en', otherName: 'English' },
 ];
 const modes = [['light', 1280], ['dark', 1280], ['light', 390], ['dark', 390], ['dark', 320]];
-const types = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.jpeg': 'image/jpeg', '.woff2': 'font/woff2', '.pdf': 'application/pdf' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.pdf': 'application/pdf' };
 
 // docs/ as GitHub Pages serves it: a folder's index.html at its own address.
 function serve() {

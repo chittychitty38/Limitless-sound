@@ -9,12 +9,24 @@
 <meta property="og:title" content="Limitless Sound: software de música gratis">
 <meta property="og:description" content="Software de música gratis para músicos con discapacidad. La música es para todos los cuerpos.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://chittychitty38.github.io/Limitless-sound/apple-touch-icon.png">
+<meta property="og:image" content="https://chittychitty38.github.io/Limitless-sound/og-es.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Limitless Sound: software de música para todos los cuerpos. Seis apps gratis para Mac y Windows.">
+<meta property="og:url" content="https://chittychitty38.github.io/Limitless-sound/es/">
+<meta property="og:site_name" content="Limitless Sound">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://chittychitty38.github.io/Limitless-sound/es/">
 <link rel="alternate" hreflang="en" href="https://chittychitty38.github.io/Limitless-sound/">
 <link rel="alternate" hreflang="es" href="https://chittychitty38.github.io/Limitless-sound/es/">
 <link rel="alternate" hreflang="x-default" href="https://chittychitty38.github.io/Limitless-sound/">
 <link rel="icon" type="image/png" href="../favicon-64.png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preload" href="../fonts/BricolageGrotesque-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/AtkinsonHyperlegibleNext.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/JetBrainsMono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face { font-family: "Bricolage"; src: url("../fonts/BricolageGrotesque-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "Bricolage"; src: url("../fonts/BricolageGrotesque-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
@@ -110,7 +122,7 @@ nav .pill:hover { border-color: var(--lavender); }
   radial-gradient(900px 520px at 85% 10%, rgba(180,176,250,.13), transparent 60%),
   radial-gradient(700px 480px at 0% 100%, rgba(210,51,76,.14), transparent 60%),
   var(--night); }
-.hero-mark { position: absolute; right: -60px; top: 40px; width: 520px; max-width: 60vw; opacity: .07; pointer-events: none; }
+.hero-mark { position: absolute; right: -60px; top: 40px; width: 520px; max-width: 60vw; height: auto; opacity: .07; pointer-events: none; }
 .meta { margin: 0 0 10px; line-height: 1.9; }
 .live { display: inline-block; margin-right: 12px; vertical-align: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
 h1 { font-family: var(--display); font-weight: 800; font-size: clamp(3rem, 8.5vw, 6.2rem); line-height: .98; letter-spacing: -.045em; margin: 22px 0 26px; max-width: 12ch; }
@@ -123,12 +135,26 @@ h1 .accent { font-size: 1.08em; letter-spacing: -.01em; }
 .download { margin-top: 8px; max-width: 800px; }   /* room for the three buttons in one row, in Spanish too */
 .fine { font-size: .98rem; color: var(--muted); margin: 18px 0 0; max-width: 60ch; }
 
-.flex { margin-top: 64px; padding: 14px 0 26px; }
-.flex .label { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
-.flex .label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
-.flexline { display: block; width: 100%; height: 90px; }
-.flexline path { fill: none; stroke: var(--lavender); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1800; stroke-dashoffset: 1800; animation: draw 2.6s ease-out .3s forwards; }
-@keyframes draw { to { stroke-dashoffset: 0; } }
+.proofchip { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; font-size: 1rem; }
+.proofchip .live { margin-right: 0; background: #7fd6a4; box-shadow: 0 0 0 5px rgba(127,214,164,.18); }
+.proofchip a { color: var(--cream); font-weight: 700; }
+
+/* Any input, any app: choose an input, see what it does */
+.any { margin-top: 64px; padding: 14px 0 34px; }
+.any .label { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.any .label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+.anyin { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.anyin button { font: inherit; font-family: var(--mono); font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cream); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; min-height: 44px; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.anyin button:hover { border-color: var(--lavender); }
+.anyin button[aria-pressed="true"] { background: var(--lavender); border-color: var(--lavender); color: var(--night); }
+.flexline { display: block; width: 100%; height: 90px; margin-top: 12px; }
+.flexline path { fill: none; stroke: var(--lavender); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1800; stroke-dashoffset: 0; }
+.flexline path.run { animation: draw 1.8s ease-out; }
+@keyframes draw { from { stroke-dashoffset: 1800; } to { stroke-dashoffset: 0; } }
+.anyout { margin: 2px 0 0; font-size: clamp(1.15rem, 2.4vw, 1.5rem); line-height: 1.4; color: var(--muted); min-height: 2.8em; }
+.anyout b { color: var(--cream); font-family: var(--display); font-weight: 800; letter-spacing: -.01em; }
+.anyout q { color: var(--cream); }
+.anyout .arrow { color: var(--red); margin: 0 .35em; }
 
 /* Honest note */
 .honest { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--night-2); }
@@ -151,7 +177,9 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
 .app { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
 .app:hover { border-color: #4a4766; }
-.app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 18px; display: flex; justify-content: space-between; }
+.app .num { font-family: var(--mono); font-size: .8rem; letter-spacing: .18em; color: var(--muted); margin: 0 0 16px; display: flex; justify-content: space-between; align-items: center; }
+.app .num svg { width: 30px; height: 30px; color: var(--lavender); }
+svg.i { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .app h3 { font-family: var(--display); font-weight: 800; font-size: 1.55rem; letter-spacing: -.02em; line-height: 1.1; margin: 0 0 4px; }
 .app .tag { font-family: var(--serif); font-style: italic; font-size: 1.35rem; color: var(--lavender); margin: 0 0 12px; line-height: 1.2; }
 .app p { margin: 0 0 12px; font-size: 1.04rem; }
@@ -200,6 +228,48 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 @media (max-width: 480px) { .levels { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 360px) { .levels { grid-template-columns: 1fr; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.proofsum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; background: var(--card); }
+.proofsum > div { padding: 22px 22px 24px; display: grid; gap: 8px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
+.proofsum > div + div { border-left: 1px solid var(--line); }
+.proofsum b { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.6vw, 2.6rem); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.proofsum .ok b { color: #7fd6a4; }
+.proofsum .bad b { color: var(--red); }
+.proofsum span { color: var(--muted); font-size: 1rem; line-height: 1.35; }
+@media (max-width: 760px) {
+  .proofsum { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .proofsum > div:nth-child(3) { border-left: 0; }
+  .proofsum > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 380px) {
+  .proofsum { grid-template-columns: minmax(0, 1fr); }
+  .proofsum > div + div { border-left: 0; border-top: 1px solid var(--line); }
+}
+.proofwhen { margin: 14px 0 0; }
+/* position: the screen-reader words in its cells stay inside it, not off the side of the page */
+.matrix { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 22px; margin: 18px 0 0; background: var(--card); }
+.matrix table { width: 100%; border-collapse: collapse; font-size: 1rem; line-height: 1.4; }
+.matrix caption { text-align: left; padding: 18px 20px 8px; font-family: var(--display); font-weight: 800; font-size: 1.25rem; letter-spacing: -.01em; }
+.matrix th, .matrix td { padding: 12px 18px; text-align: left; vertical-align: top; border-top: 1px solid var(--line); }
+.matrix thead th { font-family: var(--mono); font-weight: 400; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); border-top: 0; padding-top: 6px; }
+.matrix tbody th { font-weight: 700; min-width: 7.5em; }
+.matrix tbody th .ver { margin-left: 2px; white-space: nowrap; }
+.matrix td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.matrix td small { display: block; color: var(--muted); font-size: .9rem; white-space: normal; }
+/* On a phone the four columns fit side by side; with larger text the table scrolls inside its box */
+@media (max-width: 560px) {
+  .matrix th, .matrix td { padding: 10px 8px; }
+  .matrix caption { padding: 16px 12px 6px; }
+  .matrix thead th { font-family: var(--body); font-weight: 700; text-transform: none; letter-spacing: 0; font-size: .9rem; }
+  .matrix tbody th { min-width: 0; }
+  .matrix th:first-child, .matrix td:first-child { padding-left: 14px; }
+}
+.matrix .mark { font-weight: 800; margin-right: 6px; }
+.matrix .ok .mark { color: #7fd6a4; }
+.matrix .bad, .matrix .bad .mark { color: var(--red); }
+.matrix .tick { font-size: 1.15rem; }
+.proofall { margin-top: 18px; }
+.proofall summary { cursor: pointer; font-weight: 700; color: var(--lavender); padding: 10px 0; width: fit-content; }
+.proofall[open] summary { margin-bottom: 14px; }
 .proofruns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
 @media (max-width: 760px) { .proofruns { grid-template-columns: minmax(0, 1fr); } }
 .proofrun { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 26px; overflow-wrap: anywhere; }
@@ -209,11 +279,27 @@ section h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2.1
 .prooflist { list-style: none; margin: 0 0 14px; padding: 0; }
 .prooflist li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .prooflist .mark { font-weight: 800; font-size: 1.1rem; line-height: 1.5; }
+.proofrun .fine { margin: 0 0 10px; }
 .prooflist .ok .mark { color: #7fd6a4; }
 .prooflist .bad .mark { color: var(--red); }
 .prooflist b { display: block; }
 .prooflist span.how { color: var(--muted); font-size: 1rem; }
 .doc .note { font-size: .98rem; color: var(--muted); margin-bottom: 22px; }
+
+/* Roadmap */
+.lanes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.lane { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px 24px 8px; overflow-wrap: anywhere; }
+.lane h3 { font-family: var(--display); font-weight: 800; font-size: 1.7rem; letter-spacing: -.02em; line-height: 1.1; margin: 0 0 4px; display: flex; align-items: center; gap: 12px; }
+.lane h3::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--lane); }
+.lane.now h3::before { background: var(--lane); box-shadow: 0 0 0 5px rgba(239,79,95,.22); }
+.lane.now { --lane: var(--red); }
+.lane.next { --lane: var(--lavender); }
+.lane.later { --lane: var(--muted); }
+.lane > p { margin: 0 0 12px; font-family: var(--mono); font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.lane ul { list-style: none; margin: 0; padding: 0; }
+.lane li { padding: 14px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 1.02rem; }
+.lane li strong { display: block; color: var(--cream); font-size: 1.1rem; line-height: 1.3; margin-bottom: 2px; }
+@media (max-width: 900px) { .lanes { grid-template-columns: minmax(0, 1fr); } }
 
 /* Involved */
 .involve { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 40px; }
@@ -232,16 +318,16 @@ footer p { margin: 0; }
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Limitless Sound Foundation, volver arriba">
-      <img src="../logo.png" alt="" width="46" height="46">
-      <span style="all:unset"><b>Limitless Sound</b><span>Foundation</span></span>
+    <a class="brand" href="#top">
+      <img src="../logo-92.webp" alt="" width="46" height="46">
+      <span style="all:unset"><b>Limitless Sound</b><span>Foundation</span><span class="vh">, volver arriba</span></span>
     </a>
     <nav aria-label="Secciones">
       <ul>
         <li class="hide-sm"><a href="#apps">Apps</a></li>
         <li class="hide-sm"><a href="#install">Instalar</a></li>
         <li class="hide-sm"><a href="#proof">Pruebas</a></li>
-        <li class="hide-sm"><a href="#vision">El plan</a></li>
+        <li class="hide-sm"><a href="#roadmap">Lo que viene</a></li>
         <li class="lang-wide"><a href="../" hreflang="en" lang="en">English</a></li>
         <li><a class="pill" href="#download">Descargar</a></li>
       </ul>
@@ -251,7 +337,7 @@ footer p { margin: 0; }
 
 <main id="main">
   <div class="hero" id="top">
-    <img class="hero-mark" src="../logo.png" alt="" aria-hidden="true">
+    <img class="hero-mark" src="../logo-520.webp" alt="" aria-hidden="true" width="520" height="520">
     <div class="wrap">
       <p class="lang-sm"><a href="../" hreflang="en" lang="en">English</a></p>
       <p class="meta label"><span class="live" aria-hidden="true"></span> Software gratis &middot; Mac y Windows &middot; Funciona sin conexión</p>
@@ -260,24 +346,34 @@ footer p { margin: 0; }
 
       <div class="download" id="download">
         <div class="btns">
-          <a class="btn btn-primary" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg">
+          <a class="btn btn-primary" data-os="mac-apple-silicon" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-apple-silicon.pkg">
             <span>Descargar para Mac<small>Apple Silicon: M1 y posteriores</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
-          <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-intel.pkg">
+          <a class="btn btn-ghost" data-os="mac-intel" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-mac-intel.pkg">
             <span>Mac con Intel<small>Mac anteriores a finales de 2020</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
-          <a class="btn btn-ghost" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-windows.exe">
+          <a class="btn btn-ghost" data-os="windows" href="https://github.com/chittychitty38/limitless-sound/releases/latest/download/Limitless-Sound-Suite-windows.exe">
             <span>Windows<small>Windows 10 y 11</small></span><span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
         </div>
         <p class="fine">Toda la suite en una sola descarga: las seis apps y Limitless Sound, la app que las une, versión <span data-suite>0.2.10</span>. El instalador se muestra en español si tu equipo está en español. ¿No sabes qué Mac tienes? Menú Apple &rsaquo; Acerca de este Mac: si dice «Chip», es Apple Silicon; si dice «Procesador», es Intel. También puedes descargar cada app por separado, en <a href="#apps">las apps</a>, más abajo.</p>
+        <p class="proofchip"><span class="live" aria-hidden="true"></span><a href="#proof" id="proof-chip">Instalado y probado en equipos nuevos con cada versión</a></p>
       </div>
 
-      <div class="flex" aria-hidden="true">
-        <p class="label">Cualquier control. Cualquier app.</p>
-        <svg class="flexline" viewBox="0 0 1080 90" preserveAspectRatio="none">
-          <path d="M0 45 H300 L330 45 L350 12 L372 78 L392 30 L410 58 L428 45 H560 C600 45 610 20 640 20 S680 70 710 70 S750 45 780 45 H1080"/>
+      <div class="any" id="any" data-input="voice">
+        <p class="label" id="any-title">Cualquier control. Cualquier app.</p>
+        <ul class="anyin" aria-labelledby="any-title">
+          <li><button type="button" data-any="voice" aria-pressed="true" aria-controls="any-out">Voz</button><span class="any-says" hidden>Di <q>graba</q><span class="arrow" aria-hidden="true">&rarr;</span><b>Logic Pro empieza a grabar</b></span></li>
+          <li><button type="button" data-any="hand" aria-pressed="false" aria-controls="any-out">Una mano</button><span class="any-says" hidden>Pulsa una tecla bajo tu mano<span class="arrow" aria-hidden="true">&rarr;</span><b>Pro Tools deshace la última edición</b></span></li>
+          <li><button type="button" data-any="eyes" aria-pressed="false" aria-controls="any-out">Mirada</button><span class="any-says" hidden>Mira un pad y espera<span class="arrow" aria-hidden="true">&rarr;</span><b>GazeStage toca la nota</b></span></li>
+          <li><button type="button" data-any="switch" aria-pressed="false" aria-controls="any-out">Un pulsador</button><span class="any-says" hidden>Pulsa un pulsador<span class="arrow" aria-hidden="true">&rarr;</span><b>Ableton Live empieza a reproducir</b></span></li>
+          <li><button type="button" data-any="pedal" aria-pressed="false" aria-controls="any-out">Pedal</button><span class="any-says" hidden>Pisa el pedal<span class="arrow" aria-hidden="true">&rarr;</span><b>Limitless Zoom acerca la sesión</b></span></li>
+          <li><button type="button" data-any="sound" aria-pressed="false" aria-controls="any-out">Un sonido corto</button><span class="any-says" hidden>Haz un sonido corto<span class="arrow" aria-hidden="true">&rarr;</span><b>GazeStage empieza a reproducir</b></span></li>
+        </ul>
+        <svg class="flexline" viewBox="0 0 1080 90" preserveAspectRatio="none" aria-hidden="true">
+          <path class="run" d="M0 45 H300 L330 45 L350 12 L372 78 L392 30 L410 58 L428 45 H560 C600 45 610 20 640 20 S680 70 710 70 S750 45 780 45 H1080"/>
         </svg>
+        <p class="anyout" id="any-out" aria-live="polite">Di <q>graba</q><span class="arrow" aria-hidden="true">&rarr;</span><b>Logic Pro empieza a grabar</b></p>
       </div>
     </div>
   </div>
@@ -303,7 +399,7 @@ footer p { margin: 0; }
 
       <ul class="apps">
         <li class="app">
-          <p class="num" aria-hidden="true"><span>01</span><span>Voz</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Voz</span></p>
           <h3>Limitless Voice</h3>
           <p class="tag">Maneja el DAW hablando</p>
           <p>Di «ir al compás treinta y dos», «graba» o «mostrar el mezclador» y pasa en Logic Pro, Pro Tools, Ableton Live, GarageBand, REAPER, FL Studio o en cualquier otra parte del equipo. En español o en inglés, y una primera versión de prueba en portugués de Brasil. Funciona sin conexión: tu voz nunca sale del equipo.</p>
@@ -311,7 +407,7 @@ footer p { margin: 0; }
           <div class="links"><a data-app="voice" href="https://github.com/chittychitty38/limitless-sound/releases/tag/voice-v0.4.4">Descargar<span class="ver">0.4.4</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/voice#readme" hreflang="en">Cómo funciona (en inglés)</a></div>
         </li>
         <li class="app">
-          <p class="num" aria-hidden="true"><span>02</span><span>Una mano</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.5a1.5 1.5 0 0 1 3 0V12m0-5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L3.6 15a1.6 1.6 0 0 1 2.7-1.7L8 15.5"/></svg><span>Una mano</span></p>
           <h3>Limitless One-Hand</h3>
           <p class="tag">Todo el estudio bajo una mano</p>
           <p>Activa el modo una mano y las teclas bajo tu mano se convierten en los comandos que más usas: reproducir, grabar, deshacer, dividir, silenciar, solo, zoom, guardar. Desactívalo y el teclado vuelve a ser el de siempre.</p>
@@ -319,7 +415,7 @@ footer p { margin: 0; }
           <div class="links"><a data-app="one-hand" href="https://github.com/chittychitty38/limitless-sound/releases/tag/one-hand-v0.2.7">Descargar<span class="ver">0.2.7</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/one-hand#readme" hreflang="en">Cómo funciona (en inglés)</a></div>
         </li>
         <li class="app">
-          <p class="num" aria-hidden="true"><span>03</span><span>Visión</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M8 10.5h5M10.5 8v5"/></svg><span>Visión</span></p>
           <h3>Limitless Zoom</h3>
           <p class="tag">Mira la sesión al tamaño que quieras</p>
           <p>Amplía el DAW o toda la pantalla con la voz, con una capa de teclas para una mano, posando el puntero en botones grandes o con un pulsador. Cada acción se muestra en texto grande y se dice en voz alta. Entiende sus comandos de voz en español o en inglés: «acercar», «reducir» o «<span lang="en">zoom in</span>».</p>
@@ -327,7 +423,7 @@ footer p { margin: 0; }
           <div class="links"><a data-app="zoom" href="https://github.com/chittychitty38/limitless-sound/releases/tag/zoom-v0.1.10">Descargar<span class="ver">0.1.10</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/zoom#readme" hreflang="en">Cómo funciona (en inglés)</a></div>
         </li>
         <li class="app">
-          <p class="num" aria-hidden="true"><span>04</span><span>Color</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="5"/><circle cx="15" cy="9" r="5"/><circle cx="12" cy="14.5" r="5"/></svg><span>Color</span></p>
           <h3>Limitless Color</h3>
           <p class="tag">Una pantalla a la medida de tus ojos</p>
           <p>Describe lo que se ve mal y cambia los colores de toda la pantalla, preguntándote qué ves ahora hasta que quede bien. Descríbelo con tus palabras, en español o en inglés: «los medidores rojos se ven amarillos». Sin conexión, entiende el 98&nbsp;% de las descripciones en español que escribió alguien que nunca vio sus reglas. Fija el color exacto del solo, del mute o de los medidores.</p>
@@ -335,7 +431,7 @@ footer p { margin: 0; }
           <div class="links"><a data-app="color" href="https://github.com/chittychitty38/limitless-sound/releases/tag/color-v0.1.5">Descargar<span class="ver">0.1.5</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/color#readme" hreflang="en">Cómo funciona (en inglés)</a></div>
         </li>
         <li class="app">
-          <p class="num" aria-hidden="true"><span>05</span><span>Pulsadores</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="16" cy="11.5" r=".9"/><circle cx="18" cy="13.5" r=".9"/></svg><span>Pulsadores</span></p>
           <h3>Limitless Control</h3>
           <p class="tag">Pulsadores que se convierten en comandos</p>
           <p>Cada botón y cada conector para pulsadores de un Xbox Adaptive Controller, o de cualquier gamepad, se convierte en un comando del DAW. Sigue a la app que tienes delante, filtra los temblores y las pulsaciones dobles, y Grabar solo funciona si lo mantienes pulsado, para que nunca empiece por accidente.</p>
@@ -343,7 +439,7 @@ footer p { margin: 0; }
           <div class="links"><a data-app="control" href="https://github.com/chittychitty38/limitless-sound/releases/tag/control-v0.2.8">Descargar<span class="ver">0.2.8</span></a><a href="https://github.com/chittychitty38/limitless-sound/tree/main/apps/control#readme" hreflang="en">Cómo funciona (en inglés)</a></div>
         </li>
         <li class="app">
-          <p class="num" aria-hidden="true"><span>06</span><span>Ojos</span></p>
+          <p class="num" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Ojos</span></p>
           <h3>GazeStage</h3>
           <p class="tag">Toca con los ojos o la cabeza</p>
           <p>Toca instrumentos y maneja el transporte mirando, girando la cabeza, haciendo un sonido corto o con un pulsador. Un pad XY moldea tu sonido de la misma forma, y puede manejar los pedales de expresión de un Line 6 Helix. Usa la cámara integrada o cualquier webcam. La imagen nunca sale del equipo y no se graba nada.</p>
@@ -401,13 +497,50 @@ footer p { margin: 0; }
       <p class="kicker label">La prueba en equipos nuevos</p>
       <h2 id="proof-title">Instalado y probado en un equipo <span class="accent">nuevo</span>, en cada versión.</h2>
       <p class="section-lede">En cada versión, un Mac recién estrenado (Apple silicon e Intel) y un PC con Windows descargan Limitless Sound de esta página, lo instalan y abren todas las apps. Cada una tiene que unirse a la suite y responder a todos sus comandos en menos de tres segundos. Y la suite tiene que funcionar unida: el comando de una app llega a otra, y todas las apps siguen a la suite al español y de vuelta. Si algo falla, aparece aquí.</p>
-      <div class="proofruns" id="proof-runs" aria-live="polite">
+      <div id="proof-runs" aria-live="polite">
         <p class="fine">Cargando los últimos resultados&hellip;</p>
       </div>
       <p class="fine">Estos equipos no tienen micrófono, cámara ni controlador, así que esto demuestra la instalación, el arranque, la suite y cada comando. Las voces, las caras y las manos las prueban músicos. <a id="proof-run" href="https://github.com/chittychitty38/Limitless-sound/actions/workflows/proof.yml" hreflang="en">Cada prueba, completa (en inglés)</a>.</p>
       <h3 class="subhead">Voces reales, no una voz de prueba</h3>
       <p class="fine">Limitless Voice se prueba con grabaciones de personas reales. En español: 1657 grabaciones de hispanohablantes que dicen sus 40 palabras de comando, sacadas de frases que leyeron para Common Voice, y una hora de lectura en voz alta en español de Latinoamérica (FLEURS). Limitless Voice 0.4.0 entiende el 83.5&nbsp;% de las palabras de comando a la primera, y el 84.2&nbsp;% si cuentas las veces que pregunta y le dices «sí». Ninguna palabra que nadie dijo le hizo pulsar Cortar, Pegar ni Eliminar. En esa hora de lectura disparó un solo comando con Logic Pro delante, ninguno con Pro Tools, y ninguno destructivo. Limitless Zoom 0.1.6 oye el 90&nbsp;% de sus palabras de comando dichas por hispanohablantes, y en esa misma hora de lectura hizo zoom por error una o dos veces.</p>
       <p class="fine">En inglés se prueba con otras grabaciones, así que las cifras no se comparan una a una: unas 200 personas que dicen palabras sueltas en sus propios teléfonos y portátiles, y una hora de 40 personas leyendo en voz alta. Reconoce el 91&nbsp;% de las palabras que espera oír y actúa con «<span lang="en">stop</span>» unos dos tercios de segundo después de que lo digas. En esa hora no disparó ningún comando con Logic Pro delante, y ninguna palabra o frase suelta le hizo cortar, pegar ni borrar. Limitless Zoom hizo zoom 4 veces en esa misma hora. <a href="https://github.com/chittychitty38/Limitless-sound/blob/main/stress/README.md#spanish" hreflang="en">Cómo se mide (en inglés)</a>.</p>
+    </div>
+  </section>
+
+  <section id="roadmap" class="alt" aria-labelledby="road-title">
+    <div class="wrap">
+      <p class="kicker label">Lo que viene &middot; noviembre de 2026</p>
+      <h2 id="road-title">De probado en equipos de prueba a probado <span class="accent">por músicos.</span></h2>
+      <p class="section-lede">Cada app pasa sus pruebas en equipos nuevos con cada versión. Ninguna la ha usado todavía un músico con discapacidad en una sesión real. Ese es el siguiente paso.</p>
+      <ol class="lanes">
+        <li class="lane now">
+          <h3>Ahora</h3>
+          <p>En marcha</p>
+          <ul>
+            <li><strong>Apps firmadas</strong>Una descarga firmada y revisada por Apple, para que el Mac la abra sin el paso de «Abrir igualmente».</li>
+            <li><strong>Una prueba cada noche</strong>La prueba en equipos nuevos se hace cada noche, no solo con cada versión.</li>
+          </ul>
+        </li>
+        <li class="lane next">
+          <h3>Después</h3>
+          <p>En equipos reales</p>
+          <ul>
+            <li><strong>Micrófonos, cámaras, controladores y DAW reales</strong>Cada app probada en un Mac de verdad, en una sesión de verdad, y cada atajo del DAW pulsado de verdad.</li>
+            <li><strong>Hablantes nativos</strong>Hablantes de español y de portugués de Brasil leen cada palabra y nos dicen qué corregir.</li>
+            <li><strong>El pad de tono en un Line 6 Helix</strong>El pad XY de GazeStage en el equipo de verdad.</li>
+            <li><strong>Firmadas para Windows</strong>Sin el aviso de SmartScreen.</li>
+          </ul>
+        </li>
+        <li class="lane later">
+          <h3>Más adelante</h3>
+          <p>Con músicos y socios</p>
+          <ul>
+            <li><strong>Los músicos deciden</strong>Sesiones con músicos con discapacidad dan forma a cada app: el nivel Codiseñado del estándar.</li>
+            <li><strong>Estudios y una serie de canciones</strong>Patrocinadores equipan los estudios de los artistas, y una serie de canciones con invitados muestra lo que crean.</li>
+            <li><strong>Un estándar abierto para fabricantes</strong>Los fabricantes de plug-ins, de simuladores de amplificador y de equipos llevan el Limitless Access Standard.</li>
+          </ul>
+        </li>
+      </ol>
     </div>
   </section>
 
@@ -465,108 +598,56 @@ footer p { margin: 0; }
 
 <footer>
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Volver arriba"><img src="../logo.png" alt="" width="38" height="38"><span style="all:unset"><b>Limitless Sound</b><span>La música es para todos los cuerpos</span></span></a>
+    <a class="brand" href="#top"><img src="../logo-92.webp" alt="" width="38" height="38"><span style="all:unset"><b>Limitless Sound</b><span>La música es para todos los cuerpos</span><span class="vh">, volver arriba</span></span></a>
     <p>Limitless Sound Foundation &middot; 501(c)(3) &middot; Conyers, Georgia (EE.&nbsp;UU.) &middot; Fundada por Jason Barnes<br>Software gratuito y de código abierto &middot; <a href="https://github.com/chittychitty38/limitless-sound" hreflang="en">Código fuente en GitHub</a></p>
   </div>
 </footer>
 <script>
-// La cabecera se queda arriba solo mientras ocupa menos de una quinta parte de la pantalla: con letra
-// grande, o con el móvil de lado, taparía lo que se lee, así que se va con la página.
-(() => {
-  const top = document.querySelector("header.top");
-  const fit = () => top.classList.toggle("scrolls", top.offsetHeight > innerHeight / 5);
-  new ResizeObserver(fit).observe(top);
-  addEventListener("resize", fit);
-  fit();
-})();
-
-// Each Download button goes to that app's newest release, looked up when the page opens, and the
-// suite's version is its newest release's. What's written above is kept when GitHub can't be reached.
-(async () => {
-  const links = [...document.querySelectorAll('a[data-app]')];
-  try {
-    const res = await fetch('https://api.github.com/repos/chittychitty38/limitless-sound/releases?per_page=100');
-    if (!res.ok) return;
-    const releases = (await res.json()).filter((r) => !r.draft && !r.prerelease);
-    const suite = releases.find((x) => /^v\d/.test(x.tag_name));
-    if (suite) for (const s of document.querySelectorAll('[data-suite]')) s.textContent = suite.tag_name.slice(1);
-    for (const a of links) {
-      const r = releases.find((x) => x.tag_name.startsWith(a.dataset.app + '-v'));
-      if (!r) continue;
-      a.href = r.html_url;
-      const ver = a.querySelector('.ver');
-      if (ver) ver.textContent = r.tag_name.slice(a.dataset.app.length + 2);
-    }
-  } catch { /* keep the written links */ }
-})();
-
-// The latest proof, from the site's root. The results are written in English: the
-// checks a failed app names are said in Spanish here, and anything else stays marked as English.
-(() => {
-  const box = document.getElementById("proof-runs");
-  const shots = "https://raw.githubusercontent.com/chittychitty38/Limitless-sound/proof-results/";
-  const mac = { "mac-apple-silicon": "Mac con Apple silicon", "mac-intel": "Mac con Intel", "windows": "PC con Windows" };
-  const checks = {
-    C1: "Se conecta y saluda",
-    C2: "Anuncia sus acciones",
-    C3: "Cada acción tiene un id corto y un nombre claro",
-    C4: "Responde a cada acción en 3 segundos",
-    P1: "Lista poco después de abrirla",
-    P2: "Sigue funcionando después de pulsar todas sus acciones",
-    P4: "Cada acción se hizo o se rechazó con un motivo, sin quedarse sin respuesta",
-    S1: "Todas las apps se conectaron a la suite a la vez",
-    S2: "Un comando del DAW compartido (acercar) llega a una app y responde en menos de 3 segundos",
-    S3: "El hub sabe qué apps están abiertas",
-    S4: "La página de Limitless Sound se abre",
-    S5: "El idioma de la suite se puede poner en español y volver",
-    S6: "Cada app con ventanas en español sigue a la suite al español y de vuelta",
-    S7: "El portugués, una versión previa solo en Limitless Voice, deja las demás apps en inglés",
-  };
-  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const en = (t) => `<span lang="en">${esc(t)}</span>`;
-  const passed = (a) => !!a.level && (a.proof || []).every((x) => x.ok || x.warn);
-  const why = (a) => {
-    const bad = [...(a.checks || []), ...(a.proof || [])].find((x) => !x.ok && !x.warn && (x.level || "proof") !== "adaptive"
-      && ["connected", "proof"].includes(x.level || "proof"));
-    if (!bad) return "";
-    return `${checks[bad.id] ? esc(checks[bad.id]) : en(bad.check)}: ${bad.detail ? en(bad.detail) : "falló"}`;
-  };
-  // Las comprobaciones de la suite (S1...): las apps juntas, el idioma compartido.
-  const together = (suite) => {
-    if (!suite || !suite.length) return "";
-    const items = suite.map((s) => `<li class="${s.ok ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${s.ok ? "✓" : "✕"}</span>`
-      + `<span><b>${checks[s.id] ? esc(checks[s.id]) : en(s.check)}<span class="vh">: ${s.ok ? "pasó" : "no pasó"}</span></b><span class="how">${en(s.detail)}</span></span></li>`).join("");
-    return `<p class="fine" style="margin:12px 0 6px">La suite junta: ${suite.filter((s) => s.ok).length} de ${suite.length} comprobaciones pasaron.</p>`
-      + `<ul class="prooflist">${items}</ul>`;
-  };
-  fetch("../proof/latest.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject())
-    .then((data) => {
-      const link = document.getElementById("proof-run");
-      if (data.run) link.href = data.run;
-      box.innerHTML = data.runs.map((run) => {
-        if (run.error) return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3><p>No se pudo completar: ${en(run.error)}</p></div>`;
-        const ok = run.apps.filter(passed).length;
-        const hub = run.hubIdle && run.hubIdle.cpuPercent != null
-          ? ` La página de Limitless Sound${run.hubVersion ? " " + esc(run.hubVersion) : ""}: en reposo, ${esc(run.hubIdle.cpuPercent)}&nbsp;% del procesador.` : "";
-        const when = new Date(run.when).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
-        const apps = run.apps.map((a) => {
-          const good = passed(a);
-          const idle = a.idle && a.idle.cpuPercent != null ? `; en reposo, ${esc(a.idle.cpuPercent)}&nbsp;% del procesador` : "";
-          const how = good
-            ? `lista en ${esc(a.joinedSeconds)}&nbsp;s, respondió a sus ${esc(a.actionsTried)} comandos${idle}`
-            : why(a);
-          const shot = a.screenshot ? ` <a href="${shots}${esc(a.screenshot)}">captura</a>` : "";
-          return `<li class="${good ? "ok" : "bad"}"><span class="mark" aria-hidden="true">${good ? "✓" : "✕"}</span>`
-            + `<span><b>${esc(a.name)}${a.version ? " " + esc(a.version) : ""}<span class="vh">: ${good ? "pasó la prueba" : "no pasó la prueba"}</span></b><span class="how">${how}${shot}</span></span></li>`;
-        }).join("");
-        return `<div class="proofrun"><h3>${esc(mac[run.arch] || run.arch)}</h3>`
-          + `<span class="label">${esc(run.computer.os)} · ${esc(when)} · Limitless Sound ${esc(run.suiteVersion)}</span>`
-          + `<p class="fine" style="margin:0 0 10px">${ok} de ${run.apps.length} apps pasaron la prueba. Instalación: ${esc(run.installSeconds)}&nbsp;s.${hub}</p>`
-          + `<ul class="prooflist">${apps}</ul>${together(run.suite)}</div>`;
-      }).join("");
-    })
-    .catch(() => { box.innerHTML = `<p class="fine">Todavía no se han publicado resultados.</p>`; });
-})();
+// Las palabras de esta página para lo que escribe site.js: los resultados de las pruebas y su marcador.
+// Los resultados vienen en inglés: las comprobaciones se nombran aquí en español, y lo demás se marca como inglés.
+window.LS = {
+  lang: "es",
+  root: "../",
+  words: {
+    computers: { "mac-apple-silicon": "Mac con Apple silicon", "mac-intel": "Mac con Intel", "windows": "PC con Windows" },
+    short: { "mac-apple-silicon": "Apple silicon", "mac-intel": "Mac con Intel", "windows": "Windows" },
+    checks: {
+      C1: "Se conecta y saluda",
+      C2: "Anuncia sus acciones",
+      C3: "Cada acción tiene un id corto y un nombre claro",
+      C4: "Responde a cada acción en 3 segundos",
+      P1: "Lista poco después de abrirla",
+      P2: "Sigue funcionando después de pulsar todas sus acciones",
+      P4: "Cada acción se hizo o se rechazó con un motivo, sin quedarse sin respuesta",
+      S1: "Todas las apps se conectaron a la suite a la vez",
+      S2: "Un comando del DAW compartido (acercar) llega a una app y responde en menos de 3 segundos",
+      S3: "El hub sabe qué apps están abiertas",
+      S4: "La página de Limitless Sound se abre",
+      S5: "El idioma de la suite se puede poner en español y volver",
+      S6: "Cada app con ventanas en español sigue a la suite al español y de vuelta",
+      S7: "El portugués, una versión previa solo en Limitless Voice, deja las demás apps en inglés",
+    },
+    of: (a, b) => `${a} de ${b}`,
+    tiles: { computers: "equipos nuevos lo pasaron todo", apps: "apps pasaron en todos los equipos", checks: "comprobaciones de la suite pasaron en todos los equipos", slowest: "tardó la app más lenta en estar lista" },
+    app: "App", check: "Comprobación",
+    appsCaption: "Cada app en cada equipo",
+    appsNote: "Debajo de cada marca: cuántos segundos tardó la app en estar lista al abrirla, y cuánto procesador usó en reposo.",
+    checksCaption: "La suite, trabajando junta",
+    readyIn: "lista en",
+    idle: (p) => `${p} % en reposo`,
+    passed: "pasó", failed: "falló", unfinished: "no terminó",
+    inFull: "Cada comprobación en cada equipo, completa",
+    couldNot: "No se pudo completar:",
+    hub: (v, p) => `La página de Limitless Sound${v ? " " + v : ""}: en reposo, ${p} % del procesador.`,
+    how: (s, n, p) => `lista en ${s} s, respondió a sus ${n} comandos` + (p != null ? `; en reposo, ${p} % del procesador` : ""),
+    screenshot: "captura",
+    runLine: (ok, n, s) => `${ok} de ${n} apps pasaron la prueba. Instalación: ${s} s.`,
+    together: "La suite junta:",
+    chip: (v, ok, n) => `La versión ${v} pasó la prueba en ${ok} de ${n} equipos nuevos. Ver las pruebas`,
+    none: "Todavía no se han publicado resultados.",
+  },
+};
 </script>
+<script src="../site.js" defer></script>
 </body>
 </html>
