@@ -24,3 +24,4 @@ apps/color/app/src-tauri/gen
 Thumbs.db
 shared/clients/rust/target/
 shared/clients/rust/Cargo.lock
+_site/
