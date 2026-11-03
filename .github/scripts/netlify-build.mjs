@@ -6,7 +6,13 @@
 // - The addresses in each page's head (canonical, languages, link previews) are this site's own:
 //   Netlify sets URL to it. Run elsewhere, they stay GitHub Pages'.
 // - robots.txt and sitemap.xml.
-import { cpSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
+//
+// With --standalone, the result needs nothing else to run: drop the folder (or its zip) on
+// https://app.netlify.com/drop, no repository connected. The latest proof and its badge are copied
+// in instead of fetched live, and netlify.toml's short links and headers are written as _redirects
+// and _headers, which a dropped folder is served by. Give it the address it will have:
+//   URL=https://limitlesssound.netlify.app node .github/scripts/netlify-build.mjs --standalone
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -15,6 +21,7 @@ const REPO = 'chittychitty38/Limitless-sound';
 const PAGES = 'https://chittychitty38.github.io/Limitless-sound/';
 const SITE = (process.env.URL || PAGES).replace(/\/*$/, '/');
 const APPS = ['voice', 'one-hand', 'zoom', 'color', 'control', 'gazestage'];
+const STANDALONE = process.argv.includes('--standalone');
 
 rmSync(OUT, { recursive: true, force: true });
 cpSync('docs', OUT, { recursive: true, filter: (src) => !src.endsWith('.md') });
@@ -77,4 +84,38 @@ writeFileSync(join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <url><loc>${SITE}es/</loc>${alt}</url>
 </urlset>
 `);
+if (STANDALONE) {
+  // The proof as it was last published, from the proof-results branch.
+  const proof = async (name) => {
+    try {
+      const res = await fetch(`https://raw.githubusercontent.com/${REPO}/proof-results/${name}`);
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+    } catch { /* try git */ }
+    try {
+      execFileSync('git', ['fetch', '-q', '--depth=1', 'origin', 'proof-results']);
+      return execFileSync('git', ['show', `FETCH_HEAD:${name}`]);
+    } catch { return null; }
+  };
+  mkdirSync(join(OUT, 'proof'), { recursive: true });
+  for (const name of ['latest.json', 'badge.svg']) {
+    const body = await proof(name);
+    if (body) writeFileSync(join(OUT, 'proof', name), body);
+    console.log(`proof/${name}: ${body ? `${body.length} bytes` : 'not found, the page says no results yet'}`);
+  }
+  // netlify.toml's rules as the files a dropped folder is served by. Its proxy to the live proof
+  // stays out: the proof is copied in above.
+  const toml = readFileSync('netlify.toml', 'utf8');
+  const field = (block, key) => (block.match(new RegExp(`^\\s*${key} = "([^"]*)"`, 'm')) || [])[1];
+  const redirects = toml.split('[[redirects]]').slice(1)
+    .map((b) => ({ from: field(b, 'from'), to: field(b, 'to'), status: (b.match(/status = (\d+)/) || [])[1] }))
+    .filter((r) => r.status !== '200');
+  writeFileSync(join(OUT, '_redirects'), redirects.map((r) => `${r.from}  ${r.to}  ${r.status}`).join('\n') + '\n');
+  const headers = toml.split('[[headers]]').slice(1).map((b) => {
+    const values = b.split('[headers.values]')[1].trim().split('\n').map((l) => l.match(/^\s*([\w-]+) = "([^"]*)"/)).filter(Boolean);
+    return `${field(b, 'for')}\n${values.map((m) => `  ${m[1]}: ${m[2]}`).join('\n')}`;
+  });
+  writeFileSync(join(OUT, '_headers'), headers.join('\n') + '\n');
+  console.log(`_redirects: ${redirects.length} short links; _headers: ${headers.length} rules`);
+}
+
 console.log(`Built ${OUT}/ for ${SITE}: ${readdirSync(OUT).length} entries`);
