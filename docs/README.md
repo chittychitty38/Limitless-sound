@@ -23,6 +23,14 @@ minutes, add a build hook (**Site configuration › Build & deploy › Build hoo
 as the repository secret `NETLIFY_BUILD_HOOK`: `.github/workflows/site-refresh.yml` calls it after
 each build on `main`.
 
+**Without a repository connected** (Netlify Drop): `URL=https://<name>.netlify.app node
+.github/scripts/netlify-build.mjs --standalone` builds `_site/` to need nothing else: the latest
+proof and its badge copied in, every app's newest release in `releases.json`, and `netlify.toml`'s
+short links and headers as `_redirects` and `_headers`. Zip `_site/` (or drag the folder) onto
+https://app.netlify.com/drop, or onto the site's Deploys page to update it. The page then asks
+nothing of GitHub while it loads; only its download and source links point there. Rebuild and drop
+again after a release or a proof, as nothing refreshes it by itself.
+
 GitHub Pages still serves a copy at https://chittychitty38.github.io/Limitless-sound/ from the
 `gh-pages` branch, which is copied from this folder by hand. There the page asks GitHub's API for
 the releases, and the proof is the copy at the site's root.
